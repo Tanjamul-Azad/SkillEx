@@ -8,6 +8,7 @@ import com.skillex.repository.UserRepository;
 import com.skillex.service.AuthService;
 import com.skillex.config.JwtUtil;
 import lombok.RequiredArgsConstructor;
+import org.springframework.lang.NonNull;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -30,6 +31,7 @@ public class AuthServiceImpl implements AuthService {
 
     @Override
     @Transactional
+    @SuppressWarnings("null")
     public AuthResponse register(RegisterRequest req) {
         if (userRepository.existsByEmail(req.email())) {
             throw new IllegalArgumentException("An account with this email already exists.");
@@ -63,7 +65,7 @@ public class AuthServiceImpl implements AuthService {
 
     @Override
     @Transactional(readOnly = true)
-    public User getCurrentUser(String userId) {
+    public User getCurrentUser(@NonNull String userId) {
         return userRepository.findById(userId)
             .orElseThrow(() -> new IllegalArgumentException("User not found."));
     }

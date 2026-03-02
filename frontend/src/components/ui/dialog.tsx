@@ -44,11 +44,11 @@ const DialogContent = React.forwardRef<
         /* Open: spring in */
         "data-[state=open]:animate-in data-[state=open]:fade-in-0 data-[state=open]:zoom-in-[0.95]",
         "data-[state=open]:slide-in-from-left-1/2 data-[state=open]:slide-in-from-top-[46%]",
-        "data-[state=open]:duration-[280ms] data-[state=open]:ease-[cubic-bezier(0.16,1,0.3,1)]",
+        "data-[state=open]:duration-280 data-[state=open]:ease-expo-out",
         /* Close: snap out */
         "data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=closed]:zoom-out-[0.97]",
         "data-[state=closed]:slide-out-to-left-1/2 data-[state=closed]:slide-out-to-top-[48%]",
-        "data-[state=closed]:duration-[160ms] data-[state=closed]:ease-in",
+        "data-[state=closed]:duration-160 data-[state=closed]:ease-in",
         className
       )}
       {...props}

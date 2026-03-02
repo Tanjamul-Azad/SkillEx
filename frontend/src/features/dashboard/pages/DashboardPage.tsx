@@ -30,19 +30,18 @@ import { cn } from '@/lib/utils';
 import DashboardLayout from '@/components/layout/DashboardLayout';
 import type { Skill } from '@/types';
 
-/* ── Consistent color palette for stat cards ─────────────────────────── */
+/* ── Consistent color palette for stat cards (Glassmorphism) ────────── */
 interface StatColors {
   text: string;
   bg: string;
   border: string;
   ring: string;
-  gradient: string;
 }
 const STAT_COLORS: Record<string, StatColors> = {
-  primary:   { text: 'text-primary',   bg: 'bg-primary/10',     border: 'border-primary/25',   ring: 'shadow-[0_0_0_1px_hsl(var(--primary)/0.2)]',   gradient: 'from-primary/20 via-primary/5 to-transparent' },
-  secondary: { text: 'text-secondary', bg: 'bg-secondary/10',   border: 'border-secondary/25', ring: 'shadow-[0_0_0_1px_hsl(var(--secondary)/0.2)]', gradient: 'from-secondary/20 via-secondary/5 to-transparent' },
-  green:     { text: 'text-emerald-500', bg: 'bg-emerald-500/10', border: 'border-emerald-500/25', ring: 'shadow-[0_0_0_1px_hsl(152_69%_31%/0.2)]',   gradient: 'from-emerald-500/20 via-emerald-500/5 to-transparent' },
-  accent:    { text: 'text-amber-500',  bg: 'bg-amber-500/10',   border: 'border-amber-500/25', ring: 'shadow-[0_0_0_1px_hsl(38_92%_50%/0.2)]',      gradient: 'from-amber-500/20 via-amber-500/5 to-transparent' },
+  primary: { text: 'text-primary', bg: 'bg-primary/5 dark:bg-primary/10', border: 'border-primary/20', ring: 'shadow-[0_0_0_1px_hsl(var(--primary)/0.2)]' },
+  secondary: { text: 'text-secondary', bg: 'bg-secondary/5 dark:bg-secondary/10', border: 'border-secondary/20', ring: 'shadow-[0_0_0_1px_hsl(var(--secondary)/0.2)]' },
+  green: { text: 'text-emerald-500', bg: 'bg-emerald-500/5 dark:bg-emerald-500/10', border: 'border-emerald-500/20', ring: 'shadow-[0_0_0_1px_hsl(152_69%_31%/0.2)]' },
+  accent: { text: 'text-amber-500', bg: 'bg-amber-500/5 dark:bg-amber-500/10', border: 'border-amber-500/20', ring: 'shadow-[0_0_0_1px_hsl(38_92%_50%/0.2)]' },
 };
 
 interface StatCardProps {
@@ -67,14 +66,16 @@ const StatCard = React.memo(({ icon: Icon, title, value, trend, trendLabel, colo
       className="h-full"
     >
       <Card className={cn(
-        'group relative h-full overflow-hidden border transition-all duration-300',
-        'hover:shadow-[0_8px_30px_hsl(0_0%_0%/0.10),0_2px_8px_hsl(0_0%_0%/0.06)]',
+        'group relative h-full overflow-hidden transition-all duration-400 ease-snappy',
+        'hover:shadow-[0_8px_30px_hsl(0_0%_0%/0.10),0_2px_8px_hsl(0_0%_0%/0.06)] hover:-translate-y-1.5',
+        'glass-subtle hover:glass-strong',
         c.border,
       )}>
-        {/* Top accent gradient bar */}
-        <div className={cn('absolute inset-x-0 top-0 h-[3px] bg-gradient-to-r', c.gradient)} />
-        {/* Background radial glow on hover */}
-        <div className={cn('pointer-events-none absolute -right-6 -top-6 h-24 w-24 rounded-full blur-2xl opacity-0 group-hover:opacity-100 transition-opacity duration-500', c.bg)} />
+        {/* Subtle top inner highlight replacing flat gradient */}
+        <div className={cn('absolute inset-x-0 top-0 h-px mix-blend-overlay opacity-50 bg-white dark:bg-white/20')} />
+
+        {/* Sophisticated background radial glow on hover */}
+        <div className={cn('pointer-events-none absolute -right-6 -top-6 h-32 w-32 rounded-full blur-3xl opacity-0 group-hover:opacity-100 transition-opacity duration-700', c.bg)} />
 
         <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2 pt-5 px-5">
           <CardTitle className="text-[11px] font-bold uppercase tracking-widest text-muted-foreground/70">
@@ -82,8 +83,8 @@ const StatCard = React.memo(({ icon: Icon, title, value, trend, trendLabel, colo
           </CardTitle>
           {/* Icon box — consistent size, shape, and tint */}
           <div className={cn(
-            'flex h-9 w-9 shrink-0 items-center justify-center rounded-xl border',
-            c.bg, c.border
+            'flex h-9 w-9 shrink-0 items-center justify-center rounded-xl glass-subtle',
+            c.border
           )}>
             <Icon className={cn('h-[18px] w-[18px]', c.text)} />
           </div>
@@ -115,9 +116,9 @@ function ExchangeCard({ exchange, currentUserId }: { exchange: Exchange; current
       whileHover={{ y: -4, transition: { type: 'spring', stiffness: 300 } }}
       className="h-full"
     >
-      <Card className="group h-full overflow-hidden border-border/50 transition-all duration-300 hover:border-primary/25 hover:shadow-[0_8px_32px_hsl(0_0%_0%/0.10)]">
-        {/* Rainbow progress bar */}
-        <div className="h-[3px] w-full bg-gradient-to-r from-primary via-secondary to-amber-500 opacity-50 group-hover:opacity-100 transition-opacity duration-300" />
+      <Card className="group h-full overflow-hidden transition-all duration-400 ease-snappy hover:-translate-y-1.5 hover:border-primary/40 hover:shadow-[0_12px_40px_-12px_hsl(var(--primary)/0.25),0_4px_12px_hsl(220_20%_40%/0.1)]">
+        {/* Animated sheen line */}
+        <div className="absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-white/40 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
         <CardContent className="p-5">
           {/* Partner row */}
           <div className="flex items-center justify-between">
@@ -185,7 +186,7 @@ function EmptyExchanges() {
   return (
     <Card className="border-dashed border-2 border-border/60 bg-transparent shadow-none">
       <CardContent className="flex flex-col items-center justify-center py-14 text-center">
-        <div className="mb-4 flex h-16 w-16 items-center justify-center rounded-2xl bg-gradient-to-br from-primary/15 to-secondary/10 shadow-[inset_0_0_0_1px_hsl(var(--primary)/0.15)]">
+        <div className="mb-4 flex h-16 w-16 items-center justify-center rounded-2xl glass-subtle shadow-[inset_0_0_0_1px_hsl(var(--primary)/0.15)]">
           <Inbox className="h-7 w-7 text-primary" />
         </div>
         <p className="font-bold text-base">No active exchanges yet</p>
@@ -277,10 +278,10 @@ export default function DashboardPage() {
   };
 
   const stats: StatCardProps[] = [
-    { icon: BookOpen,     title: 'Skills Offered',     value: user?.skillsOffered.length ?? 0, trend: '+0', trendLabel: 'total',    colorKey: 'primary',   index: 0 },
-    { icon: Users,        title: 'Active Exchanges',   value: activeExchanges.length,           trend: '+0', trendLabel: 'ongoing',  colorKey: 'secondary', index: 1 },
-    { icon: CheckCircle,  title: 'Sessions Completed', value: user?.sessionsCompleted ?? 0,     trend: '+0', trendLabel: 'all time', colorKey: 'green',     index: 2 },
-    { icon: Star,         title: 'SkillEx Score',      value: user?.skillexScore ?? 0,          trend: '+0', trendLabel: 'total',    colorKey: 'accent',    index: 3 },
+    { icon: BookOpen, title: 'Skills Offered', value: user?.skillsOffered.length ?? 0, trend: '+0', trendLabel: 'total', colorKey: 'primary', index: 0 },
+    { icon: Users, title: 'Active Exchanges', value: activeExchanges.length, trend: '+0', trendLabel: 'ongoing', colorKey: 'secondary', index: 1 },
+    { icon: CheckCircle, title: 'Sessions Completed', value: user?.sessionsCompleted ?? 0, trend: '+0', trendLabel: 'all time', colorKey: 'green', index: 2 },
+    { icon: Star, title: 'SkillEx Score', value: user?.skillexScore ?? 0, trend: '+0', trendLabel: 'total', colorKey: 'accent', index: 3 },
   ];
 
   return (
@@ -293,8 +294,7 @@ export default function DashboardPage() {
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.45, type: 'spring', stiffness: 110, damping: 20 }}
         >
-          <div className="relative overflow-hidden rounded-3xl border border-primary/15 bg-card p-6 md:p-8
-                          shadow-[0_4px_24px_hsl(221_83%_53%/0.10),0_1px_4px_hsl(0_0%_0%/0.05)]">
+          <div className="relative overflow-hidden rounded-3xl glass-strong p-6 md:p-8">
             {/* Gradient mesh inside banner */}
             <div className="pointer-events-none absolute inset-0 bg-gradient-to-br from-primary/8 via-transparent to-secondary/6" />
             <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(ellipse_80%_60%_at_70%_-10%,hsl(var(--primary)/0.12),transparent)]" />
@@ -303,7 +303,7 @@ export default function DashboardPage() {
             <div className="pointer-events-none absolute -bottom-12 -right-8 h-52 w-52 rounded-full bg-secondary/12 blur-3xl" />
             {/* Decorative dots pattern top-right */}
             <div className="pointer-events-none absolute right-6 top-6 opacity-[0.07]"
-                 style={{ backgroundImage: 'radial-gradient(hsl(var(--primary)) 1px,transparent 1px)', backgroundSize: '12px 12px', width: 96, height: 72 }} />
+              style={{ backgroundImage: 'radial-gradient(hsl(var(--primary)) 1px,transparent 1px)', backgroundSize: '12px 12px', width: 96, height: 72 }} />
 
             <div className="relative z-10 flex flex-col gap-5 md:flex-row md:items-center md:justify-between">
               <div className="flex items-center gap-5">
@@ -339,10 +339,10 @@ export default function DashboardPage() {
                   {/* Mini stat pills */}
                   <div className="mt-3 flex flex-wrap gap-2">
                     {[
-                      { icon: BookOpen,    label: `${user?.skillsOffered.length ?? 0} skills`, cls: 'text-primary bg-primary/10 border-primary/20' },
-                      { icon: Users,       label: `${activeExchanges.length} active`,           cls: 'text-secondary bg-secondary/10 border-secondary/20' },
-                      { icon: Star,        label: `${user?.skillexScore ?? 0} pts`,             cls: 'text-amber-500 bg-amber-500/10 border-amber-500/20' },
-                      { icon: CheckCircle, label: `${user?.sessionsCompleted ?? 0} done`,       cls: 'text-emerald-500 bg-emerald-500/10 border-emerald-500/20' },
+                      { icon: BookOpen, label: `${user?.skillsOffered.length ?? 0} skills`, cls: 'text-primary bg-primary/10 border-primary/20' },
+                      { icon: Users, label: `${activeExchanges.length} active`, cls: 'text-secondary bg-secondary/10 border-secondary/20' },
+                      { icon: Star, label: `${user?.skillexScore ?? 0} pts`, cls: 'text-amber-500 bg-amber-500/10 border-amber-500/20' },
+                      { icon: CheckCircle, label: `${user?.sessionsCompleted ?? 0} done`, cls: 'text-emerald-500 bg-emerald-500/10 border-emerald-500/20' },
                     ].map(({ icon: IC, label, cls }) => (
                       <span key={label} className={cn('flex items-center gap-1.5 rounded-full border px-2.5 py-1 text-[11px] font-semibold', cls)}>
                         <IC className="h-3 w-3" />{label}
@@ -432,7 +432,7 @@ export default function DashboardPage() {
                           <div key={exchange.id} className="relative flex items-center gap-4">
                             <div className={cn(
                               'absolute left-0 h-[18px] w-[18px] rounded-full border-2 border-background flex items-center justify-center shrink-0',
-                              i === 0 ? 'bg-gradient-to-br from-amber-400 to-orange-500' : 'bg-gradient-to-br from-primary to-secondary'
+                              i === 0 ? 'bg-amber-400/20 border-amber-500/30' : 'bg-primary/20 border-primary/30'
                             )}>
                               <span className="h-1.5 w-1.5 rounded-full bg-white" />
                             </div>
@@ -481,7 +481,7 @@ export default function DashboardPage() {
                     Teaching
                   </p>
                   {!user ? (
-                    <div className="flex flex-wrap gap-1.5">{[0,1,2].map(i => <Skeleton key={i} className="h-6 w-16 rounded-full" />)}</div>
+                    <div className="flex flex-wrap gap-1.5">{[0, 1, 2].map(i => <Skeleton key={i} className="h-6 w-16 rounded-full" />)}</div>
                   ) : user.skillsOffered.length === 0 ? (
                     <p className="text-xs text-muted-foreground">No skills added. <Link to="/onboarding" className="text-primary hover:underline font-medium">Add them →</Link></p>
                   ) : (
@@ -501,7 +501,7 @@ export default function DashboardPage() {
                     Learning
                   </p>
                   {!user ? (
-                    <div className="flex flex-wrap gap-1.5">{[0,1,2].map(i => <Skeleton key={i} className="h-6 w-16 rounded-full" />)}</div>
+                    <div className="flex flex-wrap gap-1.5">{[0, 1, 2].map(i => <Skeleton key={i} className="h-6 w-16 rounded-full" />)}</div>
                   ) : user.skillsWanted.length === 0 ? (
                     <p className="text-xs text-muted-foreground">No skills added yet.</p>
                   ) : (
@@ -530,7 +530,7 @@ export default function DashboardPage() {
                 <CardContent className="p-5">
                   {loading ? (
                     <div className="space-y-4">
-                      {[0,1,2].map(i => (
+                      {[0, 1, 2].map(i => (
                         <div key={i} className="flex items-start gap-3">
                           <Skeleton className="h-8 w-8 rounded-xl" />
                           <Skeleton className="h-10 flex-1 rounded-xl" />

@@ -4,6 +4,7 @@ import com.skillex.dto.common.ApiResponse;
 import com.skillex.model.User;
 import com.skillex.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
+import org.springframework.lang.NonNull;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
@@ -21,7 +22,7 @@ public class UserController {
 
     /** GET /api/users/{id} */
     @GetMapping("/{id}")
-    public ResponseEntity<ApiResponse<User>> getProfile(@PathVariable String id) {
+    public ResponseEntity<ApiResponse<User>> getProfile(@PathVariable @NonNull String id) {
         return userRepository.findById(id)
             .map(user -> ResponseEntity.ok(ApiResponse.ok(user)))
             .orElse(ResponseEntity.notFound().build());
@@ -29,6 +30,7 @@ public class UserController {
 
     /** GET /api/users/me  — returns profile of currently authenticated user */
     @GetMapping("/me")
+    @SuppressWarnings("null")
     public ResponseEntity<ApiResponse<User>> myProfile(Authentication authentication) {
         String userId = (String) authentication.getPrincipal();
         return userRepository.findById(userId)

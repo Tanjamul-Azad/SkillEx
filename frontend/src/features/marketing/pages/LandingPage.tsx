@@ -54,11 +54,17 @@ const Section = React.memo(({ children, className, id }: {
 });
 Section.displayName = 'Section';
 
-const SectionLabel = ({ children }: { children: React.ReactNode }) => (
-  <motion.div variants={item} className="flex items-center justify-center mb-4">
-    <span className="inline-flex items-center gap-2 rounded-full bg-primary/10 border border-primary/20 px-4 py-1.5 text-xs font-semibold uppercase tracking-widest text-primary">
-      {children}
-    </span>
+const SectionLabel = ({ children, align = 'center' }: { children: React.ReactNode, align?: 'center' | 'start' }) => (
+  <motion.div variants={item} className={cn("flex items-center mb-6", align === 'center' ? 'justify-center' : 'justify-start')}>
+    <div className="inline-flex items-center gap-3">
+      {align === 'center' && (
+        <div className="h-[1px] w-8 md:w-16 bg-gradient-to-r from-transparent to-primary/40" />
+      )}
+      <span className="flex items-center gap-2 text-xs md:text-sm font-semibold uppercase tracking-[0.15em] text-primary/80">
+        {children}
+      </span>
+      <div className={cn("h-[1px] bg-gradient-to-l from-transparent to-primary/40", align === 'center' ? 'w-8 md:w-16' : 'w-16 md:w-32')} />
+    </div>
   </motion.div>
 );
 
@@ -166,12 +172,15 @@ const HeroSection = () => (
       animate="visible"
       className="relative z-10 mx-auto flex max-w-5xl flex-col items-center gap-8 px-4 text-center"
     >
-      {/* Social proof pill */}
+      {/* Social proof banner */}
       <motion.div variants={item}>
-        <Link to="/login" className="group inline-flex items-center gap-2 rounded-full border border-primary/20 bg-primary/5 px-5 py-2 text-sm font-medium text-primary transition-all hover:border-primary/40 hover:bg-primary/10">
-          <Sparkles className="h-3.5 w-3.5" />
-          <span>Trusted by 12,000+ students · 150+ universities</span>
-          <ChevronRight className="h-3.5 w-3.5 transition-transform group-hover:translate-x-0.5" />
+        <Link to="/login" className="group relative inline-flex items-center gap-3 rounded-full glass-subtle border-white/5 px-2 py-2 pr-5 text-sm font-medium text-foreground/80 transition-all hover:text-foreground hover:shadow-glow-sm overflow-hidden">
+          <div className="absolute inset-0 bg-gradient-to-r from-primary/10 via-accent/10 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-700 pointer-events-none" />
+          <div className="flex h-7 w-7 items-center justify-center rounded-full bg-primary/20 shrink-0">
+            <Sparkles className="h-3.5 w-3.5 text-primary" />
+          </div>
+          <span className="relative z-10">Trusted by <strong className="text-foreground font-semibold">12,000+ students</strong> &middot; 150+ universities</span>
+          <ChevronRight className="relative z-10 h-3.5 w-3.5 text-muted-foreground transition-transform group-hover:translate-x-1" />
         </Link>
       </motion.div>
 
@@ -389,7 +398,7 @@ const SkillChainSection = () => {
         <div className="grid items-center gap-16 lg:grid-cols-2">
           {/* Left copy */}
           <div className="space-y-6">
-            <SectionLabel><Zap className="h-3.5 w-3.5" /> Skill Chains</SectionLabel>
+            <SectionLabel align="start"><Zap className="h-3.5 w-3.5" /> Skill Chains</SectionLabel>
             <motion.h2 variants={item} className="font-headline text-4xl font-extrabold tracking-tight md:text-5xl text-balance">
               The magic of{' '}
               <span className="text-gradient">circular</span> learning

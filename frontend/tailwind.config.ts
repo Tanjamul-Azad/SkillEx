@@ -10,8 +10,8 @@ const config: Config = {
   theme: {
     extend: {
       fontFamily: {
-        body: ["DM Sans", "sans-serif"],
-        headline: ["Plus Jakarta Sans", "sans-serif"],
+        body: ["Figtree", "sans-serif"],
+        headline: ["Syne", "sans-serif"],
       },
       colors: {
         background: "hsl(var(--background))",

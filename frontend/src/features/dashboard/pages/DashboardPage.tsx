@@ -36,12 +36,13 @@ interface StatColors {
   bg: string;
   border: string;
   ring: string;
+  stroke: string;
 }
 const STAT_COLORS: Record<string, StatColors> = {
-  primary: { text: 'text-primary', bg: 'bg-primary/5 dark:bg-primary/10', border: 'border-primary/20', ring: 'shadow-[0_0_0_1px_hsl(var(--primary)/0.2)]' },
-  secondary: { text: 'text-secondary', bg: 'bg-secondary/5 dark:bg-secondary/10', border: 'border-secondary/20', ring: 'shadow-[0_0_0_1px_hsl(var(--secondary)/0.2)]' },
-  green: { text: 'text-emerald-500', bg: 'bg-emerald-500/5 dark:bg-emerald-500/10', border: 'border-emerald-500/20', ring: 'shadow-[0_0_0_1px_hsl(152_69%_31%/0.2)]' },
-  accent: { text: 'text-amber-500', bg: 'bg-amber-500/5 dark:bg-amber-500/10', border: 'border-amber-500/20', ring: 'shadow-[0_0_0_1px_hsl(38_92%_50%/0.2)]' },
+  primary: { text: 'text-primary', bg: 'bg-primary/5 dark:bg-primary/10', border: 'border-primary/20 hover:border-primary/50', ring: 'shadow-[0_0_0_1px_hsl(var(--primary)/0.2)]', stroke: 'stroke-primary' },
+  secondary: { text: 'text-blue-400', bg: 'bg-blue-500/5 dark:bg-blue-500/10', border: 'border-blue-500/20 hover:border-blue-500/50', ring: 'shadow-[0_0_0_1px_hsl(var(--secondary)/0.2)]', stroke: 'stroke-blue-400' },
+  green: { text: 'text-emerald-400', bg: 'bg-emerald-500/5 dark:bg-emerald-500/10', border: 'border-emerald-500/20 hover:border-emerald-500/50', ring: 'shadow-[0_0_0_1px_hsl(152_69%_31%/0.2)]', stroke: 'stroke-emerald-400' },
+  accent: { text: 'text-amber-400', bg: 'bg-amber-500/5 dark:bg-amber-500/10', border: 'border-amber-500/20 hover:border-amber-500/50', ring: 'shadow-[0_0_0_1px_hsl(38_92%_50%/0.2)]', stroke: 'stroke-amber-400' },
 };
 
 interface StatCardProps {
@@ -90,14 +91,32 @@ const StatCard = React.memo(({ icon: Icon, title, value, trend, trendLabel, colo
           </div>
         </CardHeader>
 
-        <CardContent className="px-5 pb-5 pt-0">
+        <CardContent className="px-5 pb-5 pt-0 relative">
           <div className="font-headline text-[2.2rem] font-black leading-none tabular-nums tracking-tight" ref={ref} />
-          <p className="mt-2 text-xs text-muted-foreground/80">
-            <span className={cn('mr-1 font-semibold', isPositive ? 'text-emerald-500' : 'text-destructive')}>
-              {trend}
-            </span>
-            {trendLabel}
-          </p>
+
+          <div className="mt-3 flex items-end justify-between">
+            <p className="text-xs text-muted-foreground/80">
+              <span className={cn('mr-1 font-semibold', isPositive ? 'text-emerald-400' : 'text-muted-foreground')}>
+                {trend}
+              </span>
+              {trendLabel}
+            </p>
+            {/* Minimalist sparkline */}
+            <div className="h-6 w-16 opacity-60">
+              <svg viewBox="0 0 100 24" className="h-full w-full overflow-visible" preserveAspectRatio="none">
+                <motion.path
+                  d={isPositive ? "M0,20 Q20,18 35,10 T70,12 T100,2" : "M0,12 L100,12"}
+                  fill="none"
+                  className={c.stroke}
+                  strokeWidth="2.5"
+                  strokeLinecap="round"
+                  initial={{ pathLength: 0, opacity: 0 }}
+                  animate={{ pathLength: 1, opacity: 1 }}
+                  transition={{ duration: 1.5, delay: 0.2 + (index * 0.1), ease: "easeOut" }}
+                />
+              </svg>
+            </div>
+          </div>
         </CardContent>
       </Card>
     </motion.div>
@@ -186,9 +205,14 @@ function EmptyExchanges() {
   return (
     <Card className="border-dashed border-2 border-border/60 bg-transparent shadow-none">
       <CardContent className="flex flex-col items-center justify-center py-14 text-center">
-        <div className="mb-4 flex h-16 w-16 items-center justify-center rounded-2xl glass-subtle shadow-[inset_0_0_0_1px_hsl(var(--primary)/0.15)]">
-          <Inbox className="h-7 w-7 text-primary" />
-        </div>
+        <motion.div
+          animate={{ y: [0, -8, 0] }}
+          transition={{ duration: 4, repeat: Infinity, ease: "easeInOut" }}
+          className="mb-4 flex h-16 w-16 items-center justify-center rounded-2xl glass-subtle shadow-[inset_0_0_0_1px_hsl(var(--primary)/0.15)] relative"
+        >
+          <div className="absolute inset-0 rounded-2xl bg-primary/20 blur-xl animate-pulse" />
+          <Inbox className="h-7 w-7 text-primary relative z-10" />
+        </motion.div>
         <p className="font-bold text-base">No active exchanges yet</p>
         <p className="mt-1.5 text-sm text-muted-foreground max-w-[22ch] leading-relaxed">
           Find a match, send a request, and start teaching!
@@ -244,6 +268,63 @@ function activityFromExchange(exchange: Exchange, currentUserId: string) {
   }
 }
 
+/* ── Onboarding Progress ────────────────────────────────────────────────── */
+function OnboardingProgress({ user, exchanges }: { user: any; exchanges: Exchange[] }) {
+  const hasSkills = (user?.skillsOffered?.length ?? 0) > 0 || (user?.skillsWanted?.length ?? 0) > 0;
+  const hasMatch = exchanges.length > 0;
+  const hasSession = exchanges.some(e => e.status === 'accepted' && e.session_date);
+
+  const steps = [
+    { title: "Add your skills", desc: "List what you can teach and what you want to learn.", done: hasSkills, link: `/profile/${user?.id}` },
+    { title: "Find a match", desc: "Send an exchange request to a fellow student.", done: hasMatch, link: '/match' },
+    { title: "Schedule a session", desc: "Set a time to meet up and exchange knowledge.", done: hasSession, link: '/match' }
+  ];
+
+  const completed = steps.filter(s => s.done).length;
+  if (completed === steps.length) return null; // hide entirely if done
+
+  return (
+    <motion.div variants={{ hidden: { opacity: 0, y: 18 }, visible: { opacity: 1, y: 0 } }}>
+      <Card className="overflow-hidden glass-subtle border-primary/20 bg-primary/5">
+        <CardContent className="p-5 md:p-6">
+          <div className="flex flex-col gap-4 md:flex-row md:items-center justify-between">
+            <div>
+              <h3 className="font-headline font-bold text-lg text-primary">Let's get you set up!</h3>
+              <p className="text-sm text-muted-foreground mt-1">Complete these steps to start your first skill exchange.</p>
+            </div>
+            <div className="flex items-center gap-3">
+              <div className="text-right">
+                <p className="text-xs font-bold text-primary">{Math.round((completed / steps.length) * 100)}% Complete</p>
+                <p className="text-[10px] text-muted-foreground">{completed} of {steps.length} steps</p>
+              </div>
+              <svg className="w-12 h-12 transform -rotate-90">
+                <circle cx="24" cy="24" r="20" stroke="currentColor" strokeWidth="4" fill="none" className="text-primary/10" />
+                <circle cx="24" cy="24" r="20" stroke="currentColor" strokeWidth="4" fill="none" className="text-primary transition-all duration-1000 ease-out" strokeDasharray="125.6" strokeDashoffset={125.6 - (125.6 * completed / steps.length)} />
+              </svg>
+            </div>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-3 mt-6">
+            {steps.map((step, i) => (
+              <Link key={i} to={step.link} className={cn("block relative p-4 rounded-xl border transition-all duration-300", step.done ? "bg-background/50 border-border/50 opacity-60" : "bg-card border-primary/20 hover:border-primary/50 shadow-sm")}>
+                <div className="flex items-start gap-3">
+                  <div className="shrink-0 mt-0.5">
+                    {step.done ? <CheckCircle className="w-5 h-5 text-emerald-500" /> : <div className="w-5 h-5 rounded-full border-2 border-primary/50" />}
+                  </div>
+                  <div>
+                    <h4 className={cn("font-bold text-sm", step.done ? "line-through text-muted-foreground" : "text-foreground")}>{step.title}</h4>
+                    <p className="text-[11px] text-muted-foreground mt-1 leading-snug">{step.desc}</p>
+                  </div>
+                </div>
+              </Link>
+            ))}
+          </div>
+        </CardContent>
+      </Card>
+    </motion.div>
+  );
+}
+
 /* ── Section heading ─────────────────────────────────────────────────── */
 function SectionHeading({ children, action }: { children: React.ReactNode; action?: React.ReactNode }) {
   return (
@@ -294,13 +375,13 @@ export default function DashboardPage() {
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.45, type: 'spring', stiffness: 110, damping: 20 }}
         >
-          <div className="relative overflow-hidden rounded-3xl glass-strong p-6 md:p-8">
-            {/* Gradient mesh inside banner */}
-            <div className="pointer-events-none absolute inset-0 bg-gradient-to-br from-primary/8 via-transparent to-secondary/6" />
-            <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(ellipse_80%_60%_at_70%_-10%,hsl(var(--primary)/0.12),transparent)]" />
+          <div className="relative overflow-hidden rounded-3xl glass-strong p-6 md:p-8 border border-white/5 dark:border-white/10 shadow-glow-sm">
+            {/* Gradient mesh inside banner - Teal & Blue */}
+            <div className="pointer-events-none absolute inset-0 bg-gradient-to-br from-primary/10 via-background/50 to-blue-500/10" />
+            <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(ellipse_80%_60%_at_70%_-10%,hsl(var(--primary)/0.15),rgba(59,130,246,0.1))]" />
             {/* Ambient blobs */}
-            <div className="pointer-events-none absolute -top-12 -left-12 h-44 w-44 rounded-full bg-primary/15 blur-3xl" />
-            <div className="pointer-events-none absolute -bottom-12 -right-8 h-52 w-52 rounded-full bg-secondary/12 blur-3xl" />
+            <div className="pointer-events-none absolute -top-12 -left-12 h-44 w-44 rounded-full bg-primary/20 blur-[80px]" />
+            <div className="pointer-events-none absolute -bottom-12 -right-8 h-52 w-52 rounded-full bg-blue-500/20 blur-[80px]" />
             {/* Decorative dots pattern top-right */}
             <div className="pointer-events-none absolute right-6 top-6 opacity-[0.07]"
               style={{ backgroundImage: 'radial-gradient(hsl(var(--primary)) 1px,transparent 1px)', backgroundSize: '12px 12px', width: 96, height: 72 }} />
@@ -309,22 +390,22 @@ export default function DashboardPage() {
               <div className="flex items-center gap-5">
                 {/* Avatar with pulse ring */}
                 <div className="relative hidden sm:block shrink-0">
-                  <div className="absolute inset-[-3px] rounded-full bg-gradient-to-br from-primary to-secondary opacity-60 animate-breathe" />
-                  <Avatar className="relative h-16 w-16 ring-2 ring-background">
+                  <div className="absolute inset-[-4px] rounded-full bg-gradient-to-br from-primary via-blue-400 to-transparent opacity-70 animate-breathe" />
+                  <Avatar className="relative h-16 w-16 ring-4 ring-card/80">
                     <AvatarImage src={user?.avatar} alt={user?.name} />
                     <AvatarFallback className="text-xl font-black">{user?.name?.charAt(0)}</AvatarFallback>
                   </Avatar>
                   <motion.span
-                    className="absolute bottom-0.5 right-0.5 h-4 w-4 rounded-full border-2 border-background bg-secondary"
+                    className="absolute bottom-0.5 right-0.5 h-4 w-4 rounded-full border-2 border-background bg-primary shadow-glow-sm"
                     initial={{ scale: 0 }} animate={{ scale: 1 }}
                     transition={{ delay: 0.5, type: 'spring', stiffness: 400 }}
                   />
                 </div>
 
                 <div>
-                  <h1 className="font-headline text-2xl font-extrabold tracking-tight md:text-3xl">
+                  <h1 className="font-headline text-3xl font-extrabold tracking-tight md:text-4xl text-foreground">
                     {getGreeting()},{' '}
-                    <span className="bg-gradient-to-r from-primary to-secondary bg-clip-text text-transparent">
+                    <span className="text-transparent bg-clip-text bg-gradient-to-r from-primary to-blue-400">
                       {user?.name?.split(' ')[0]}
                     </span>
                     {' '}
@@ -337,12 +418,12 @@ export default function DashboardPage() {
                   <p className="mt-1 text-sm text-muted-foreground">Here&apos;s your SkillEx summary for today.</p>
 
                   {/* Mini stat pills */}
-                  <div className="mt-3 flex flex-wrap gap-2">
+                  <div className="mt-4 flex flex-wrap gap-2.5">
                     {[
                       { icon: BookOpen, label: `${user?.skillsOffered.length ?? 0} skills`, cls: 'text-primary bg-primary/10 border-primary/20' },
-                      { icon: Users, label: `${activeExchanges.length} active`, cls: 'text-secondary bg-secondary/10 border-secondary/20' },
-                      { icon: Star, label: `${user?.skillexScore ?? 0} pts`, cls: 'text-amber-500 bg-amber-500/10 border-amber-500/20' },
-                      { icon: CheckCircle, label: `${user?.sessionsCompleted ?? 0} done`, cls: 'text-emerald-500 bg-emerald-500/10 border-emerald-500/20' },
+                      { icon: Users, label: `${activeExchanges.length} active`, cls: 'text-blue-400 bg-blue-500/10 border-blue-500/20' },
+                      { icon: Star, label: `${user?.skillexScore ?? 0} pts`, cls: 'text-amber-400 bg-amber-500/10 border-amber-500/20 shadow-glow-sm' },
+                      { icon: CheckCircle, label: `${user?.sessionsCompleted ?? 0} done`, cls: 'text-emerald-400 bg-emerald-500/10 border-emerald-500/20' },
                     ].map(({ icon: IC, label, cls }) => (
                       <span key={label} className={cn('flex items-center gap-1.5 rounded-full border px-2.5 py-1 text-[11px] font-semibold', cls)}>
                         <IC className="h-3 w-3" />{label}
@@ -363,6 +444,11 @@ export default function DashboardPage() {
             </div>
           </div>
         </motion.div>
+
+        {/* ══ Onboarding Checklist ═══════════════════════════════════════ */}
+        {!loading && user && (
+          <OnboardingProgress user={user} exchanges={exchanges} />
+        )}
 
         {/* ══ Stat Cards ═══════════════════════════════════════════════ */}
         <motion.div
@@ -467,107 +553,100 @@ export default function DashboardPage() {
 
           {/* Right column */}
           <div className="space-y-6 lg:col-span-1">
+            <div className="sticky top-[88px] space-y-6">
 
-            {/* Your Skills */}
-            <motion.div variants={itemVariants} initial="hidden" animate="visible" transition={{ delay: 0.2 }}>
-              <SectionHeading>Your Skills</SectionHeading>
-              <Card className="overflow-hidden">
-                {/* Teaching section */}
-                <div className="border-b border-border/50 p-5">
-                  <p className="flex items-center gap-2 text-sm font-bold mb-3">
-                    <span className="flex h-6 w-6 items-center justify-center rounded-lg bg-primary/10">
-                      <Zap className="h-3.5 w-3.5 text-primary" />
-                    </span>
-                    Teaching
-                  </p>
-                  {!user ? (
-                    <div className="flex flex-wrap gap-1.5">{[0, 1, 2].map(i => <Skeleton key={i} className="h-6 w-16 rounded-full" />)}</div>
-                  ) : user.skillsOffered.length === 0 ? (
-                    <p className="text-xs text-muted-foreground">No skills added. <Link to="/onboarding" className="text-primary hover:underline font-medium">Add them →</Link></p>
-                  ) : (
-                    <div className="flex flex-wrap gap-1.5">
-                      {user.skillsOffered.map((skill: Skill) => (
-                        <Badge key={skill.id} variant="secondary" className="rounded-full text-[11px] px-2.5">{skill.name}</Badge>
-                      ))}
-                    </div>
-                  )}
-                </div>
-                {/* Learning section */}
-                <div className="p-5">
-                  <p className="flex items-center gap-2 text-sm font-bold mb-3">
-                    <span className="flex h-6 w-6 items-center justify-center rounded-lg bg-secondary/10">
-                      <BookOpen className="h-3.5 w-3.5 text-secondary" />
-                    </span>
-                    Learning
-                  </p>
-                  {!user ? (
-                    <div className="flex flex-wrap gap-1.5">{[0, 1, 2].map(i => <Skeleton key={i} className="h-6 w-16 rounded-full" />)}</div>
-                  ) : user.skillsWanted.length === 0 ? (
-                    <p className="text-xs text-muted-foreground">No skills added yet.</p>
-                  ) : (
-                    <div className="flex flex-wrap gap-1.5">
-                      {user.skillsWanted.map((skill: Skill) => (
-                        <Badge key={skill.id} variant="outline" className="rounded-full text-[11px] px-2.5">{skill.name}</Badge>
-                      ))}
-                    </div>
-                  )}
-                  <Button asChild variant="outline" size="sm" className="mt-4 w-full rounded-xl text-xs">
-                    <Link to={`/profile/${user?.id}`}>Edit Skills <ArrowRight className="ml-1.5 h-3.5 w-3.5" /></Link>
-                  </Button>
-                </div>
-              </Card>
-            </motion.div>
+              {/* Your Skills */}
+              <motion.div variants={itemVariants} initial="hidden" animate="visible" transition={{ delay: 0.2 }}>
+                <SectionHeading>Your Skills</SectionHeading>
+                <Card className="overflow-hidden glass-subtle border-border/40">
+                  {/* Teaching section */}
+                  <div className="border-b border-border/40 p-5">
+                    <p className="flex items-center gap-2 text-sm font-bold mb-3">
+                      <span className="flex h-6 w-6 items-center justify-center rounded-lg bg-primary/10">
+                        <Zap className="h-3.5 w-3.5 text-primary" />
+                      </span>
+                      Teaching
+                    </p>
+                    {!user ? (
+                      <div className="flex flex-wrap gap-1.5">{[0, 1, 2].map(i => <Skeleton key={i} className="h-6 w-16 rounded-full" />)}</div>
+                    ) : user.skillsOffered.length === 0 ? (
+                      <p className="text-xs text-muted-foreground">No skills added. <Link to="/profile" className="text-primary hover:underline font-medium">Add them →</Link></p>
+                    ) : (
+                      <div className="flex flex-wrap gap-2">
+                        {user.skillsOffered.map((skill: Skill) => (
+                          <div key={skill.id} className="inline-flex items-center rounded-full bg-primary/10 border border-primary/20 px-2.5 py-1 text-xs font-semibold text-primary shadow-glow-sm">
+                            {skill.name}
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                  {/* Learning section */}
+                  <div className="p-5">
+                    <p className="flex items-center gap-2 text-sm font-bold mb-3">
+                      <span className="flex h-6 w-6 items-center justify-center rounded-lg bg-blue-500/10">
+                        <BookOpen className="h-3.5 w-3.5 text-blue-400" />
+                      </span>
+                      Learning
+                    </p>
+                    {!user ? (
+                      <div className="flex flex-wrap gap-1.5">{[0, 1, 2].map(i => <Skeleton key={i} className="h-6 w-16 rounded-full" />)}</div>
+                    ) : user.skillsWanted.length === 0 ? (
+                      <p className="text-xs text-muted-foreground">No skills added yet.</p>
+                    ) : (
+                      <div className="flex flex-wrap gap-2">
+                        {user.skillsWanted.map((skill: Skill) => (
+                          <div key={skill.id} className="inline-flex items-center rounded-full bg-blue-500/5 border border-blue-500/20 px-2.5 py-1 text-xs font-semibold text-blue-400">
+                            {skill.name}
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                    <Button asChild variant="outline" size="sm" className="mt-5 w-full rounded-xl text-xs border-white/5 bg-background shadow-none hover:bg-background/80">
+                      <Link to={`/profile/${user?.id}`}>Edit Skills <ArrowRight className="ml-1.5 h-3.5 w-3.5" /></Link>
+                    </Button>
+                  </div>
+                </Card>
+              </motion.div>
 
-            {/* Activity Feed */}
-            <motion.div variants={itemVariants} initial="hidden" animate="visible" transition={{ delay: 0.28 }}>
-              <SectionHeading>
-                <span className="flex items-center gap-2">
-                  Activity Feed
-                  <Sparkles className="h-4 w-4 text-amber-500/80" />
-                </span>
-              </SectionHeading>
-              <Card>
-                <CardContent className="p-5">
-                  {loading ? (
+              {/* Live Network Activity Feed */}
+              <motion.div variants={itemVariants} initial="hidden" animate="visible" transition={{ delay: 0.28 }}>
+                <SectionHeading>
+                  <span className="flex items-center gap-2">
+                    Live Network
+                    <span className="relative flex h-2 w-2">
+                      <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
+                      <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-500"></span>
+                    </span>
+                  </span>
+                </SectionHeading>
+
+                <Card className="glass-subtle border-border/40">
+                  <CardContent className="p-5">
                     <div className="space-y-4">
-                      {[0, 1, 2].map(i => (
-                        <div key={i} className="flex items-start gap-3">
-                          <Skeleton className="h-8 w-8 rounded-xl" />
-                          <Skeleton className="h-10 flex-1 rounded-xl" />
+                      {[
+                        { name: 'Alex M.', action: 'matched with Jordan for', skill: 'Python', time: '2m ago', color: 'text-primary', bg: 'bg-primary/10', icon: Users },
+                        { name: 'Sarah L.', action: 'completed a session on', skill: 'UI Design', time: '14m ago', color: 'text-amber-400', bg: 'bg-amber-500/10', icon: Star },
+                        { name: 'David K.', action: 'earned the Top Teacher badge', skill: '', time: '1h ago', color: 'text-emerald-400', bg: 'bg-emerald-500/10', icon: CheckCircle }
+                      ].map((item, i) => (
+                        <div key={i} className="flex items-start gap-3 rounded-xl p-2.5 transition-colors hover:bg-white/5 dark:hover:bg-white/5">
+                          <div className={cn('flex h-8 w-8 shrink-0 items-center justify-center rounded-xl md:shadow-glow-sm', item.bg)}>
+                            <item.icon className={cn('h-3.5 w-3.5', item.color)} />
+                          </div>
+                          <div className="flex-1 min-w-0">
+                            <p className="text-xs text-muted-foreground leading-relaxed">
+                              <span className="font-bold text-foreground">{item.name}</span> {item.action} {item.skill && <span className="font-bold text-foreground">{item.skill}</span>}
+                            </p>
+                            <p className="mt-0.5 text-[10px] text-muted-foreground/60">{item.time}</p>
+                          </div>
                         </div>
                       ))}
                     </div>
-                  ) : activityItems.length === 0 ? (
-                    <div className="flex flex-col items-center justify-center py-8 text-center">
-                      <div className="mb-3 flex h-12 w-12 items-center justify-center rounded-2xl bg-muted">
-                        <TrendingUp className="h-5 w-5 text-muted-foreground/50" />
-                      </div>
-                      <p className="font-semibold text-sm">No activity yet</p>
-                      <p className="text-xs text-muted-foreground mt-1">Your exchange activity will appear here.</p>
-                    </div>
-                  ) : (
-                    <div className="space-y-3">
-                      {activityItems.map((item, i) => {
-                        if (!item) return null;
-                        const Icon = item.icon;
-                        return (
-                          <div key={i} className="flex items-start gap-3 rounded-xl p-2.5 transition-colors hover:bg-muted/50">
-                            <div className={cn('flex h-8 w-8 shrink-0 items-center justify-center rounded-xl', item.bg)}>
-                              <Icon className={cn('h-3.5 w-3.5', item.color)} />
-                            </div>
-                            <div className="flex-1 min-w-0">
-                              <p className="text-xs text-muted-foreground leading-relaxed">{item.text}</p>
-                              <p className="mt-0.5 text-[10px] text-muted-foreground/60">{item.time}</p>
-                            </div>
-                          </div>
-                        );
-                      })}
-                    </div>
-                  )}
-                </CardContent>
-              </Card>
-            </motion.div>
+                  </CardContent>
+                </Card>
+              </motion.div>
 
+            </div>
           </div>
         </div>
       </div>

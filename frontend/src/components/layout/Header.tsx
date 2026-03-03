@@ -92,16 +92,16 @@ export default function Header() {
               key={link.href}
               to={link.href}
               className={cn(
-                'relative rounded-xl px-3.5 py-2 text-sm font-medium transition-colors duration-200',
+                'relative px-4 py-2 text-sm font-semibold transition-colors duration-200 tracking-wide',
                 pathname === link.href
-                  ? 'text-foreground'
+                  ? 'text-primary'
                   : 'text-muted-foreground hover:text-foreground'
               )}
             >
               {pathname === link.href && (
                 <motion.span
-                  layoutId="header-nav-pill"
-                  className="absolute inset-0 rounded-xl bg-gradient-to-br from-primary/15 to-secondary/10 border border-primary/20"
+                  layoutId="header-nav-line"
+                  className="absolute bottom-0 left-0 right-0 h-[2px] bg-primary shadow-[0_0_8px_hsl(var(--primary))]"
                   transition={{ type: 'spring', stiffness: 400, damping: 30 }}
                 />
               )}

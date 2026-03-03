@@ -187,8 +187,8 @@ const FilterSidebar: FC<{ filters: Filters; setFilters: (f: Filters) => void }> 
           </AccordionItem>
         </Accordion>
       </div>
-      <div className="border-t p-4">
-        <Button className="w-full font-bold gradient-bg text-primary-foreground">
+      <div className="border-t border-white/10 dark:border-white/5 p-4">
+        <Button className="w-full font-bold gradient-bg text-primary-foreground shadow-glow">
           Apply Filters {activeFilterCount > 0 && `(${activeFilterCount})`}
         </Button>
       </div>
@@ -236,13 +236,13 @@ const FilterSidebar: FC<{ filters: Filters; setFilters: (f: Filters) => void }> 
 FilterSidebar.displayName = 'FilterSidebar';
 
 const AIBestMatchCard: FC<{ match: MatchUser; currentUser: User | null }> = React.memo(({ match, currentUser }) => {
-    const [requestOpen, setRequestOpen] = useState(false);
-    const myName = currentUser?.name ?? 'You';
-    const score = match.compatibilityScore;
-    return (
-      <>
+  const [requestOpen, setRequestOpen] = useState(false);
+  const myName = currentUser?.name ?? 'You';
+  const score = match.compatibilityScore;
+  return (
+    <>
       <motion.div
-        className="relative mb-8 rounded-lg border-2 border-transparent bg-card p-6 shadow-xl before:absolute before:inset-0 before:-z-10 before:animate-gradient-pan before:rounded-[inherit] before:bg-[conic-gradient(from_180deg_at_50%_50%,#FBBF24_0deg,#F472B6_180deg,#6EE7B7_270deg,#FBBF24_360deg)] before:p-px"
+        className="relative mb-8 rounded-2xl glass-strong p-6 shadow-glow"
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ delay: 0.2 }}
@@ -273,8 +273,8 @@ const AIBestMatchCard: FC<{ match: MatchUser; currentUser: User | null }> = Reac
               {match.theyOffer && <div className="flex-1 rounded-md border p-2 text-sm"><p className="font-bold">{match.name.split(' ')[0]} teaches:</p><p>{match.theyOffer.name}</p></div>}
             </div>
             <div className="flex gap-2">
-              <Button className="w-full font-bold gradient-bg text-primary-foreground" onClick={() => setRequestOpen(true)}>Request Exchange</Button>
-              <Button variant="outline" className="w-full" asChild><Link to={`/profile/${match.id}`}>View Profile</Link></Button>
+              <Button className="w-full font-bold gradient-bg text-primary-foreground shadow-glow" onClick={() => setRequestOpen(true)}>Request Exchange</Button>
+              <Button variant="outline" className="w-full glass-subtle text-foreground hover:bg-white/10" asChild><Link to={`/profile/${match.id}`}>View Profile</Link></Button>
             </div>
           </div>
         </div>
@@ -284,8 +284,8 @@ const AIBestMatchCard: FC<{ match: MatchUser; currentUser: User | null }> = Reac
         onClose={() => setRequestOpen(false)}
         targetUser={match as User}
       />
-      </>
-    );
+    </>
+  );
 });
 AIBestMatchCard.displayName = 'AIBestMatchCard';
 
@@ -293,8 +293,9 @@ const MatchCard: FC<{ match: MatchUser }> = React.memo(({ match }) => {
   const [requestOpen, setRequestOpen] = useState(false);
   return (
     <>
-      <Card className="group h-full overflow-hidden border-border/60 transition-shadow hover:shadow-card-hover-glow">
-        <div className="h-0.5 w-full bg-gradient-to-r from-primary via-secondary to-accent opacity-60 group-hover:opacity-100 transition-opacity" />
+      <Card className="group h-full overflow-hidden transition-all duration-400 ease-snappy hover:-translate-y-1.5 hover:border-primary/40 hover:shadow-[0_12px_40px_-12px_hsl(var(--primary)/0.25),0_4px_12px_hsl(220_20%_40%/0.1)]">
+        {/* Animated sheen line */}
+        <div className="absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-white/40 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
         <CardContent className="relative p-5">
           <div className="absolute top-5 right-4"><MatchScoreRing score={match.compatibilityScore} size={48} /></div>
           <div className="flex items-center gap-3 pr-14">
@@ -340,13 +341,13 @@ const MatchCard: FC<{ match: MatchUser }> = React.memo(({ match }) => {
             <div className="flex items-center gap-1"><Zap className="h-3 w-3 text-primary" /> {match.skillexScore}</div>
           </div>
         </CardContent>
-        <div className="flex border-t border-border/50">
-          <Button variant="ghost" className="w-1/2 rounded-none rounded-bl-lg text-sm hover:bg-primary/5 transition-colors" asChild>
+        <div className="flex border-t border-white/10 dark:border-white/5">
+          <Button variant="ghost" className="w-1/2 rounded-none rounded-bl-2xl text-sm hover:bg-primary/10 transition-colors" asChild>
             <Link to={`/profile/${match.id}`}>View Profile</Link>
           </Button>
           <Button
             onClick={() => setRequestOpen(true)}
-            className="w-1/2 rounded-none rounded-br-lg gradient-bg text-primary-foreground font-bold text-sm hover:opacity-90 transition-opacity"
+            className="w-1/2 rounded-none rounded-br-2xl gradient-bg text-primary-foreground font-bold text-sm hover:opacity-90 transition-opacity"
           >
             Request
           </Button>
@@ -363,21 +364,21 @@ const MatchCard: FC<{ match: MatchUser }> = React.memo(({ match }) => {
 MatchCard.displayName = 'MatchCard';
 
 const ChainComingSoon = () => (
-  <div className="flex w-full flex-col items-center justify-center rounded-lg border-2 border-dashed bg-card py-20 text-center">
-    <div className="p-5 bg-primary/10 rounded-full"><Link2 className="h-12 w-12 text-primary" /></div>
+  <div className="flex w-full flex-col items-center justify-center rounded-3xl glass-subtle py-20 text-center shadow-[inset_0_0_0_1px_rgba(255,255,255,0.1)]">
+    <div className="p-5 bg-primary/10 rounded-full shadow-glow-sm"><Link2 className="h-12 w-12 text-primary" /></div>
     <h2 className="mt-6 text-2xl font-bold font-headline">Skill Chains Coming Soon</h2>
     <p className="mt-2 max-w-sm text-muted-foreground">Multi-person skill exchange chains are under development. Check back soon!</p>
   </div>
 );
 
 const LoadingSkeletons = () => (
-    <div className="grid grid-cols-1 gap-6 md:grid-cols-2 xl:grid-cols-3">
-        {[...Array(6)].map((_, i) => <Skeleton key={i} variant="card" />)}
-    </div>
+  <div className="grid grid-cols-1 gap-6 md:grid-cols-2 xl:grid-cols-3">
+    {[...Array(6)].map((_, i) => <Skeleton key={i} variant="card" />)}
+  </div>
 );
 
 const EmptyState: FC<{ onReset: () => void, isChain?: boolean }> = ({ onReset, isChain }) => (
-    <div className="flex w-full flex-col items-center justify-center rounded-lg border-2 border-dashed bg-card py-20 text-center"><div className="p-5 bg-primary/10 rounded-full"><ServerCrash className="h-12 w-12 text-primary" /></div><h2 className="mt-6 text-2xl font-bold font-headline">{isChain ? 'No Chains Found' : 'No Matches Found'}</h2><p className="mt-2 max-w-sm text-muted-foreground">{isChain ? 'There are no multi-person skill chains available for you right now.' : 'Try adjusting your filters to find more skill exchange opportunities.'}</p><Button onClick={onReset} className="mt-6 gap-2"><RefreshCw /> Reset Filters</Button></div>
+  <div className="flex w-full flex-col items-center justify-center rounded-3xl glass-subtle py-20 text-center shadow-[inset_0_0_0_1px_rgba(255,255,255,0.1)]"><div className="p-5 bg-primary/10 rounded-full shadow-glow-sm"><ServerCrash className="h-12 w-12 text-primary" /></div><h2 className="mt-6 text-2xl font-bold font-headline">{isChain ? 'No Chains Found' : 'No Matches Found'}</h2><p className="mt-2 max-w-sm text-muted-foreground">{isChain ? 'There are no multi-person skill chains available for you right now.' : 'Try adjusting your filters to find more skill exchange opportunities.'}</p><Button onClick={onReset} className="mt-6 gap-2 glass-strong"><RefreshCw className="h-4 w-4" /> Reset Filters</Button></div>
 );
 
 export default function MatchPage() {
@@ -391,22 +392,22 @@ export default function MatchPage() {
 
   const filteredMatches = useMemo(() => {
     return users.filter((u) => {
-        const matchesCategory = filters.categories.length === 0
-          || u.skillsOffered.some(s => filters.categories.includes(s.category))
-          || u.skillsWanted.some(s => filters.categories.includes(s.category));
-        const matchesLevel = filters.levels.length === 0
-          || u.skillsOffered.some(s => filters.levels.includes(s.level))
-          || u.skillsWanted.some(s => filters.levels.includes(s.level));
-        const matchesCompatibility = u.compatibilityScore >= filters.compatibility[0];
-        const matchesRating = u.rating >= filters.rating;
-        return matchesCategory && matchesLevel && matchesCompatibility && matchesRating;
+      const matchesCategory = filters.categories.length === 0
+        || u.skillsOffered.some(s => filters.categories.includes(s.category))
+        || u.skillsWanted.some(s => filters.categories.includes(s.category));
+      const matchesLevel = filters.levels.length === 0
+        || u.skillsOffered.some(s => filters.levels.includes(s.level))
+        || u.skillsWanted.some(s => filters.levels.includes(s.level));
+      const matchesCompatibility = u.compatibilityScore >= filters.compatibility[0];
+      const matchesRating = u.rating >= filters.rating;
+      return matchesCategory && matchesLevel && matchesCompatibility && matchesRating;
     }).sort((a, b) => {
-        switch (sortOption) {
-            case 'rating': return b.rating - a.rating;
-            case 'sessions': return b.sessionsCompleted - a.sessionsCompleted;
-            case 'newest': return new Date(b.joinedAt).getTime() - new Date(a.joinedAt).getTime();
-            default: return b.compatibilityScore - a.compatibilityScore;
-        }
+      switch (sortOption) {
+        case 'rating': return b.rating - a.rating;
+        case 'sessions': return b.sessionsCompleted - a.sessionsCompleted;
+        case 'newest': return new Date(b.joinedAt).getTime() - new Date(a.joinedAt).getTime();
+        default: return b.compatibilityScore - a.compatibilityScore;
+      }
     });
   }, [users, filters, sortOption]);
 
@@ -414,7 +415,7 @@ export default function MatchPage() {
   const otherMatches = useMemo(() => (activeTab === 'direct' && filteredMatches.length > 0) ? filteredMatches.slice(1) : [], [filteredMatches, activeTab]);
 
   const containerVariants = { hidden: { opacity: 0 }, visible: { opacity: 1, transition: { staggerChildren: 0.05 } } };
-  const itemVariants = { hidden: { opacity: 0, y: 20 }, visible: { opacity: 1, y: 0, transition: {type: 'spring', stiffness: 100} } };
+  const itemVariants = { hidden: { opacity: 0, y: 20 }, visible: { opacity: 1, y: 0, transition: { type: 'spring', stiffness: 100 } } };
 
   return (
     <DashboardLayout>
@@ -425,35 +426,35 @@ export default function MatchPage() {
             <motion.div initial={{ opacity: 0, y: -20 }} animate={{ opacity: 1, y: 0 }}>
               <h1 className="font-headline text-4xl font-extrabold tracking-tight">Find Your <span className="text-gradient-animated">Skill Match</span></h1>
               <p className="mt-2 text-muted-foreground">AI-powered recommendations based on your unique skill profile.</p>
-              <div className="relative mt-6"><Search className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground" /><Input placeholder="Search by skill, name, or university..." className="pl-10 text-base" value={filters.search} onChange={(e) => setFilters({ ...filters, search: e.target.value })}/></div>
+              <div className="relative mt-6"><Search className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground" /><Input placeholder="Search by skill, name, or university..." className="pl-10 text-base" value={filters.search} onChange={(e) => setFilters({ ...filters, search: e.target.value })} /></div>
             </motion.div>
 
             <div className="relative mt-6">
               <div className="border-b"><div className="flex space-x-2">
-                  {[{id: 'direct', label: 'Direct Matches'}, {id: 'chain', label: 'Skill Chains'}].map(tab => (
-                      <button key={tab.id} onClick={() => setActiveTab(tab.id as any)} className={cn("relative py-2 px-3 font-medium transition-colors", activeTab === tab.id ? 'text-primary' : 'text-muted-foreground hover:text-foreground')}>
-                          {tab.label}
-                          {activeTab === tab.id && <motion.div className="absolute bottom-0 left-0 right-0 h-0.5 bg-primary" layoutId="tab-underline" />}
-                      </button>
-                  ))}
+                {[{ id: 'direct', label: 'Direct Matches' }, { id: 'chain', label: 'Skill Chains' }].map(tab => (
+                  <button key={tab.id} onClick={() => setActiveTab(tab.id as any)} className={cn("relative py-2 px-3 font-medium transition-colors", activeTab === tab.id ? 'text-primary' : 'text-muted-foreground hover:text-foreground')}>
+                    {tab.label}
+                    {activeTab === tab.id && <motion.div className="absolute bottom-0 left-0 right-0 h-0.5 bg-primary" layoutId="tab-underline" />}
+                  </button>
+                ))}
               </div></div>
             </div>
-              
+
             <AnimatePresence mode="wait">
               <motion.div key={activeTab} initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -10 }} transition={{ duration: 0.2 }} className="mt-6">
-                  {loading ? <LoadingSkeletons /> : (
+                {loading ? <LoadingSkeletons /> : (
+                  <>
+                    {activeTab === 'direct' ? (
                       <>
-                      {activeTab === 'direct' ? (
-                          <>
-                          {bestMatch && <AIBestMatchCard match={bestMatch} currentUser={user} />}
-                          <div className="my-6 flex flex-col items-start gap-4 md:flex-row md:items-center md:justify-between"><p className="font-semibold text-muted-foreground">Showing {otherMatches.length} other matches</p><div className="flex items-center gap-2"><Select value={sortOption} onValueChange={setSortOption}><SelectTrigger className="w-[180px]"><SelectValue placeholder="Sort by" /></SelectTrigger><SelectContent><SelectItem value="best">Best Match</SelectItem><SelectItem value="rating">Rating</SelectItem><SelectItem value="sessions">Sessions</SelectItem><SelectItem value="newest">Newest</SelectItem></SelectContent></Select><div className="rounded-md bg-muted p-1"><Button aria-label="Grid view" size="sm" variant={view === 'grid' ? 'default' : 'ghost'} onClick={() => setView('grid')}><LayoutGrid /></Button><Button aria-label="List view" size="sm" variant={view === 'list' ? 'default' : 'ghost'} onClick={() => setView('list')}><List /></Button></div></div></div>
-                          {otherMatches.length === 0 && !bestMatch ? <EmptyState onReset={() => setFilters(defaultFilters)} /> : (<motion.div key={view} variants={containerVariants} initial="hidden" animate="visible" className={cn(view === 'grid' ? 'grid grid-cols-1 gap-6 md:grid-cols-2 xl:grid-cols-3' : 'space-y-4')}>{otherMatches.map((match) => (<motion.div variants={itemVariants} key={match.id}><MatchCard match={match} /></motion.div>))}</motion.div>)}
-                          </>
-                      ) : (
-                          <ChainComingSoon />
-                      )}
+                        {bestMatch && <AIBestMatchCard match={bestMatch} currentUser={user} />}
+                        <div className="my-6 flex flex-col items-start gap-4 md:flex-row md:items-center md:justify-between"><p className="font-semibold text-muted-foreground">Showing {otherMatches.length} other matches</p><div className="flex items-center gap-2"><Select value={sortOption} onValueChange={setSortOption}><SelectTrigger className="w-[180px]"><SelectValue placeholder="Sort by" /></SelectTrigger><SelectContent><SelectItem value="best">Best Match</SelectItem><SelectItem value="rating">Rating</SelectItem><SelectItem value="sessions">Sessions</SelectItem><SelectItem value="newest">Newest</SelectItem></SelectContent></Select><div className="rounded-md bg-muted p-1"><Button aria-label="Grid view" size="sm" variant={view === 'grid' ? 'default' : 'ghost'} onClick={() => setView('grid')}><LayoutGrid /></Button><Button aria-label="List view" size="sm" variant={view === 'list' ? 'default' : 'ghost'} onClick={() => setView('list')}><List /></Button></div></div></div>
+                        {otherMatches.length === 0 && !bestMatch ? <EmptyState onReset={() => setFilters(defaultFilters)} /> : (<motion.div key={view} variants={containerVariants} initial="hidden" animate="visible" className={cn(view === 'grid' ? 'grid grid-cols-1 gap-6 md:grid-cols-2 xl:grid-cols-3' : 'space-y-4')}>{otherMatches.map((match) => (<motion.div variants={itemVariants} key={match.id}><MatchCard match={match} /></motion.div>))}</motion.div>)}
                       </>
-                  )}
+                    ) : (
+                      <ChainComingSoon />
+                    )}
+                  </>
+                )}
               </motion.div>
             </AnimatePresence>
           </div>

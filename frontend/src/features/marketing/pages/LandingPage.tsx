@@ -90,15 +90,15 @@ const GradientUnderline = () => (
 // None are near the center content area (max-w-5xl)
 const floatingSkillsData = [
   // ── Left column ──────────────────────────────────────────
-  { name: 'Guitar',          icon: Music,    side: 'left',  top: '12%', delay: 0,    duration: 3.8 },
-  { name: 'Photography',     icon: Camera,   side: 'left',  top: '32%', delay: 0.6,  duration: 4.2 },
-  { name: 'Video Editing',   icon: Film,     side: 'left',  top: '54%', delay: 1.2,  duration: 3.5 },
-  { name: 'Git & GitHub',    icon: TrendingUp, side: 'left',top: '74%', delay: 1.8,  duration: 4.6 },
+  { name: 'Guitar', icon: Music, side: 'left', top: '12%', delay: 0, duration: 3.8 },
+  { name: 'Photography', icon: Camera, side: 'left', top: '32%', delay: 0.6, duration: 4.2 },
+  { name: 'Video Editing', icon: Film, side: 'left', top: '54%', delay: 1.2, duration: 3.5 },
+  { name: 'Git & GitHub', icon: TrendingUp, side: 'left', top: '74%', delay: 1.8, duration: 4.6 },
   // ── Right column ─────────────────────────────────────────
-  { name: 'Python',          icon: Code,     side: 'right', top: '18%', delay: 0.3,  duration: 4.0 },
-  { name: 'Data Science',    icon: Database, side: 'right', top: '38%', delay: 0.9,  duration: 3.6 },
-  { name: 'Figma',           icon: Figma,    side: 'right', top: '58%', delay: 1.5,  duration: 4.4 },
-  { name: 'Public Speaking', icon: Mic,      side: 'right', top: '76%', delay: 2.1,  duration: 3.9 },
+  { name: 'Python', icon: Code, side: 'right', top: '18%', delay: 0.3, duration: 4.0 },
+  { name: 'Data Science', icon: Database, side: 'right', top: '38%', delay: 0.9, duration: 3.6 },
+  { name: 'Figma', icon: Figma, side: 'right', top: '58%', delay: 1.5, duration: 4.4 },
+  { name: 'Public Speaking', icon: Mic, side: 'right', top: '76%', delay: 2.1, duration: 3.9 },
 ];
 
 /* Bubble component with continuous floating animation */
@@ -141,116 +141,116 @@ const FloatingBubble = React.memo(({ skill }: {
 FloatingBubble.displayName = 'FloatingBubble';
 
 const HeroSection = () => (
-    <section
-      className="relative flex min-h-screen w-full flex-col items-center justify-center overflow-hidden bg-background"
+  <section
+    className="relative flex min-h-screen w-full flex-col items-center justify-center overflow-hidden bg-background"
+  >
+    {/* Ambient blobs */}
+    <div className="pointer-events-none absolute inset-0 overflow-hidden">
+      <div className="animate-blob absolute -top-40 -left-40 h-[600px] w-[600px] rounded-full bg-primary/10 blur-[100px]" />
+      <div className="animate-blob absolute top-1/2 left-1/2 h-[500px] w-[500px] -translate-x-1/2 -translate-y-1/2 rounded-full bg-secondary/8 blur-[120px]" style={{ animationDelay: '4s', animationDuration: '16s' }} />
+      <div className="animate-blob absolute -bottom-40 -right-40 h-[550px] w-[550px] rounded-full bg-accent/8 blur-[100px]" style={{ animationDelay: '8s' }} />
+    </div>
+
+    {/* Dot grid */}
+    <div className="pointer-events-none absolute inset-0 dot-grid opacity-40 dark:opacity-20" />
+
+    {/* Floating skill bubbles — left + right columns, never overlapping center */}
+    {floatingSkillsData.map((skill) => (
+      <FloatingBubble key={skill.name} skill={skill} />
+    ))}
+
+    {/* Main hero content */}
+    <motion.div
+      variants={container}
+      initial="hidden"
+      animate="visible"
+      className="relative z-10 mx-auto flex max-w-5xl flex-col items-center gap-8 px-4 text-center"
     >
-      {/* Ambient blobs */}
-      <div className="pointer-events-none absolute inset-0 overflow-hidden">
-        <div className="animate-blob absolute -top-40 -left-40 h-[600px] w-[600px] rounded-full bg-primary/10 blur-[100px]" />
-        <div className="animate-blob absolute top-1/2 left-1/2 h-[500px] w-[500px] -translate-x-1/2 -translate-y-1/2 rounded-full bg-secondary/8 blur-[120px]" style={{ animationDelay: '4s', animationDuration: '16s' }} />
-        <div className="animate-blob absolute -bottom-40 -right-40 h-[550px] w-[550px] rounded-full bg-accent/8 blur-[100px]" style={{ animationDelay: '8s' }} />
-      </div>
-
-      {/* Dot grid */}
-      <div className="pointer-events-none absolute inset-0 dot-grid opacity-40 dark:opacity-20" />
-
-      {/* Floating skill bubbles — left + right columns, never overlapping center */}
-      {floatingSkillsData.map((skill) => (
-        <FloatingBubble key={skill.name} skill={skill} />
-      ))}
-
-      {/* Main hero content */}
-      <motion.div
-        variants={container}
-        initial="hidden"
-        animate="visible"
-        className="relative z-10 mx-auto flex max-w-5xl flex-col items-center gap-8 px-4 text-center"
-      >
-        {/* Social proof pill */}
-        <motion.div variants={item}>
-          <Link to="/login" className="group inline-flex items-center gap-2 rounded-full border border-primary/20 bg-primary/5 px-5 py-2 text-sm font-medium text-primary transition-all hover:border-primary/40 hover:bg-primary/10">
-            <Sparkles className="h-3.5 w-3.5" />
-            <span>Trusted by 12,000+ students · 150+ universities</span>
-            <ChevronRight className="h-3.5 w-3.5 transition-transform group-hover:translate-x-0.5" />
-          </Link>
-        </motion.div>
-
-        {/* Headline */}
-        <motion.h1
-          variants={item}
-          className="font-headline text-7xl font-extrabold tracking-tighter leading-[0.9] md:text-8xl lg:text-[7rem]"
-        >
-          <span className="block">Trade Skills.</span>
-          <span className="block text-gradient-animated mt-1">Not Money.</span>
-        </motion.h1>
-
-        {/* Subheadline */}
-        <motion.p
-          variants={item}
-          className="max-w-xl text-lg text-muted-foreground text-balance leading-relaxed md:text-xl"
-        >
-          Connect with students who have what you want to learn — and teach what you know.
-          No payments. Just pure knowledge exchange.
-        </motion.p>
-
-        {/* CTAs */}
-        <motion.div variants={item} className="flex flex-col items-center gap-4 sm:flex-row">
-          <Button
-            asChild
-            size="lg"
-            className="group h-14 rounded-2xl px-8 text-base font-bold gradient-bg text-primary-foreground shadow-glow transition-all hover:scale-105 hover:shadow-glow-lg"
-          >
-            <Link to="/login">
-              Start Exchanging Free
-              <ArrowRight className="ml-2 h-4 w-4 transition-transform group-hover:translate-x-1" />
-            </Link>
-          </Button>
-          <Button
-            asChild
-            size="lg"
-            variant="outline"
-            className="h-14 rounded-2xl px-8 text-base font-semibold border-border/60 hover:border-primary/40 hover:bg-primary/5"
-          >
-            <Link to="#how-it-works">See how it works</Link>
-          </Button>
-        </motion.div>
-
-        {/* Trust strip */}
-        <motion.div variants={item} className="flex items-center gap-6 text-sm text-muted-foreground">
-          {[
-            { icon: Shield, text: 'No credit card' },
-            { icon: Users, text: '8,500+ exchanges' },
-            { icon: Star, text: '4.9 avg rating' },
-          ].map(({ icon: Icon, text }) => (
-            <span key={text} className="flex items-center gap-1.5">
-              <Icon className="h-3.5 w-3.5 text-secondary" />
-              {text}
-            </span>
-          ))}
-        </motion.div>
-      </motion.div>
-
-      {/* Scroll indicator */}
-      <motion.div
-        className="absolute bottom-8 left-1/2 -translate-x-1/2"
-        initial={{ opacity: 0, y: -8 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ delay: 2, duration: 0.6 }}
-      >
-        <Link to="#how-it-works" className="flex flex-col items-center gap-2 text-xs text-muted-foreground hover:text-foreground transition-colors">
-          <span>Scroll to explore</span>
-          <motion.div
-            className="h-8 w-5 rounded-full border-2 border-border flex items-start justify-center pt-1"
-          >
-            <motion.div
-              className="h-1.5 w-1 rounded-full bg-muted-foreground"
-              animate={{ y: [0, 10, 0] }}
-              transition={{ duration: 1.5, repeat: Infinity, ease: 'easeInOut' }}
-            />
-          </motion.div>
+      {/* Social proof pill */}
+      <motion.div variants={item}>
+        <Link to="/login" className="group inline-flex items-center gap-2 rounded-full border border-primary/20 bg-primary/5 px-5 py-2 text-sm font-medium text-primary transition-all hover:border-primary/40 hover:bg-primary/10">
+          <Sparkles className="h-3.5 w-3.5" />
+          <span>Trusted by 12,000+ students · 150+ universities</span>
+          <ChevronRight className="h-3.5 w-3.5 transition-transform group-hover:translate-x-0.5" />
         </Link>
       </motion.div>
-    </section>
+
+      {/* Headline */}
+      <motion.h1
+        variants={item}
+        className="font-headline text-7xl font-extrabold tracking-tighter leading-[0.9] md:text-8xl lg:text-[7rem]"
+      >
+        <span className="block">Trade Skills.</span>
+        <span className="block text-gradient-animated mt-1">Not Money.</span>
+      </motion.h1>
+
+      {/* Subheadline */}
+      <motion.p
+        variants={item}
+        className="max-w-xl text-lg text-muted-foreground text-balance leading-relaxed md:text-xl"
+      >
+        Connect with students who have what you want to learn — and teach what you know.
+        No payments. Just pure knowledge exchange.
+      </motion.p>
+
+      {/* CTAs */}
+      <motion.div variants={item} className="flex flex-col items-center gap-4 sm:flex-row">
+        <Button
+          asChild
+          size="lg"
+          className="group h-14 rounded-2xl px-8 text-base font-bold gradient-bg text-primary-foreground shadow-glow transition-all hover:scale-105 hover:shadow-glow-lg"
+        >
+          <Link to="/login">
+            Start Exchanging Free
+            <ArrowRight className="ml-2 h-4 w-4 transition-transform group-hover:translate-x-1" />
+          </Link>
+        </Button>
+        <Button
+          asChild
+          size="lg"
+          variant="outline"
+          className="h-14 rounded-2xl px-8 text-base font-semibold border-border/60 hover:border-primary/40 hover:bg-primary/5"
+        >
+          <Link to="#how-it-works">See how it works</Link>
+        </Button>
+      </motion.div>
+
+      {/* Trust strip */}
+      <motion.div variants={item} className="flex items-center gap-6 text-sm text-muted-foreground">
+        {[
+          { icon: Shield, text: 'No credit card' },
+          { icon: Users, text: '8,500+ exchanges' },
+          { icon: Star, text: '4.9 avg rating' },
+        ].map(({ icon: Icon, text }) => (
+          <span key={text} className="flex items-center gap-1.5">
+            <Icon className="h-3.5 w-3.5 text-secondary" />
+            {text}
+          </span>
+        ))}
+      </motion.div>
+    </motion.div>
+
+    {/* Scroll indicator */}
+    <motion.div
+      className="absolute bottom-8 left-1/2 -translate-x-1/2"
+      initial={{ opacity: 0, y: -8 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ delay: 2, duration: 0.6 }}
+    >
+      <Link to="#how-it-works" className="flex flex-col items-center gap-2 text-xs text-muted-foreground hover:text-foreground transition-colors">
+        <span>Scroll to explore</span>
+        <motion.div
+          className="h-8 w-5 rounded-full border-2 border-border flex items-start justify-center pt-1"
+        >
+          <motion.div
+            className="h-1.5 w-1 rounded-full bg-muted-foreground"
+            animate={{ y: [0, 10, 0] }}
+            transition={{ duration: 1.5, repeat: Infinity, ease: 'easeInOut' }}
+          />
+        </motion.div>
+      </Link>
+    </motion.div>
+  </section>
 );
 
 /* ══════════════════════════════════════════════════════════════════════════════
@@ -350,9 +350,10 @@ const HowItWorksSection = () => {
               whileHover={{ y: -6, transition: { type: 'spring', stiffness: 300 } }}
             >
               <div className={cn(
-                'relative h-full rounded-2xl border bg-gradient-to-br p-8 transition-shadow hover:shadow-card-hover',
+                'relative h-full rounded-3xl glass p-8 transition-all duration-400 ease-snappy hover:shadow-glow-sm hover:-translate-y-2 group overflow-hidden',
                 step.color
               )}>
+                <div className="absolute inset-0 bg-gradient-to-br opacity-5 transition-opacity group-hover:opacity-10 pointer-events-none" />
                 <span className="absolute top-6 right-6 font-headline text-5xl font-black text-foreground/5">
                   {step.step}
                 </span>
@@ -375,9 +376,9 @@ const HowItWorksSection = () => {
 ══════════════════════════════════════════════════════════════════════════════ */
 const SkillChainSection = () => {
   const chainMembers = [
-    { user: users[0], teaches: 'Video Editing', learns: 'Guitar',        angle: -90  },
-    { user: users[1], teaches: 'Guitar',        learns: 'Python',        angle: 30   },
-    { user: users[2], teaches: 'Python',        learns: 'Video Editing', angle: 150  },
+    { user: users[0], teaches: 'Video Editing', learns: 'Guitar', angle: -90 },
+    { user: users[1], teaches: 'Guitar', learns: 'Python', angle: 30 },
+    { user: users[2], teaches: 'Python', learns: 'Video Editing', angle: 150 },
   ];
   const R = 140; // orbit radius
   const cx = 180; const cy = 200;
@@ -552,10 +553,10 @@ const StatsSection = () => (
     <div className="container mx-auto px-4">
       <div className="rounded-3xl border border-border/60 bg-gradient-to-br from-muted/60 to-muted/20 p-12">
         <div className="grid grid-cols-2 gap-12 md:grid-cols-4">
-          <StatCounter value={12000} label="Skills listed"        suffix="+"  icon={Zap}         color="bg-primary/10 text-primary" />
-          <StatCounter value={8500}  label="Exchanges completed"  suffix="+"  icon={RefreshCw}   color="bg-secondary/10 text-secondary" />
-          <StatCounter value={4.9}   label="Average rating"       suffix="★"  icon={Star}        color="bg-accent/10 text-accent" />
-          <StatCounter value={150}   label="Universities"         suffix="+"  icon={Users}       color="bg-purple-500/10 text-purple-500" />
+          <StatCounter value={12000} label="Skills listed" suffix="+" icon={Zap} color="bg-primary/10 text-primary" />
+          <StatCounter value={8500} label="Exchanges completed" suffix="+" icon={RefreshCw} color="bg-secondary/10 text-secondary" />
+          <StatCounter value={4.9} label="Average rating" suffix="★" icon={Star} color="bg-accent/10 text-accent" />
+          <StatCounter value={150} label="Universities" suffix="+" icon={Users} color="bg-purple-500/10 text-purple-500" />
         </div>
       </div>
     </div>
@@ -569,8 +570,8 @@ const FeaturedSkillsSection = () => {
   const featuredSkills = skills.slice(0, 6);
   const categoryColors: Record<string, string> = {
     Creative: 'bg-pink-500/10 text-pink-600 dark:text-pink-400 border-pink-500/20',
-    Tech:     'bg-blue-500/10 text-blue-600 dark:text-blue-400 border-blue-500/20',
-    Design:   'bg-violet-500/10 text-violet-600 dark:text-violet-400 border-violet-500/20',
+    Tech: 'bg-blue-500/10 text-blue-600 dark:text-blue-400 border-blue-500/20',
+    Design: 'bg-violet-500/10 text-violet-600 dark:text-violet-400 border-violet-500/20',
     Language: 'bg-amber-500/10 text-amber-600 dark:text-amber-400 border-amber-500/20',
   };
 
@@ -600,9 +601,9 @@ const FeaturedSkillsSection = () => {
                 variants={item}
                 whileHover={{ y: -6, transition: { type: 'spring', stiffness: 300 } }}
               >
-                <Card className="group h-full overflow-hidden border-border/60 transition-shadow hover:shadow-card-hover-glow">
-                  {/* Gradient header bar */}
-                  <div className="h-1.5 w-full bg-gradient-to-r from-primary via-secondary to-accent opacity-60 group-hover:opacity-100 transition-opacity" />
+                <Card className="group h-full overflow-hidden glass transition-all duration-400 ease-snappy hover:shadow-glow-sm hover:-translate-y-2">
+                  {/* Animated sheen line */}
+                  <div className="absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-white/40 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
                   <CardContent className="p-6">
                     <div className="flex items-start justify-between gap-3">
                       <div className="flex items-center gap-3">
@@ -637,7 +638,7 @@ const FeaturedSkillsSection = () => {
                       </div>
                     </div>
 
-                    <Button className="mt-5 w-full rounded-xl font-bold gradient-bg text-primary-foreground text-sm hover:scale-[1.02] transition-transform">
+                    <Button className="mt-5 w-full rounded-2xl font-bold gradient-bg text-primary-foreground text-sm hover:scale-[1.02] shadow-glow transition-transform">
                       Request Exchange
                     </Button>
                   </CardContent>
@@ -707,8 +708,8 @@ const TestimonialsSection = () => (
             variants={item}
             whileHover={{ y: -5, transition: { type: 'spring', stiffness: 300 } }}
           >
-            <Card className="group relative h-full overflow-hidden border-border/60 transition-shadow hover:shadow-card-hover">
-              <div className="absolute inset-0 bg-gradient-to-br from-primary/3 via-transparent to-secondary/3 opacity-0 group-hover:opacity-100 transition-opacity" />
+            <Card className="group relative h-full overflow-hidden glass transition-all duration-400 ease-snappy hover:shadow-glow-sm hover:-translate-y-2">
+              <div className="absolute inset-0 bg-gradient-to-br from-primary/5 via-transparent to-secondary/5 opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
               <CardContent className="relative p-8 flex flex-col h-full">
                 <div className="flex items-center gap-0.5 mb-4">
                   {Array.from({ length: t.rating }).map((_, si) => (

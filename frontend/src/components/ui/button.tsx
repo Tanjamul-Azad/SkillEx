@@ -12,7 +12,7 @@ const buttonVariants = cva(
     "transform-gpu will-change-transform",
     /* Smooth transitions — fast enough to feel snappy, slow enough to see */
     "transition-[transform,box-shadow,background-color,border-color,color,opacity]",
-    "duration-200 ease-[cubic-bezier(0.16,1,0.3,1)]",
+    "duration-200 ease-expo-out",
     /* Press feedback */
     "active:scale-[0.97] active:translate-y-0 active:duration-75",
     /* Focus ring */

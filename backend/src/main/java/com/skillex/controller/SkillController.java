@@ -4,6 +4,7 @@ import com.skillex.dto.common.ApiResponse;
 import com.skillex.model.Skill;
 import com.skillex.repository.SkillRepository;
 import lombok.RequiredArgsConstructor;
+import org.springframework.lang.NonNull;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
@@ -39,7 +40,7 @@ public class SkillController {
 
     /** GET /api/skills/{id} */
     @GetMapping("/{id}")
-    public ResponseEntity<ApiResponse<Skill>> getById(@PathVariable String id) {
+    public ResponseEntity<ApiResponse<Skill>> getById(@PathVariable @NonNull String id) {
         return skillRepository.findById(id)
             .map(skill -> ResponseEntity.ok(ApiResponse.ok(skill)))
             .orElse(ResponseEntity.notFound().build());

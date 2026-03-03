@@ -93,6 +93,7 @@ export default defineConfig({
       '@data': path.resolve(__dirname, '../database'),
       '@config': path.resolve(__dirname, './src/config'),
       '@scripts': path.resolve(__dirname, '../scripts'),
+      'date-fns': path.resolve(__dirname, './node_modules/date-fns'),
     },
   },
   server: {

@@ -46,6 +46,7 @@ public class AuthController {
 
     /** GET /api/auth/me  — requires Authorization: Bearer <token> */
     @GetMapping("/me")
+    @SuppressWarnings("null")
     public ResponseEntity<ApiResponse<User>> me(Authentication authentication) {
         String userId = (String) authentication.getPrincipal();
         User user = authService.getCurrentUser(userId);

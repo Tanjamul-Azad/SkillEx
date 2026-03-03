@@ -69,10 +69,10 @@ const DropdownMenuContent = React.forwardRef<
         "shadow-xl backdrop-blur-sm",
         /* Open: spring-scale from origin */
         "data-[state=open]:animate-in data-[state=open]:fade-in-0 data-[state=open]:zoom-in-[0.96]",
-        "data-[state=open]:duration-[180ms] data-[state=open]:ease-[cubic-bezier(0.16,1,0.3,1)]",
+        "data-[state=open]:duration-180 data-[state=open]:ease-expo-out",
         /* Close: quick fade-scale out */
         "data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=closed]:zoom-out-[0.97]",
-        "data-[state=closed]:duration-[120ms] data-[state=closed]:ease-in",
+        "data-[state=closed]:duration-120 data-[state=closed]:ease-in",
         /* Directional slide */
         "data-[side=bottom]:slide-in-from-top-1 data-[side=left]:slide-in-from-right-1",
         "data-[side=right]:slide-in-from-left-1 data-[side=top]:slide-in-from-bottom-1",

@@ -1,112 +1,178 @@
-
 'use client';
+
+/**
+ * DashboardLayout
+ * Shell for all authenticated pages.
+ *
+ * Structure:
+ *   +-------------------------------------------------+
+ *   �          �  HEADER (fixed, h-16, full top-right) �
+ *   � SIDEBAR  +--------------------------------------�
+ *   � (fixed,  �  <main>  (scrollable)                 �
+ *   �  w-60|68)�                                       �
+ *   +-------------------------------------------------+
+ *
+ * Shneiderman Rules applied:
+ *   Rule 1 � Consistency: same chrome on every authenticated page.
+ *   Rule 3 � Informative feedback: animated page transitions; active nav item.
+ *   Rule 7 � Locus of control: collapsible sidebar, theme toggle, skip-link.
+ *   Rule 8 � Reduce memory load: persistent sidebar always shows where you are.
+ */
 
 import { motion, AnimatePresence } from 'framer-motion';
 import { useLocation } from 'react-router-dom';
+import { useEffect, useState } from 'react';
 import ProtectedRouteWrapper from '@/components/auth/ProtectedRouteWrapper';
+import { AppSidebar, MobileSidebar } from '@/components/layout/AppSidebar';
 import Header from '@/components/layout/Header';
-import Footer from '@/components/layout/Footer';
-import { Button } from '../ui/button';
-import { Plus, Pencil, Zap, Users } from 'lucide-react';
-import { useState } from 'react';
+import { SidebarProvider, useSidebar } from '@/context/SidebarContext';
+import { cn } from '@/lib/utils';
 
-const fabActions = [
-  { icon: Zap, label: 'List a Skill', color: 'bg-primary text-primary-foreground' },
-  { icon: Users, label: 'Find Match', color: 'bg-secondary text-secondary-foreground' },
-  { icon: Pencil, label: 'Write Post', color: 'bg-accent text-accent-foreground' },
-];
+const SIDEBAR_EXPANDED = 240;
+const SIDEBAR_COLLAPSED = 68;
+const HEADER_H = 64;
 
-export default function DashboardLayout({ children }: { children: React.ReactNode }) {
-  const [fabOpen, setFabOpen] = useState(false);
+function useIsDesktop() {
+  const [isDesktop, setIsDesktop] = useState(() =>
+    typeof window !== 'undefined' ? window.innerWidth >= 1024 : true
+  );
+  useEffect(() => {
+    const fn = () => setIsDesktop(window.innerWidth >= 1024);
+    window.addEventListener('resize', fn);
+    return () => window.removeEventListener('resize', fn);
+  }, []);
+  return isDesktop;
+}
+
+function DashboardInner({ children }: { children: React.ReactNode }) {
+  const { collapsed } = useSidebar();
   const { pathname } = useLocation();
+  const sidebarW = collapsed ? SIDEBAR_COLLAPSED : SIDEBAR_EXPANDED;
 
   return (
-    <ProtectedRouteWrapper>
-      <div className="flex min-h-screen flex-col bg-background">
-        {/* Subtle ambient layer behind all dashboard content */}
-        <div className="pointer-events-none fixed inset-0 z-0 overflow-hidden">
-          <div className="absolute -top-32 -left-32 h-80 w-80 rounded-full bg-primary/8 blur-3xl animate-blob" />
-          <div className="absolute -bottom-32 -right-32 h-96 w-96 rounded-full bg-secondary/6 blur-3xl animate-blob" style={{ animationDelay: '4s' }} />
-          <div className="absolute top-1/2 left-1/2 h-64 w-64 -translate-x-1/2 -translate-y-1/2 rounded-full bg-accent/4 blur-3xl animate-blob" style={{ animationDelay: '8s' }} />
-        </div>
-        <Header />
-        {/* Page transition — fade + micro-lift, no jarring y-shift */}
+    <>
+      {/* Skip-to-content link */}
+      <a
+        href="#main-content"
+        className={cn(
+          'fixed left-1/2 -translate-x-1/2 -top-16 z-[9999]',
+          'rounded-b-xl bg-primary px-6 py-3 text-sm font-bold text-primary-foreground shadow-lg',
+          'transition-[top] duration-150 focus:top-0 focus:outline-none'
+        )}
+      >
+        Skip to main content
+      </a>
+
+      {/* Ambient background */}
+      <div className="pointer-events-none fixed inset-0 z-0 overflow-hidden" aria-hidden="true">
+        <div className="absolute -top-32 -left-32 h-80 w-80 rounded-full bg-primary/8 blur-3xl animate-blob" />
+        <div className="absolute -bottom-32 -right-32 h-96 w-96 rounded-full bg-secondary/6 blur-3xl animate-blob" style={{ animationDelay: '4s' }} />
+        <div className="absolute top-1/2 left-1/2 h-64 w-64 -translate-x-1/2 -translate-y-1/2 rounded-full bg-accent/4 blur-3xl animate-blob" style={{ animationDelay: '8s' }} />
+      </div>
+
+      <AppSidebar />
+      <MobileSidebar />
+
+      <motion.div
+        className="flex min-h-screen flex-col"
+        initial={false}
+        animate={{ marginLeft: sidebarW }}
+        transition={{ duration: 0.22, ease: [0.16, 1, 0.3, 1] }}
+      >
+        <Header sidebarWidth={sidebarW} headerHeight={HEADER_H} />
+
         <AnimatePresence mode="wait" initial={false}>
           <motion.main
+            id="main-content"
             key={pathname}
             initial={{ opacity: 0, y: 8, scale: 0.995 }}
             animate={{ opacity: 1, y: 0, scale: 1 }}
             exit={{ opacity: 0, y: -6, scale: 0.995 }}
-            transition={{
-              duration: 0.28,
-              ease: [0.16, 1, 0.3, 1],
-            }}
-            className="relative z-10 flex-grow"
+            transition={{ duration: 0.26, ease: [0.16, 1, 0.3, 1] }}
+            className="relative z-10 flex-1 min-h-0"
             style={{ willChange: 'transform, opacity' }}
+            tabIndex={-1}
           >
             {children}
           </motion.main>
         </AnimatePresence>
-        <Footer />
+      </motion.div>
+    </>
+  );
+}
 
-        {/* FAB speed-dial */}
-        <div className="fixed bottom-6 right-6 z-50 flex flex-col-reverse items-end gap-3">
-          <AnimatePresence>
-            {fabOpen && fabActions.map((action, i) => (
-              <motion.div
-                key={action.label}
-                initial={{ opacity: 0, scale: 0.5, y: 24, x: 8 }}
-                animate={{ opacity: 1, scale: 1, y: 0, x: 0 }}
-                exit={{ opacity: 0, scale: 0.5, y: 24, x: 8 }}
-                transition={{
-                  delay: i * 0.04,
-                  type: 'spring',
-                  stiffness: 380,
-                  damping: 26,
-                  mass: 0.8,
-                }}
-                className="flex items-center gap-2"
-              >
-                <motion.span
-                  initial={{ opacity: 0, x: 8 }}
-                  animate={{ opacity: 1, x: 0 }}
-                  transition={{ delay: i * 0.04 + 0.06 }}
-                  className="rounded-lg bg-background/90 border border-border/60 px-3 py-1.5 text-xs font-semibold shadow-card backdrop-blur-sm"
-                >
-                  {action.label}
-                </motion.span>
-                <Button
-                  size="icon"
-                  className={`h-11 w-11 rounded-full shadow-card-hover ${action.color}`}
-                >
-                  <action.icon className="h-5 w-5" />
-                </Button>
-              </motion.div>
-            ))}
-          </AnimatePresence>
-
-          {/* Main FAB */}
-          <motion.div
-            whileHover={{ scale: 1.07 }}
-            whileTap={{ scale: 0.91 }}
-            transition={{ type: 'spring', stiffness: 400, damping: 18 }}
+export default function DashboardLayout({ children }: { children: React.ReactNode }) {
+  return (
+    <ProtectedRouteWrapper>
+      <SidebarProvider>
+        <div className="fixed inset-0 overflow-hidden bg-background">
+          {/* Skip link for mobile too */}
+          <a
+            href="#main-content"
+            className={cn(
+              'sr-only focus:not-sr-only fixed left-1/2 -translate-x-1/2 top-0 z-[9999]',
+              'rounded-b-xl bg-primary px-6 py-3 text-sm font-bold text-primary-foreground shadow-lg',
+              'focus:outline-none'
+            )}
           >
-            <Button
-              aria-label={fabOpen ? 'Close menu' : 'Create new'}
-              size="icon"
-              onClick={() => setFabOpen((v) => !v)}
-              className="h-14 w-14 rounded-full gradient-bg text-primary-foreground shadow-glow hover:shadow-glow-lg"
-            >
-              <motion.div
-                animate={{ rotate: fabOpen ? 45 : 0 }}
-                transition={{ type: 'spring', stiffness: 350, damping: 22, mass: 0.8 }}
-              >
-                <Plus className="h-7 w-7" />
-              </motion.div>
-            </Button>
-          </motion.div>
+            Skip to main content
+          </a>
+
+          {/* Ambient background */}
+          <div className="pointer-events-none fixed inset-0 z-0 overflow-hidden" aria-hidden="true">
+            <div className="absolute -top-32 -left-32 h-80 w-80 rounded-full bg-primary/8 blur-3xl animate-blob" />
+            <div className="absolute -bottom-32 -right-32 h-96 w-96 rounded-full bg-secondary/6 blur-3xl animate-blob" style={{ animationDelay: '4s' }} />
+            <div className="absolute top-1/2 left-1/2 h-64 w-64 -translate-x-1/2 -translate-y-1/2 rounded-full bg-accent/4 blur-3xl animate-blob" style={{ animationDelay: '8s' }} />
+          </div>
+
+          {/* Desktop sidebar */}
+          <AppSidebar />
+
+          {/* Mobile drawer */}
+          <MobileSidebar />
+
+          {/* Main area � shifts on sidebar expand/collapse */}
+          <MainArea>{children}</MainArea>
         </div>
-      </div>
+      </SidebarProvider>
     </ProtectedRouteWrapper>
+  );
+}
+
+function MainArea({ children }: { children: React.ReactNode }) {
+  const { collapsed } = useSidebar();
+  const { pathname } = useLocation();
+  const isDesktop = useIsDesktop();
+  const sidebarW = isDesktop ? (collapsed ? SIDEBAR_COLLAPSED : SIDEBAR_EXPANDED) : 0;
+
+  return (
+    <motion.div
+      className="flex h-full flex-col overflow-hidden"
+      initial={false}
+      animate={{ marginLeft: sidebarW }}
+      transition={{ duration: 0.22, ease: [0.16, 1, 0.3, 1] }}
+      // On mobile: no margin offset (sidebar is a drawer)
+      style={{ ['--sidebar-w' as never]: `${sidebarW}px` }}
+    >
+      {/* Fixed header */}
+      <Header sidebarWidth={sidebarW} headerHeight={HEADER_H} />
+
+      {/* Scrollable page content */}
+      <AnimatePresence mode="wait" initial={false}>
+        <motion.main
+          id="main-content"
+          key={pathname}
+          initial={{ opacity: 0, y: 8, scale: 0.995 }}
+          animate={{ opacity: 1, y: 0, scale: 1 }}
+          exit={{ opacity: 0, y: -6, scale: 0.995 }}
+          transition={{ duration: 0.26, ease: [0.16, 1, 0.3, 1] }}
+          className="relative z-10 flex-1 overflow-y-auto"
+          style={{ willChange: 'transform, opacity' }}
+          tabIndex={-1}
+        >
+          {children}
+        </motion.main>
+      </AnimatePresence>
+    </motion.div>
   );
 }

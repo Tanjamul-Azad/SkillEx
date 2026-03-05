@@ -60,6 +60,13 @@ const buttonVariants = cva(
         // Link — underline animation only, no translate
         link:
           "text-primary underline-offset-4 hover:underline active:scale-100 rounded-none",
+        // Gradient CTA — primary/secondary gradient fill, glow shadow, slight scale
+        gradient:
+          "gradient-bg text-primary-foreground font-bold " +
+          "shadow-[0_2px_12px_hsl(var(--primary)/0.35),0_1px_4px_hsl(var(--primary)/0.20)] " +
+          "hover:-translate-y-[3px] hover:scale-[1.02] " +
+          "hover:shadow-[0_6px_20px_hsl(var(--primary)/0.40),0_2px_6px_hsl(var(--primary)/0.25)] " +
+          "active:scale-[0.97]",
       },
       size: {
         default: "h-10 px-5 py-2",

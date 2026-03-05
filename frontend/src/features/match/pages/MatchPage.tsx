@@ -188,7 +188,7 @@ const FilterSidebar: FC<{ filters: Filters; setFilters: (f: Filters) => void }> 
         </Accordion>
       </div>
       <div className="border-t border-white/10 dark:border-white/5 p-4">
-        <Button className="w-full font-bold gradient-bg text-primary-foreground shadow-glow">
+        <Button variant="gradient" className="w-full">
           Apply Filters {activeFilterCount > 0 && `(${activeFilterCount})`}
         </Button>
       </div>
@@ -273,7 +273,7 @@ const AIBestMatchCard: FC<{ match: MatchUser; currentUser: User | null }> = Reac
               {match.theyOffer && <div className="flex-1 rounded-md border p-2 text-sm"><p className="font-bold">{match.name.split(' ')[0]} teaches:</p><p>{match.theyOffer.name}</p></div>}
             </div>
             <div className="flex gap-2">
-              <Button className="w-full font-bold gradient-bg text-primary-foreground shadow-glow" onClick={() => setRequestOpen(true)}>Request Exchange</Button>
+              <Button variant="gradient" className="w-full" onClick={() => setRequestOpen(true)}>Request Exchange</Button>
               <Button variant="outline" className="w-full glass-subtle text-foreground hover:bg-white/10" asChild><Link to={`/profile/${match.id}`}>View Profile</Link></Button>
             </div>
           </div>
@@ -347,7 +347,8 @@ const MatchCard: FC<{ match: MatchUser }> = React.memo(({ match }) => {
           </Button>
           <Button
             onClick={() => setRequestOpen(true)}
-            className="w-1/2 rounded-none rounded-br-2xl gradient-bg text-primary-foreground font-bold text-sm hover:opacity-90 transition-opacity"
+            variant="gradient"
+            className="w-1/2 rounded-none rounded-br-2xl text-sm"
           >
             Request
           </Button>
@@ -432,10 +433,18 @@ export default function MatchPage() {
             <div className="relative mt-6">
               <div className="border-b"><div className="flex space-x-2">
                 {[{ id: 'direct', label: 'Direct Matches' }, { id: 'chain', label: 'Skill Chains' }].map(tab => (
-                  <button key={tab.id} onClick={() => setActiveTab(tab.id as any)} className={cn("relative py-2 px-3 font-medium transition-colors", activeTab === tab.id ? 'text-primary' : 'text-muted-foreground hover:text-foreground')}>
+                  <Button
+                    key={tab.id}
+                    variant="ghost"
+                    onClick={() => setActiveTab(tab.id as any)}
+                    className={cn(
+                      "relative py-2 px-3 font-medium transition-colors hover:bg-transparent",
+                      activeTab === tab.id ? 'text-primary' : 'text-muted-foreground hover:text-foreground'
+                    )}
+                  >
                     {tab.label}
                     {activeTab === tab.id && <motion.div className="absolute bottom-0 left-0 right-0 h-0.5 bg-primary" layoutId="tab-underline" />}
-                  </button>
+                  </Button>
                 ))}
               </div></div>
             </div>

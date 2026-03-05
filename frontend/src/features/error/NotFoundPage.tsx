@@ -73,7 +73,7 @@ export default function NotFound() {
           transition={{ delay: 0.35, type: 'spring', stiffness: 100 }}
           className="mt-8 flex flex-col sm:flex-row items-center justify-center gap-3"
         >
-          <Button asChild size="lg" className="rounded-xl gradient-bg text-primary-foreground font-bold shadow-glow hover:shadow-glow-lg">
+          <Button asChild variant="gradient" size="lg" className="rounded-xl">
             <Link to="/dashboard">
               <Home className="mr-2 h-4 w-4" />Go to Dashboard
             </Link>

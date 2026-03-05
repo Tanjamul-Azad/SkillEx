@@ -57,7 +57,7 @@ function StatCard({
   value,
   color,
 }: {
-  icon: React.ElementType;
+  icon: React.FC<{ className?: string }>;
   label: string;
   value: string | number;
   color: string;
@@ -84,7 +84,7 @@ function SkillSection({
 }: {
   title: string;
   skills: Skill[];
-  icon: React.ElementType;
+  icon: React.FC<{ className?: string }>;
   emptyText: string;
   variant: 'offer' | 'want';
   isOwner?: boolean;

@@ -19,6 +19,9 @@ import { Checkbox } from '@/components/ui/checkbox';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
 import { GoogleIcon } from '@/components/icons/GoogleIcon';
+import Logo from '@/components/ui/Logo';
+import { Progress } from '@/components/ui/progress';
+import PasswordStrengthMeter from '@/components/auth/PasswordStrengthMeter';
 
 const loginSchema = z.object({
   email: z.string().email({ message: 'Please enter a valid email.' }),
@@ -72,7 +75,7 @@ function AuthPage() {
   }, [isAuthenticated, isAuthLoading, navigate]);
 
   if (isAuthLoading || (!isAuthLoading && isAuthenticated)) {
-     return (
+    return (
       <div className="flex h-screen w-full items-center justify-center bg-background">
         <p>Loading...</p>
       </div>
@@ -81,46 +84,53 @@ function AuthPage() {
 
   return (
     <main className="min-h-screen w-full grid grid-cols-1 lg:grid-cols-10">
-        <div className="lg:col-span-4">
-            <AuthGraphic />
-        </div>
-        <div className="lg:col-span-6 flex items-center justify-center p-8">
-            <div className="w-full max-w-md">
-            <div className="relative mb-8 flex w-full justify-center rounded-full bg-muted p-1">
-                {['login', 'register'].map((type) => (
-                <button
-                    key={type}
-                    onClick={() => setFormType(type as 'login' | 'register')}
-                    className={cn(
-                    'relative z-10 w-1/2 rounded-full py-2 text-sm font-medium capitalize transition-colors',
-                    formType === type ? 'text-primary-foreground' : 'text-muted-foreground hover:text-foreground'
-                    )}
-                >
-                    {type}
-                </button>
-                ))}
-                <motion.div
-                layoutId="auth-tab"
-                transition={{ type: 'spring', stiffness: 300, damping: 30 }}
-                className="absolute inset-0 z-0 h-full w-1/2 rounded-full bg-primary"
-                style={{ x: formType === 'login' ? '0%' : '100%' }}
-                />
-            </div>
+      <div className="lg:col-span-4">
+        <AuthGraphic />
+      </div>
+      <div className="lg:col-span-6 flex items-center justify-center p-8 bg-background/50 backdrop-blur-sm">
+        <div className="w-full max-w-md">
+          {/* Top Logo for Mobile/Small Screens */}
+          <div className="flex justify-center mb-8 lg:hidden">
+            <Link to="/">
+              <Logo size="lg" />
+            </Link>
+          </div>
+          <div className="relative mb-8 flex w-full justify-center rounded-full bg-muted p-1">
+            {['login', 'register'].map((type) => (
+              <Button
+                key={type}
+                variant="ghost"
+                onClick={() => setFormType(type as 'login' | 'register')}
+                className={cn(
+                  'relative z-10 w-1/2 rounded-full py-2 text-sm font-medium capitalize transition-colors',
+                  formType === type ? 'text-primary-foreground hover:text-primary-foreground hover:bg-transparent' : 'text-muted-foreground hover:text-foreground hover:bg-transparent'
+                )}
+              >
+                {type}
+              </Button>
+            ))}
+            <motion.div
+              layoutId="auth-tab"
+              transition={{ type: 'spring', stiffness: 300, damping: 30 }}
+              className="absolute inset-0 z-0 h-full w-1/2 rounded-full bg-primary"
+              style={{ x: formType === 'login' ? '0%' : '100%' }}
+            />
+          </div>
 
-            <AnimatePresence mode="wait" custom={formType === 'login' ? -1 : 1}>
-                <motion.div
-                key={formType}
-                custom={formType === 'login' ? -1 : 1}
-                variants={formVariants}
-                initial="hidden"
-                animate="visible"
-                exit="hidden"
-                >
-                {formType === 'login' ? <LoginForm /> : <RegisterForm setFormType={setFormType} />}
-                </motion.div>
-            </AnimatePresence>
-            </div>
+          <AnimatePresence mode="wait" custom={formType === 'login' ? -1 : 1}>
+            <motion.div
+              key={formType}
+              custom={formType === 'login' ? -1 : 1}
+              variants={formVariants}
+              initial="hidden"
+              animate="visible"
+              exit="hidden"
+            >
+              {formType === 'login' ? <LoginForm /> : <RegisterForm setFormType={setFormType} />}
+            </motion.div>
+          </AnimatePresence>
         </div>
+      </div>
     </main>
   );
 }
@@ -132,6 +142,8 @@ function LoginForm() {
   const [isLoading, setIsLoading] = React.useState(false);
   const [isGoogleLoading, setIsGoogleLoading] = React.useState(false);
   const [showPassword, setShowPassword] = React.useState(false);
+  const [isForgotMode, setIsForgotMode] = React.useState(false);
+  const [resetSent, setResetSent] = React.useState(false);
 
   const form = useForm<LoginFormData>({
     resolver: zodResolver(loginSchema),
@@ -165,6 +177,40 @@ function LoginForm() {
     }
   };
 
+  if (isForgotMode) {
+    return (
+      <div className="space-y-6">
+        <div className="text-center">
+          <h1 className="text-2xl font-bold font-headline">Reset Password</h1>
+          <p className="text-muted-foreground">
+            {resetSent ? 'Check your email for instructions.' : 'Enter your email to receive a reset link.'}
+          </p>
+        </div>
+
+        {resetSent ? (
+          <motion.div initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} className="text-center py-4 bg-primary/5 rounded-2xl border border-primary/10">
+            <CheckCircle2 className="mx-auto h-12 w-12 text-primary mb-3" />
+            <p className="text-sm px-6">Sent! We've dispatched a recovery link to your inbox.</p>
+            <Button variant="outline" className="mt-6 w-11/12 mx-auto" onClick={() => setIsForgotMode(false)}>Close</Button>
+          </motion.div>
+        ) : (
+          <form className="space-y-4" onSubmit={(e) => { e.preventDefault(); setResetSent(true); }}>
+            <div className="relative">
+              <Mail className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+              <Input type="email" placeholder="your@email.com" className="pl-10 h-11" required />
+            </div>
+            <Button type="submit" variant="gradient" className="w-full h-11">
+              Send Reset Link
+            </Button>
+            <Button type="button" variant="ghost" className="w-full text-muted-foreground" onClick={() => setIsForgotMode(false)}>
+              Back to Login
+            </Button>
+          </form>
+        )}
+      </div>
+    );
+  }
+
   return (
     <>
       <div className="text-center">
@@ -181,7 +227,7 @@ function LoginForm() {
               <FormItem>
                 <div className="relative">
                   <Mail className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                  <Input {...field} type="email" placeholder="your@email.com" className="pl-10" />
+                  <Input {...field} type="email" placeholder="your@email.com" className="pl-10 h-11" />
                 </div>
                 <FormMessage />
               </FormItem>
@@ -194,10 +240,17 @@ function LoginForm() {
               <FormItem>
                 <div className="relative">
                   <Lock className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                  <Input {...field} type={showPassword ? 'text' : 'password'} placeholder="Your password" className="pl-10 pr-10" />
-                  <button type="button" aria-label={showPassword ? "Hide password" : "Show password"} onClick={() => setShowPassword(!showPassword)} className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground">
+                  <Input {...field} type={showPassword ? 'text' : 'password'} placeholder="Your password" className="pl-10 pr-10 h-11" />
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    type="button"
+                    aria-label={showPassword ? "Hide password" : "Show password"}
+                    onClick={() => setShowPassword(!showPassword)}
+                    className="absolute right-2 top-1/2 -translate-y-1/2 h-8 w-8 text-muted-foreground hover:text-foreground hover:bg-primary/10 rounded-lg"
+                  >
                     {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
-                  </button>
+                  </Button>
                 </div>
                 <FormMessage />
               </FormItem>
@@ -205,22 +258,26 @@ function LoginForm() {
           />
           <div className="flex items-center justify-between text-sm">
             <FormField
-                control={form.control}
-                name="rememberMe"
-                render={({ field }) => (
-                    <FormItem className="flex items-center gap-2 space-y-0">
-                        <FormControl>
-                            <Checkbox checked={field.value} onCheckedChange={field.onChange} />
-                        </FormControl>
-                        <FormLabel className="font-normal">Remember me</FormLabel>
-                    </FormItem>
-                )}
+              control={form.control}
+              name="rememberMe"
+              render={({ field }) => (
+                <FormItem className="flex items-center gap-2 space-y-0">
+                  <FormControl>
+                    <Checkbox checked={field.value} onCheckedChange={field.onChange} />
+                  </FormControl>
+                  <FormLabel className="font-normal">Remember me</FormLabel>
+                </FormItem>
+              )}
             />
-            <Link to="#" className="font-medium text-primary hover:underline">
+            <button
+              type="button"
+              onClick={() => setIsForgotMode(true)}
+              className="font-medium text-primary hover:underline"
+            >
               Forgot Password?
-            </Link>
+            </button>
           </div>
-          <Button type="submit" className="w-full font-bold gradient-bg text-primary-foreground" disabled={isLoading}>
+          <Button type="submit" variant="gradient" className="w-full h-11" disabled={isLoading}>
             {isLoading ? 'Logging in...' : 'Log In'}
           </Button>
         </form>
@@ -234,7 +291,7 @@ function LoginForm() {
 
       <Button
         variant="outline"
-        className="w-full transition-shadow hover:shadow-md"
+        className="w-full transition-shadow hover:shadow-md h-11"
         disabled={isGoogleLoading}
         onClick={async () => {
           setIsGoogleLoading(true);
@@ -242,7 +299,7 @@ function LoginForm() {
           finally { setIsGoogleLoading(false); }
         }}
       >
-        <GoogleIcon className="mr-2" />
+        <GoogleIcon className="mr-2 h-4 w-4" />
         {isGoogleLoading ? 'Redirecting...' : 'Google'}
       </Button>
     </>
@@ -250,6 +307,7 @@ function LoginForm() {
 }
 
 function RegisterForm({ setFormType }: { setFormType: (type: 'login') => void }) {
+  const [step, setStep] = React.useState(1);
   const { register } = useAuth();
   const { toast } = useToast();
   const [isLoading, setIsLoading] = React.useState(false);
@@ -271,16 +329,15 @@ function RegisterForm({ setFormType }: { setFormType: (type: 'login') => void })
   const onSubmit = async (data: RegisterFormData) => {
     setIsLoading(true);
     const result = await register({
-        name: data.fullName,
-        email: data.email,
-        password: data.password,
-        university: '',
+      name: data.fullName,
+      email: data.email,
+      password: data.password,
+      university: '',
     });
 
     if (result.success) {
       setIsSuccess(result.needsEmailConfirmation ?? false);
       if (!result.needsEmailConfirmation) {
-        // Email confirmation disabled — session is live, go to onboarding
         toast({ title: 'Account Created!', description: 'Welcome to SkiilEX!', variant: 'success' });
       }
       setIsLoading(false);
@@ -296,172 +353,225 @@ function RegisterForm({ setFormType }: { setFormType: (type: 'login') => void })
       setIsLoading(false);
     }
   };
-  
-    if(isSuccess) {
-        return (
-            <div className="text-center py-4">
-                <motion.div initial={{scale:0.5, opacity:0}} animate={{scale:1, opacity:1}} transition={{type: 'spring', delay: 0.2, stiffness: 150}}>
-                    <CheckCircle2 className="mx-auto h-16 w-16 text-green-500" />
-                </motion.div>
-                <h2 className="mt-4 text-2xl font-bold font-headline">Account Created!</h2>
-                <p className="text-muted-foreground mt-2">Please check your inbox and click the confirmation link to activate your account.</p>
-                <Button variant="outline" className="mt-6 w-full" onClick={() => setFormType('login')}>Back to Login</Button>
-            </div>
-        )
-    }
+
+  if (isSuccess) {
+    return (
+      <div className="text-center py-4">
+        <motion.div initial={{ scale: 0.5, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} transition={{ type: 'spring', delay: 0.2, stiffness: 150 }}>
+          <CheckCircle2 className="mx-auto h-16 w-16 text-emerald-500" />
+        </motion.div>
+        <h2 className="mt-4 text-2xl font-bold font-headline">Account Created!</h2>
+        <p className="text-muted-foreground mt-2">Please check your inbox and click the confirmation link to activate your account.</p>
+        <Button variant="outline" className="mt-6 w-full h-11" onClick={() => setFormType('login')}>Back to Login</Button>
+      </div>
+    );
+  }
 
   return (
     <>
       <div className="text-center">
         <h1 className="text-2xl font-bold font-headline">Create an Account</h1>
-        <p className="text-muted-foreground">Start your skill exchange journey with us today.</p>
+        <p className="text-muted-foreground">
+          {step === 1 ? 'Join our community of learners.' : 'Tell us what you want to trade.'}
+        </p>
+      </div>
+
+      <div className="mt-6 mb-8">
+        <div className="flex justify-between text-xs font-medium text-muted-foreground mb-2 px-1">
+          <span>Identity</span>
+          <span>Profiling</span>
+        </div>
+        <Progress value={step === 1 ? 50 : 100} className="h-1 shadow-sm" />
       </div>
 
       <Form {...form}>
-        <form onSubmit={form.handleSubmit(onSubmit)} className="mt-8 space-y-4">
-          <FormField
-            control={form.control}
-            name="fullName"
-            render={({ field }) => (
-              <FormItem>
-                <div className="relative">
-                  <User className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                  <Input {...field} placeholder="Your Full Name" className="pl-10" />
-                </div>
-                <FormMessage />
-              </FormItem>
-            )}
-          />
-          <FormField
-            control={form.control}
-            name="email"
-            render={({ field }) => (
-              <FormItem>
-                <div className="relative">
-                  <Mail className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                  <Input {...field} type="email" placeholder="your@email.com" className="pl-10" />
-                </div>
-                <FormMessage />
-              </FormItem>
-            )}
-          />
-          <div className="grid gap-4 sm:grid-cols-2">
-             <FormField
-                control={form.control}
-                name="password"
-                render={({ field }) => (
-                <FormItem>
-                    <div className="relative">
-                        <Lock className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                        <Input {...field} type={showPassword ? 'text' : 'password'} placeholder="Password" className="pl-10 pr-10" />
-                        <button type="button" aria-label={showPassword ? "Hide password" : "Show password"} onClick={() => setShowPassword(!showPassword)} className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground">
-                            {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
-                        </button>
-                    </div>
-                    <FormMessage />
-                </FormItem>
-                )}
-            />
-             <FormField
-                control={form.control}
-                name="confirmPassword"
-                render={({ field }) => (
-                <FormItem>
-                    <div className="relative">
-                        <Lock className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                        <Input {...field} type={showConfirmPassword ? 'text' : 'password'} placeholder="Confirm Password" className="pl-10 pr-10" />
-                        <button type="button" aria-label={showConfirmPassword ? "Hide password" : "Show password"} onClick={() => setShowConfirmPassword(!showConfirmPassword)} className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground">
-                            {showConfirmPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
-                        </button>
-                    </div>
-                    <FormMessage />
-                </FormItem>
-                )}
-            />
-          </div>
-
-          <div className="grid gap-4 sm:grid-cols-2">
-            <FormField control={form.control} name="skillToTeach" render={({field}) => (
-                <FormItem>
-                    <Select onValueChange={field.onChange} defaultValue={field.value}>
-                        <FormControl>
-                            <SelectTrigger><SelectValue placeholder="Skill you can teach" /></SelectTrigger>
-                        </FormControl>
-                        <SelectContent>
-                            {skills.map(s => <SelectItem key={s.id} value={s.id}>{s.name}</SelectItem>)}
-                        </SelectContent>
-                    </Select>
-                    <FormMessage />
-                </FormItem>
-            )} />
-            <FormField control={form.control} name="skillToLearn" render={({field}) => (
-                <FormItem>
-                    <Select onValueChange={field.onChange} defaultValue={field.value}>
-                        <FormControl>
-                            <SelectTrigger><SelectValue placeholder="Skill you want to learn" /></SelectTrigger>
-                        </FormControl>
-                        <SelectContent>
-                            {skills.map(s => <SelectItem key={s.id} value={s.id}>{s.name}</SelectItem>)}
-                        </SelectContent>
-                    </Select>
-                    <FormMessage />
-                </FormItem>
-            )} />
-          </div>
-
-          <FormField control={form.control} name="level" render={({field}) => (
-                <FormItem className="space-y-3">
-                    <FormLabel>Your general proficiency level</FormLabel>
-                    <FormControl>
-                        <div className="flex w-full justify-center rounded-full bg-muted p-1">
-                            {(['Beginner', 'Moderate', 'Expert'] as const).map(level => (
-                                <button
-                                    key={level}
-                                    type="button"
-                                    onClick={() => field.onChange(level)}
-                                    className={cn('w-1/2 rounded-full py-1.5 text-sm font-medium capitalize transition-colors',
-                                        field.value === level ? 'bg-primary text-primary-foreground' : 'text-muted-foreground hover:text-foreground'
-                                    )}
-                                >
-                                    {level}
-                                </button>
-                            ))}
-                        </div>
-                    </FormControl>
-                    <FormMessage />
-                </FormItem>
-            )} />
-
-            <div className="flex cursor-pointer flex-col items-center justify-center rounded-lg border-2 border-dashed border-border p-6 text-center transition-colors hover:border-primary hover:bg-primary/5">
-                <UploadCloud className="h-8 w-8 text-muted-foreground"/>
-                <p className="mt-2 text-sm text-muted-foreground">
-                    <span className="font-semibold text-primary">Click to upload</span> or drag and drop
-                </p>
-                <p className="text-xs text-muted-foreground">A profile photo is recommended</p>
-            </div>
-
-
-            <FormField
-                control={form.control}
-                name="terms"
-                render={({ field }) => (
-                    <FormItem className="flex items-start gap-3 space-y-0">
-                        <FormControl>
-                            <Checkbox checked={field.value} onCheckedChange={field.onChange} id="terms"/>
-                        </FormControl>
-                        <div className="grid gap-1.5 leading-none">
-                            <label htmlFor="terms" className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70">
-                                I agree to the <Link to="#" className="font-bold text-primary hover:underline">Terms</Link> and <Link to="#" className="font-bold text-primary hover:underline">Privacy Policy</Link>.
-                            </label>
-                            <FormMessage />
-                        </div>
+        <form onSubmit={form.handleSubmit(onSubmit)} className="mt-4 space-y-4">
+          <AnimatePresence mode="wait">
+            {step === 1 ? (
+              <motion.div
+                key="step1"
+                initial={{ opacity: 0, x: 20 }}
+                animate={{ opacity: 1, x: 0 }}
+                exit={{ opacity: 0, x: -20 }}
+                transition={{ duration: 0.2 }}
+                className="space-y-4"
+              >
+                <FormField
+                  control={form.control}
+                  name="fullName"
+                  render={({ field }) => (
+                    <FormItem>
+                      <div className="relative">
+                        <User className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                        <Input {...field} placeholder="Your Full Name" className="pl-10 h-11" />
+                      </div>
+                      <FormMessage />
                     </FormItem>
-                )}
-            />
-            
-          <Button type="submit" className="w-full font-bold gradient-bg text-primary-foreground" disabled={isLoading}>
-            {isLoading ? 'Creating Account...' : 'Create Account'}
-          </Button>
+                  )}
+                />
+                <FormField
+                  control={form.control}
+                  name="email"
+                  render={({ field }) => (
+                    <FormItem>
+                      <div className="relative">
+                        <Mail className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                        <Input {...field} type="email" placeholder="your@email.com" className="pl-10 h-11" />
+                      </div>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                <div className="grid gap-4 sm:grid-cols-2">
+                  <FormField
+                    control={form.control}
+                    name="password"
+                    render={({ field }) => (
+                      <FormItem>
+                        <div className="relative">
+                          <Lock className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                          <Input {...field} type={showPassword ? 'text' : 'password'} placeholder="Password" className="pl-10 pr-10 h-11" />
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            type="button"
+                            onClick={() => setShowPassword(!showPassword)}
+                            className="absolute right-2 top-1/2 -translate-y-1/2 h-8 w-8"
+                          >
+                            {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                          </Button>
+                        </div>
+                        <PasswordStrengthMeter password={field.value} />
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                  <FormField
+                    control={form.control}
+                    name="confirmPassword"
+                    render={({ field }) => (
+                      <FormItem>
+                        <div className="relative">
+                          <Lock className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                          <Input {...field} type={showConfirmPassword ? 'text' : 'password'} placeholder="Confirm" className="pl-10 pr-10 h-11" />
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            type="button"
+                            onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+                            className="absolute right-2 top-1/2 -translate-y-1/2 h-8 w-8"
+                          >
+                            {showConfirmPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                          </Button>
+                        </div>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                </div>
+                <Button
+                  type="button"
+                  variant="gradient"
+                  className="w-full h-11 mt-2 shadow-lg shadow-primary/20"
+                  onClick={async () => {
+                    const isValid = await form.trigger(['fullName', 'email', 'password', 'confirmPassword']);
+                    if (isValid) setStep(2);
+                  }}
+                >
+                  Continue to Skills
+                </Button>
+              </motion.div>
+            ) : (
+              <motion.div
+                key="step2"
+                initial={{ opacity: 0, x: 20 }}
+                animate={{ opacity: 1, x: 0 }}
+                exit={{ opacity: 0, x: -20 }}
+                transition={{ duration: 0.2 }}
+                className="space-y-4"
+              >
+                <div className="grid gap-4 sm:grid-cols-2">
+                  <FormField control={form.control} name="skillToTeach" render={({ field }) => (
+                    <FormItem>
+                      <Select onValueChange={field.onChange} defaultValue={field.value}>
+                        <FormControl>
+                          <SelectTrigger className="h-11 shadow-sm"><SelectValue placeholder="Skill to teach" /></SelectTrigger>
+                        </FormControl>
+                        <SelectContent>
+                          {skills.map(s => <SelectItem key={s.id} value={s.name}>{s.name}</SelectItem>)}
+                        </SelectContent>
+                      </Select>
+                      <FormMessage />
+                    </FormItem>
+                  )} />
+                  <FormField control={form.control} name="skillToLearn" render={({ field }) => (
+                    <FormItem>
+                      <Select onValueChange={field.onChange} defaultValue={field.value}>
+                        <FormControl>
+                          <SelectTrigger className="h-11 shadow-sm"><SelectValue placeholder="Skill to learn" /></SelectTrigger>
+                        </FormControl>
+                        <SelectContent>
+                          {skills.map(s => <SelectItem key={s.id} value={s.name}>{s.name}</SelectItem>)}
+                        </SelectContent>
+                      </Select>
+                      <FormMessage />
+                    </FormItem>
+                  )} />
+                </div>
+
+                <FormField control={form.control} name="level" render={({ field }) => (
+                  <FormItem>
+                    <Select onValueChange={field.onChange} defaultValue={field.value}>
+                      <FormControl>
+                        <SelectTrigger className="h-11 shadow-sm"><SelectValue placeholder="Your proficiency level" /></SelectTrigger>
+                      </FormControl>
+                      <SelectContent>
+                        <SelectItem value="Beginner">Beginner</SelectItem>
+                        <SelectItem value="Moderate">Moderate</SelectItem>
+                        <SelectItem value="Expert">Expert</SelectItem>
+                      </SelectContent>
+                    </Select>
+                    <FormMessage />
+                  </FormItem>
+                )} />
+
+                <div className="flex flex-col items-center justify-center p-4 border-2 border-dashed border-muted-foreground/20 rounded-2xl bg-muted/30 hover:bg-muted/50 transition-colors cursor-pointer group">
+                  <UploadCloud className="h-8 w-8 text-muted-foreground group-hover:text-primary transition-colors mb-2" />
+                  <p className="text-[11px] font-medium text-muted-foreground text-center">
+                    <span className="font-bold text-primary">Click to upload</span> profile photo<br />
+                    <span className="opacity-60">PNG, JPG up to 5MB</span>
+                  </p>
+                </div>
+
+                <FormField
+                  control={form.control}
+                  name="terms"
+                  render={({ field }) => (
+                    <FormItem className="flex items-start gap-3 space-y-0 py-2">
+                      <FormControl>
+                        <Checkbox checked={field.value} onCheckedChange={field.onChange} />
+                      </FormControl>
+                      <div className="grid gap-1.5 leading-none">
+                        <label className="text-[11px] font-medium leading-normal text-muted-foreground select-none">
+                          I agree to the <Link to="#" className="font-bold text-primary hover:underline">Terms</Link> and <Link to="#" className="font-bold text-primary hover:underline">Privacy Policy</Link>.
+                        </label>
+                        <FormMessage />
+                      </div>
+                    </FormItem>
+                  )}
+                />
+
+                <div className="flex gap-3 pt-2">
+                  <Button type="button" variant="outline" className="flex-1 h-11" onClick={() => setStep(1)}>
+                    Back
+                  </Button>
+                  <Button type="submit" variant="gradient" className="flex-[2] h-11 shadow-lg shadow-primary/20" disabled={isLoading}>
+                    {isLoading ? 'Creating...' : 'Create Account'}
+                  </Button>
+                </div>
+              </motion.div>
+            )}
+          </AnimatePresence>
         </form>
       </Form>
     </>

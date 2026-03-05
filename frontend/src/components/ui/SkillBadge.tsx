@@ -15,9 +15,9 @@ interface SkillBadgeProps {
 }
 
 const levelColors = {
-  beginner: 'bg-green-500',
-  moderate: 'bg-blue-500',
-  expert: 'bg-purple-500',
+  beginner: 'bg-primary/70',
+  moderate: 'bg-secondary/70',
+  expert: 'bg-accent/70',
 };
 
 const sizeClasses = {

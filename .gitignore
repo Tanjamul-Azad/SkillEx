@@ -10,6 +10,9 @@ frontend/.env.*.local
 backend/target/
 backend/*.jar
 
+##──── Bundled Maven (use local install instead) ────
+backend/apache-maven-3.9.6/
+
 ##──── Environment / secrets ────────────────────────
 .env.local
 .env.*.local

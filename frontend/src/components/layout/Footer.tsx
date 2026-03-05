@@ -4,16 +4,10 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
 import { Github, Twitter, Linkedin, Instagram, Zap } from 'lucide-react';
+import Logo from '@/components/ui/Logo';
 
-const Logo = () => (
-  <div className="flex items-center gap-2.5">
-    <div className="flex h-8 w-8 items-center justify-center rounded-xl bg-gradient-to-br from-primary to-secondary shadow-[0_0_12px_hsl(var(--primary)/0.35)]">
-      <Zap className="h-4 w-4 text-white" />
-    </div>
-    <span className="bg-gradient-to-r from-foreground to-foreground/70 bg-clip-text text-xl font-extrabold font-headline text-transparent">
-      SkillEx
-    </span>
-  </div>
+const FooterLogo = () => (
+  <Logo size="lg" />
 );
 
 export default function Footer() {
@@ -45,7 +39,7 @@ export default function Footer() {
   ];
 
   return (
-    <footer className="relative border-t border-border/40 bg-background">
+    <footer className="relative border-t border-border/40 bg-card/50">
       {/* Top gradient accent line */}
       <div className="absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-primary/30 to-transparent" />
 
@@ -53,7 +47,7 @@ export default function Footer() {
         <div className="grid grid-cols-1 gap-10 md:grid-cols-4 lg:grid-cols-5">
           {/* Brand column */}
           <div className="col-span-1 lg:col-span-2">
-            <Logo />
+            <FooterLogo />
             <p className="mt-4 max-w-xs text-sm leading-relaxed text-muted-foreground">
               The free skill exchange platform for students. Trade what you know for what you want to learn.
             </p>

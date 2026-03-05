@@ -23,6 +23,7 @@ import {
   User, Mail, Lock, Bell, Shield, Trash2, Camera,
   CheckCircle2, Eye, EyeOff, Globe, Zap,
 } from 'lucide-react';
+import { cn } from '@/lib/utils';
 
 /* ── Schemas ─────────────────────────────────────────────── */
 const profileSchema = z.object({
@@ -132,18 +133,20 @@ export default function SettingsPage() {
           >
             <nav className="flex flex-row gap-1 lg:flex-col">
               {sections.map((s) => (
-                <button
+                <Button
                   key={s.id}
+                  variant="ghost"
                   onClick={() => setActive(s.id)}
-                  className={`flex items-center gap-2.5 rounded-xl px-3 py-2.5 text-sm font-medium transition-colors w-full text-left ${
+                  className={cn(
+                    "flex items-center gap-2.5 rounded-xl px-3 py-2.5 text-sm font-medium transition-colors w-full text-left justify-start h-auto",
                     active === s.id
-                      ? 'bg-primary/10 text-primary'
+                      ? 'bg-primary/10 text-primary hover:bg-primary/10 hover:text-primary'
                       : 'text-muted-foreground hover:bg-muted hover:text-foreground'
-                  } ${s.id === 'danger' ? 'mt-auto text-destructive hover:bg-destructive/10 hover:text-destructive' : ''}`}
+                    , s.id === 'danger' && 'mt-auto text-destructive hover:bg-destructive/10 hover:text-destructive')}
                 >
                   <s.icon className="h-4 w-4 shrink-0" />
                   <span className="hidden sm:block">{s.label}</span>
-                </button>
+                </Button>
               ))}
             </nav>
           </motion.aside>
@@ -174,9 +177,12 @@ export default function SettingsPage() {
                           <AvatarImage src={user?.avatar} alt={user?.name} />
                           <AvatarFallback className="text-xl font-bold">{user?.name?.charAt(0)}</AvatarFallback>
                         </Avatar>
-                        <button className="absolute bottom-0 right-0 flex h-7 w-7 items-center justify-center rounded-full bg-primary text-primary-foreground shadow hover:bg-primary/90 transition-colors">
+                        <Button
+                          size="icon"
+                          className="absolute bottom-0 right-0 flex h-7 w-7 items-center justify-center rounded-full bg-primary text-primary-foreground shadow hover:bg-primary/90 transition-colors"
+                        >
                           <Camera className="h-3.5 w-3.5" />
-                        </button>
+                        </Button>
                       </div>
                       <div className="text-sm">
                         <p className="font-semibold">{user?.name}</p>
@@ -230,8 +236,9 @@ export default function SettingsPage() {
                         )} />
                         <Button
                           type="submit"
+                          variant="gradient"
                           disabled={savingProfile}
-                          className="rounded-xl font-bold gradient-bg text-primary-foreground min-w-[140px]"
+                          className="min-w-[140px]"
                         >
                           {savingProfile ? 'Saving...' : <><CheckCircle2 className="mr-2 h-4 w-4" />Save Changes</>}
                         </Button>
@@ -284,9 +291,15 @@ export default function SettingsPage() {
                             <FormControl>
                               <Input {...field} type={showCurrent ? 'text' : 'password'} placeholder="Your current password" className="pr-10" />
                             </FormControl>
-                            <button type="button" onClick={() => setShowCurrent((v) => !v)} className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground">
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              type="button"
+                              onClick={() => setShowCurrent((v) => !v)}
+                              className="absolute right-2 top-1/2 -translate-y-1/2 h-8 w-8 text-muted-foreground hover:text-foreground hover:bg-primary/10 rounded-lg"
+                            >
                               {showCurrent ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
-                            </button>
+                            </Button>
                           </div>
                           <FormMessage />
                         </FormItem>
@@ -298,9 +311,15 @@ export default function SettingsPage() {
                             <FormControl>
                               <Input {...field} type={showNext ? 'text' : 'password'} placeholder="Min. 8 characters" className="pr-10" />
                             </FormControl>
-                            <button type="button" onClick={() => setShowNext((v) => !v)} className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground">
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              type="button"
+                              onClick={() => setShowNext((v) => !v)}
+                              className="absolute right-2 top-1/2 -translate-y-1/2 h-8 w-8 text-muted-foreground hover:text-foreground hover:bg-primary/10 rounded-lg"
+                            >
                               {showNext ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
-                            </button>
+                            </Button>
                           </div>
                           <FormMessage />
                         </FormItem>
@@ -312,7 +331,7 @@ export default function SettingsPage() {
                           <FormMessage />
                         </FormItem>
                       )} />
-                      <Button type="submit" disabled={savingPassword} className="rounded-xl font-bold gradient-bg text-primary-foreground min-w-[160px]">
+                      <Button type="submit" variant="gradient" disabled={savingPassword} className="min-w-[160px]">
                         {savingPassword ? 'Updating...' : 'Update Password'}
                       </Button>
                     </form>
@@ -351,7 +370,7 @@ export default function SettingsPage() {
                   ))}
                   <Separator />
                   <Button
-                    className="rounded-xl font-bold gradient-bg text-primary-foreground"
+                    variant="gradient"
                     onClick={() => toast({ title: 'Preferences saved', variant: 'success' })}
                   >
                     Save Preferences
@@ -388,7 +407,7 @@ export default function SettingsPage() {
                   ))}
                   <Separator />
                   <Button
-                    className="rounded-xl font-bold gradient-bg text-primary-foreground"
+                    variant="gradient"
                     onClick={() => toast({ title: 'Privacy settings saved', variant: 'success' })}
                   >
                     Save Privacy Settings

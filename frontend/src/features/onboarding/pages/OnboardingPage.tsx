@@ -20,38 +20,38 @@ import { UserService } from '@/services/userService';
 import type { Skill } from '@/types';
 
 // ── Static skill catalog ──────────────────────────────────────
-const ICON_MAP: Record<string, React.ElementType> = {
+const ICON_MAP: Record<string, React.FC<{ className?: string }>> = {
   Film, Music, Code, Camera, Mic, Database, Paintbrush, PenTool,
   Laptop, Disc, Box, Megaphone, Languages, ChefHat, Palette,
   Table, AppWindow, BookOpen, Globe, Lightbulb,
 };
 
 const SKILL_CATALOG: Omit<Skill, 'level' | 'description'>[] = [
-  { id: 'skill-1',  name: 'Video Editing',      icon: 'Film',       category: 'Creative' },
-  { id: 'skill-2',  name: 'Guitar',              icon: 'Music',      category: 'Creative' },
-  { id: 'skill-3',  name: 'Python',              icon: 'Code',       category: 'Tech' },
-  { id: 'skill-4',  name: 'Photography',         icon: 'Camera',     category: 'Creative' },
-  { id: 'skill-5',  name: 'Public Speaking',     icon: 'Mic',        category: 'Communication' },
-  { id: 'skill-6',  name: 'Data Science',        icon: 'Database',   category: 'Tech' },
-  { id: 'skill-7',  name: 'Graphic Design',      icon: 'Paintbrush', category: 'Design' },
-  { id: 'skill-8',  name: 'English Writing',     icon: 'PenTool',    category: 'Language' },
-  { id: 'skill-9',  name: 'Web Dev',             icon: 'Laptop',     category: 'Tech' },
-  { id: 'skill-10', name: 'Music Production',    icon: 'Disc',       category: 'Creative' },
-  { id: 'skill-11', name: '3D Modeling',         icon: 'Box',        category: 'Design' },
-  { id: 'skill-12', name: 'Digital Marketing',   icon: 'Megaphone',  category: 'Business' },
-  { id: 'skill-13', name: 'French Language',     icon: 'Languages',  category: 'Language' },
-  { id: 'skill-14', name: 'Cooking',             icon: 'ChefHat',    category: 'Lifestyle' },
-  { id: 'skill-15', name: 'Drawing',             icon: 'Palette',    category: 'Creative' },
-  { id: 'skill-16', name: 'Excel',               icon: 'Table',      category: 'Business' },
-  { id: 'skill-17', name: 'UI/UX Design',        icon: 'AppWindow',  category: 'Design' },
-  { id: 'skill-18', name: 'Research',            icon: 'BookOpen',   category: 'Academic' },
-  { id: 'skill-19', name: 'Language Exchange',   icon: 'Globe',      category: 'Language' },
-  { id: 'skill-20', name: 'Critical Thinking',   icon: 'Lightbulb',  category: 'Academic' },
+  { id: 'skill-1', name: 'Video Editing', icon: 'Film', category: 'Creative' },
+  { id: 'skill-2', name: 'Guitar', icon: 'Music', category: 'Creative' },
+  { id: 'skill-3', name: 'Python', icon: 'Code', category: 'Tech' },
+  { id: 'skill-4', name: 'Photography', icon: 'Camera', category: 'Creative' },
+  { id: 'skill-5', name: 'Public Speaking', icon: 'Mic', category: 'Communication' },
+  { id: 'skill-6', name: 'Data Science', icon: 'Database', category: 'Tech' },
+  { id: 'skill-7', name: 'Graphic Design', icon: 'Paintbrush', category: 'Design' },
+  { id: 'skill-8', name: 'English Writing', icon: 'PenTool', category: 'Language' },
+  { id: 'skill-9', name: 'Web Dev', icon: 'Laptop', category: 'Tech' },
+  { id: 'skill-10', name: 'Music Production', icon: 'Disc', category: 'Creative' },
+  { id: 'skill-11', name: '3D Modeling', icon: 'Box', category: 'Design' },
+  { id: 'skill-12', name: 'Digital Marketing', icon: 'Megaphone', category: 'Business' },
+  { id: 'skill-13', name: 'French Language', icon: 'Languages', category: 'Language' },
+  { id: 'skill-14', name: 'Cooking', icon: 'ChefHat', category: 'Lifestyle' },
+  { id: 'skill-15', name: 'Drawing', icon: 'Palette', category: 'Creative' },
+  { id: 'skill-16', name: 'Excel', icon: 'Table', category: 'Business' },
+  { id: 'skill-17', name: 'UI/UX Design', icon: 'AppWindow', category: 'Design' },
+  { id: 'skill-18', name: 'Research', icon: 'BookOpen', category: 'Academic' },
+  { id: 'skill-19', name: 'Language Exchange', icon: 'Globe', category: 'Language' },
+  { id: 'skill-20', name: 'Critical Thinking', icon: 'Lightbulb', category: 'Academic' },
 ];
 
 // ── Schemas ───────────────────────────────────────────────────
 const step1Schema = z.object({
-  name:       z.string().min(2, 'Name must be at least 2 characters'),
+  name: z.string().min(2, 'Name must be at least 2 characters'),
   university: z.string().min(2, 'University must be at least 2 characters'),
 });
 type Step1Data = z.infer<typeof step1Schema>;
@@ -137,19 +137,19 @@ function SkillCard({
 const slideVariants = {
   enter: (dir: number) => ({ x: dir > 0 ? 60 : -60, opacity: 0 }),
   center: { x: 0, opacity: 1 },
-  exit:  (dir: number) => ({ x: dir > 0 ? -60 : 60, opacity: 0 }),
+  exit: (dir: number) => ({ x: dir > 0 ? -60 : 60, opacity: 0 }),
 };
 
 export default function OnboardingPage() {
   const { user, isLoading } = useAuth();
   const navigate = useNavigate();
-  const [step, setStep]     = useState(0);
-  const [dir, setDir]       = useState(1);
+  const [step, setStep] = useState(0);
+  const [dir, setDir] = useState(1);
   const [saving, setSaving] = useState(false);
 
   const [profileData, setProfileData] = useState<Step1Data>({ name: '', university: '' });
   const [skillsOffered, setSkillsOffered] = useState<string[]>([]);
-  const [skillsWanted,  setSkillsWanted]  = useState<string[]>([]);
+  const [skillsWanted, setSkillsWanted] = useState<string[]>([]);
 
   const form = useForm<Step1Data>({
     resolver: zodResolver(step1Schema),
@@ -178,10 +178,10 @@ export default function OnboardingPage() {
         return { ...s, level: 'beginner', description: '' };
       };
       await UserService.updateProfile(user.id, {
-        name:          profileData.name,
-        university:    profileData.university,
+        name: profileData.name,
+        university: profileData.university,
         skillsOffered: skillsOffered.map((id) => toSkill(id, true)),
-        skillsWanted:  skillsWanted.map((id)  => toSkill(id, false)),
+        skillsWanted: skillsWanted.map((id) => toSkill(id, false)),
       });
       go(3); // success screen
       setTimeout(() => navigate('/dashboard'), 1800);
@@ -233,7 +233,7 @@ export default function OnboardingPage() {
                         <FormMessage />
                       </FormItem>
                     )} />
-                    <Button type="submit" className="w-full gradient-bg text-primary-foreground font-bold mt-2">
+                    <Button type="submit" variant="gradient" className="w-full mt-2">
                       Continue <ArrowRight className="ml-2 w-4 h-4" />
                     </Button>
                   </form>
@@ -260,7 +260,8 @@ export default function OnboardingPage() {
                 <div className="flex gap-3">
                   <Button variant="outline" className="flex-1" onClick={() => go(0)}>Back</Button>
                   <Button
-                    className="flex-1 gradient-bg text-primary-foreground font-bold"
+                    variant="gradient"
+                    className="flex-1"
                     disabled={skillsOffered.length === 0}
                     onClick={() => go(2)}
                   >
@@ -289,7 +290,8 @@ export default function OnboardingPage() {
                 <div className="flex gap-3">
                   <Button variant="outline" className="flex-1" onClick={() => go(1)}>Back</Button>
                   <Button
-                    className="flex-1 gradient-bg text-primary-foreground font-bold"
+                    variant="gradient"
+                    className="flex-1"
                     disabled={skillsWanted.length === 0 || saving}
                     onClick={handleFinish}
                   >

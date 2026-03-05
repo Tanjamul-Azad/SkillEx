@@ -9,9 +9,13 @@ const config: Config = {
   ],
   theme: {
     extend: {
+      // ── LOCKED FONTS — DO NOT CHANGE ──────────────────────────
+      // body:     DM Sans       (Google Fonts)
+      // headline: Plus Jakarta Sans (Google Fonts)
+      // ──────────────────────────────────────────────────────────
       fontFamily: {
-        body: ["Figtree", "sans-serif"],
-        headline: ["Syne", "sans-serif"],
+        body: ["DM Sans", "sans-serif"],
+        headline: ["Plus Jakarta Sans", "sans-serif"],
       },
       colors: {
         background: "hsl(var(--background))",

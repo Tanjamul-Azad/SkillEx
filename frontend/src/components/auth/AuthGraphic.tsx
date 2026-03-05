@@ -3,26 +3,23 @@
 import { Link } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
-import { Code, Film, Figma, Mic, Music, Camera, Database, GitBranch, Zap, ArrowLeftRight } from 'lucide-react';
+import { Code, Film, Figma, Mic, Music, Camera, Database, GitBranch, ArrowLeftRight } from 'lucide-react';
 import { cn } from '@/lib/utils';
-import React from 'react';
+import React, { Suspense } from 'react';
+import { Canvas } from '@react-three/fiber';
+import { Stars } from '@react-three/drei';
+import Logo from '@/components/ui/Logo';
 
-const Logo = () => (
-  <Link to="/" className="flex items-center gap-2">
-    <Zap className="h-8 w-8 text-primary" />
-    <span className="text-3xl font-bold font-headline text-white">SkillEx</span>
-  </Link>
-);
 
 const floatingSkills = [
-  { name: 'Guitar',          icon: Music,     position: 'top-[12%] left-[8%]',   delay: '0s'   },
-  { name: 'Python',          icon: Code,      position: 'top-[18%] right-[10%]', delay: '1s'   },
-  { name: 'Video Editing',   icon: Film,      position: 'top-[62%] left-[18%]',  delay: '2s'   },
-  { name: 'Figma',           icon: Figma,     position: 'top-[48%] right-[20%]', delay: '0.5s' },
-  { name: 'Photography',     icon: Camera,    position: 'top-[78%] right-[12%]', delay: '1.5s' },
-  { name: 'Public Speaking', icon: Mic,       position: 'top-[82%] left-[6%]',   delay: '2.5s' },
-  { name: 'Git & GitHub',    icon: GitBranch, position: 'top-[35%] left-[5%]',   delay: '3s'   },
-  { name: 'Data Science',    icon: Database,  position: 'top-[30%] right-[6%]',  delay: '0.2s' },
+  { name: 'Guitar', icon: Music, position: 'top-[12%] left-[8%]', delay: '0s' },
+  { name: 'Python', icon: Code, position: 'top-[18%] right-[10%]', delay: '1s' },
+  { name: 'Video Editing', icon: Film, position: 'top-[62%] left-[18%]', delay: '2s' },
+  { name: 'Figma', icon: Figma, position: 'top-[48%] right-[20%]', delay: '0.5s' },
+  { name: 'Photography', icon: Camera, position: 'top-[78%] right-[12%]', delay: '1.5s' },
+  { name: 'Public Speaking', icon: Mic, position: 'top-[82%] left-[6%]', delay: '2.5s' },
+  { name: 'Git & GitHub', icon: GitBranch, position: 'top-[35%] left-[5%]', delay: '3s' },
+  { name: 'Data Science', icon: Database, position: 'top-[30%] right-[6%]', delay: '0.2s' },
 ];
 
 const testimonials = [
@@ -99,13 +96,22 @@ const TestimonialChip = ({ quote, avatar, name, color }: { quote: string; avatar
 export function AuthGraphic() {
   return (
     <div className="relative hidden min-h-screen select-none bg-background lg:flex lg:flex-col lg:items-center lg:justify-between p-10 lg:p-12">
+      {/* Background 3D Starfield */}
+      <div className="absolute inset-0 z-0">
+        <Canvas camera={{ position: [0, 0, 5], fov: 60 }}>
+          <Suspense fallback={null}>
+            <Stars radius={50} depth={50} count={3000} factor={4} saturation={0} fade speed={0.5} />
+          </Suspense>
+        </Canvas>
+      </div>
+
       {/* Background layers */}
-      <div className="absolute inset-0 bg-gradient-to-br from-background via-blue-950/60 to-background" />
-      <div className="absolute inset-0 bg-[radial-gradient(ellipse_80%_80%_at_50%_-20%,rgba(120,119,198,0.35),transparent)]" />
-      <div className="absolute inset-0 mesh-gradient opacity-70" />
+      <div className="absolute inset-0 bg-gradient-to-br from-background via-primary/5 to-background opacity-80" />
+      <div className="absolute inset-0 bg-[radial-gradient(ellipse_80%_80%_at_50%_-20%,rgba(120,119,198,0.25),transparent)]" />
+      <div className="absolute inset-0 mesh-gradient opacity-40" />
       {/* Ambient blobs */}
-      <div className="pointer-events-none absolute top-1/4 left-0 h-64 w-64 rounded-full bg-primary/10 blur-3xl animate-blob" />
-      <div className="pointer-events-none absolute bottom-1/4 right-0 h-64 w-64 rounded-full bg-secondary/10 blur-3xl animate-blob" style={{ animationDelay: '3s' }} />
+      <div className="pointer-events-none absolute top-1/4 left-0 h-64 w-64 rounded-full bg-primary/20 blur-3xl animate-blob opacity-50" />
+      <div className="pointer-events-none absolute bottom-1/4 right-0 h-64 w-64 rounded-full bg-secondary/20 blur-3xl animate-blob opacity-50" style={{ animationDelay: '3s' }} />
 
       {/* Floating skill chips */}
       <div className="absolute inset-0 overflow-hidden">
@@ -128,7 +134,9 @@ export function AuthGraphic() {
 
       {/* Logo */}
       <div className="relative z-10 self-start">
-        <Logo />
+        <Link to="/" className="block transition-transform hover:scale-105 active:scale-95">
+          <Logo size="lg" className="[&_span]:text-white" />
+        </Link>
       </div>
 
       {/* Central visual */}

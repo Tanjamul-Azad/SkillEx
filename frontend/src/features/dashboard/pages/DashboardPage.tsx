@@ -31,22 +31,16 @@ import DashboardLayout from '@/components/layout/DashboardLayout';
 import type { Skill } from '@/types';
 
 /* ── Consistent color palette for stat cards (Glassmorphism) ────────── */
-interface StatColors {
-  text: string;
-  bg: string;
-  border: string;
-  ring: string;
-  stroke: string;
-}
-const STAT_COLORS: Record<string, StatColors> = {
+const STAT_COLORS = {
   primary: { text: 'text-primary', bg: 'bg-primary/5 dark:bg-primary/10', border: 'border-primary/20 hover:border-primary/50', ring: 'shadow-[0_0_0_1px_hsl(var(--primary)/0.2)]', stroke: 'stroke-primary' },
-  secondary: { text: 'text-blue-400', bg: 'bg-blue-500/5 dark:bg-blue-500/10', border: 'border-blue-500/20 hover:border-blue-500/50', ring: 'shadow-[0_0_0_1px_hsl(var(--secondary)/0.2)]', stroke: 'stroke-blue-400' },
+  secondary: { text: 'text-primary', bg: 'bg-primary/5 dark:bg-primary/10', border: 'border-primary/20 hover:border-primary/50', ring: 'shadow-[0_0_0_1px_hsl(var(--primary)/0.2)]', stroke: 'stroke-primary' },
   green: { text: 'text-emerald-400', bg: 'bg-emerald-500/5 dark:bg-emerald-500/10', border: 'border-emerald-500/20 hover:border-emerald-500/50', ring: 'shadow-[0_0_0_1px_hsl(152_69%_31%/0.2)]', stroke: 'stroke-emerald-400' },
   accent: { text: 'text-amber-400', bg: 'bg-amber-500/5 dark:bg-amber-500/10', border: 'border-amber-500/20 hover:border-amber-500/50', ring: 'shadow-[0_0_0_1px_hsl(38_92%_50%/0.2)]', stroke: 'stroke-amber-400' },
-};
+} as const;
+const DEFAULT_COLORS = STAT_COLORS.primary;
 
 interface StatCardProps {
-  icon: React.ElementType;
+  icon: React.FC<{ className?: string }>;
   title: string;
   value: number;
   trend: string;
@@ -58,7 +52,7 @@ interface StatCardProps {
 const StatCard = React.memo(({ icon: Icon, title, value, trend, trendLabel, colorKey, index }: StatCardProps) => {
   const { ref } = useCounter(value, { duration: 2 });
   const isPositive = trend.startsWith('+');
-  const c = STAT_COLORS[colorKey];
+  const c = (STAT_COLORS as any)[colorKey] ?? DEFAULT_COLORS;
   return (
     <motion.div
       variants={{ hidden: { opacity: 0, y: 28 }, visible: { opacity: 1, y: 0 } }}
@@ -260,7 +254,7 @@ function activityFromExchange(exchange: Exchange, currentUserId: string) {
     case 'pending':
       return exchange.requester_id === currentUserId
         ? { icon: Clock, color: 'text-primary', bg: 'bg-primary/10', text: <>Waiting for <span className="font-bold text-foreground">{partner.name.split(' ')[0]}</span> to respond.</>, time: timeLabel }
-        : { icon: Users, color: 'text-blue-500', bg: 'bg-blue-500/10', text: <><span className="font-bold text-foreground">{partner.name.split(' ')[0]}</span> sent you an exchange request.</>, time: timeLabel };
+        : { icon: Users, color: 'text-primary', bg: 'bg-primary/10', text: <><span className="font-bold text-foreground">{partner.name.split(' ')[0]}</span> sent you an exchange request.</>, time: timeLabel };
     case 'completed':
       return { icon: Star, color: 'text-amber-500', bg: 'bg-amber-500/10', text: <>Session with <span className="font-bold text-foreground">{partner.name.split(' ')[0]}</span> completed!</>, time: timeLabel };
     default:
@@ -359,7 +353,7 @@ export default function DashboardPage() {
   };
 
   const stats: StatCardProps[] = [
-    { icon: BookOpen, title: 'Skills Offered', value: user?.skillsOffered.length ?? 0, trend: '+0', trendLabel: 'total', colorKey: 'primary', index: 0 },
+    { icon: BookOpen, title: 'Skills Offered', value: user?.skillsOffered?.length ?? 0, trend: '+0', trendLabel: 'total', colorKey: 'primary', index: 0 },
     { icon: Users, title: 'Active Exchanges', value: activeExchanges.length, trend: '+0', trendLabel: 'ongoing', colorKey: 'secondary', index: 1 },
     { icon: CheckCircle, title: 'Sessions Completed', value: user?.sessionsCompleted ?? 0, trend: '+0', trendLabel: 'all time', colorKey: 'green', index: 2 },
     { icon: Star, title: 'SkillEx Score', value: user?.skillexScore ?? 0, trend: '+0', trendLabel: 'total', colorKey: 'accent', index: 3 },
@@ -377,11 +371,11 @@ export default function DashboardPage() {
         >
           <div className="relative overflow-hidden rounded-3xl glass-strong p-6 md:p-8 border border-white/5 dark:border-white/10 shadow-glow-sm">
             {/* Gradient mesh inside banner - Teal & Blue */}
-            <div className="pointer-events-none absolute inset-0 bg-gradient-to-br from-primary/10 via-background/50 to-blue-500/10" />
-            <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(ellipse_80%_60%_at_70%_-10%,hsl(var(--primary)/0.15),rgba(59,130,246,0.1))]" />
+            <div className="pointer-events-none absolute inset-0 bg-gradient-to-br from-primary/10 via-background/50 to-primary/5" />
+            <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(ellipse_80%_60%_at_70%_-10%,hsl(var(--primary)/0.15),hsl(var(--primary)/0.04))]" />
             {/* Ambient blobs */}
             <div className="pointer-events-none absolute -top-12 -left-12 h-44 w-44 rounded-full bg-primary/20 blur-[80px]" />
-            <div className="pointer-events-none absolute -bottom-12 -right-8 h-52 w-52 rounded-full bg-blue-500/20 blur-[80px]" />
+            <div className="pointer-events-none absolute -bottom-12 -right-8 h-52 w-52 rounded-full bg-primary/15 blur-[80px]" />
             {/* Decorative dots pattern top-right */}
             <div className="pointer-events-none absolute right-6 top-6 opacity-[0.07]"
               style={{ backgroundImage: 'radial-gradient(hsl(var(--primary)) 1px,transparent 1px)', backgroundSize: '12px 12px', width: 96, height: 72 }} />
@@ -390,7 +384,7 @@ export default function DashboardPage() {
               <div className="flex items-center gap-5">
                 {/* Avatar with pulse ring */}
                 <div className="relative hidden sm:block shrink-0">
-                  <div className="absolute inset-[-4px] rounded-full bg-gradient-to-br from-primary via-blue-400 to-transparent opacity-70 animate-breathe" />
+                  <div className="absolute inset-[-4px] rounded-full bg-gradient-to-br from-primary via-primary/50 to-transparent opacity-70 animate-breathe" />
                   <Avatar className="relative h-16 w-16 ring-4 ring-card/80">
                     <AvatarImage src={user?.avatar} alt={user?.name} />
                     <AvatarFallback className="text-xl font-black">{user?.name?.charAt(0)}</AvatarFallback>
@@ -405,7 +399,7 @@ export default function DashboardPage() {
                 <div>
                   <h1 className="font-headline text-3xl font-extrabold tracking-tight md:text-4xl text-foreground">
                     {getGreeting()},{' '}
-                    <span className="text-transparent bg-clip-text bg-gradient-to-r from-primary to-blue-400">
+                    <span className="text-transparent bg-clip-text bg-gradient-to-r from-primary to-[hsl(185_100%_35%)]">
                       {user?.name?.split(' ')[0]}
                     </span>
                     {' '}
@@ -420,8 +414,8 @@ export default function DashboardPage() {
                   {/* Mini stat pills */}
                   <div className="mt-4 flex flex-wrap gap-2.5">
                     {[
-                      { icon: BookOpen, label: `${user?.skillsOffered.length ?? 0} skills`, cls: 'text-primary bg-primary/10 border-primary/20' },
-                      { icon: Users, label: `${activeExchanges.length} active`, cls: 'text-blue-400 bg-blue-500/10 border-blue-500/20' },
+                      { icon: BookOpen, label: `${user?.skillsOffered?.length ?? 0} skills`, cls: 'text-primary bg-primary/10 border-primary/20' },
+                      { icon: Users, label: `${activeExchanges.length} active`, cls: 'text-primary bg-primary/10 border-primary/20' },
                       { icon: Star, label: `${user?.skillexScore ?? 0} pts`, cls: 'text-amber-400 bg-amber-500/10 border-amber-500/20 shadow-glow-sm' },
                       { icon: CheckCircle, label: `${user?.sessionsCompleted ?? 0} done`, cls: 'text-emerald-400 bg-emerald-500/10 border-emerald-500/20' },
                     ].map(({ icon: IC, label, cls }) => (
@@ -584,8 +578,8 @@ export default function DashboardPage() {
                   {/* Learning section */}
                   <div className="p-5">
                     <p className="flex items-center gap-2 text-sm font-bold mb-3">
-                      <span className="flex h-6 w-6 items-center justify-center rounded-lg bg-blue-500/10">
-                        <BookOpen className="h-3.5 w-3.5 text-blue-400" />
+                      <span className="flex h-6 w-6 items-center justify-center rounded-lg bg-primary/10">
+                        <BookOpen className="h-3.5 w-3.5 text-primary" />
                       </span>
                       Learning
                     </p>
@@ -596,7 +590,7 @@ export default function DashboardPage() {
                     ) : (
                       <div className="flex flex-wrap gap-2">
                         {user.skillsWanted.map((skill: Skill) => (
-                          <div key={skill.id} className="inline-flex items-center rounded-full bg-blue-500/5 border border-blue-500/20 px-2.5 py-1 text-xs font-semibold text-blue-400">
+                          <div key={skill.id} className="inline-flex items-center rounded-full bg-primary/5 border border-primary/20 px-2.5 py-1 text-xs font-semibold text-primary">
                             {skill.name}
                           </div>
                         ))}

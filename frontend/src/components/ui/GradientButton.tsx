@@ -10,19 +10,19 @@ import { Loader2 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
 const gradientButtonVariants = cva(
-  'inline-flex items-center justify-center whitespace-nowrap rounded-md text-sm font-bold ring-offset-background transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50',
+  'inline-flex items-center justify-center whitespace-nowrap rounded-xl text-sm font-bold ring-offset-background transition-[transform,box-shadow,background-color,border-color,color,opacity] duration-200 ease-out focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40 focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 transform-gpu will-change-transform active:scale-[0.97] active:duration-75',
   {
     variants: {
       variant: {
-        filled: 'gradient-bg text-primary-foreground shadow-lg hover:shadow-primary/40 hover:scale-[1.03]',
-        outlined: 'border-2 border-transparent bg-background bg-clip-padding before:content-[\'\'] before:absolute before:inset-0 before:-z-10 before:rounded-[inherit] before:bg-gradient-to-br before:from-primary before:to-secondary',
-        ghost: 'bg-transparent text-foreground hover:bg-muted hover:text-foreground',
+        filled: 'gradient-bg text-primary-foreground shadow-[0_2px_12px_hsl(var(--primary)/0.35)] hover:-translate-y-[3px] hover:scale-[1.02] hover:shadow-[0_6px_20px_hsl(var(--primary)/0.40)]',
+        outlined: 'border-2 border-primary/50 bg-background text-foreground hover:-translate-y-[3px] hover:border-primary hover:bg-primary/[0.04] hover:shadow-[0_4px_14px_hsl(var(--primary)/0.18)]',
+        ghost: 'bg-transparent text-foreground hover:bg-muted hover:-translate-y-px',
       },
       size: {
-        default: 'h-10 px-4 py-2',
-        sm: 'h-9 rounded-md px-3',
-        lg: 'h-11 rounded-md px-8 text-base',
-        icon: 'h-10 w-10',
+        default: 'h-10 px-5 py-2',
+        sm: 'h-9 rounded-lg px-3.5 text-xs',
+        lg: 'h-11 rounded-xl px-8 text-base',
+        icon: 'h-10 w-10 rounded-xl',
       },
     },
     defaultVariants: {

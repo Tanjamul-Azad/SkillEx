@@ -12,6 +12,7 @@ import { Checkbox } from '@/components/ui/checkbox';
 import { Label } from '@/components/ui/label';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { useToast } from '@/hooks/use-toast';
+import { cn } from '@/lib/utils';
 import { Search, Plus, Check } from 'lucide-react';
 import { skills as allSkills } from '@data/mock/mockData';
 import type { Skill } from '@/types';
@@ -115,17 +116,20 @@ export function AddSkillDialog({ open, onClose, mode, existingIds, onSave }: Pro
         {/* Category filter */}
         <div className="flex flex-wrap gap-1.5">
           {CATEGORIES.map((c) => (
-            <button
+            <Button
               key={c}
+              variant="ghost"
+              size="sm"
               onClick={() => setCategory(c)}
-              className={`rounded-full px-3 py-1 text-xs font-semibold transition-colors border ${
+              className={cn(
+                "rounded-full px-3 py-1 text-xs font-semibold transition-colors border h-auto",
                 category === c
-                  ? 'bg-primary text-primary-foreground border-primary'
-                  : 'border-border/40 text-muted-foreground hover:border-primary/40 hover:text-foreground'
-              }`}
+                  ? 'bg-primary text-primary-foreground border-primary hover:bg-primary hover:text-primary-foreground'
+                  : 'border-border/40 text-muted-foreground hover:border-primary/40 hover:text-foreground hover:bg-transparent'
+              )}
             >
               {c}
-            </button>
+            </Button>
           ))}
         </div>
 
@@ -143,13 +147,12 @@ export function AddSkillDialog({ open, onClose, mode, existingIds, onSave }: Pro
                   key={skill.id}
                   htmlFor={`add-skill-${skill.id}`}
                   whileHover={{ scale: 1.01 }}
-                  className={`flex cursor-pointer items-center gap-3 rounded-xl border p-3 transition-colors ${
-                    already
-                      ? 'cursor-not-allowed opacity-50 border-border/30 bg-muted/30'
-                      : checked
+                  className={`flex cursor-pointer items-center gap-3 rounded-xl border p-3 transition-colors ${already
+                    ? 'cursor-not-allowed opacity-50 border-border/30 bg-muted/30'
+                    : checked
                       ? 'border-primary bg-primary/5'
                       : 'border-border/40 hover:border-primary/30 hover:bg-muted/40'
-                  }`}
+                    }`}
                 >
                   <Checkbox
                     id={`add-skill-${skill.id}`}
@@ -183,8 +186,8 @@ export function AddSkillDialog({ open, onClose, mode, existingIds, onSave }: Pro
           <div className="flex gap-2">
             <Button variant="outline" className="rounded-xl" onClick={handleClose}>Cancel</Button>
             <Button
+              variant="gradient"
               disabled={selected.size === 0 || saving}
-              className="rounded-xl font-bold gradient-bg text-primary-foreground"
               onClick={handleSave}
             >
               {saving ? 'Saving...' : `Add ${selected.size > 0 ? selected.size : ''} Skill${selected.size !== 1 ? 's' : ''}`}

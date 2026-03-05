@@ -153,17 +153,21 @@ const PostComposer = React.memo(({ onPost }: { onPost: (post: Post) => void }) =
                   <div className="flex items-center justify-between gap-3">
                     <div className="flex gap-1">
                       {POST_TYPES.map(({ id, label, icon: Icon }) => (
-                        <button
+                        <Button
                           key={id}
+                          variant="ghost"
+                          size="sm"
                           onClick={() => setPostType(id)}
-                          className={`flex items-center gap-1.5 rounded-full px-3 py-1.5 text-xs font-medium transition-colors border ${postType === id
-                              ? 'bg-primary/10 text-primary border-primary/30'
-                              : 'border-border/40 text-muted-foreground hover:border-primary/30 hover:text-foreground'
-                            }`}
+                          className={cn(
+                            'flex items-center gap-1.5 rounded-full px-3 py-1.5 text-xs font-medium transition-colors border h-auto',
+                            postType === id
+                              ? 'bg-primary/10 text-primary border-primary/30 hover:bg-primary/20'
+                              : 'border-border/40 text-muted-foreground hover:border-primary/30 hover:text-foreground hover:bg-transparent'
+                          )}
                         >
                           <Icon className="h-3 w-3" />
                           {label}
-                        </button>
+                        </Button>
                       ))}
                     </div>
                     <div className="flex gap-2">
@@ -176,9 +180,10 @@ const PostComposer = React.memo(({ onPost }: { onPost: (post: Post) => void }) =
                         Cancel
                       </Button>
                       <Button
+                        variant="gradient"
                         size="sm"
                         disabled={!content.trim() || submitting}
-                        className="rounded-xl font-bold gradient-bg text-primary-foreground text-xs px-4"
+                        className="rounded-xl text-xs px-4"
                         onClick={handleSubmit}
                       >
                         {submitting ? 'Posting...' : 'Post'}
@@ -387,7 +392,7 @@ const EventCard = React.memo(({ event }: { event: Event }) => {
         </div>
         <div className="mt-4 flex gap-2">
           <Button variant="outline" className="w-full hover:bg-red-500/10 hover:text-red-500"><Heart className="mr-2" /> Interested</Button>
-          <Button className="w-full font-bold gradient-bg text-primary-foreground">Register</Button>
+          <Button variant="gradient" className="w-full">Register</Button>
         </div>
       </CardContent>
     </Card>
@@ -442,7 +447,7 @@ const CircleCard = React.memo(({ circle }: { circle: SkillCircle }) => {
         <div className="mt-4 text-xs text-muted-foreground">Last session: {circle.lastSession}</div>
         <div className="mt-4 flex gap-2">
           <Button variant="ghost" className="w-full">Preview</Button>
-          <Button className="w-full font-bold gradient-bg text-primary-foreground">Join Circle</Button>
+          <Button variant="gradient" className="w-full">Join Circle</Button>
         </div>
       </CardContent>
     </Card>
@@ -541,17 +546,18 @@ export default function CommunityPage() {
           <div className="relative border-b">
             <div className="flex space-x-2 overflow-x-auto pb-px">
               {tabs.map((tab) => (
-                <button
+                <Button
                   key={tab.id}
+                  variant="ghost"
                   onClick={() => setActiveTab(tab.id)}
                   className={cn(
-                    "relative flex-shrink-0 whitespace-nowrap py-2 px-3 font-medium transition-colors",
+                    "relative flex-shrink-0 whitespace-nowrap py-2 px-3 font-medium transition-colors hover:bg-transparent",
                     activeTab === tab.id ? 'text-primary' : 'text-muted-foreground hover:text-foreground'
                   )}
                 >
                   <tab.icon className="mr-2 inline h-4 w-4" />
                   {tab.label}
-                </button>
+                </Button>
               ))}
             </div>
             <motion.div

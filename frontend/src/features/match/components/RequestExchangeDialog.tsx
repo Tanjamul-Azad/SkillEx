@@ -207,8 +207,9 @@ export function RequestExchangeDialog({ open, onClose, targetUser }: Props) {
                     </Button>
                     <Button
                       type="submit"
+                      variant="gradient"
                       disabled={submitting || mySkills.length === 0}
-                      className="flex-1 rounded-xl font-bold gradient-bg text-primary-foreground"
+                      className="flex-1"
                     >
                       {submitting ? 'Sending...' : 'Send Request'}
                     </Button>
@@ -233,7 +234,7 @@ export function RequestExchangeDialog({ open, onClose, targetUser }: Props) {
                   We notified <strong>{targetUser.name}</strong>. You'll get a notification when they respond.
                 </p>
               </div>
-              <Button className="rounded-xl font-bold gradient-bg text-primary-foreground" onClick={handleClose}>
+              <Button variant="gradient" className="rounded-xl" onClick={handleClose}>
                 Done
               </Button>
             </motion.div>

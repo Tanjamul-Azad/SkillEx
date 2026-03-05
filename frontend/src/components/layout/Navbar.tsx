@@ -1,7 +1,7 @@
 
 'use client';
 
-import React, { useState, useRef } from 'react';
+import React, { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { useLocation } from 'react-router-dom';
 import { motion, AnimatePresence, useScroll, useMotionValueEvent } from 'framer-motion';
@@ -9,6 +9,7 @@ import { Zap, Sun, Moon, Menu, X as XIcon, ChevronRight, Sparkles } from 'lucide
 import { Button } from '@/components/ui/button';
 import { useTheme } from '@/hooks/useTheme';
 import { cn } from '@/lib/utils';
+import Logo from '@/components/ui/Logo';
 
 const navLinks = [
   { name: 'How it Works', href: '#how-it-works' },
@@ -16,15 +17,9 @@ const navLinks = [
   { name: 'Community', href: '/community' },
 ];
 
-const Logo = () => (
-  <Link to="/" className="group flex items-center gap-2">
-    <div className="relative">
-      <Zap className="h-8 w-8 text-primary transition-transform group-hover:scale-110 group-hover:-rotate-12 duration-300" />
-      <span className="absolute -top-0.5 -right-0.5 h-2 w-2 animate-pulse rounded-full bg-secondary" />
-    </div>
-    <span className="text-2xl font-extrabold font-headline">
-      SkillEx
-    </span>
+const NavLogo = () => (
+  <Link to="/" className="group">
+    <Logo size="lg" />
   </Link>
 );
 
@@ -33,25 +28,15 @@ export default function Navbar() {
   const [scrolled, setScrolled] = useState(false);
   const [scrollProgress, setScrollProgress] = useState(0);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
-  const [visible, setVisible] = useState(true);
-  const lastScrollY = useRef(0);
   const { pathname } = useLocation();
   const { scrollY } = useScroll();
 
   useMotionValueEvent(scrollY, 'change', (latest) => {
-    const prev = lastScrollY.current;
     setScrolled(latest > 20);
-    if (latest > prev && latest > 100) {
-      setVisible(false);
-      setMobileMenuOpen(false);
-    } else {
-      setVisible(true);
-    }
-    lastScrollY.current = latest;
     const docH = document.documentElement.scrollHeight - window.innerHeight;
     setScrollProgress(docH > 0 ? (latest / docH) * 100 : 0);
   });
-  
+
   return (
     <>
       {/* Scroll progress bar — GPU composited via will-change */}
@@ -67,19 +52,22 @@ export default function Navbar() {
 
       {/* Navbar */}
       <motion.header
-        initial={{ y: 0 }}
-        animate={{ y: visible ? 0 : -100 }}
+        initial={{ y: -20, opacity: 0 }}
+        animate={{ y: 0, opacity: 1 }}
         transition={{ type: 'spring', stiffness: 380, damping: 32, mass: 0.8 }}
         className={cn(
-          'fixed top-0 left-0 right-0 z-50',
-          'transition-[background,border-color,box-shadow] duration-300 ease-out',
+          'fixed top-0 z-50 w-full',
+          'transition-all duration-500 ease-in-out',
           scrolled
-            ? 'border-b border-border/50 bg-background/85 backdrop-blur-xl shadow-sm'
-            : 'bg-transparent'
+            ? 'bg-background/60 backdrop-blur-2xl border-b border-border/40 shadow-[0_2px_15px_-3px_rgba(0,0,0,0.07),0_10px_20px_-2px_rgba(0,0,0,0.04)] py-0'
+            : 'bg-transparent border-b-transparent shadow-none py-2'
         )}
       >
-        <div className="container mx-auto flex h-20 items-center justify-between px-4">
-          <Logo />
+        <div className={cn(
+          "container mx-auto flex items-center justify-between px-4 transition-all duration-500",
+          scrolled ? "h-16" : "h-20"
+        )}>
+          <NavLogo />
 
           {/* Desktop nav */}
           <nav className="hidden items-center gap-1 md:flex">
@@ -114,7 +102,8 @@ export default function Navbar() {
             </Button>
             <Button
               asChild
-              className="group h-10 rounded-xl px-5 text-sm font-bold gradient-bg text-primary-foreground shadow-glow hover:shadow-glow-lg hover:scale-[1.03] transition-all duration-200"
+              variant="gradient"
+              className="group h-10 rounded-xl px-5 text-sm"
             >
               <Link to="/login">
                 <Sparkles className="mr-1.5 h-3.5 w-3.5 transition-transform group-hover:rotate-12" />
@@ -212,7 +201,7 @@ export default function Navbar() {
                   <Button asChild variant="outline" className="w-full rounded-xl">
                     <Link to="/login">Login</Link>
                   </Button>
-                  <Button asChild className="w-full rounded-xl font-bold gradient-bg text-primary-foreground">
+                  <Button asChild variant="gradient" className="w-full rounded-xl">
                     <Link to="/login">
                       <Sparkles className="mr-2 h-3.5 w-3.5" />
                       Start Exchanging Free

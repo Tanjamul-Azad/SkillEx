@@ -74,7 +74,7 @@ const defaultFilters: Filters = {
   search: '',
 };
 
-const FilterSidebar: FC<{ filters: Filters; setFilters: (f: Filters) => void }> = React.memo(({ filters, setFilters }) => {
+const FilterSidebar: FC<{ filters: Filters; setFilters: (f: Filters) => void; onApply?: () => void }> = React.memo(({ filters, setFilters, onApply }) => {
   const activeFilterCount =
     filters.categories.length +
     filters.levels.length +
@@ -188,7 +188,7 @@ const FilterSidebar: FC<{ filters: Filters; setFilters: (f: Filters) => void }> 
         </Accordion>
       </div>
       <div className="border-t border-white/10 dark:border-white/5 p-4">
-        <Button variant="gradient" className="w-full">
+        <Button variant="gradient" className="w-full" onClick={onApply}>
           Apply Filters {activeFilterCount > 0 && `(${activeFilterCount})`}
         </Button>
       </div>
@@ -211,7 +211,7 @@ const FilterSidebar: FC<{ filters: Filters; setFilters: (f: Filters) => void }> 
         {content}
       </aside>
       <div className="lg:hidden">
-        <Sheet>
+        <Sheet open={mobileSheetOpen} onOpenChange={setMobileSheetOpen}>
           <SheetTrigger asChild>
             <Button variant="outline" size="icon" className="fixed bottom-24 right-4 z-40 rounded-full shadow-lg" aria-label="Open filters">
               <SlidersHorizontal />
@@ -388,6 +388,7 @@ export default function MatchPage() {
   const [activeTab, setActiveTab] = useState<'direct' | 'chain'>('direct');
   const [sortOption, setSortOption] = useState('best');
   const [filters, setFilters] = useState<Filters>(defaultFilters);
+  const [mobileSheetOpen, setMobileSheetOpen] = useState(false);
 
   const { users, loading } = useMatchUsers({ search: filters.search, limit: 50 });
 
@@ -421,7 +422,7 @@ export default function MatchPage() {
   return (
     <DashboardLayout>
       <div className="flex flex-1">
-        <FilterSidebar filters={filters} setFilters={setFilters} />
+        <FilterSidebar filters={filters} setFilters={setFilters} onApply={() => setMobileSheetOpen(false)} />
         <div className="flex-1 p-4 md:p-8">
           <div className="mx-auto max-w-7xl">
             <motion.div initial={{ opacity: 0, y: -20 }} animate={{ opacity: 1, y: 0 }}>

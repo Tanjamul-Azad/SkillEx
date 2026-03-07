@@ -46,6 +46,19 @@ public class SecurityConfig {
             .authorizeHttpRequests(auth -> auth
                 .requestMatchers(HttpMethod.POST, "/api/auth/login", "/api/auth/register").permitAll()
                 .requestMatchers("/api/auth/google/**").permitAll()
+                // Public read-only routes — skills catalogue and community browsing
+                .requestMatchers(HttpMethod.GET, "/api/skills", "/api/skills/**").permitAll()
+                .requestMatchers(HttpMethod.GET,
+                    "/api/community/events",
+                    "/api/community/events/**",
+                    "/api/community/discussions",
+                    "/api/community/discussions/**",
+                    "/api/community/posts",
+                    "/api/community/posts/**",
+                    "/api/community/stories",
+                    "/api/community/skill-circles",
+                    "/api/community/skill-circles/**"
+                ).permitAll()
                 .anyRequest().authenticated()
             )
             .addFilterBefore(jwtAuthFilter, UsernamePasswordAuthenticationFilter.class);

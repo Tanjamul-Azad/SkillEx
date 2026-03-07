@@ -4,13 +4,14 @@ import { AnimatePresence, motion } from 'framer-motion';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import { Link } from 'react-router-dom';
 import { Eye, EyeOff, Lock, Mail, User, UploadCloud, CheckCircle2 } from 'lucide-react';
 import { useAuth } from '@/hooks/useAuth';
 import { useToast } from '@/hooks/use-toast';
 import { cn } from '@/lib/utils';
-import { skills } from '@data/mock/mockData';
+import { SkillService } from '@/services/skillService';
+import type { Skill } from '@/types';
 import { AuthGraphic } from '@/components/auth/AuthGraphic';
 
 import { Button } from '@/components/ui/button';
@@ -64,7 +65,9 @@ const formVariants = {
 };
 
 function AuthPage() {
-  const [formType, setFormType] = React.useState<'login' | 'register'>('login');
+  const [searchParams] = useSearchParams();
+  const initialTab = searchParams.get('tab') === 'register' ? 'register' : 'login';
+  const [formType, setFormType] = React.useState<'login' | 'register'>(initialTab);
   const { isAuthenticated, isLoading: isAuthLoading } = useAuth();
   const navigate = useNavigate();
 
@@ -144,6 +147,7 @@ function LoginForm() {
   const [showPassword, setShowPassword] = React.useState(false);
   const [isForgotMode, setIsForgotMode] = React.useState(false);
   const [resetSent, setResetSent] = React.useState(false);
+  const [resetEmail, setResetEmail] = React.useState('');
 
   const form = useForm<LoginFormData>({
     resolver: zodResolver(loginSchema),
@@ -197,7 +201,7 @@ function LoginForm() {
           <form className="space-y-4" onSubmit={(e) => { e.preventDefault(); setResetSent(true); }}>
             <div className="relative">
               <Mail className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-              <Input type="email" placeholder="your@email.com" className="pl-10 h-11" required />
+              <Input type="email" placeholder="your@email.com" className="pl-10 h-11" required value={resetEmail} onChange={(e) => setResetEmail(e.target.value)} />
             </div>
             <Button type="submit" variant="gradient" className="w-full h-11">
               Send Reset Link
@@ -309,11 +313,17 @@ function LoginForm() {
 function RegisterForm({ setFormType }: { setFormType: (type: 'login') => void }) {
   const [step, setStep] = React.useState(1);
   const { register } = useAuth();
+  const navigate = useNavigate();
   const { toast } = useToast();
   const [isLoading, setIsLoading] = React.useState(false);
   const [showPassword, setShowPassword] = React.useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = React.useState(false);
   const [isSuccess, setIsSuccess] = React.useState(false);
+  const [skillOptions, setSkillOptions] = React.useState<Skill[]>([]);
+
+  React.useEffect(() => {
+    SkillService.getAll().then((s) => setSkillOptions(Array.isArray(s) ? s : [])).catch(() => {});
+  }, []);
 
   const form = useForm<RegisterFormData>({
     resolver: zodResolver(registerSchema),
@@ -336,9 +346,15 @@ function RegisterForm({ setFormType }: { setFormType: (type: 'login') => void })
     });
 
     if (result.success) {
-      setIsSuccess(result.needsEmailConfirmation ?? false);
-      if (!result.needsEmailConfirmation) {
-        toast({ title: 'Account Created!', description: 'Welcome to SkiilEX!', variant: 'success' });
+      if (result.needsEmailConfirmation) {
+        setIsSuccess(true);
+      } else {
+        toast({
+          title: 'Account Created!',
+          description: 'Your account is ready. Sign in with your new credentials.',
+          variant: 'success',
+        });
+        setFormType('login');
       }
       setIsLoading(false);
     } else {
@@ -498,7 +514,7 @@ function RegisterForm({ setFormType }: { setFormType: (type: 'login') => void })
                           <SelectTrigger className="h-11 shadow-sm"><SelectValue placeholder="Skill to teach" /></SelectTrigger>
                         </FormControl>
                         <SelectContent>
-                          {skills.map(s => <SelectItem key={s.id} value={s.name}>{s.name}</SelectItem>)}
+                          {skillOptions.map(s => <SelectItem key={s.id} value={s.name}>{s.name}</SelectItem>)}
                         </SelectContent>
                       </Select>
                       <FormMessage />
@@ -511,7 +527,7 @@ function RegisterForm({ setFormType }: { setFormType: (type: 'login') => void })
                           <SelectTrigger className="h-11 shadow-sm"><SelectValue placeholder="Skill to learn" /></SelectTrigger>
                         </FormControl>
                         <SelectContent>
-                          {skills.map(s => <SelectItem key={s.id} value={s.name}>{s.name}</SelectItem>)}
+                          {skillOptions.map(s => <SelectItem key={s.id} value={s.name}>{s.name}</SelectItem>)}
                         </SelectContent>
                       </Select>
                       <FormMessage />
@@ -553,7 +569,7 @@ function RegisterForm({ setFormType }: { setFormType: (type: 'login') => void })
                       </FormControl>
                       <div className="grid gap-1.5 leading-none">
                         <label className="text-[11px] font-medium leading-normal text-muted-foreground select-none">
-                          I agree to the <Link to="#" className="font-bold text-primary hover:underline">Terms</Link> and <Link to="#" className="font-bold text-primary hover:underline">Privacy Policy</Link>.
+                          I agree to the <Link to="/terms" className="font-bold text-primary hover:underline">Terms</Link> and <Link to="/privacy" className="font-bold text-primary hover:underline">Privacy Policy</Link>.
                         </label>
                         <FormMessage />
                       </div>

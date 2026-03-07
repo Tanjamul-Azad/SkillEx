@@ -620,13 +620,13 @@
       transform 0.4s cubic-bezier(0.23, 1, 0.32, 1),
       box-shadow 0.4s ease,
       border-color 0.4s ease;
-    will-change: transform, box-shadow;
+    will-change: transform, box-shadow, border-color;
   }
 
   .card-hover:hover {
     transform: translateY(-4px) scale(1.005) translateZ(0);
-    box-shadow: 0 16px 40px -12px hsl(var(--primary) / 0.15), 0 4px 12px hsl(220 20% 40% / 0.08);
-    border-color: hsl(var(--primary) / 0.4);
+    box-shadow: 0 16px 40px -12px hsl(var(--primary) / 0.35), 0 4px 12px hsl(0 0% 0% / 0.2);
+    border-color: hsl(var(--primary) / 0.6);
   }
 
   .card-hover:active {
@@ -638,13 +638,13 @@
       transform 0.4s cubic-bezier(0.23, 1, 0.32, 1),
       box-shadow 0.4s ease,
       border-color 0.4s ease;
-    will-change: transform, box-shadow;
+    will-change: transform, box-shadow, border-color;
   }
 
   .card-hover-glow:hover {
     transform: translateY(-6px) translateZ(0);
     box-shadow: var(--shadow-xl), var(--glow-primary);
-    border-color: hsl(var(--primary) / 0.6);
+    border-color: hsl(var(--primary) / 0.8);
   }
 
   .card-hover-glow:active {

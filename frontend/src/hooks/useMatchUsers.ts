@@ -27,8 +27,9 @@ export function useMatchUsers(options: UseMatchUsersOptions = {}) {
       if (options.search) params.set('q', options.search);
       if (options.limit)  params.set('limit', String(options.limit));
       const qs = params.toString();
-      const { data } = await api.get<{ data: MatchUser[] }>(`/users/matches${qs ? `?${qs}` : ''}`);
-      setUsers(data ?? []);
+      const raw = await api.get<{ data: MatchUser[] } | MatchUser[]>(`/match/users${qs ? `?${qs}` : ''}`);
+      const list = Array.isArray(raw) ? raw : (raw as { data: MatchUser[] }).data ?? [];
+      setUsers(list);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to load matches');
     } finally {

@@ -1,5 +1,5 @@
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
   Rss,
@@ -25,8 +25,11 @@ import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { useAuth } from '@/hooks/useAuth';
+import { useToast } from '@/hooks/use-toast';
 import { cn } from '@/lib/utils';
-import { stories, posts, events, skillCircles, discussions, users as allUsers, skills as allSkills } from '@data/mock/mockData';
+import { CommunityService } from '@/services/communityService';
+import { SkillService } from '@/services/skillService';
+import { UserService } from '@/services/userService';
 import type { Story, Post, Event, SkillCircle, Discussion, User } from '@/types';
 import DashboardLayout from '@/components/layout/DashboardLayout';
 
@@ -216,6 +219,10 @@ PostComposer.displayName = 'PostComposer';
 
 const PostCard = React.memo(({ post }: { post: Post }) => {
   const authorName = post.author.name.split(' ')[0] || post.author.name;
+  const [liked, setLiked] = React.useState(false);
+  const [saved, setSaved] = React.useState(false);
+  const [localLikes, setLocalLikes] = React.useState(post.likes);
+  const { toast } = useToast();
   return (
     <Card className="group overflow-hidden glass transition-all hover:shadow-glow-sm duration-400 ease-snappy hover:-translate-y-1">
       <CardContent className="p-5">
@@ -258,8 +265,8 @@ const PostCard = React.memo(({ post }: { post: Post }) => {
 
         <div className="mt-4 flex justify-between items-center text-xs text-muted-foreground border-b border-border/50 pb-3">
           <div className="flex items-center gap-1">
-            <Heart className="h-3.5 w-3.5 text-red-500/80" />
-            <span>{post.likes} likes</span>
+            <Heart className={cn('h-3.5 w-3.5', liked ? 'fill-red-500 text-red-500' : 'text-red-500/80')} />
+            <span>{localLikes} likes</span>
           </div>
           <div className="flex items-center gap-2">
             <span>{post.comments} comments</span>
@@ -269,17 +276,21 @@ const PostCard = React.memo(({ post }: { post: Post }) => {
         </div>
 
         <div className="pt-1 flex justify-around -mx-1">
-          <Button variant="ghost" size="sm" className="flex-1 rounded-xl text-xs hover:bg-red-500/5 hover:text-red-500 transition-colors">
-            <Heart className="mr-1.5 h-3.5 w-3.5" /> Like
+          <Button variant="ghost" size="sm" className={cn('flex-1 rounded-xl text-xs hover:bg-red-500/5 transition-colors', liked && 'text-red-500')} onClick={() => { setLiked(l => !l); setLocalLikes(n => liked ? n - 1 : n + 1); }}>
+            <Heart className={cn('mr-1.5 h-3.5 w-3.5', liked && 'fill-red-500')} /> Like
           </Button>
-          <Button variant="ghost" size="sm" className="flex-1 rounded-xl text-xs hover:bg-primary/5 transition-colors">
+          <Button variant="ghost" size="sm" className="flex-1 rounded-xl text-xs hover:bg-primary/5 transition-colors" onClick={() => toast({ title: 'Comments', description: 'Comment threads are coming soon.' })}>
             <MessageSquare className="mr-1.5 h-3.5 w-3.5" /> Comment
           </Button>
-          <Button variant="ghost" size="sm" className="flex-1 rounded-xl text-xs hover:bg-secondary/5 transition-colors">
+          <Button variant="ghost" size="sm" className="flex-1 rounded-xl text-xs hover:bg-secondary/5 transition-colors" onClick={async () => {
+            const url = window.location.href;
+            if (navigator.share) { try { await navigator.share({ title: post.author.name, url }); } catch { /* cancelled */ } }
+            else { await navigator.clipboard.writeText(url); toast({ title: 'Link copied!', description: 'Post link copied to clipboard.' }); }
+          }}>
             <Share2 className="mr-1.5 h-3.5 w-3.5" /> Share
           </Button>
-          <Button variant="ghost" size="sm" className="flex-1 rounded-xl text-xs hover:bg-accent/5 transition-colors">
-            <Bookmark className="mr-1.5 h-3.5 w-3.5" /> Save
+          <Button variant="ghost" size="sm" className={cn('flex-1 rounded-xl text-xs hover:bg-accent/5 transition-colors', saved && 'text-accent')} onClick={() => { setSaved(s => !s); toast({ title: saved ? 'Removed from saved' : 'Post saved!', description: saved ? undefined : 'Find it in your saved posts.' }); }}>
+            <Bookmark className={cn('mr-1.5 h-3.5 w-3.5', saved && 'fill-current')} /> Save
           </Button>
         </div>
       </CardContent>
@@ -291,7 +302,21 @@ PostCard.displayName = 'PostCard';
 
 const FeedTab = () => {
   const { user } = useAuth();
-  const [localPosts, setLocalPosts] = useState<Post[]>([...posts]);
+  const [localPosts, setLocalPosts] = useState<Post[]>([]);
+  const [stories, setStories] = useState<Story[]>([]);
+  const [trendingSkills, setTrendingSkills] = useState<{ id: string; name: string }[]>([]);
+  const [suggestions, setSuggestions] = useState<User[]>([]);
+  const [followedUsers, setFollowedUsers] = useState<Set<string>>(new Set());
+
+  useEffect(() => {
+    CommunityService.getPosts().then((r) => setLocalPosts(r.content ?? [])).catch(() => {});
+    CommunityService.getStories().then(setStories).catch(() => {});
+    SkillService.getAll().then((s) => setTrendingSkills(Array.isArray(s) ? s.slice(0, 5) : [])).catch(() => {});
+    UserService.getAll(1, 10).then((r) => {
+      const list = (r as { content?: User[]; data?: User[] }).content ?? (r as { data?: User[] }).data ?? [];
+      setSuggestions(list.slice(0, 3));
+    }).catch(() => {});
+  }, []);
 
   const handleNewPost = (post: Post) => {
     setLocalPosts((prev) => [post, ...prev]);
@@ -323,10 +348,10 @@ const FeedTab = () => {
           <CardHeader><CardTitle className="text-lg">Trending Skills</CardTitle></CardHeader>
           <CardContent>
             <ul className="space-y-3">
-              {allSkills.slice(0, 5).map((skill, i) => (
+              {trendingSkills.slice(0, 5).map((skill, i) => (
                 <li key={skill.id} className="flex items-center justify-between text-sm">
                   <span className="font-semibold">{i + 1}. {skill.name}</span>
-                  <span className="flex items-center text-green-500"><ArrowUp className="h-4 w-4" /> {Math.floor(Math.random() * 20)}%</span>
+                  <span className="flex items-center text-green-500"><ArrowUp className="h-4 w-4" /> {(i + 1) * 3}%</span>
                 </li>
               ))}
             </ul>
@@ -335,16 +360,16 @@ const FeedTab = () => {
         <Card>
           <CardHeader><CardTitle className="text-lg">Suggested Connections</CardTitle></CardHeader>
           <CardContent className="space-y-4">
-            {allUsers.slice(5, 8).map(user => (
-              <div key={user.id} className="flex items-center gap-3">
-                <Avatar><AvatarImage src={user.avatar} /><AvatarFallback>{user.name.charAt(0)}</AvatarFallback></Avatar>
-                <div>
-                  <p className="font-semibold text-sm">{user.name}</p>
-                  <p className="text-xs text-muted-foreground">{user.university}</p>
+              {suggestions.map(u => (
+                <div key={u.id} className="flex items-center gap-3">
+                  <Avatar><AvatarImage src={u.avatar} /><AvatarFallback>{u.name.charAt(0)}</AvatarFallback></Avatar>
+                  <div>
+                    <p className="font-semibold text-sm">{u.name}</p>
+                    <p className="text-xs text-muted-foreground">{u.university}</p>
+                  </div>
+                  <Button size="sm" variant={followedUsers.has(u.id) ? 'default' : 'outline'} className="ml-auto" onClick={() => setFollowedUsers(prev => { const next = new Set(prev); next.has(u.id) ? next.delete(u.id) : next.add(u.id); return next; })}>{followedUsers.has(u.id) ? 'Following' : 'Follow'}</Button>
                 </div>
-                <Button size="sm" variant="outline" className="ml-auto">Follow</Button>
-              </div>
-            ))}
+              ))}
           </CardContent>
         </Card>
       </aside>
@@ -354,6 +379,8 @@ const FeedTab = () => {
 
 // --- EVENTS TAB COMPONENTS ---
 const EventCard = React.memo(({ event }: { event: Event }) => {
+  const [interested, setInterested] = React.useState(false);
+  const { toast } = useToast();
   return (
     <Card className="overflow-hidden h-full flex flex-col transition-all duration-400 ease-snappy hover:shadow-glow-sm hover:-translate-y-2 group">
       <div className={cn("h-40 w-full flex flex-col justify-end p-4 text-white", event.coverGradient)}>
@@ -391,8 +418,10 @@ const EventCard = React.memo(({ event }: { event: Event }) => {
           <p className="text-sm text-muted-foreground">+{event.attendees.length - 5} going</p>
         </div>
         <div className="mt-4 flex gap-2">
-          <Button variant="outline" className="w-full hover:bg-red-500/10 hover:text-red-500"><Heart className="mr-2" /> Interested</Button>
-          <Button variant="gradient" className="w-full">Register</Button>
+          <Button variant="outline" className={cn('w-full hover:bg-red-500/10', interested && 'bg-red-500/10 text-red-500 border-red-500/30')} onClick={() => setInterested(i => !i)}>
+            <Heart className={cn('mr-2', interested && 'fill-red-500 text-red-500')} /> {interested ? 'Interested ✓' : 'Interested'}
+          </Button>
+          <Button variant="gradient" className="w-full" onClick={() => toast({ title: 'Registration confirmed!', description: `See you at ${event.title}!`, variant: 'success' })}>Register</Button>
         </div>
       </CardContent>
     </Card>
@@ -401,24 +430,39 @@ const EventCard = React.memo(({ event }: { event: Event }) => {
 EventCard.displayName = 'EventCard';
 
 const EventsTab = () => {
-  const featuredEvent = events[0];
+  const [events, setEvents] = useState<Event[]>([]);
   const filterChips = ['All', 'Online', 'In-Person', 'Workshop', 'Meetup'];
   const [activeFilter, setActiveFilter] = useState('All');
 
+  useEffect(() => {
+    CommunityService.getEvents().then((r) => setEvents(r.content ?? [])).catch(() => {});
+  }, []);
+
+  const featuredEvent = events[0];
+  const filteredEvents = events.filter(event => {
+    if (activeFilter === 'All') return true;
+    if (activeFilter === 'Online') return event.isOnline;
+    if (activeFilter === 'In-Person') return !event.isOnline;
+    return true;
+  });
+
   return (
     <div className="space-y-6">
-      <div className={cn("relative h-48 rounded-lg overflow-hidden p-8 flex flex-col justify-end text-white", featuredEvent.coverGradient)}>
-        <h2 className="text-3xl font-bold font-headline">{featuredEvent.title}</h2>
-        <p>{new Date(featuredEvent.date).toDateString()}</p>
-        {/* Countdown timer could go here */}
-      </div>
+      {featuredEvent ? (
+        <div className={cn("relative h-48 rounded-lg overflow-hidden p-8 flex flex-col justify-end text-white", featuredEvent.coverGradient)}>
+          <h2 className="text-3xl font-bold font-headline">{featuredEvent.title}</h2>
+          <p>{new Date(featuredEvent.date).toDateString()}</p>
+        </div>
+      ) : (
+        <div className="h-48 rounded-lg bg-muted flex items-center justify-center text-muted-foreground">Loading events...</div>
+      )}
       <div className="flex gap-2 overflow-x-auto pb-2">
         {filterChips.map(chip => (
           <Button key={chip} variant={activeFilter === chip ? 'default' : 'outline'} onClick={() => setActiveFilter(chip)}>{chip}</Button>
         ))}
       </div>
       <motion.div variants={containerVariants} initial="hidden" animate="visible" className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-        {events.map(event => <motion.div variants={itemVariants} key={event.id}><EventCard event={event} /></motion.div>)}
+        {filteredEvents.map(event => <motion.div variants={itemVariants} key={event.id}><EventCard event={event} /></motion.div>)}
       </motion.div>
     </div>
   )
@@ -426,6 +470,8 @@ const EventsTab = () => {
 
 // --- SKILL CIRCLES TAB ---
 const CircleCard = React.memo(({ circle }: { circle: SkillCircle }) => {
+  const [joined, setJoined] = React.useState(false);
+  const { toast } = useToast();
   return (
     <Card className="h-full flex flex-col transition-all duration-400 ease-snappy hover:shadow-glow-sm hover:-translate-y-2 group">
       <CardContent className="p-6 flex-grow flex flex-col">
@@ -446,8 +492,8 @@ const CircleCard = React.memo(({ circle }: { circle: SkillCircle }) => {
         </div>
         <div className="mt-4 text-xs text-muted-foreground">Last session: {circle.lastSession}</div>
         <div className="mt-4 flex gap-2">
-          <Button variant="ghost" className="w-full">Preview</Button>
-          <Button variant="gradient" className="w-full">Join Circle</Button>
+          <Button variant="ghost" className="w-full" onClick={() => toast({ title: circle.name, description: `${circle.memberCount} members · ${circle.activity}` })}>Preview</Button>
+          <Button variant={joined ? 'outline' : 'gradient'} className="w-full" onClick={() => { setJoined(j => !j); toast({ title: joined ? 'Left circle' : `Joined ${circle.name}!`, description: joined ? undefined : 'You can now participate in this skill circle.', variant: joined ? 'default' : 'success' }); }}>{joined ? 'Leave Circle' : 'Join Circle'}</Button>
         </div>
       </CardContent>
     </Card>
@@ -456,6 +502,12 @@ const CircleCard = React.memo(({ circle }: { circle: SkillCircle }) => {
 CircleCard.displayName = 'CircleCard';
 
 const SkillCirclesTab = () => {
+  const [circles, setCircles] = useState<SkillCircle[]>([]);
+
+  useEffect(() => {
+    CommunityService.getSkillCircles().then((r) => setCircles(r.content ?? [])).catch(() => {});
+  }, []);
+
   return (
     <div className="space-y-6">
       <div>
@@ -469,7 +521,7 @@ const SkillCirclesTab = () => {
           <h3 className="mt-4 font-bold">Create New Circle</h3>
           <p className="text-sm text-muted-foreground">Start a new community</p>
         </Card>
-        {skillCircles.map(circle => <CircleCard key={circle.id} circle={circle} />)}
+        {circles.map(circle => <CircleCard key={circle.id} circle={circle} />)}
       </div>
     </div>
   )
@@ -477,8 +529,13 @@ const SkillCirclesTab = () => {
 
 // --- DISCUSSIONS TAB ---
 const DiscussionsTab = () => {
+  const [discussions, setDiscussions] = useState<Discussion[]>([]);
   const categories = ['All', 'General', 'Skill Tips', 'Success Stories', 'Help & Support', 'Announcements'];
   const [activeCategory, setActiveCategory] = useState('All');
+
+  useEffect(() => {
+    CommunityService.getDiscussions().then((r) => setDiscussions(r.content ?? [])).catch(() => {});
+  }, []);
 
   return (
     <div className="grid grid-cols-1 lg:grid-cols-4 gap-8">
@@ -519,7 +576,7 @@ const DiscussionsTab = () => {
                   <span>{d.createdAt}</span>
                 </div>
               </div>
-              <Avatar className="ml-auto hidden sm:block"><AvatarImage src={allUsers.find(u => u.id === d.author.id)?.avatar} /></Avatar>
+              <Avatar className="ml-auto hidden sm:block"><AvatarImage src={d.author.avatar} /></Avatar>
             </CardContent>
           </Card>
         ))}

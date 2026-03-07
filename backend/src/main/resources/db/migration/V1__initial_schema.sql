@@ -1,11 +1,14 @@
 -- ============================================================
--- SkillEX — MySQL Initial Schema
+-- SkillEX — MySQL Initial Schema  V1
 -- Compatible with: MySQL 8.0+ / MariaDB 10.6+
--- Run against Spring Boot DataSource (managed by Flyway or Liquibase)
+--
+-- IMPORTANT: The `skillex` database must already exist before Flyway runs.
+-- Create it manually in phpMyAdmin / mysql CLI:
+--   CREATE DATABASE skillex CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
+--
+-- Flyway cannot run CREATE DATABASE / USE statements — they are intentionally
+-- omitted here. The DataSource in application.properties points to the DB directly.
 -- ============================================================
-
-CREATE DATABASE IF NOT EXISTS skillex CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
-USE skillex;
 
 -- ── users ────────────────────────────────────────────────────
 -- Stores registered users. Spring Boot entity: User.java
@@ -18,13 +21,15 @@ CREATE TABLE IF NOT EXISTS users (
   university          VARCHAR(200)  DEFAULT ''                  COMMENT 'University / institution',
   bio                 TEXT                                      COMMENT 'Short personal bio',
   skillex_score       INT           NOT NULL DEFAULT 0          COMMENT 'Platform reputation score',
-  level               ENUM('Newcomer','Learner','Practitioner','Skilled','Advanced','Master')
-                                    NOT NULL DEFAULT 'Newcomer',
+  -- Matches UserLevel enum names stored by JPA EnumType.STRING
+  level               ENUM('NEWCOMER','LEARNER','PRACTITIONER','SKILLED','ADVANCED','MASTER')
+                                    NOT NULL DEFAULT 'NEWCOMER',
   sessions_completed  INT           NOT NULL DEFAULT 0,
   rating              DECIMAL(3,2)  NOT NULL DEFAULT 0.00       COMMENT 'Average review rating (0–5)',
   is_online           TINYINT(1)    NOT NULL DEFAULT 0,
-  role                ENUM('student','admin')
-                                    NOT NULL DEFAULT 'student',
+  -- Matches UserRole enum names stored by JPA EnumType.STRING
+  role                ENUM('STUDENT','ADMIN')
+                                    NOT NULL DEFAULT 'STUDENT',
   joined_at           DATETIME      NOT NULL DEFAULT CURRENT_TIMESTAMP,
   updated_at          DATETIME      NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
   PRIMARY KEY (id),
@@ -48,18 +53,19 @@ CREATE TABLE IF NOT EXISTS skills (
 CREATE TABLE IF NOT EXISTS user_skills_offered (
   user_id     VARCHAR(36)   NOT NULL,
   skill_id    VARCHAR(36)   NOT NULL,
-  level       ENUM('beginner','moderate','expert') NOT NULL DEFAULT 'beginner',
+  -- Matches SkillProficiency enum names stored by JPA EnumType.STRING
+  level       ENUM('BEGINNER','MODERATE','EXPERT') NOT NULL DEFAULT 'BEGINNER',
   PRIMARY KEY (user_id, skill_id),
   CONSTRAINT fk_uso_user  FOREIGN KEY (user_id)  REFERENCES users(id)  ON DELETE CASCADE,
   CONSTRAINT fk_uso_skill FOREIGN KEY (skill_id) REFERENCES skills(id) ON DELETE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
--- ── user_skills_wanted ───────────────────────────────────────
+-- ── user_skills_wanted ──────────────────────────────────────────────
 -- Skills a user wants to learn. Spring Boot: @ManyToMany UserSkillWanted.java
 CREATE TABLE IF NOT EXISTS user_skills_wanted (
   user_id     VARCHAR(36)   NOT NULL,
   skill_id    VARCHAR(36)   NOT NULL,
-  level       ENUM('beginner','moderate','expert') NOT NULL DEFAULT 'beginner',
+  level       ENUM('BEGINNER','MODERATE','EXPERT') NOT NULL DEFAULT 'BEGINNER',
   PRIMARY KEY (user_id, skill_id),
   CONSTRAINT fk_usw_user  FOREIGN KEY (user_id)  REFERENCES users(id)  ON DELETE CASCADE,
   CONSTRAINT fk_usw_skill FOREIGN KEY (skill_id) REFERENCES skills(id) ON DELETE CASCADE
@@ -74,8 +80,9 @@ CREATE TABLE IF NOT EXISTS exchanges (
   offered_skill_id VARCHAR(36)   DEFAULT NULL          COMMENT 'Skill requester offers to teach',
   wanted_skill_id  VARCHAR(36)   DEFAULT NULL          COMMENT 'Skill requester wants to learn',
   message          TEXT          DEFAULT NULL          COMMENT 'Optional introductory message',
-  status           ENUM('pending','accepted','declined','completed','cancelled')
-                                 NOT NULL DEFAULT 'pending',
+  -- Matches ExchangeStatus enum names stored by JPA EnumType.STRING
+  status           ENUM('PENDING','ACCEPTED','DECLINED','COMPLETED','CANCELLED')
+                                 NOT NULL DEFAULT 'PENDING',
   session_date     DATETIME      DEFAULT NULL          COMMENT 'Agreed session datetime (UTC)',
   created_at       DATETIME      NOT NULL DEFAULT CURRENT_TIMESTAMP,
   updated_at       DATETIME      NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
@@ -96,8 +103,9 @@ CREATE TABLE IF NOT EXISTS sessions (
   skill_id        VARCHAR(36)   NOT NULL,
   scheduled_at    DATETIME      NOT NULL,
   duration_mins   INT           NOT NULL DEFAULT 60,
-  status          ENUM('scheduled','completed','cancelled')
-                                NOT NULL DEFAULT 'scheduled',
+  -- Matches SessionStatus enum names stored by JPA EnumType.STRING
+  status          ENUM('SCHEDULED','COMPLETED','CANCELLED')
+                                NOT NULL DEFAULT 'SCHEDULED',
   meet_link       VARCHAR(500)  DEFAULT NULL            COMMENT 'Google Meet / Zoom link',
   created_at      DATETIME      NOT NULL DEFAULT CURRENT_TIMESTAMP,
   updated_at      DATETIME      NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
@@ -176,7 +184,8 @@ CREATE TABLE IF NOT EXISTS skill_circles (
   icon          VARCHAR(50)   DEFAULT '⚡',
   member_count  INT           NOT NULL DEFAULT 0,
   last_session  DATETIME      DEFAULT NULL,
-  activity      ENUM('🔥 Very Active','⚡ Active','😴 Quiet') NOT NULL DEFAULT '⚡ Active',
+  -- Matches ActivityLevel enum names stored by JPA EnumType.STRING
+  activity      ENUM('VERY_ACTIVE','ACTIVE','QUIET') NOT NULL DEFAULT 'ACTIVE',
   created_at    DATETIME      NOT NULL DEFAULT CURRENT_TIMESTAMP,
   PRIMARY KEY (id)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;

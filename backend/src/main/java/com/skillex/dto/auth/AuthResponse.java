@@ -1,18 +1,13 @@
 package com.skillex.dto.auth;
 
-/** Response body for login and register — carries JWT token + user snapshot */
+import com.skillex.dto.user.UserProfileDto;
+
+/**
+ * Response body for login and register.
+ * Carries JWT token + full user profile (including skills) so the frontend
+ * never needs a second /users/me round-trip after login.
+ */
 public record AuthResponse(
     String token,
-    UserSnapshot user
-) {
-    public record UserSnapshot(
-        String id,
-        String name,
-        String email,
-        String university,
-        String avatarUrl,
-        String role,
-        int skillexScore,
-        int sessionsCompleted
-    ) {}
-}
+    UserProfileDto user
+) {}

@@ -1,5 +1,5 @@
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { useAuth } from '@/hooks/useAuth';
@@ -24,7 +24,8 @@ import {
   ArrowLeftRight, Star, Calendar, MessageSquare, Menu,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
-import { notifications as allNotifications } from '@data/mock/mockData';
+import { NotificationService } from '@/services/notificationService';
+import type { Notification } from '@/types';
 import Logo from '@/components/ui/Logo';
 
 const LogoWrapper = () => (
@@ -75,10 +76,21 @@ export default function Header({
   const pageTitle = PAGE_TITLES[pathname] ?? (matchedKey ? PAGE_TITLES[matchedKey] : 'SkillEx');
 
   const [readIds, setReadIds] = useState<Set<string>>(new Set());
-  const notifs = (allNotifications as { id: string; type: string; message: string; createdAt: string; isRead: boolean }[]).slice(0, 8);
+  const [notifs, setNotifs] = useState<Notification[]>([]);
+
+  useEffect(() => {
+    if (!user) return;
+    NotificationService.getAll(0, 8)
+      .then((res) => setNotifs(res.content ?? []))
+      .catch(() => { /* silently fail — notifications are non-critical */ });
+  }, [user]);
+
   const unreadCount = notifs.filter((n) => !n.isRead && !readIds.has(n.id)).length;
 
-  const markAllRead = () => setReadIds(new Set(notifs.map((n) => n.id)));
+  const markAllRead = () => {
+    NotificationService.markAllRead().catch(() => {});
+    setReadIds(new Set(notifs.map((n) => n.id)));
+  };
 
   return (
     <header

@@ -29,27 +29,34 @@ export interface Exchange {
   receiver: ExchangeProfile;
 }
 
+export interface PagedResponse<T> {
+  content: T[];
+  totalElements: number;
+  totalPages: number;
+  page: number;
+  size: number;
+  last: boolean;
+}
+
 export const exchangeService = {
-  list(status?: string): Promise<{ data: Exchange[] }> {
-    const params = status ? `?status=${status}` : '';
-    return api.get<{ data: Exchange[] }>(`/exchanges${params}`);
+  list(status?: string, page = 0, size = 20): Promise<PagedResponse<Exchange>> {
+    const params = new URLSearchParams({ page: String(page), size: String(size) });
+    if (status) params.set('status', status);
+    return api.get<PagedResponse<Exchange>>(`/exchanges?${params.toString()}`);
   },
 
   create(data: {
     receiverId: string;
-    offeredSkill?: Skill;
-    wantedSkill?: Skill;
+    offeredSkillId?: string;
+    wantedSkillId?: string;
     message?: string;
-  }): Promise<{ data: Exchange }> {
-    return api.post<{ data: Exchange }>('/exchanges', data);
+  }): Promise<Exchange> {
+    return api.post<Exchange>('/exchanges', data);
   },
 
-  update(id: string, data: {
-    status?: 'accepted' | 'declined' | 'completed' | 'cancelled';
-    sessionDate?: string;
-    message?: string;
-  }): Promise<{ data: Exchange }> {
-    return api.patch<{ data: Exchange }>(`/exchanges/${id}`, data);
+  /** PATCH /api/exchanges/{id}/status — accept / decline / complete */
+  updateStatus(id: string, status: 'accepted' | 'declined' | 'completed' | 'cancelled'): Promise<Exchange> {
+    return api.patch<Exchange>(`/exchanges/${id}/status`, { status });
   },
 
   cancel(id: string): Promise<void> {

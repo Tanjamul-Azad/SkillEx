@@ -24,8 +24,9 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import { useCounter } from '@/hooks/useCounter';
+import { useToast } from '@/hooks/use-toast';
 import { cn } from '@/lib/utils';
 import DashboardLayout from '@/components/layout/DashboardLayout';
 import type { Skill } from '@/types';
@@ -61,9 +62,8 @@ const StatCard = React.memo(({ icon: Icon, title, value, trend, trendLabel, colo
       className="h-full"
     >
       <Card className={cn(
-        'group relative h-full overflow-hidden transition-all duration-400 ease-snappy',
-        'hover:shadow-[0_8px_30px_hsl(0_0%_0%/0.10),0_2px_8px_hsl(0_0%_0%/0.06)] hover:-translate-y-1.5',
-        'glass-subtle hover:glass-strong',
+        'group relative h-full overflow-hidden ease-snappy',
+        'glass-subtle card-hover',
         c.border,
       )}>
         {/* Subtle top inner highlight replacing flat gradient */}
@@ -123,13 +123,19 @@ function ExchangeCard({ exchange, currentUserId }: { exchange: Exchange; current
   const partner = exchange.requester_id === currentUserId ? exchange.receiver : exchange.requester;
   const mySkill = exchange.requester_id === currentUserId ? exchange.offered_skill : exchange.wanted_skill;
   const theirSkill = exchange.requester_id === currentUserId ? exchange.wanted_skill : exchange.offered_skill;
+  const { toast } = useToast();
+  const navigate = useNavigate();
+  const [localStatus, setLocalStatus] = React.useState(exchange.status);
+  const [dismissed, setDismissed] = React.useState(false);
+
+  if (dismissed) return null;
 
   return (
     <motion.div
       whileHover={{ y: -4, transition: { type: 'spring', stiffness: 300 } }}
       className="h-full"
     >
-      <Card className="group h-full overflow-hidden transition-all duration-400 ease-snappy hover:-translate-y-1.5 hover:border-primary/40 hover:shadow-[0_12px_40px_-12px_hsl(var(--primary)/0.25),0_4px_12px_hsl(220_20%_40%/0.1)]">
+      <Card className="group h-full overflow-hidden ease-snappy glass-subtle card-hover">
         {/* Animated sheen line */}
         <div className="absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-white/40 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
         <CardContent className="p-5">
@@ -146,10 +152,10 @@ function ExchangeCard({ exchange, currentUserId }: { exchange: Exchange; current
               </div>
             </div>
             <Badge
-              variant={exchange.status === 'accepted' ? 'default' : 'secondary'}
+              variant={localStatus === 'accepted' ? 'default' : 'secondary'}
               className="text-[10px] capitalize rounded-full px-2.5 py-0.5"
             >
-              {exchange.status}
+              {localStatus}
             </Badge>
           </div>
 
@@ -181,16 +187,35 @@ function ExchangeCard({ exchange, currentUserId }: { exchange: Exchange; current
           )}
 
           <div className="mt-4 grid grid-cols-2 gap-2">
-            <Button variant="outline" size="sm" className="rounded-xl text-xs">
-              <MessageSquare className="mr-1.5 h-3.5 w-3.5" />Message
-            </Button>
-            <Button size="sm" className="rounded-xl text-xs font-bold">
-              <Video className="mr-1.5 h-3.5 w-3.5" />Schedule
-            </Button>
+            {localStatus === 'pending' && exchange.receiver_id === currentUserId ? (
+              <>
+                <Button variant="outline" size="sm" className="rounded-xl text-xs border-destructive/20 text-destructive hover:bg-destructive/10" onClick={() => { setDismissed(true); toast({ title: 'Request declined', variant: 'destructive' }); }}>
+                  Decline
+                </Button>
+                <Button size="sm" className="rounded-xl text-xs font-bold bg-emerald-500 hover:bg-emerald-600 text-white" onClick={() => { setLocalStatus('accepted'); toast({ title: 'Request accepted!', description: `You are now matched with ${partner.name.split(' ')[0]}.`, variant: 'success' }); }}>
+                  Accept
+                </Button>
+              </>
+            ) : localStatus === 'pending' ? (
+              <>
+                <Button variant="outline" size="sm" className="rounded-xl text-xs col-span-2 text-muted-foreground" disabled>
+                  Waiting for response...
+                </Button>
+              </>
+            ) : (
+              <>
+                <Button variant="outline" size="sm" className="rounded-xl text-xs" onClick={() => { navigate('/community'); toast({ title: 'Opening Community', description: 'Use Community to chat with your exchange partner.' }); }}>
+                  <MessageSquare className="mr-1.5 h-3.5 w-3.5" />Message
+                </Button>
+                <Button size="sm" className="rounded-xl text-xs font-bold" onClick={() => toast({ title: 'Coming soon', description: 'Session scheduling will be available in a future update.' })}>
+                  <Video className="mr-1.5 h-3.5 w-3.5" />Schedule
+                </Button>
+              </>
+            )}
           </div>
         </CardContent>
-      </Card>
-    </motion.div>
+      </Card >
+    </motion.div >
   );
 }
 
@@ -250,17 +275,18 @@ function activityFromExchange(exchange: Exchange, currentUserId: string) {
 
   switch (exchange.status) {
     case 'accepted':
-      return { icon: CheckCircle, color: 'text-emerald-500', bg: 'bg-emerald-500/10', text: <><span className="font-bold text-foreground">{partner.name.split(' ')[0]}</span> accepted your exchange request.</>, time: timeLabel };
+      return { icon: CheckCircle, color: 'text-emerald-500', bg: 'bg-emerald-500/10', text: <><span className="font-bold text-foreground">{partner.name.split(' ')[0]}</span> accepted your request.</>, time: timeLabel };
     case 'pending':
       return exchange.requester_id === currentUserId
-        ? { icon: Clock, color: 'text-primary', bg: 'bg-primary/10', text: <>Waiting for <span className="font-bold text-foreground">{partner.name.split(' ')[0]}</span> to respond.</>, time: timeLabel }
-        : { icon: Users, color: 'text-primary', bg: 'bg-primary/10', text: <><span className="font-bold text-foreground">{partner.name.split(' ')[0]}</span> sent you an exchange request.</>, time: timeLabel };
+        ? { icon: Clock, color: 'text-primary', bg: 'bg-primary/10', text: <>Waiting for <span className="font-bold text-foreground">{partner.name.split(' ')[0]}</span>.</>, time: timeLabel }
+        : { icon: Users, color: 'text-primary', bg: 'bg-primary/10', text: <><span className="font-bold text-foreground">{partner.name.split(' ')[0]}</span> sent a request.</>, time: timeLabel };
     case 'completed':
       return { icon: Star, color: 'text-amber-500', bg: 'bg-amber-500/10', text: <>Session with <span className="font-bold text-foreground">{partner.name.split(' ')[0]}</span> completed!</>, time: timeLabel };
     default:
       return null;
   }
 }
+
 
 /* ── Onboarding Progress ────────────────────────────────────────────────── */
 function OnboardingProgress({ user, exchanges }: { user: any; exchanges: Exchange[] }) {
@@ -341,10 +367,11 @@ export default function DashboardPage() {
 
   const getGreeting = () => {
     const h = new Date().getHours();
-    if (h < 12) return 'Good morning';
-    if (h < 18) return 'Good afternoon';
-    return 'Good evening';
+    if (h < 12) return { text: 'Good morning', icon: '🌅' };
+    if (h < 18) return { text: 'Good afternoon', icon: '☀️' };
+    return { text: 'Good evening', icon: '🌙' };
   };
+  const greeting = getGreeting();
 
   const containerVariants = { hidden: { opacity: 0 }, visible: { opacity: 1, transition: { staggerChildren: 0.07 } } };
   const itemVariants = {
@@ -398,7 +425,7 @@ export default function DashboardPage() {
 
                 <div>
                   <h1 className="font-headline text-3xl font-extrabold tracking-tight md:text-4xl text-foreground">
-                    {getGreeting()},{' '}
+                    {greeting.text},{' '}
                     <span className="text-transparent bg-clip-text bg-gradient-to-r from-primary to-[hsl(185_100%_35%)]">
                       {user?.name?.split(' ')[0]}
                     </span>
@@ -407,7 +434,7 @@ export default function DashboardPage() {
                       className="inline-block origin-[70%_70%]"
                       animate={{ rotate: [0, -14, 14, -8, 8, -4, 4, 0] }}
                       transition={{ duration: 2.5, repeat: Infinity, repeatDelay: 4 }}
-                    >👋</motion.span>
+                    >{greeting.icon}</motion.span>
                   </h1>
                   <p className="mt-1 text-sm text-muted-foreground">Here&apos;s your SkillEx summary for today.</p>
 
@@ -432,7 +459,7 @@ export default function DashboardPage() {
                   <Link to="/match"><Search className="mr-2 h-3.5 w-3.5" />Find a Match</Link>
                 </Button>
                 <Button asChild size="sm" className="rounded-xl font-bold">
-                  <Link to={`/profile/${user?.id}`}><TrendingUp className="mr-2 h-3.5 w-3.5" />My Progress</Link>
+                  <Link to={user?.id ? `/profile/${user.id}` : '/settings'}><TrendingUp className="mr-2 h-3.5 w-3.5" />My Progress</Link>
                 </Button>
               </div>
             </div>
@@ -501,6 +528,9 @@ export default function DashboardPage() {
                       </div>
                       <p className="font-semibold text-sm">No sessions scheduled</p>
                       <p className="text-xs text-muted-foreground mt-1 max-w-[22ch]">Accept an exchange and schedule your first session!</p>
+                      <Button asChild size="sm" variant="outline" className="mt-4 rounded-xl">
+                        <Link to="/match">Find Matches</Link>
+                      </Button>
                     </div>
                   ) : (
                     <div className="relative space-y-5">
@@ -563,15 +593,20 @@ export default function DashboardPage() {
                     </p>
                     {!user ? (
                       <div className="flex flex-wrap gap-1.5">{[0, 1, 2].map(i => <Skeleton key={i} className="h-6 w-16 rounded-full" />)}</div>
-                    ) : user.skillsOffered.length === 0 ? (
-                      <p className="text-xs text-muted-foreground">No skills added. <Link to="/profile" className="text-primary hover:underline font-medium">Add them →</Link></p>
+                    ) : (user.skillsOffered ?? []).length === 0 ? (
+                      <p className="text-xs text-muted-foreground">No skills added. <Link to={`/profile/${user?.id}`} className="text-primary hover:underline font-medium">Add them →</Link></p>
                     ) : (
                       <div className="flex flex-wrap gap-2">
-                        {user.skillsOffered.map((skill: Skill) => (
+                        {(user.skillsOffered ?? []).slice(0, 5).map((skill: Skill) => (
                           <div key={skill.id} className="inline-flex items-center rounded-full bg-primary/10 border border-primary/20 px-2.5 py-1 text-xs font-semibold text-primary shadow-glow-sm">
                             {skill.name}
                           </div>
                         ))}
+                        {(user.skillsOffered ?? []).length > 5 && (
+                          <div className="inline-flex items-center rounded-full bg-muted/50 border border-border/50 px-2.5 py-1 text-xs font-semibold text-muted-foreground">
+                            +{(user.skillsOffered ?? []).length - 5} more
+                          </div>
+                        )}
                       </div>
                     )}
                   </div>
@@ -585,15 +620,20 @@ export default function DashboardPage() {
                     </p>
                     {!user ? (
                       <div className="flex flex-wrap gap-1.5">{[0, 1, 2].map(i => <Skeleton key={i} className="h-6 w-16 rounded-full" />)}</div>
-                    ) : user.skillsWanted.length === 0 ? (
+                    ) : (user.skillsWanted ?? []).length === 0 ? (
                       <p className="text-xs text-muted-foreground">No skills added yet.</p>
                     ) : (
                       <div className="flex flex-wrap gap-2">
-                        {user.skillsWanted.map((skill: Skill) => (
+                        {(user.skillsWanted ?? []).slice(0, 5).map((skill: Skill) => (
                           <div key={skill.id} className="inline-flex items-center rounded-full bg-primary/5 border border-primary/20 px-2.5 py-1 text-xs font-semibold text-primary">
                             {skill.name}
                           </div>
                         ))}
+                        {(user.skillsWanted ?? []).length > 5 && (
+                          <div className="inline-flex items-center rounded-full bg-muted/50 border border-border/50 px-2.5 py-1 text-xs font-semibold text-muted-foreground">
+                            +{(user.skillsWanted ?? []).length - 5} more
+                          </div>
+                        )}
                       </div>
                     )}
                     <Button asChild variant="outline" size="sm" className="mt-5 w-full rounded-xl text-xs border-white/5 bg-background shadow-none hover:bg-background/80">
@@ -618,23 +658,27 @@ export default function DashboardPage() {
                 <Card className="glass-subtle border-border/40">
                   <CardContent className="p-5">
                     <div className="space-y-4">
-                      {[
-                        { name: 'Alex M.', action: 'matched with Jordan for', skill: 'Python', time: '2m ago', color: 'text-primary', bg: 'bg-primary/10', icon: Users },
-                        { name: 'Sarah L.', action: 'completed a session on', skill: 'UI Design', time: '14m ago', color: 'text-amber-400', bg: 'bg-amber-500/10', icon: Star },
-                        { name: 'David K.', action: 'earned the Top Teacher badge', skill: '', time: '1h ago', color: 'text-emerald-400', bg: 'bg-emerald-500/10', icon: CheckCircle }
-                      ].map((item, i) => (
-                        <div key={i} className="flex items-start gap-3 rounded-xl p-2.5 transition-colors hover:bg-white/5 dark:hover:bg-white/5">
-                          <div className={cn('flex h-8 w-8 shrink-0 items-center justify-center rounded-xl md:shadow-glow-sm', item.bg)}>
-                            <item.icon className={cn('h-3.5 w-3.5', item.color)} />
-                          </div>
-                          <div className="flex-1 min-w-0">
-                            <p className="text-xs text-muted-foreground leading-relaxed">
-                              <span className="font-bold text-foreground">{item.name}</span> {item.action} {item.skill && <span className="font-bold text-foreground">{item.skill}</span>}
-                            </p>
-                            <p className="mt-0.5 text-[10px] text-muted-foreground/60">{item.time}</p>
-                          </div>
+                      {activityItems.length > 0 ? (
+                        activityItems.map((item, i) => (
+                          item ? (
+                            <div key={i} className="flex items-start gap-3 rounded-xl p-2.5 transition-colors hover:bg-white/5 dark:hover:bg-white/5">
+                              <div className={cn('flex h-8 w-8 shrink-0 items-center justify-center rounded-xl md:shadow-glow-sm', item.bg)}>
+                                {item.icon && <item.icon className={cn('h-3.5 w-3.5', item.color)} />}
+                              </div>
+                              <div className="flex-1 min-w-0">
+                                <p className="text-xs text-muted-foreground leading-relaxed">
+                                  {item.text}
+                                </p>
+                                <p className="mt-0.5 text-[10px] text-muted-foreground/60">{item.time}</p>
+                              </div>
+                            </div>
+                          ) : null
+                        ))
+                      ) : (
+                        <div className="text-center py-6 text-sm text-muted-foreground">
+                          No recent activity yet.
                         </div>
-                      ))}
+                      )}
                     </div>
                   </CardContent>
                 </Card>

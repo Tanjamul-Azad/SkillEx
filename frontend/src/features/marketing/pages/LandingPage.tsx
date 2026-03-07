@@ -16,8 +16,40 @@ import { Card, CardContent } from '@/components/ui/card';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { useCounter } from '@/hooks/useCounter';
 import { useScrollAnimation } from '@/hooks/useScrollAnimation';
-import { skills, users } from '@data/mock/mockData';
 import { cn } from '@/lib/utils';
+
+/* Static display data for the marketing page — no auth/API needed */
+const skills = [
+  { id: 'sk1',  name: 'Video Editing',    icon: 'Film',     category: 'Creative',      level: 'beginner'  as const },
+  { id: 'sk2',  name: 'Guitar',           icon: 'Music',    category: 'Creative',      level: 'moderate'  as const },
+  { id: 'sk3',  name: 'Python',           icon: 'Code',     category: 'Tech',          level: 'expert'    as const },
+  { id: 'sk4',  name: 'Figma',            icon: 'Figma',    category: 'Design',        level: 'beginner'  as const },
+  { id: 'sk5',  name: 'Photography',      icon: 'Camera',   category: 'Creative',      level: 'moderate'  as const },
+  { id: 'sk6',  name: 'Public Speaking',  icon: 'Mic',      category: 'Communication', level: 'expert'    as const },
+  { id: 'sk7',  name: 'Data Science',     icon: 'Database', category: 'Tech',          level: 'beginner'  as const },
+  { id: 'sk8',  name: 'Graphic Design',   icon: 'Pencil',   category: 'Design',        level: 'moderate'  as const },
+  { id: 'sk9',  name: 'English Writing',  icon: 'Pencil',   category: 'Language',      level: 'expert'    as const },
+  { id: 'sk10', name: 'Web Dev',          icon: 'Code',     category: 'Tech',          level: 'beginner'  as const },
+  { id: 'sk11', name: 'Music Production', icon: 'Music',    category: 'Creative',      level: 'moderate'  as const },
+  { id: 'sk12', name: 'Digital Marketing',icon: 'TrendingUp',category: 'Business',     level: 'expert'    as const },
+  { id: 'sk13', name: 'French Language',  icon: 'Bot',      category: 'Language',      level: 'beginner'  as const },
+  { id: 'sk14', name: 'Drawing',          icon: 'Pencil',   category: 'Creative',      level: 'moderate'  as const },
+  { id: 'sk15', name: 'Chess',            icon: 'RefreshCw',category: 'Strategy',      level: 'expert'    as const },
+  { id: 'sk16', name: 'Excel',            icon: 'Database', category: 'Business',      level: 'beginner'  as const },
+  { id: 'sk17', name: 'UI/UX Design',     icon: 'Figma',    category: 'Design',        level: 'moderate'  as const },
+  { id: 'sk18', name: '3D Modeling',      icon: 'Code',     category: 'Design',        level: 'expert'    as const },
+  { id: 'sk19', name: 'Calligraphy',      icon: 'Pencil',   category: 'Creative',      level: 'beginner'  as const },
+  { id: 'sk20', name: 'Cooking',          icon: 'Star',     category: 'Lifestyle',     level: 'moderate'  as const },
+];
+
+const users = [
+  { id: 'u1', name: 'Rahim Ahmed',   avatar: 'https://picsum.photos/seed/1/200/200', university: 'BUET', rating: 4.5, skillexScore: 500, isOnline: true  },
+  { id: 'u2', name: 'Nadia Ahmed',   avatar: 'https://picsum.photos/seed/2/200/200', university: 'DU',   rating: 4.6, skillexScore: 550, isOnline: false },
+  { id: 'u3', name: 'Karim Ahmed',   avatar: 'https://picsum.photos/seed/3/200/200', university: 'NSU',  rating: 4.7, skillexScore: 600, isOnline: true  },
+  { id: 'u4', name: 'Fatema Ahmed',  avatar: 'https://picsum.photos/seed/4/200/200', university: 'BRAC', rating: 4.8, skillexScore: 650, isOnline: false },
+  { id: 'u5', name: 'Arif Ahmed',    avatar: 'https://picsum.photos/seed/5/200/200', university: 'IUT',  rating: 4.9, skillexScore: 700, isOnline: true  },
+  { id: 'u6', name: 'Sumaiya Ahmed', avatar: 'https://picsum.photos/seed/6/200/200', university: 'CUET', rating: 4.5, skillexScore: 750, isOnline: false },
+];
 import MarketingLayout from '@/components/layout/MarketingLayout';
 
 /* Lazy-loaded: Three.js module never downloaded on mobile */

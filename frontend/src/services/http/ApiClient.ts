@@ -83,7 +83,13 @@ export class ApiClient {
     }
 
     if (response.status === 204) return {} as T;
-    return response.json() as Promise<T>;
+    const json = await response.json();
+
+    // Unwrap Spring Boot's ApiResponse<T> envelope: { success: boolean, data: T, message?: string }
+    if (json !== null && typeof json === 'object' && 'success' in json && 'data' in json) {
+      return json.data as T;
+    }
+    return json as T;
   }
 
   // ── Public convenience methods (Polymorphism via method overloads) ────────

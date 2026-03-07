@@ -195,7 +195,7 @@ function SidebarContent({
               {group.items.map((item) => (
                 <li key={item.href}>
                   <NavItem
-                    href={item.href}
+                    href={item.label === 'Profile' ? `/profile/${user?.id ?? ''}` : item.href}
                     label={item.label}
                     iconName={item.icon}
                     collapsed={collapsed}

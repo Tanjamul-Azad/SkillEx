@@ -6,6 +6,7 @@ import com.skillex.dto.auth.RegisterRequest;
 import com.skillex.model.User;
 import com.skillex.repository.UserRepository;
 import com.skillex.service.AuthService;
+import com.skillex.service.DtoMapper;
 import com.skillex.config.JwtUtil;
 import lombok.RequiredArgsConstructor;
 import org.springframework.lang.NonNull;
@@ -28,6 +29,7 @@ public class AuthServiceImpl implements AuthService {
     private final UserRepository userRepository;
     private final PasswordEncoder passwordEncoder;
     private final JwtUtil jwtUtil;
+    private final DtoMapper mapper;
 
     @Override
     @Transactional
@@ -72,16 +74,8 @@ public class AuthServiceImpl implements AuthService {
 
     // ── Private helpers ──────────────────────────────────────────────────────
 
+    /** Builds the auth response with a full profile DTO so no second round-trip is needed. */
     private AuthResponse toAuthResponse(String token, User user) {
-        return new AuthResponse(token, new AuthResponse.UserSnapshot(
-            user.getId(),
-            user.getName(),
-            user.getEmail(),
-            user.getUniversity(),
-            user.getAvatarUrl(),
-            user.getRole().name().toLowerCase(),
-            user.getSkillexScore(),
-            user.getSessionsCompleted()
-        ));
+        return new AuthResponse(token, mapper.toProfile(user));
     }
 }

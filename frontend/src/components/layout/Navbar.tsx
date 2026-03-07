@@ -2,7 +2,7 @@
 'use client';
 
 import React, { useState } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import { useLocation } from 'react-router-dom';
 import { motion, AnimatePresence, useScroll, useMotionValueEvent } from 'framer-motion';
 import { Zap, Sun, Moon, Menu, X as XIcon, ChevronRight, Sparkles } from 'lucide-react';
@@ -29,7 +29,26 @@ export default function Navbar() {
   const [scrollProgress, setScrollProgress] = useState(0);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const { pathname } = useLocation();
+  const navigate = useNavigate();
   const { scrollY } = useScroll();
+
+  const scrollToSection = (sectionId: string) => {
+    setMobileMenuOpen(false);
+    const doScroll = () => {
+      const el = document.getElementById(sectionId);
+      if (!el) return;
+      const navbarOffset = scrolled ? 64 : 80;
+      const top = el.getBoundingClientRect().top + window.scrollY - navbarOffset - 12;
+      window.scrollTo({ top, behavior: 'smooth' });
+    };
+    if (pathname !== '/') {
+      navigate('/');
+      // Wait for LandingPage to mount then scroll
+      setTimeout(doScroll, 350);
+    } else {
+      doScroll();
+    }
+  };
 
   useMotionValueEvent(scrollY, 'change', (latest) => {
     setScrolled(latest > 20);
@@ -72,16 +91,22 @@ export default function Navbar() {
           {/* Desktop nav */}
           <nav className="hidden items-center gap-1 md:flex">
             {navLinks.map((link) => {
-              const isActive = pathname === link.href;
-              return (
-                <Link
+              const isHash = link.href.startsWith('#');
+              const isActive = !isHash && pathname === link.href;
+              const sharedClass = cn(
+                'relative rounded-lg px-4 py-2 text-sm font-medium transition-colors duration-200',
+                isActive ? 'text-foreground' : 'text-muted-foreground hover:text-foreground'
+              );
+              return isHash ? (
+                <button
                   key={link.name}
-                  to={link.href}
-                  className={cn(
-                    'relative rounded-lg px-4 py-2 text-sm font-medium transition-colors duration-200',
-                    isActive ? 'text-foreground' : 'text-muted-foreground hover:text-foreground'
-                  )}
+                  onClick={() => scrollToSection(link.href.slice(1))}
+                  className={sharedClass}
                 >
+                  <span className="relative">{link.name}</span>
+                </button>
+              ) : (
+                <Link key={link.name} to={link.href} className={sharedClass}>
                   {isActive && (
                     <motion.span
                       layoutId="nav-pill"
@@ -105,7 +130,7 @@ export default function Navbar() {
               variant="gradient"
               className="group h-10 rounded-xl px-5 text-sm"
             >
-              <Link to="/login">
+              <Link to="/login?tab=register">
                 <Sparkles className="mr-1.5 h-3.5 w-3.5 transition-transform group-hover:rotate-12" />
                 Start Free
                 <ChevronRight className="ml-1 h-3.5 w-3.5 transition-transform group-hover:translate-x-0.5" />
@@ -180,29 +205,43 @@ export default function Navbar() {
               className="fixed top-[76px] left-4 right-4 z-40 overflow-hidden rounded-2xl border border-border/50 bg-background/95 shadow-card backdrop-blur-xl md:hidden"
             >
               <nav className="flex flex-col p-4 gap-1">
-                {navLinks.map((link, i) => (
-                  <motion.div
-                    key={link.name}
-                    initial={{ opacity: 0, x: -12 }}
-                    animate={{ opacity: 1, x: 0 }}
-                    transition={{ delay: i * 0.05, type: 'spring', stiffness: 300 }}
-                  >
-                    <Link
-                      to={link.href}
-                      onClick={() => setMobileMenuOpen(false)}
-                      className="flex items-center justify-between rounded-xl px-4 py-3 text-sm font-medium text-muted-foreground hover:bg-primary/5 hover:text-foreground transition-colors"
+                {navLinks.map((link, i) => {
+                  const isHash = link.href.startsWith('#');
+                  const mobileClass = 'flex items-center justify-between rounded-xl px-4 py-3 text-sm font-medium text-muted-foreground hover:bg-primary/5 hover:text-foreground transition-colors w-full text-left';
+                  return (
+                    <motion.div
+                      key={link.name}
+                      initial={{ opacity: 0, x: -12 }}
+                      animate={{ opacity: 1, x: 0 }}
+                      transition={{ delay: i * 0.05, type: 'spring', stiffness: 300 }}
                     >
-                      {link.name}
-                      <ChevronRight className="h-4 w-4 opacity-40" />
-                    </Link>
-                  </motion.div>
-                ))}
+                      {isHash ? (
+                        <button
+                          onClick={() => scrollToSection(link.href.slice(1))}
+                          className={mobileClass}
+                        >
+                          {link.name}
+                          <ChevronRight className="h-4 w-4 opacity-40" />
+                        </button>
+                      ) : (
+                        <Link
+                          to={link.href}
+                          onClick={() => setMobileMenuOpen(false)}
+                          className={mobileClass}
+                        >
+                          {link.name}
+                          <ChevronRight className="h-4 w-4 opacity-40" />
+                        </Link>
+                      )}
+                    </motion.div>
+                  );
+                })}
                 <div className="mt-2 flex flex-col gap-2 border-t border-border/50 pt-4">
                   <Button asChild variant="outline" className="w-full rounded-xl">
                     <Link to="/login">Login</Link>
                   </Button>
                   <Button asChild variant="gradient" className="w-full rounded-xl">
-                    <Link to="/login">
+                    <Link to="/login?tab=register">
                       <Sparkles className="mr-2 h-3.5 w-3.5" />
                       Start Exchanging Free
                     </Link>

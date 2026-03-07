@@ -1,8 +1,10 @@
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useAuth } from '@/hooks/useAuth';
-import { users, reviews } from '@data/mock/mockData';
+import { useToast } from '@/hooks/use-toast';
+import { UserService } from '@/services/userService';
+import { ReviewService } from '@/services/reviewService';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -212,27 +214,56 @@ export default function ProfilePage() {
   const { user: currentUser } = useAuth();
   const navigate = useNavigate();
   const userId = params?.userId as string;
+  const { toast } = useToast();
 
-  const profileUser = users.find((u) => u.id === userId);
+  const [profileUser, setProfileUser] = useState<User | null>(null);
+  const [userReviews, setUserReviews] = useState<Review[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [notFound, setNotFound] = useState(false);
+  const [offeredSkills, setOfferedSkills] = useState<Skill[]>([]);
+  const [wantedSkills, setWantedSkills] = useState<Skill[]>([]);
+  const [addSkillMode, setAddSkillMode] = useState<'offered' | 'wanted' | null>(null);
+  const [requestOpen, setRequestOpen] = useState(false);
 
-  if (!profileUser) {
+  useEffect(() => {
+    if (!userId) return;
+    setLoading(true);
+    setNotFound(false);
+    Promise.all([
+      UserService.getById(userId),
+      ReviewService.getForUser(userId),
+    ])
+      .then(([userResult, reviewsResult]) => {
+        const u = userResult as User;
+        setProfileUser(u);
+        setOfferedSkills(u.skillsOffered ?? []);
+        setWantedSkills(u.skillsWanted ?? []);
+        const reviews = (reviewsResult as { content?: Review[] }).content ?? (reviewsResult as Review[]) ?? [];
+        setUserReviews(reviews);
+      })
+      .catch(() => setNotFound(true))
+      .finally(() => setLoading(false));
+  }, [userId]);
+
+  if (loading) {
+    return (
+      <DashboardLayout>
+        <div className="flex items-center justify-center min-h-[60vh]">
+          <div className="animate-spin h-8 w-8 rounded-full border-4 border-primary border-t-transparent" />
+        </div>
+      </DashboardLayout>
+    );
+  }
+
+  if (notFound || !profileUser) {
     return <Navigate to="/" replace />;
   }
 
   const isOwnProfile = currentUser?.id === profileUser.id;
-  const userReviews: Review[] = reviews.filter((r) => r.toUser.id === userId);
   const avgRating =
     userReviews.length > 0
       ? userReviews.reduce((sum, r) => sum + r.rating, 0) / userReviews.length
       : profileUser.rating;
-
-  // Local skill state so we can add skills client-side
-  const [offeredSkills, setOfferedSkills] = useState<Skill[]>(profileUser.skillsOffered);
-  const [wantedSkills, setWantedSkills] = useState<Skill[]>(profileUser.skillsWanted);
-
-  // Dialog state
-  const [addSkillMode, setAddSkillMode] = useState<'offered' | 'wanted' | null>(null);
-  const [requestOpen, setRequestOpen] = useState(false);
 
   return (
     <DashboardLayout>
@@ -255,6 +286,7 @@ export default function ProfilePage() {
                   variant="ghost"
                   size="icon"
                   className="absolute top-3 right-3 bg-background/60 backdrop-blur-sm h-8 w-8 hover:bg-background/80"
+                  onClick={() => toast({ title: 'Coming soon', description: 'Cover photo customisation will be available soon.' })}
                 >
                   <Camera className="w-4 h-4" />
                 </Button>
@@ -295,15 +327,21 @@ export default function ProfilePage() {
                     </>
                   ) : (
                     <>
-                      <Button variant="outline" size="sm">
+                      <Button variant="outline" size="sm" onClick={async () => {
+                        const url = window.location.href;
+                        if (navigator.share) {
+                          try { await navigator.share({ title: profileUser.name, url }); } catch { /* user cancelled */ }
+                        } else {
+                          await navigator.clipboard.writeText(url);
+                          toast({ title: 'Link copied!', description: 'Profile link copied to clipboard.' });
+                        }
+                      }}>
                         <Share2 className="w-4 h-4 mr-1.5" />
                         Share
                       </Button>
-                      <Button variant="outline" size="sm" asChild>
-                        <Link to={`/messages/${profileUser.id}`}>
-                          <MessageSquare className="w-4 h-4 mr-1.5" />
-                          Message
-                        </Link>
+                      <Button variant="outline" size="sm" onClick={() => toast({ title: 'Coming soon', description: 'Direct messaging will be available in a future update.' })}>
+                        <MessageSquare className="w-4 h-4 mr-1.5" />
+                        Message
                       </Button>
                       <Button size="sm" onClick={() => setRequestOpen(true)}>
                         <UserPlus className="w-4 h-4 mr-1.5" />
@@ -481,7 +519,7 @@ export default function ProfilePage() {
                   <Star className="w-8 h-8 mx-auto mb-3 text-muted-foreground/40" />
                   <p className="text-muted-foreground">No reviews yet.</p>
                   {!isOwnProfile && (
-                    <Button size="sm" className="mt-4">
+                    <Button size="sm" className="mt-4" onClick={() => toast({ title: 'Coming soon', description: 'Leave a review after completing a session with this user.' })}>
                       <Plus className="w-4 h-4 mr-1.5" />
                       Leave a Review
                     </Button>

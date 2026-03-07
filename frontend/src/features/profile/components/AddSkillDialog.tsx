@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import {
   Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription,
@@ -14,7 +14,7 @@ import { ScrollArea } from '@/components/ui/scroll-area';
 import { useToast } from '@/hooks/use-toast';
 import { cn } from '@/lib/utils';
 import { Search, Plus, Check } from 'lucide-react';
-import { skills as allSkills } from '@data/mock/mockData';
+import { SkillService } from '@/services/skillService';
 import type { Skill } from '@/types';
 
 interface Props {
@@ -37,18 +37,26 @@ const levelColor: Record<string, string> = {
 
 export function AddSkillDialog({ open, onClose, mode, existingIds, onSave }: Props) {
   const { toast } = useToast();
+  const [skills, setSkills] = useState<Skill[]>([]);
   const [query, setQuery] = useState('');
   const [category, setCategory] = useState('All');
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [saving, setSaving] = useState(false);
 
+  useEffect(() => {
+    if (!open) return;
+    SkillService.getAll()
+      .then((data) => setSkills(Array.isArray(data) ? data : []))
+      .catch(() => setSkills([]));
+  }, [open]);
+
   const filtered = useMemo(() => {
-    return (allSkills as Skill[]).filter((s) => {
+    return skills.filter((s) => {
       const qMatch = s.name.toLowerCase().includes(query.toLowerCase()) || s.description?.toLowerCase().includes(query.toLowerCase());
       const cMatch = category === 'All' || s.category === category;
       return qMatch && cMatch;
     });
-  }, [query, category]);
+  }, [skills, query, category]);
 
   const toggle = (id: string) => {
     setSelected((prev) => {
@@ -66,7 +74,7 @@ export function AddSkillDialog({ open, onClose, mode, existingIds, onSave }: Pro
     setSaving(true);
     // TODO: PATCH /api/users/:id with new skill ids
     await new Promise((r) => setTimeout(r, 700));
-    const added = (allSkills as Skill[]).filter((s) => selected.has(s.id));
+    const added = skills.filter((s) => selected.has(s.id));
     onSave(added);
     setSaving(false);
     setSelected(new Set());

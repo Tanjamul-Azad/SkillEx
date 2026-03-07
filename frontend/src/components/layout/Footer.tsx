@@ -1,41 +1,63 @@
-
 'use client';
 
-import React from 'react';
-import { Link } from 'react-router-dom';
-import { Github, Twitter, Linkedin, Instagram, Zap } from 'lucide-react';
+import React, { useCallback } from 'react';
+import { Link, useNavigate, useLocation } from 'react-router-dom';
+import { Github, Twitter, Linkedin, Instagram } from 'lucide-react';
 import Logo from '@/components/ui/Logo';
 
 const FooterLogo = () => (
   <Logo size="lg" />
 );
 
+const SECTION_OFFSET = 88;
+
 export default function Footer() {
-  const footerLinks = {
+  const navigate = useNavigate();
+  const location = useLocation();
+
+  const scrollToSection = useCallback(
+    (sectionId: string) => (e: React.MouseEvent) => {
+      e.preventDefault();
+      const doScroll = () => {
+        const el = document.getElementById(sectionId);
+        if (!el) return;
+        const top = el.getBoundingClientRect().top + window.scrollY - SECTION_OFFSET;
+        window.scrollTo({ top, behavior: 'smooth' });
+      };
+      if (location.pathname === '/') {
+        doScroll();
+      } else {
+        navigate('/');
+        setTimeout(doScroll, 350);
+      }
+    },
+    [navigate, location.pathname],
+  );
+  const footerLinks: Record<string, { name: string; href: string; sectionId?: string }[]> = {
     Product: [
-      { name: 'How it Works', href: '#' },
-      { name: 'Explore Skills', href: '#' },
-      { name: 'Skill Chains', href: '#' },
-      { name: 'Pricing', href: '#' },
+      { name: 'How it Works', href: '/#how-it-works', sectionId: 'how-it-works' },
+      { name: 'Match Demo', href: '/#match-demo', sectionId: 'match-demo' },
+      { name: 'Skill Chains', href: '/#skill-chain', sectionId: 'skill-chain' },
+      { name: 'FAQ', href: '/#faq', sectionId: 'faq' },
     ],
     Company: [
-      { name: 'About Us', href: '#' },
-      { name: 'Careers', href: '#' },
-      { name: 'Press', href: '#' },
+      { name: 'About Us', href: '/about' },
+      { name: 'Careers', href: '/careers' },
       { name: 'Community', href: '/community' },
+      { name: 'Contact', href: 'mailto:hello@skiilex.com' },
     ],
     Legal: [
-      { name: 'Terms of Service', href: '#' },
-      { name: 'Privacy Policy', href: '#' },
-      { name: 'Cookie Policy', href: '#' },
+      { name: 'Terms of Service', href: '/terms' },
+      { name: 'Privacy Policy', href: '/privacy' },
+      { name: 'Trust & Safety', href: '/trust' },
     ],
   };
 
   const socialLinks = [
-    { name: 'Twitter', icon: Twitter, href: '#' },
-    { name: 'GitHub', icon: Github, href: '#' },
-    { name: 'LinkedIn', icon: Linkedin, href: '#' },
-    { name: 'Instagram', icon: Instagram, href: '#' },
+    { name: 'Twitter', icon: Twitter, href: 'https://twitter.com' },
+    { name: 'GitHub', icon: Github, href: 'https://github.com/Tanjamul-Azad/SkillEx' },
+    { name: 'LinkedIn', icon: Linkedin, href: 'https://linkedin.com' },
+    { name: 'Instagram', icon: Instagram, href: 'https://instagram.com' },
   ];
 
   return (
@@ -53,14 +75,16 @@ export default function Footer() {
             </p>
             <div className="mt-6 flex items-center gap-2.5">
               {socialLinks.map((social) => (
-                <Link
+                <a
                   key={social.name}
-                  to={social.href}
+                  href={social.href}
+                  target="_blank"
+                  rel="noopener noreferrer"
                   aria-label={social.name}
                   className="group flex h-9 w-9 items-center justify-center rounded-xl border border-border/50 bg-card/60 text-muted-foreground backdrop-blur-sm transition-all duration-200 hover:border-primary/40 hover:bg-primary/10 hover:text-primary hover:shadow-[0_0_12px_hsl(var(--primary)/0.2)]"
                 >
                   <social.icon className="h-4 w-4 transition-transform duration-200 group-hover:scale-110" />
-                </Link>
+                </a>
               ))}
             </div>
           </div>
@@ -72,15 +96,39 @@ export default function Footer() {
               <ul className="mt-4 space-y-2.5">
                 {links.map((link) => (
                   <li key={link.name}>
-                    <Link
-                      to={link.href}
-                      className="group inline-flex items-center gap-1 text-sm text-muted-foreground transition-colors duration-200 hover:text-foreground"
-                    >
-                      <span className="relative">
-                        {link.name}
-                        <span className="absolute -bottom-0.5 left-0 h-px w-0 bg-gradient-to-r from-primary to-secondary transition-all duration-300 group-hover:w-full" />
-                      </span>
-                    </Link>
+                    {link.sectionId ? (
+                      <button
+                        onClick={scrollToSection(link.sectionId)}
+                        className="group inline-flex items-center gap-1 text-sm text-muted-foreground transition-colors duration-200 hover:text-foreground text-left"
+                      >
+                        <span className="relative">
+                          {link.name}
+                          <span className="absolute -bottom-0.5 left-0 h-px w-0 bg-gradient-to-r from-primary to-secondary transition-all duration-300 group-hover:w-full" />
+                        </span>
+                      </button>
+                    ) : link.href.startsWith('http') || link.href.startsWith('mailto') ? (
+                      <a
+                        href={link.href}
+                        target={link.href.startsWith('http') ? "_blank" : undefined}
+                        rel={link.href.startsWith('http') ? "noopener noreferrer" : undefined}
+                        className="group inline-flex items-center gap-1 text-sm text-muted-foreground transition-colors duration-200 hover:text-foreground"
+                      >
+                        <span className="relative">
+                          {link.name}
+                          <span className="absolute -bottom-0.5 left-0 h-px w-0 bg-gradient-to-r from-primary to-secondary transition-all duration-300 group-hover:w-full" />
+                        </span>
+                      </a>
+                    ) : (
+                      <Link
+                        to={link.href}
+                        className="group inline-flex items-center gap-1 text-sm text-muted-foreground transition-colors duration-200 hover:text-foreground"
+                      >
+                        <span className="relative">
+                          {link.name}
+                          <span className="absolute -bottom-0.5 left-0 h-px w-0 bg-gradient-to-r from-primary to-secondary transition-all duration-300 group-hover:w-full" />
+                        </span>
+                      </Link>
+                    )}
                   </li>
                 ))}
               </ul>

@@ -1,11 +1,10 @@
 package com.skillex.dto.user;
 
 import jakarta.validation.constraints.Email;
-import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.Size;
 
 /**
- * Request body for PATCH /api/users/{id}
+ * Request body for PATCH /api/users/me
  * All fields optional — only non-null values are applied (patch semantics in service layer).
  */
 public record UpdateProfileRequest(

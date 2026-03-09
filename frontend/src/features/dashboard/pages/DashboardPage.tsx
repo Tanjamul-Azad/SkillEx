@@ -1,12 +1,15 @@
 
-import React from 'react';
+import React, { useState } from 'react';
 import { useAuth } from '@/hooks/useAuth';
 import { useExchanges } from '@/hooks/useExchanges';
+import { exchangeService } from '@/services/exchangeService';
+import { DashboardService } from '@/services/dashboardService';
 import type { Exchange } from '@/services/exchangeService';
 import { motion } from 'framer-motion';
 import {
   ArrowRight,
   BookOpen,
+  CalendarDays,
   CheckCircle,
   Clock,
   MessageSquare,
@@ -29,6 +32,18 @@ import { useCounter } from '@/hooks/useCounter';
 import { useToast } from '@/hooks/use-toast';
 import { cn } from '@/lib/utils';
 import DashboardLayout from '@/components/layout/DashboardLayout';
+import { ConfirmDialog } from '@/components/ui/ConfirmDialog';
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+  DialogFooter,
+} from '@/components/ui/dialog';
+import { Input } from '@/components/ui/input';
+import { Textarea } from '@/components/ui/textarea';
+import { Label } from '@/components/ui/label';
 import type { Skill } from '@/types';
 
 /* ── Consistent color palette for stat cards (Glassmorphism) ────────── */
@@ -127,6 +142,12 @@ function ExchangeCard({ exchange, currentUserId }: { exchange: Exchange; current
   const navigate = useNavigate();
   const [localStatus, setLocalStatus] = React.useState(exchange.status);
   const [dismissed, setDismissed] = React.useState(false);
+  const [declineConfirmOpen, setDeclineConfirmOpen] = React.useState(false);
+  const [scheduleOpen, setScheduleOpen] = React.useState(false);
+  const [scheduleDate, setScheduleDate] = useState('');
+  const [scheduleTime, setScheduleTime] = useState('');
+  const [sessionNotes, setSessionNotes] = useState('');
+  const [scheduledConfirmed, setScheduledConfirmed] = useState(false);
 
   if (dismissed) return null;
 
@@ -189,10 +210,18 @@ function ExchangeCard({ exchange, currentUserId }: { exchange: Exchange; current
           <div className="mt-4 grid grid-cols-2 gap-2">
             {localStatus === 'pending' && exchange.receiver_id === currentUserId ? (
               <>
-                <Button variant="outline" size="sm" className="rounded-xl text-xs border-destructive/20 text-destructive hover:bg-destructive/10" onClick={() => { setDismissed(true); toast({ title: 'Request declined', variant: 'destructive' }); }}>
+                <Button variant="outline" size="sm" className="rounded-xl text-xs border-destructive/20 text-destructive hover:bg-destructive/10" onClick={() => setDeclineConfirmOpen(true)}>
                   Decline
                 </Button>
-                <Button size="sm" className="rounded-xl text-xs font-bold bg-emerald-500 hover:bg-emerald-600 text-white" onClick={() => { setLocalStatus('accepted'); toast({ title: 'Request accepted!', description: `You are now matched with ${partner.name.split(' ')[0]}.`, variant: 'success' }); }}>
+                <Button size="sm" className="rounded-xl text-xs font-bold bg-emerald-500 hover:bg-emerald-600 text-white" onClick={async () => {
+                  try {
+                    await exchangeService.updateStatus(exchange.id, 'accepted');
+                    setLocalStatus('accepted');
+                    toast({ title: 'Request accepted!', description: `You are now matched with ${partner.name.split(' ')[0]}.`, variant: 'success' });
+                  } catch {
+                    toast({ title: 'Failed to accept', description: 'Please try again.', variant: 'destructive' });
+                  }
+                }}>
                   Accept
                 </Button>
               </>
@@ -207,7 +236,7 @@ function ExchangeCard({ exchange, currentUserId }: { exchange: Exchange; current
                 <Button variant="outline" size="sm" className="rounded-xl text-xs" onClick={() => { navigate('/community'); toast({ title: 'Opening Community', description: 'Use Community to chat with your exchange partner.' }); }}>
                   <MessageSquare className="mr-1.5 h-3.5 w-3.5" />Message
                 </Button>
-                <Button size="sm" className="rounded-xl text-xs font-bold" onClick={() => toast({ title: 'Coming soon', description: 'Session scheduling will be available in a future update.' })}>
+                <Button size="sm" className="rounded-xl text-xs font-bold" onClick={() => setScheduleOpen(true)}>
                   <Video className="mr-1.5 h-3.5 w-3.5" />Schedule
                 </Button>
               </>
@@ -215,6 +244,125 @@ function ExchangeCard({ exchange, currentUserId }: { exchange: Exchange; current
           </div>
         </CardContent>
       </Card >
+      <ConfirmDialog
+        open={declineConfirmOpen}
+        onOpenChange={setDeclineConfirmOpen}
+        title={`Decline ${partner.name.split(' ')[0]}'s request?`}
+        description="They won't be notified, but they'll no longer see their request as pending."
+        confirmLabel="Decline"
+        cancelLabel="Keep it"
+        variant="destructive"
+        onConfirm={async () => {
+          try {
+            await exchangeService.updateStatus(exchange.id, 'declined');
+            setDismissed(true);
+            toast({ title: 'Request declined', variant: 'destructive' });
+          } catch {
+            toast({ title: 'Failed to decline', variant: 'destructive' });
+          }
+        }}
+      />
+
+      {/* ── Schedule Session Dialog ── */}
+      <Dialog open={scheduleOpen} onOpenChange={(o) => { setScheduleOpen(o); if (!o) { setScheduleDate(''); setScheduleTime(''); setSessionNotes(''); setScheduledConfirmed(false); } }}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2 font-headline">
+              <CalendarDays className="h-5 w-5 text-primary" />
+              {scheduledConfirmed ? 'Session Scheduled!' : 'Schedule a Session'}
+            </DialogTitle>
+            <DialogDescription>
+              {scheduledConfirmed
+                ? `Your session with ${partner?.name?.split(' ')[0]} is confirmed.`
+                : `Pick a date and time to meet with ${partner?.name?.split(' ')[0]}.`}
+            </DialogDescription>
+          </DialogHeader>
+
+          {scheduledConfirmed ? (
+            <div className="py-6 flex flex-col items-center gap-4 text-center">
+              <motion.div
+                initial={{ scale: 0 }}
+                animate={{ scale: 1 }}
+                transition={{ type: 'spring', stiffness: 300, damping: 20 }}
+                className="h-16 w-16 rounded-full bg-green-500/15 flex items-center justify-center"
+              >
+                <CheckCircle className="h-8 w-8 text-green-500" />
+              </motion.div>
+              <div>
+                <p className="text-lg font-bold">{scheduleDate} at {scheduleTime}</p>
+                {sessionNotes && <p className="text-sm text-muted-foreground mt-1">"{sessionNotes}"</p>}
+              </div>
+              <p className="text-sm text-muted-foreground">
+                You'll both receive a reminder before the session.
+              </p>
+              <Button className="w-full" onClick={() => setScheduleOpen(false)}>Done</Button>
+            </div>
+          ) : (
+            <>
+              <div className="space-y-4 py-2">
+                <div className="grid grid-cols-2 gap-3">
+                  <div className="space-y-1.5">
+                    <Label htmlFor="session-date">Date</Label>
+                    <Input
+                      id="session-date"
+                      type="date"
+                      value={scheduleDate}
+                      min={new Date().toISOString().split('T')[0]}
+                      onChange={e => setScheduleDate(e.target.value)}
+                      className="rounded-xl"
+                    />
+                  </div>
+                  <div className="space-y-1.5">
+                    <Label htmlFor="session-time">Time</Label>
+                    <Input
+                      id="session-time"
+                      type="time"
+                      value={scheduleTime}
+                      onChange={e => setScheduleTime(e.target.value)}
+                      className="rounded-xl"
+                    />
+                  </div>
+                </div>
+                <div className="space-y-1.5">
+                  <Label htmlFor="session-notes">Notes <span className="text-muted-foreground">(optional)</span></Label>
+                  <Textarea
+                    id="session-notes"
+                    placeholder="Topics to cover, meeting link, etc."
+                    value={sessionNotes}
+                    onChange={e => setSessionNotes(e.target.value)}
+                    rows={2}
+                    className="rounded-xl resize-none text-sm"
+                  />
+                </div>
+                <div className="rounded-xl p-3 bg-muted/50 border border-border/40 flex items-start gap-2.5">
+                  <Avatar className="h-8 w-8 shrink-0">
+                    <AvatarImage src={partner?.avatar ?? undefined} />
+                    <AvatarFallback className="text-xs">{partner?.name?.charAt(0)}</AvatarFallback>
+                  </Avatar>
+                  <div>
+                    <p className="text-sm font-medium">{partner?.name}</p>
+                    <p className="text-xs text-muted-foreground">
+                      {mySkill && theirSkill
+                        ? `You teach ${mySkill.name} · They teach ${theirSkill.name}`
+                        : 'Skill exchange partner'}
+                    </p>
+                  </div>
+                </div>
+              </div>
+              <DialogFooter>
+                <Button variant="outline" onClick={() => setScheduleOpen(false)}>Cancel</Button>
+                <Button
+                  disabled={!scheduleDate || !scheduleTime}
+                  onClick={() => setScheduledConfirmed(true)}
+                >
+                  <CalendarDays className="mr-2 h-4 w-4" /> Confirm Session
+                </Button>
+              </DialogFooter>
+            </>
+          )}
+        </DialogContent>
+      </Dialog>
+
     </motion.div >
   );
 }
@@ -359,6 +507,17 @@ function SectionHeading({ children, action }: { children: React.ReactNode; actio
 export default function DashboardPage() {
   const { user } = useAuth();
   const { exchanges, loading } = useExchanges();
+  const [serverStats, setServerStats] = React.useState<{ sessionsCompleted?: number; skillexScore?: number; activeExchanges?: number } | null>(null);
+
+  React.useEffect(() => {
+    DashboardService.getStats()
+      .then((s) => setServerStats({
+        sessionsCompleted: s.sessionsCompleted,
+        skillexScore: s.skillexScore,
+        activeExchanges: (s.activeExchanges ?? 0) + (s.pendingExchanges ?? 0),
+      }))
+      .catch(() => {}); // silently fall back to client-side values
+  }, []);
 
   const currentUserId = user?.id ?? '';
   const activeExchanges = exchanges.filter(e => e.status === 'pending' || e.status === 'accepted');
@@ -381,9 +540,9 @@ export default function DashboardPage() {
 
   const stats: StatCardProps[] = [
     { icon: BookOpen, title: 'Skills Offered', value: user?.skillsOffered?.length ?? 0, trend: '+0', trendLabel: 'total', colorKey: 'primary', index: 0 },
-    { icon: Users, title: 'Active Exchanges', value: activeExchanges.length, trend: '+0', trendLabel: 'ongoing', colorKey: 'secondary', index: 1 },
-    { icon: CheckCircle, title: 'Sessions Completed', value: user?.sessionsCompleted ?? 0, trend: '+0', trendLabel: 'all time', colorKey: 'green', index: 2 },
-    { icon: Star, title: 'SkillEx Score', value: user?.skillexScore ?? 0, trend: '+0', trendLabel: 'total', colorKey: 'accent', index: 3 },
+    { icon: Users, title: 'Active Exchanges', value: serverStats?.activeExchanges ?? activeExchanges.length, trend: '+0', trendLabel: 'ongoing', colorKey: 'secondary', index: 1 },
+    { icon: CheckCircle, title: 'Sessions Completed', value: serverStats?.sessionsCompleted ?? user?.sessionsCompleted ?? 0, trend: '+0', trendLabel: 'all time', colorKey: 'green', index: 2 },
+    { icon: Star, title: 'SkillEx Score', value: serverStats?.skillexScore ?? user?.skillexScore ?? 0, trend: '+0', trendLabel: 'total', colorKey: 'accent', index: 3 },
   ];
 
   return (

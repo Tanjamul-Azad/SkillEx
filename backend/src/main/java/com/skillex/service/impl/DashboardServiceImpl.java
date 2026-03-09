@@ -18,12 +18,12 @@ import java.util.List;
 
 @Service
 @RequiredArgsConstructor
+@SuppressWarnings("null")
 public class DashboardServiceImpl implements DashboardService {
 
     private final UserRepository userRepository;
     private final ExchangeRepository exchangeRepository;
     private final SessionRepository sessionRepository;
-    private final ReviewRepository reviewRepository;
 
     @Override
     @Transactional(readOnly = true)

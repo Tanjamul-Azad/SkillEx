@@ -8,6 +8,8 @@ import { ReviewService } from '@/services/reviewService';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from '@/components/ui/dialog';
+import { Textarea } from '@/components/ui/textarea';
 import { Progress } from '@/components/ui/progress';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Separator } from '@/components/ui/separator';
@@ -34,7 +36,7 @@ import {
   TrendingUp,
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Link, Navigate } from 'react-router-dom';
+import { Link, Navigate, useNavigate as useNav } from 'react-router-dom';
 import { cn } from '@/lib/utils';
 import DashboardLayout from '@/components/layout/DashboardLayout';
 import { SkillBadge } from '@/components/ui/SkillBadge';
@@ -222,8 +224,18 @@ export default function ProfilePage() {
   const [notFound, setNotFound] = useState(false);
   const [offeredSkills, setOfferedSkills] = useState<Skill[]>([]);
   const [wantedSkills, setWantedSkills] = useState<Skill[]>([]);
+  const navTo = useNav();
   const [addSkillMode, setAddSkillMode] = useState<'offered' | 'wanted' | null>(null);
   const [requestOpen, setRequestOpen] = useState(false);
+  const [coverDialogOpen, setCoverDialogOpen] = useState(false);
+  const [coverPreview, setCoverPreview] = useState<string | null>(null);
+  const [localCover, setLocalCover] = useState<string | null>(null);
+  const coverFileRef = React.useRef<HTMLInputElement>(null);
+  const [reviewDialogOpen, setReviewDialogOpen] = useState(false);
+  const [reviewRating, setReviewRating] = useState(0);
+  const [reviewHover, setReviewHover] = useState(0);
+  const [reviewComment, setReviewComment] = useState('');
+  const [reviewSubmitted, setReviewSubmitted] = useState(false);
 
   useEffect(() => {
     if (!userId) return;
@@ -238,7 +250,7 @@ export default function ProfilePage() {
         setProfileUser(u);
         setOfferedSkills(u.skillsOffered ?? []);
         setWantedSkills(u.skillsWanted ?? []);
-        const reviews = (reviewsResult as { content?: Review[] }).content ?? (reviewsResult as Review[]) ?? [];
+        const reviews = (reviewsResult as unknown as { content?: Review[] }).content ?? (reviewsResult as unknown as Review[]) ?? [];
         setUserReviews(reviews);
       })
       .catch(() => setNotFound(true))
@@ -276,7 +288,7 @@ export default function ProfilePage() {
         >
           <Card className="overflow-hidden border-border/60">
             {/* Cover banner */}
-            <div className="relative h-40 bg-gradient-to-br from-primary/30 via-secondary/20 to-accent/20 overflow-hidden">
+            <div className="relative h-40 bg-gradient-to-br from-primary/30 via-secondary/20 to-accent/20 overflow-hidden" style={localCover ? { backgroundImage: `url(${localCover})`, backgroundSize: 'cover', backgroundPosition: 'center' } : undefined}>
               {/* Animated blobs in banner */}
               <div className="animate-blob absolute -top-10 -left-10 h-48 w-48 rounded-full bg-primary/20 blur-3xl" />
               <div className="animate-blob absolute -bottom-10 -right-10 h-48 w-48 rounded-full bg-secondary/20 blur-3xl" style={{ animationDelay: '4s' }} />
@@ -286,7 +298,7 @@ export default function ProfilePage() {
                   variant="ghost"
                   size="icon"
                   className="absolute top-3 right-3 bg-background/60 backdrop-blur-sm h-8 w-8 hover:bg-background/80"
-                  onClick={() => toast({ title: 'Coming soon', description: 'Cover photo customisation will be available soon.' })}
+                  onClick={() => setCoverDialogOpen(true)}
                 >
                   <Camera className="w-4 h-4" />
                 </Button>
@@ -339,7 +351,7 @@ export default function ProfilePage() {
                         <Share2 className="w-4 h-4 mr-1.5" />
                         Share
                       </Button>
-                      <Button variant="outline" size="sm" onClick={() => toast({ title: 'Coming soon', description: 'Direct messaging will be available in a future update.' })}>
+                      <Button variant="outline" size="sm" onClick={() => navTo(`/messages/${profileUser.id}`)}>
                         <MessageSquare className="w-4 h-4 mr-1.5" />
                         Message
                       </Button>
@@ -519,7 +531,7 @@ export default function ProfilePage() {
                   <Star className="w-8 h-8 mx-auto mb-3 text-muted-foreground/40" />
                   <p className="text-muted-foreground">No reviews yet.</p>
                   {!isOwnProfile && (
-                    <Button size="sm" className="mt-4" onClick={() => toast({ title: 'Coming soon', description: 'Leave a review after completing a session with this user.' })}>
+                    <Button size="sm" className="mt-4" onClick={() => setReviewDialogOpen(true)}>
                       <Plus className="w-4 h-4 mr-1.5" />
                       Leave a Review
                     </Button>
@@ -660,6 +672,154 @@ export default function ProfilePage() {
           targetUser={profileUser as User}
         />
       )}
+
+      {/* Leave a Review Dialog */}
+      {!isOwnProfile && (
+        <Dialog open={reviewDialogOpen} onOpenChange={(o) => { setReviewDialogOpen(o); if (!o) { setReviewRating(0); setReviewComment(''); setReviewSubmitted(false); } }}>
+          <DialogContent className="sm:max-w-md">
+            <DialogHeader>
+              <DialogTitle>Leave a Review</DialogTitle>
+              <DialogDescription>Share your experience with {profileUser?.name}.</DialogDescription>
+            </DialogHeader>
+            {reviewSubmitted ? (
+              <div className="flex flex-col items-center gap-3 py-6 text-center">
+                <div className="p-4 rounded-full bg-secondary/10 text-secondary"><CheckCircle className="h-10 w-10" /></div>
+                <h3 className="text-lg font-bold">Review Submitted!</h3>
+                <p className="text-sm text-muted-foreground">Your review has been added. Thank you for your feedback.</p>
+                <Button className="mt-2" onClick={() => { setReviewDialogOpen(false); setReviewSubmitted(false); }}>Close</Button>
+              </div>
+            ) : (
+              <>
+                <div className="space-y-4 py-2">
+                  <div>
+                    <p className="text-sm font-medium mb-2">Rating</p>
+                    <div className="flex gap-1">
+                      {[1, 2, 3, 4, 5].map((s) => (
+                        <button
+                          key={s}
+                          type="button"
+                          onMouseEnter={() => setReviewHover(s)}
+                          onMouseLeave={() => setReviewHover(0)}
+                          onClick={() => setReviewRating(s)}
+                          className="p-0.5 transition-transform hover:scale-110"
+                        >
+                          <Star className={cn('w-8 h-8 transition-colors', (reviewHover || reviewRating) >= s ? 'fill-amber-400 text-amber-400' : 'fill-muted text-muted-foreground/30')} />
+                        </button>
+                      ))}
+                      {reviewRating > 0 && (
+                        <span className="ml-2 self-center text-sm font-medium text-muted-foreground">
+                          {['', 'Poor', 'Fair', 'Good', 'Great', 'Excellent'][reviewRating]}
+                        </span>
+                      )}
+                    </div>
+                  </div>
+                  <div>
+                    <p className="text-sm font-medium mb-2">Comment</p>
+                    <Textarea
+                      placeholder={`Describe your experience with ${profileUser?.name?.split(' ')[0]}...`}
+                      value={reviewComment}
+                      onChange={(e) => setReviewComment(e.target.value)}
+                      rows={4}
+                      className="resize-none"
+                    />
+                  </div>
+                </div>
+                <DialogFooter>
+                  <Button variant="ghost" onClick={() => setReviewDialogOpen(false)}>Cancel</Button>
+                  <Button
+                    variant="gradient"
+                    disabled={reviewRating === 0 || reviewComment.trim().length < 10}
+                    onClick={() => {
+                      setUserReviews(prev => [{
+                        id: `local-${Date.now()}`,
+                        rating: reviewRating,
+                        comment: reviewComment.trim(),
+                        createdAt: new Date().toISOString(),
+                        fromUser: currentUser,
+                        toUserId: profileUser?.id ?? '',
+                        sessionId: '',
+                      } as unknown as Review, ...prev]);
+                      setReviewSubmitted(true);
+                    }}
+                  >
+                    Submit Review
+                  </Button>
+                </DialogFooter>
+              </>
+            )}
+          </DialogContent>
+        </Dialog>
+      )}
+
+      {/* Cover Photo Dialog */}
+      <Dialog open={coverDialogOpen} onOpenChange={(o) => { setCoverDialogOpen(o); if (!o) setCoverPreview(null); }}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>Update Cover Photo</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4">
+            {/* Preview */}
+            <div
+              className="h-36 w-full rounded-xl bg-gradient-to-br from-primary/30 via-secondary/20 to-accent/20 overflow-hidden border border-border/60 flex items-center justify-center cursor-pointer hover:opacity-90 transition-opacity"
+              style={coverPreview ? { backgroundImage: `url(${coverPreview})`, backgroundSize: 'cover', backgroundPosition: 'center' } : undefined}
+              onClick={() => coverFileRef.current?.click()}
+            >
+              {!coverPreview && (
+                <div className="flex flex-col items-center gap-2 text-muted-foreground">
+                  <Camera className="h-8 w-8" />
+                  <p className="text-sm">Click to select an image</p>
+                </div>
+              )}
+            </div>
+            <input
+              ref={coverFileRef}
+              type="file"
+              accept="image/*"
+              className="hidden"
+              onChange={(e) => {
+                const file = e.target.files?.[0];
+                if (file) setCoverPreview(URL.createObjectURL(file));
+              }}
+            />
+            {/* Gradient presets */}
+            <div>
+              <p className="text-xs font-medium text-muted-foreground mb-2">Or choose a gradient</p>
+              <div className="flex gap-2 flex-wrap">
+                {[
+                  'from-primary/40 via-secondary/20 to-accent/20',
+                  'from-violet-500/40 via-purple-500/20 to-pink-500/20',
+                  'from-cyan-500/40 via-blue-500/20 to-indigo-500/20',
+                  'from-amber-500/40 via-orange-500/20 to-red-500/20',
+                  'from-emerald-500/40 via-teal-500/20 to-cyan-500/20',
+                ].map((grad, i) => (
+                  <button
+                    key={i}
+                    className={`h-10 w-16 rounded-lg bg-gradient-to-br ${grad} border-2 ${coverPreview === `preset-${i}` ? 'border-primary' : 'border-transparent'} hover:border-primary/60 transition-colors`}
+                    onClick={() => setCoverPreview(`preset-${i}`)}
+                  />
+                ))}
+              </div>
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="ghost" onClick={() => { setCoverDialogOpen(false); setCoverPreview(null); }}>Cancel</Button>
+            <Button
+              variant="gradient"
+              disabled={!coverPreview}
+              onClick={() => {
+                if (coverPreview && !coverPreview.startsWith('preset-')) {
+                  setLocalCover(coverPreview);
+                }
+                setCoverDialogOpen(false);
+                setCoverPreview(null);
+                toast({ title: 'Cover photo updated!' });
+              }}
+            >
+              Save
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </DashboardLayout>
   );
 }

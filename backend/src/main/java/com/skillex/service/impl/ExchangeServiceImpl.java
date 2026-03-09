@@ -22,6 +22,7 @@ import java.util.UUID;
 
 @Service
 @RequiredArgsConstructor
+@SuppressWarnings("null")
 public class ExchangeServiceImpl implements ExchangeService {
 
     private final ExchangeRepository exchangeRepository;

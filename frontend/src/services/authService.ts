@@ -40,6 +40,9 @@ function normalizeUser(raw: Record<string, unknown>): User {
 export const AuthService = {
   /** Sign in with email & password — stores the returned JWT */
   async login(email: string, password: string): Promise<{ user: User }> {
+    // Clear any stale token before logging in — a stale token could cause
+    // the backend to reject the request if CORS/auth filter has issues.
+    TokenStore.clear();
     const data = await httpClient.post<{ token: string; user: Record<string, unknown> }>('/auth/login', { email, password });
     TokenStore.set(data.token);
     return { user: normalizeUser(data.user) };
@@ -51,7 +54,11 @@ export const AuthService = {
     email: string;
     password: string;
     university?: string;
+    skillToTeach?: string;
+    skillToLearn?: string;
+    level?: string;
   }): Promise<{ user: User; needsEmailConfirmation: boolean }> {
+    TokenStore.clear();
     const data = await httpClient.post<{ token?: string; user: Record<string, unknown>; needsEmailConfirmation?: boolean }>('/auth/register', payload);
     if (data.token) TokenStore.set(data.token);
     return {

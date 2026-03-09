@@ -26,6 +26,7 @@ import java.util.List;
 @Slf4j
 @Component
 @RequiredArgsConstructor
+@SuppressWarnings("null")
 public class DataSeeder {
 
     private final UserRepository             userRepository;
@@ -57,7 +58,7 @@ public class DataSeeder {
         String demoPass  = passwordEncoder.encode("Demo1234!");
         String adminPass = passwordEncoder.encode("Admin1234!");
 
-        User admin = saveUser("Admin User",    "admin@skillex.app",   adminPass, "SkiilEX HQ",  User.UserRole.ADMIN,   User.UserLevel.MASTER,       1500, 30,  new BigDecimal("5.00"), true,  "Platform administrator and community manager.");
+        saveUser("Admin User",    "admin@skillex.app",   adminPass, "SkiilEX HQ",  User.UserRole.ADMIN,   User.UserLevel.MASTER,       1500, 30,  new BigDecimal("5.00"), true,  "Platform administrator and community manager.");
         User u1    = saveUser("Rahim Ahmed",   "rahim@buet.ac.bd",    demoPass,  "BUET",         User.UserRole.STUDENT, User.UserLevel.SKILLED,      900,  15,  new BigDecimal("4.80"), true,  "CS student passionate about algorithms and music.");
         User u2    = saveUser("Nadia Islam",   "nadia@du.ac.bd",      demoPass,  "DU",           User.UserRole.STUDENT, User.UserLevel.PRACTITIONER, 750,  12,  new BigDecimal("4.70"), false, "Design enthusiast and Figma power-user.");
         User u3    = saveUser("Karim Hassan",  "karim@nsu.edu.bd",    demoPass,  "NSU",          User.UserRole.STUDENT, User.UserLevel.LEARNER,      550,  8,   new BigDecimal("4.60"), true,  "Python dev by day, guitarist by night.");

@@ -511,12 +511,11 @@ const HeroSection = () => {
               {/* Line 1: "Trade Skills" — High-speed slide from left */}
               <motion.div
                 initial={{ opacity: 0, x: -120, filter: 'blur(15px)' }}
-                animate={{
-                  opacity: 1, x: 0, filter: 'blur(0px)',
-                  transition: {
-                    type: 'spring', stiffness: 100, damping: 15, mass: 0.8,
-                    delay: 0.5
-                  }
+                animate={{ opacity: 1, x: 0, filter: 'blur(0px)' }}
+                transition={{
+                  type: 'spring', stiffness: 100, damping: 15, mass: 0.8,
+                  delay: 0.5,
+                  filter: { type: 'tween', duration: 0.7, ease: 'easeOut', delay: 0.5 },
                 }}
                 className="flex flex-nowrap gap-x-4 mb-2 overflow-visible select-none"
               >
@@ -530,12 +529,11 @@ const HeroSection = () => {
               {/* Line 2: "Not Money." — Cinematic reveal following the slide */}
               <motion.div
                 initial={{ opacity: 0, y: 30, scale: 0.95, filter: 'blur(10px)', rotateX: -10 }}
-                animate={{
-                  opacity: 1, y: 0, scale: 1, filter: 'blur(0px)', rotateX: 0,
-                  transition: {
-                    type: 'spring', stiffness: 60, damping: 18, mass: 1,
-                    delay: 1.1
-                  }
+                animate={{ opacity: 1, y: 0, scale: 1, filter: 'blur(0px)', rotateX: 0 }}
+                transition={{
+                  type: 'spring', stiffness: 60, damping: 18, mass: 1,
+                  delay: 1.1,
+                  filter: { type: 'tween', duration: 0.9, ease: 'easeOut', delay: 1.1 },
                 }}
                 className="flex flex-nowrap gap-x-4 select-none"
               >
@@ -569,8 +567,8 @@ const HeroSection = () => {
                   </Link>
                 </Button>
               </Magnetic>
-              <Button asChild size="lg" variant="outline" className="h-14 rounded-2xl px-8 text-base font-semibold border-border/60 hover:border-primary/40 hover:bg-primary/5">
-                <Link to="#how-it-works">See how it works</Link>
+              <Button size="lg" variant="outline" className="h-14 rounded-2xl px-8 text-base font-semibold border-border/60 hover:border-primary/40 hover:bg-primary/5" onClick={() => { const el = document.getElementById('how-it-works'); if (el) el.scrollIntoView({ behavior: 'smooth', block: 'start' }); }}>
+                See how it works
               </Button>
             </motion.div>
 
@@ -1117,12 +1115,12 @@ const CtaBanner = () => {
               <Link to="/login">Join for Free <ArrowRight className="ml-2 h-4 w-4" /></Link>
             </Button>
             <Button
-              asChild
               size="lg"
               variant="outline"
               className="h-14 rounded-2xl px-8 text-base font-semibold border-white/10 hover:bg-white/5"
+              onClick={() => { const el = document.getElementById('how-it-works'); if (el) el.scrollIntoView({ behavior: 'smooth', block: 'start' }); }}
             >
-              <Link to="#how-it-works">See how it works</Link>
+              See how it works
             </Button>
           </motion.div>
         </SpotlightCard>

@@ -19,11 +19,21 @@ import {
   Circle,
   Pin,
   Play,
+  Flag,
+  Trash2,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
+import { ConfirmDialog } from '@/components/ui/ConfirmDialog';
 import { useAuth } from '@/hooks/useAuth';
 import { useToast } from '@/hooks/use-toast';
 import { cn } from '@/lib/utils';
@@ -101,31 +111,41 @@ type PostType = typeof POST_TYPES[number]['id'];
 
 const PostComposer = React.memo(({ onPost }: { onPost: (post: Post) => void }) => {
   const { user } = useAuth();
+  const { toast } = useToast();
   const [focused, setFocused] = useState(false);
   const [content, setContent] = useState('');
   const [postType, setPostType] = useState<PostType>('regular');
   const [submitting, setSubmitting] = useState(false);
+  const [attachedPreview, setAttachedPreview] = useState<string | null>(null);
+  const fileInputRef = React.useRef<HTMLInputElement>(null);
+
+  const handleAttach = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setAttachedPreview(URL.createObjectURL(file));
+    setFocused(true);
+    e.target.value = '';
+  };
 
   const handleSubmit = async () => {
     if (!content.trim() || !user) return;
     setSubmitting(true);
-    // TODO: POST /api/community/posts
-    await new Promise((r) => setTimeout(r, 600));
-    const newPost: Post = {
-      id: `local-${Date.now()}`,
-      author: user,
-      content: content.trim(),
-      type: postType === 'question' ? 'question' : postType === 'showcase' ? 'showcase' : 'exchange',
-      likes: 0,
-      comments: 0,
-      shares: 0,
-      createdAt: 'Just now',
-    };
-    onPost(newPost);
-    setContent('');
-    setPostType('regular');
-    setFocused(false);
-    setSubmitting(false);
+    try {
+      const typeMap: Record<PostType, string> = { regular: 'EXCHANGE', question: 'QUESTION', showcase: 'SHOWCASE' };
+      const newPost = await CommunityService.createPost({
+        type: typeMap[postType],
+        content: content.trim(),
+      });
+      onPost(newPost);
+      setContent('');
+      setPostType('regular');
+      setFocused(false);
+      setAttachedPreview(null);
+    } catch {
+      toast({ title: 'Failed to post', description: 'Please try again.', variant: 'destructive' });
+    } finally {
+      setSubmitting(false);
+    }
   };
 
   return (
@@ -178,7 +198,7 @@ const PostComposer = React.memo(({ onPost }: { onPost: (post: Post) => void }) =
                         size="sm"
                         variant="ghost"
                         className="rounded-xl text-xs"
-                        onClick={() => { setContent(''); setFocused(false); }}
+                        onClick={() => { setContent(''); setFocused(false); setAttachedPreview(null); }}
                       >
                         Cancel
                       </Button>
@@ -193,14 +213,30 @@ const PostComposer = React.memo(({ onPost }: { onPost: (post: Post) => void }) =
                       </Button>
                     </div>
                   </div>
+
+                  {/* Attached image preview */}
+                  {attachedPreview && (
+                    <div className="relative mt-2 rounded-xl overflow-hidden border border-border/50 group/img">
+                      <img src={attachedPreview} alt="attachment preview" className="w-full max-h-52 object-cover" />
+                      <button
+                        type="button"
+                        onClick={() => setAttachedPreview(null)}
+                        className="absolute top-2 right-2 h-7 w-7 rounded-full bg-black/60 hover:bg-black/80 text-white flex items-center justify-center transition-colors"
+                      >
+                        <svg className="h-3.5 w-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><path d="M18 6 6 18M6 6l12 12"/></svg>
+                      </button>
+                    </div>
+                  )}
                 </motion.div>
               )}
             </AnimatePresence>
           </div>
         </div>
+        {/* Hidden file input */}
+        <input ref={fileInputRef} type="file" accept="image/*,video/*" className="hidden" onChange={handleAttach} />
         {!focused && (
           <div className="mt-3 flex justify-around border-t border-border/40 pt-2">
-            <Button variant="ghost" size="sm" className="text-xs" onClick={() => setFocused(true)}>
+            <Button variant="ghost" size="sm" className="text-xs" onClick={() => fileInputRef.current?.click()}>
               <ImageIcon className="mr-1.5 h-3.5 w-3.5" /> Photo/Video
             </Button>
             <Button variant="ghost" size="sm" className="text-xs" onClick={() => { setPostType('question'); setFocused(true); }}>
@@ -222,23 +258,65 @@ const PostCard = React.memo(({ post }: { post: Post }) => {
   const [liked, setLiked] = React.useState(false);
   const [saved, setSaved] = React.useState(false);
   const [localLikes, setLocalLikes] = React.useState(post.likes);
+  const [deleteConfirmOpen, setDeleteConfirmOpen] = React.useState(false);
+  const [deleted, setDeleted] = React.useState(false);
+  const [commentsOpen, setCommentsOpen] = React.useState(false);
+  const [commentText, setCommentText] = React.useState('');
+  const [postComments, setPostComments] = React.useState<{ id: string; author: string; avatar?: string; text: string; time: string }[]>([]);
+  const [localCommentCount, setLocalCommentCount] = React.useState(post.comments);
   const { toast } = useToast();
+  const { user } = useAuth();
+
+  const handleAddComment = () => {
+    if (!commentText.trim() || !user) return;
+    const c = { id: `c-${Date.now()}`, author: user.name, avatar: user.avatar, text: commentText.trim(), time: 'just now' };
+    setPostComments(prev => [...prev, c]);
+    setLocalCommentCount(n => n + 1);
+    setCommentText('');
+  };
+
+  if (deleted) return null;
+
   return (
-    <Card className="group overflow-hidden glass transition-all hover:shadow-glow-sm duration-400 ease-snappy hover:-translate-y-1">
-      <CardContent className="p-5">
-        <div className="flex items-center gap-3">
-          <Avatar className="ring-2 ring-border group-hover:ring-primary/30 transition-all">
-            <AvatarImage src={post.author.avatar} />
-            <AvatarFallback>{post.author.name.charAt(0)}</AvatarFallback>
-          </Avatar>
-          <div>
-            <p className="font-semibold text-sm">{post.author.name}</p>
-            <p className="text-xs text-muted-foreground">{post.createdAt}</p>
+    <>
+      <Card className="group overflow-hidden glass transition-all hover:shadow-glow-sm duration-400 ease-snappy hover:-translate-y-1">
+        <CardContent className="p-5">
+          <div className="flex items-center gap-3">
+            <Avatar className="ring-2 ring-border group-hover:ring-primary/30 transition-all">
+              <AvatarImage src={post.author.avatar} />
+              <AvatarFallback>{post.author.name.charAt(0)}</AvatarFallback>
+            </Avatar>
+            <div>
+              <p className="font-semibold text-sm">{post.author.name}</p>
+              <p className="text-xs text-muted-foreground">{post.createdAt}</p>
+            </div>
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button variant="ghost" size="icon" className="ml-auto h-8 w-8 hover:bg-primary/5" aria-label="More options">
+                  <MoreHorizontal className="h-4 w-4" />
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end" className="w-40 rounded-xl border-border/50 bg-background/80 backdrop-blur-xl shadow-lg">
+                <DropdownMenuItem
+                  onClick={() => toast({ title: 'Post reported', description: 'Thanks for helping keep SkillEx safe.' })}
+                  className="gap-2 cursor-pointer text-sm"
+                >
+                  <Flag className="h-3.5 w-3.5 text-muted-foreground" /> Report
+                </DropdownMenuItem>
+                {user?.id === post.author.id && (
+                  <>
+                    <DropdownMenuSeparator />
+                    <DropdownMenuItem
+                      onClick={() => setDeleteConfirmOpen(true)}
+                      className="gap-2 cursor-pointer text-sm text-destructive focus:text-destructive"
+                    >
+                      <Trash2 className="h-3.5 w-3.5" /> Delete Post
+                    </DropdownMenuItem>
+                  </>
+                )}
+              </DropdownMenuContent>
+            </DropdownMenu>
           </div>
-          <Button variant="ghost" size="icon" className="ml-auto h-8 w-8 hover:bg-primary/5" aria-label="More options">
-            <MoreHorizontal className="h-4 w-4" />
-          </Button>
-        </div>
 
         <div className="mt-3 text-sm leading-relaxed">
           {post.type === 'achievement' && `🏆 ${authorName} ${post.content}`}
@@ -269,17 +347,27 @@ const PostCard = React.memo(({ post }: { post: Post }) => {
             <span>{localLikes} likes</span>
           </div>
           <div className="flex items-center gap-2">
-            <span>{post.comments} comments</span>
+            <span>{localCommentCount} comments</span>
             <span className="text-border">·</span>
             <span>{post.shares} shares</span>
           </div>
         </div>
 
         <div className="pt-1 flex justify-around -mx-1">
-          <Button variant="ghost" size="sm" className={cn('flex-1 rounded-xl text-xs hover:bg-red-500/5 transition-colors', liked && 'text-red-500')} onClick={() => { setLiked(l => !l); setLocalLikes(n => liked ? n - 1 : n + 1); }}>
+          <Button variant="ghost" size="sm" className={cn('flex-1 rounded-xl text-xs hover:bg-red-500/5 transition-colors', liked && 'text-red-500')} onClick={async () => {
+            const wasLiked = liked;
+            setLiked(!wasLiked);
+            setLocalLikes(n => wasLiked ? n - 1 : n + 1);
+            try {
+              await CommunityService.likePost(post.id);
+            } catch {
+              setLiked(wasLiked);
+              setLocalLikes(n => wasLiked ? n + 1 : n - 1);
+            }
+          }}>
             <Heart className={cn('mr-1.5 h-3.5 w-3.5', liked && 'fill-red-500')} /> Like
           </Button>
-          <Button variant="ghost" size="sm" className="flex-1 rounded-xl text-xs hover:bg-primary/5 transition-colors" onClick={() => toast({ title: 'Comments', description: 'Comment threads are coming soon.' })}>
+          <Button variant="ghost" size="sm" className={cn('flex-1 rounded-xl text-xs hover:bg-primary/5 transition-colors', commentsOpen && 'text-primary bg-primary/5')} onClick={() => setCommentsOpen(o => !o)}>
             <MessageSquare className="mr-1.5 h-3.5 w-3.5" /> Comment
           </Button>
           <Button variant="ghost" size="sm" className="flex-1 rounded-xl text-xs hover:bg-secondary/5 transition-colors" onClick={async () => {
@@ -293,8 +381,78 @@ const PostCard = React.memo(({ post }: { post: Post }) => {
             <Bookmark className={cn('mr-1.5 h-3.5 w-3.5', saved && 'fill-current')} /> Save
           </Button>
         </div>
+
+        {/* ── Comments Thread ── */}
+        <AnimatePresence>
+          {commentsOpen && (
+            <motion.div
+              initial={{ opacity: 0, height: 0 }}
+              animate={{ opacity: 1, height: 'auto' }}
+              exit={{ opacity: 0, height: 0 }}
+              className="overflow-hidden"
+            >
+              <div className="mt-3 pt-3 border-t border-border/40 space-y-3">
+                {postComments.length === 0 && (
+                  <p className="text-xs text-muted-foreground text-center py-2">No comments yet. Be the first!</p>
+                )}
+                {postComments.map(c => (
+                  <div key={c.id} className="flex items-start gap-2">
+                    <Avatar className="h-7 w-7 shrink-0">
+                      <AvatarImage src={c.avatar} />
+                      <AvatarFallback className="text-[10px]">{c.author.charAt(0)}</AvatarFallback>
+                    </Avatar>
+                    <div className="flex-1 bg-muted/50 rounded-xl px-3 py-2">
+                      <div className="flex items-center justify-between gap-2 mb-0.5">
+                        <span className="text-xs font-semibold">{c.author}</span>
+                        <span className="text-[10px] text-muted-foreground">{c.time}</span>
+                      </div>
+                      <p className="text-sm leading-snug">{c.text}</p>
+                    </div>
+                  </div>
+                ))}
+                <div className="flex items-center gap-2 pt-1">
+                  <Avatar className="h-7 w-7 shrink-0">
+                    <AvatarImage src={user?.avatar} />
+                    <AvatarFallback className="text-[10px]">{user?.name?.charAt(0)}</AvatarFallback>
+                  </Avatar>
+                  <div className="flex-1 flex items-center gap-1.5 bg-muted/50 rounded-xl px-3 py-2">
+                    <input
+                      className="flex-1 bg-transparent text-sm outline-none placeholder:text-muted-foreground min-w-0"
+                      placeholder="Write a comment..."
+                      value={commentText}
+                      onChange={e => setCommentText(e.target.value)}
+                      onKeyDown={e => { if (e.key === 'Enter') { e.preventDefault(); handleAddComment(); } }}
+                    />
+                    <button
+                      type="button"
+                      onClick={handleAddComment}
+                      disabled={!commentText.trim()}
+                      className="shrink-0 disabled:opacity-40 text-primary hover:text-primary/80 transition-colors"
+                    >
+                      <svg className="h-4 w-4 rotate-90" viewBox="0 0 24 24" fill="currentColor">
+                        <path d="M2.01 21L23 12 2.01 3 2 10l15 2-15 2z"/>
+                      </svg>
+                    </button>
+                  </div>
+                </div>
+              </div>
+            </motion.div>
+          )}
+        </AnimatePresence>
       </CardContent>
     </Card>
+
+      <ConfirmDialog
+        open={deleteConfirmOpen}
+        onOpenChange={setDeleteConfirmOpen}
+        title="Delete this post?"
+        description="This post will be permanently removed. This action cannot be undone."
+        confirmLabel="Delete"
+        cancelLabel="Keep it"
+        variant="destructive"
+        onConfirm={() => { setDeleted(true); toast({ title: 'Post deleted', variant: 'destructive' }); }}
+      />
+    </>
   );
 });
 PostCard.displayName = 'PostCard';
@@ -418,7 +576,15 @@ const EventCard = React.memo(({ event }: { event: Event }) => {
           <p className="text-sm text-muted-foreground">+{event.attendees.length - 5} going</p>
         </div>
         <div className="mt-4 flex gap-2">
-          <Button variant="outline" className={cn('w-full hover:bg-red-500/10', interested && 'bg-red-500/10 text-red-500 border-red-500/30')} onClick={() => setInterested(i => !i)}>
+          <Button variant="outline" className={cn('w-full hover:bg-red-500/10', interested && 'bg-red-500/10 text-red-500 border-red-500/30')} onClick={async () => {
+            const wasInterested = interested;
+            setInterested(!wasInterested);
+            try {
+              await CommunityService.attendEvent(event.id);
+            } catch {
+              setInterested(wasInterested);
+            }
+          }}>
             <Heart className={cn('mr-2', interested && 'fill-red-500 text-red-500')} /> {interested ? 'Interested ✓' : 'Interested'}
           </Button>
           <Button variant="gradient" className="w-full" onClick={() => toast({ title: 'Registration confirmed!', description: `See you at ${event.title}!`, variant: 'success' })}>Register</Button>
@@ -471,32 +637,64 @@ const EventsTab = () => {
 // --- SKILL CIRCLES TAB ---
 const CircleCard = React.memo(({ circle }: { circle: SkillCircle }) => {
   const [joined, setJoined] = React.useState(false);
+  const [leaveConfirmOpen, setLeaveConfirmOpen] = React.useState(false);
   const { toast } = useToast();
   return (
-    <Card className="h-full flex flex-col transition-all duration-400 ease-snappy hover:shadow-glow-sm hover:-translate-y-2 group">
-      <CardContent className="p-6 flex-grow flex flex-col">
-        <div className="flex justify-between items-start">
-          <div className="p-3 glass-strong rounded-xl text-4xl shadow-[inset_0_0_0_1px_rgba(255,255,255,0.2)] group-hover:scale-110 transition-transform">{circle.icon}</div>
-          <Badge variant={circle.activity.includes('Very Active') ? 'secondary' : circle.activity.includes('Quiet') ? 'destructive' : 'default'}>{circle.activity}</Badge>
-        </div>
-        <h3 className="mt-4 text-xl font-bold font-headline">{circle.name}</h3>
-        <div className="flex flex-wrap gap-2 mt-2">
-          {circle.skills.map(skill => <Badge key={skill.id} variant="outline">{skill.name}</Badge>)}
-        </div>
-        <div className="flex-grow" />
-        <div className="mt-4 flex items-center justify-between">
-          <div className="flex items-center -space-x-2">
-            {circle.members.slice(0, 5).map(m => <Avatar key={m.id} className="h-8 w-8"><AvatarImage src={m.avatar} /><AvatarFallback>{m.name.charAt(0)}</AvatarFallback></Avatar>)}
+    <>
+      <Card className="h-full flex flex-col transition-all duration-400 ease-snappy hover:shadow-glow-sm hover:-translate-y-2 group">
+        <CardContent className="p-6 flex-grow flex flex-col">
+          <div className="flex justify-between items-start">
+            <div className="p-3 glass-strong rounded-xl text-4xl shadow-[inset_0_0_0_1px_rgba(255,255,255,0.2)] group-hover:scale-110 transition-transform">{circle.icon}</div>
+            <Badge variant={circle.activity.includes('Very Active') ? 'secondary' : circle.activity.includes('Quiet') ? 'destructive' : 'default'}>{circle.activity}</Badge>
           </div>
-          <p className="text-sm font-medium">{circle.memberCount} members</p>
-        </div>
-        <div className="mt-4 text-xs text-muted-foreground">Last session: {circle.lastSession}</div>
-        <div className="mt-4 flex gap-2">
-          <Button variant="ghost" className="w-full" onClick={() => toast({ title: circle.name, description: `${circle.memberCount} members · ${circle.activity}` })}>Preview</Button>
-          <Button variant={joined ? 'outline' : 'gradient'} className="w-full" onClick={() => { setJoined(j => !j); toast({ title: joined ? 'Left circle' : `Joined ${circle.name}!`, description: joined ? undefined : 'You can now participate in this skill circle.', variant: joined ? 'default' : 'success' }); }}>{joined ? 'Leave Circle' : 'Join Circle'}</Button>
-        </div>
-      </CardContent>
-    </Card>
+          <h3 className="mt-4 text-xl font-bold font-headline">{circle.name}</h3>
+          <div className="flex flex-wrap gap-2 mt-2">
+            {circle.skills.map(skill => <Badge key={skill.id} variant="outline">{skill.name}</Badge>)}
+          </div>
+          <div className="flex-grow" />
+          <div className="mt-4 flex items-center justify-between">
+            <div className="flex items-center -space-x-2">
+              {circle.members.slice(0, 5).map(m => <Avatar key={m.id} className="h-8 w-8"><AvatarImage src={m.avatar} /><AvatarFallback>{m.name.charAt(0)}</AvatarFallback></Avatar>)}
+            </div>
+            <p className="text-sm font-medium">{circle.memberCount} members</p>
+          </div>
+          <div className="mt-4 text-xs text-muted-foreground">Last session: {circle.lastSession}</div>
+          <div className="mt-4 flex gap-2">
+            <Button variant="ghost" className="w-full" onClick={() => toast({ title: circle.name, description: `${circle.memberCount} members · ${circle.activity}` })}>Preview</Button>
+            <Button
+              variant={joined ? 'outline' : 'gradient'}
+              className="w-full"
+              onClick={async () => {
+                if (joined) {
+                  setLeaveConfirmOpen(true);
+                } else {
+                  try {
+                    await CommunityService.joinCircle(circle.id);
+                    setJoined(true);
+                    toast({ title: `Joined ${circle.name}!`, description: 'You can now participate in this skill circle.', variant: 'success' });
+                  } catch {
+                    toast({ title: 'Failed to join circle', variant: 'destructive' });
+                  }
+                }
+              }}
+            >
+              {joined ? 'Leave Circle' : 'Join Circle'}
+            </Button>
+          </div>
+        </CardContent>
+      </Card>
+
+      <ConfirmDialog
+        open={leaveConfirmOpen}
+        onOpenChange={setLeaveConfirmOpen}
+        title={`Leave ${circle.name}?`}
+        description="You can rejoin this circle any time, but you'll lose your spot in active sessions."
+        confirmLabel="Leave circle"
+        cancelLabel="Stay"
+        variant="destructive"
+        onConfirm={() => { setJoined(false); toast({ title: `Left ${circle.name}` }); }}
+      />
+    </>
   );
 });
 CircleCard.displayName = 'CircleCard';
@@ -528,6 +726,52 @@ const SkillCirclesTab = () => {
 }
 
 // --- DISCUSSIONS TAB ---
+const DiscussionCard = React.memo(({ discussion: d }: { discussion: Discussion }) => {
+  const [localUpvotes, setLocalUpvotes] = React.useState(d.upvotes);
+  const [upvoted, setUpvoted] = React.useState(false);
+
+  const handleUpvote = async () => {
+    const wasUpvoted = upvoted;
+    setUpvoted(!wasUpvoted);
+    setLocalUpvotes(n => wasUpvoted ? n - 1 : n + 1);
+    try {
+      await CommunityService.upvoteDiscussion(d.id);
+    } catch {
+      setUpvoted(wasUpvoted);
+      setLocalUpvotes(n => wasUpvoted ? n + 1 : n - 1);
+    }
+  };
+
+  return (
+    <Card className={cn("glass transition-all duration-400 hover:shadow-glow-sm hover:-translate-y-1 cursor-pointer", d.isPinned && "border-amber-500/30 bg-amber-500/5 dark:bg-amber-500/10")}>
+      <CardContent className="p-4 flex items-start gap-4">
+        <div className="flex flex-col items-center gap-1 p-2 rounded-md bg-muted/50">
+          <ArrowUp
+            className={cn("h-4 w-4 cursor-pointer hover:text-primary transition-colors", upvoted && "text-primary")}
+            onClick={handleUpvote}
+          />
+          <span className="font-bold text-sm">{localUpvotes}</span>
+        </div>
+        <div className="flex-1">
+          <div className="flex items-center gap-2 flex-wrap">
+            {d.isPinned && <Badge variant="outline" className="border-amber-500 text-amber-600 gap-1"><Pin className="h-3 w-3" /> Pinned</Badge>}
+            <Badge variant="secondary">{d.category}</Badge>
+          </div>
+          <h3 className="font-bold font-headline mt-1 hover:underline cursor-pointer">{d.title}</h3>
+          <div className="mt-2 flex items-center gap-4 text-xs text-muted-foreground">
+            <div className="flex items-center gap-1"><Avatar className="h-5 w-5"><AvatarImage src={d.author.avatar} /><AvatarFallback>{d.author.name.charAt(0)}</AvatarFallback></Avatar> {d.author.name}</div>
+            <span>{d.replies} replies</span>
+            <span>{d.views} views</span>
+            <span>{d.createdAt}</span>
+          </div>
+        </div>
+        <Avatar className="ml-auto hidden sm:block"><AvatarImage src={d.author.avatar} /></Avatar>
+      </CardContent>
+    </Card>
+  );
+});
+DiscussionCard.displayName = 'DiscussionCard';
+
 const DiscussionsTab = () => {
   const [discussions, setDiscussions] = useState<Discussion[]>([]);
   const categories = ['All', 'General', 'Skill Tips', 'Success Stories', 'Help & Support', 'Announcements'];
@@ -557,28 +801,7 @@ const DiscussionsTab = () => {
       </aside>
       <main className="col-span-1 lg:col-span-3 space-y-4">
         {discussions.map(d => (
-          <Card key={d.id} className={cn("glass transition-all duration-400 hover:shadow-glow-sm hover:-translate-y-1 cursor-pointer", d.isPinned && "border-amber-500/30 bg-amber-500/5 dark:bg-amber-500/10")}>
-            <CardContent className="p-4 flex items-start gap-4">
-              <div className="flex flex-col items-center gap-1 p-2 rounded-md bg-muted/50">
-                <ArrowUp className="h-4 w-4 cursor-pointer hover:text-primary" />
-                <span className="font-bold text-sm">{d.upvotes}</span>
-              </div>
-              <div className="flex-1">
-                <div className="flex items-center gap-2 flex-wrap">
-                  {d.isPinned && <Badge variant="outline" className="border-amber-500 text-amber-600 gap-1"><Pin className="h-3 w-3" /> Pinned</Badge>}
-                  <Badge variant="secondary">{d.category}</Badge>
-                </div>
-                <h3 className="font-bold font-headline mt-1 hover:underline cursor-pointer">{d.title}</h3>
-                <div className="mt-2 flex items-center gap-4 text-xs text-muted-foreground">
-                  <div className="flex items-center gap-1"><Avatar className="h-5 w-5"><AvatarImage src={d.author.avatar} /><AvatarFallback>{d.author.name.charAt(0)}</AvatarFallback></Avatar> {d.author.name}</div>
-                  <span>{d.replies} replies</span>
-                  <span>{d.views} views</span>
-                  <span>{d.createdAt}</span>
-                </div>
-              </div>
-              <Avatar className="ml-auto hidden sm:block"><AvatarImage src={d.author.avatar} /></Avatar>
-            </CardContent>
-          </Card>
+          <DiscussionCard key={d.id} discussion={d} />
         ))}
       </main>
     </div>

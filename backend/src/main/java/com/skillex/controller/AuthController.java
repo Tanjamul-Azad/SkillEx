@@ -4,8 +4,9 @@ import com.skillex.dto.auth.AuthResponse;
 import com.skillex.dto.auth.LoginRequest;
 import com.skillex.dto.auth.RegisterRequest;
 import com.skillex.dto.common.ApiResponse;
-import com.skillex.model.User;
+import com.skillex.dto.user.UserProfileDto;
 import com.skillex.service.AuthService;
+import com.skillex.service.DtoMapper;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
@@ -25,6 +26,7 @@ import org.springframework.web.bind.annotation.*;
 public class AuthController {
 
     private final AuthService authService;
+    private final DtoMapper dtoMapper;
 
     /** POST /api/auth/register */
     @PostMapping("/register")
@@ -47,9 +49,9 @@ public class AuthController {
     /** GET /api/auth/me  — requires Authorization: Bearer <token> */
     @GetMapping("/me")
     @SuppressWarnings("null")
-    public ResponseEntity<ApiResponse<User>> me(Authentication authentication) {
+    public ResponseEntity<ApiResponse<UserProfileDto>> me(Authentication authentication) {
         String userId = (String) authentication.getPrincipal();
-        User user = authService.getCurrentUser(userId);
-        return ResponseEntity.ok(ApiResponse.ok(user));
+        var user = authService.getCurrentUser(userId);
+        return ResponseEntity.ok(ApiResponse.ok(dtoMapper.toProfile(user)));
     }
 }

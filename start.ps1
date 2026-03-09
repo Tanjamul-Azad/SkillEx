@@ -20,8 +20,8 @@ Write-Host "[backend]  Spring Boot starting..." -ForegroundColor Cyan
 
 # ── 2. Wait for backend to be ready on port 8080 ─────────────────────────────
 $timeout = 120   # seconds
-$waited  = 0
-$ready   = $false
+$waited = 0
+$ready = $false
 
 while ($waited -lt $timeout) {
     # flush backend output while we wait so the user sees progress
@@ -34,7 +34,8 @@ while ($waited -lt $timeout) {
         $tcp.Close()
         $ready = $true
         break
-    } catch { }
+    }
+    catch { }
     Start-Sleep -Seconds 2
     $waited += 2
 }
@@ -52,7 +53,7 @@ Write-Host "[backend]  Ready on http://localhost:8080" -ForegroundColor Green
 $frontendJob = Start-Job -Name "frontend" -ScriptBlock {
     param($root)
     Set-Location "$root\frontend"
-    npm run dev 2>&1
+    npm run dev -- --host 2>&1
 } -ArgumentList $root
 
 Write-Host "[frontend] Vite starting..." -ForegroundColor Magenta
@@ -68,7 +69,8 @@ try {
         }
         Start-Sleep -Milliseconds 300
     }
-} finally {
+}
+finally {
     Write-Host "`nStopping servers..." -ForegroundColor Yellow
     Stop-Job  -Job $backendJob, $frontendJob
     Remove-Job -Job $backendJob, $frontendJob -Force

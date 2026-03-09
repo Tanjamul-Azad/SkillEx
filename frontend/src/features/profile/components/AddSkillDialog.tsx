@@ -15,6 +15,7 @@ import { useToast } from '@/hooks/use-toast';
 import { cn } from '@/lib/utils';
 import { Search, Plus, Check } from 'lucide-react';
 import { SkillService } from '@/services/skillService';
+import { UserService } from '@/services/userService';
 import type { Skill } from '@/types';
 
 interface Props {
@@ -72,20 +73,26 @@ export function AddSkillDialog({ open, onClose, mode, existingIds, onSave }: Pro
       return;
     }
     setSaving(true);
-    // TODO: PATCH /api/users/:id with new skill ids
-    await new Promise((r) => setTimeout(r, 700));
-    const added = skills.filter((s) => selected.has(s.id));
-    onSave(added);
-    setSaving(false);
-    setSelected(new Set());
-    setQuery('');
-    setCategory('All');
-    onClose();
-    toast({
-      title: `${selected.size} skill${selected.size > 1 ? 's' : ''} added`,
-      description: `Added to your ${mode === 'offered' ? 'teach' : 'learn'} list.`,
-      variant: 'success',
-    });
+    try {
+      await Promise.all(
+        Array.from(selected).map((id) => UserService.addSkill(id, mode, 'BEGINNER'))
+      );
+      const added = skills.filter((s) => selected.has(s.id));
+      onSave(added);
+      setSaving(false);
+      setSelected(new Set());
+      setQuery('');
+      setCategory('All');
+      onClose();
+      toast({
+        title: `${added.length} skill${added.length > 1 ? 's' : ''} added`,
+        description: `Added to your ${mode === 'offered' ? 'teach' : 'learn'} list.`,
+        variant: 'success',
+      });
+    } catch {
+      setSaving(false);
+      toast({ title: 'Failed to add skills', description: 'Please try again.', variant: 'destructive' });
+    }
   };
 
   const handleClose = () => {

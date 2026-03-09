@@ -7,6 +7,7 @@ import com.skillex.model.User;
 import com.skillex.repository.NotificationRepository;
 import com.skillex.repository.UserRepository;
 import com.skillex.service.DtoMapper;
+import com.skillex.service.NotificationPublisher;
 import com.skillex.service.NotificationService;
 import jakarta.persistence.EntityNotFoundException;
 import lombok.RequiredArgsConstructor;
@@ -20,11 +21,13 @@ import java.util.UUID;
 
 @Service
 @RequiredArgsConstructor
+@SuppressWarnings("null")
 public class NotificationServiceImpl implements NotificationService {
 
     private final NotificationRepository notificationRepository;
     private final UserRepository userRepository;
     private final DtoMapper mapper;
+    private final NotificationPublisher publisher;
 
     @Override
     @Transactional(readOnly = true)
@@ -68,6 +71,9 @@ public class NotificationServiceImpl implements NotificationService {
         notification.setType(Notification.NotificationType.valueOf(type.toUpperCase()));
         notification.setMessage(message);
         notification.setIsRead(false);
-        return mapper.toNotification(notificationRepository.save(notification));
+        NotificationDto dto = mapper.toNotification(notificationRepository.save(notification));
+        // Push real-time via WebSocket (non-blocking; falls back gracefully if WS is down)
+        publisher.push(userId, dto);
+        return dto;
     }
 }

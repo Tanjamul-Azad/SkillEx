@@ -2,12 +2,13 @@ import { User } from '@/types';
 import { api } from './api';
 
 export const UserService = {
-  getAll: async (page = 1, limit = 10, search?: string) => {
+  /** GET /api/users?query=&page=0&size=20  (page is 0-based on backend) */
+  getAll: async (page = 1, size = 10, search?: string) => {
     const params = new URLSearchParams({
-      page: page.toString(),
-      limit: limit.toString(),
+      page: (page - 1).toString(), // frontend is 1-based, backend is 0-based
+      size: size.toString(),
     });
-    if (search) params.append('q', search);
+    if (search) params.append('query', search);
     return api.get<{ data: User[]; total: number }>(`/users?${params.toString()}`);
   },
 
@@ -15,8 +16,18 @@ export const UserService = {
     return api.get<User>(`/users/${id}`);
   },
 
-  /** Update authenticated user's own profile (PATCH /api/users/:id) */
-  updateProfile: async (id: string, data: Partial<Omit<User, 'id' | 'email'>>) => {
-    return api.patch<User>(`/users/${id}`, data);
+  /** Update authenticated user's own profile (PATCH /api/users/me) */
+  updateProfile: async (_id: string, data: Partial<Omit<User, 'id' | 'email'>>) => {
+    return api.patch<User>('/users/me', data);
+  },
+
+  /** POST /api/users/me/skills — add a skill to offered or wanted list */
+  addSkill: async (skillId: string, type: 'offered' | 'wanted', level = 'BEGINNER'): Promise<void> => {
+    return api.post<void>('/users/me/skills', { skillId, type, level: level.toUpperCase() });
+  },
+
+  /** DELETE /api/users/me — permanently delete authenticated user's account */
+  deleteAccount: async (): Promise<void> => {
+    return api.delete<void>('/users/me');
   },
 };

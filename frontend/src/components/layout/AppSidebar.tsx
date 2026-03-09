@@ -21,7 +21,7 @@
  *    identifies each section via tooltip.
  */
 
-import React, { useEffect } from 'react';
+import React, { useEffect, useState } from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useAuth } from '@/hooks/useAuth';
@@ -31,10 +31,11 @@ import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import {
   LayoutDashboard, Zap, Users, User, Settings, LogOut,
-  ChevronLeft, ChevronRight, X,
+  ChevronLeft, ChevronRight, X, MessageSquare,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { dashboardNav } from '@/config/navigation.config';
+import { ConfirmDialog } from '@/components/ui/ConfirmDialog';
 import type { LucideIcon } from 'lucide-react';
 
 /* ── Icon registry (maps string names from navigation.config → components) ── */
@@ -44,6 +45,7 @@ const ICON_MAP: Record<string, LucideIcon> = {
   Users,
   User,
   Settings,
+  MessageSquare,
 };
 
 /* ── Constants ─────────────────────────────────────────────────────────────── */
@@ -137,6 +139,7 @@ function SidebarContent({
   onNavClick?: () => void;
 }) {
   const { user, logout } = useAuth();
+  const [confirmLogout, setConfirmLogout] = useState(false);
 
   return (
     <div className="flex h-full flex-col">
@@ -148,9 +151,9 @@ function SidebarContent({
         )}
       >
         <Link
-          to="/dashboard"
+          to="/"
           className="group flex items-center gap-2.5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40 rounded-xl"
-          aria-label="SkillEx — go to dashboard"
+          aria-label="SkillEx — go to home"
         >
           <div className="relative flex h-8 w-8 shrink-0 items-center justify-center rounded-xl bg-gradient-to-br from-primary to-secondary shadow-[0_0_12px_hsl(var(--primary)/0.4)] transition-all duration-300 group-hover:shadow-[0_0_20px_hsl(var(--primary)/0.6)] group-hover:scale-105">
             <Zap className="h-4 w-4 text-white transition-transform group-hover:-rotate-12 duration-300" aria-hidden="true" />
@@ -252,7 +255,7 @@ function SidebarContent({
                       <Button
                         variant="ghost"
                         size="icon"
-                        onClick={logout}
+                        onClick={() => setConfirmLogout(true)}
                         aria-label="Log out"
                         className="h-8 w-8 shrink-0 rounded-lg text-muted-foreground transition-colors hover:bg-destructive/10 hover:text-destructive focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-destructive/40"
                       >
@@ -272,7 +275,7 @@ function SidebarContent({
                   <Button
                     variant="ghost"
                     size="icon"
-                    onClick={logout}
+                    onClick={() => setConfirmLogout(true)}
                     aria-label="Log out"
                     className="h-8 w-8 rounded-lg text-muted-foreground transition-colors hover:bg-destructive/10 hover:text-destructive focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-destructive/40"
                   >
@@ -285,6 +288,17 @@ function SidebarContent({
           </div>
         ) : null}
       </div>
+
+      <ConfirmDialog
+        open={confirmLogout}
+        onOpenChange={setConfirmLogout}
+        title="Log out?"
+        description="You'll be signed out of your account on this device."
+        confirmLabel="Log out"
+        cancelLabel="Stay signed in"
+        variant="destructive"
+        onConfirm={logout}
+      />
     </div>
   );
 }

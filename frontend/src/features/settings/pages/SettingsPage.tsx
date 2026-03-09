@@ -1,11 +1,13 @@
 
-import React, { useState } from 'react';
+import React, { useState, useRef } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
 import { motion } from 'framer-motion';
 import { useAuth } from '@/hooks/useAuth';
 import { useToast } from '@/hooks/use-toast';
+import { UserService } from '@/services/userService';
+import { api } from '@/services/api';
 import DashboardLayout from '@/components/layout/DashboardLayout';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -19,6 +21,11 @@ import { Badge } from '@/components/ui/badge';
 import {
   Form, FormControl, FormField, FormItem, FormLabel, FormMessage, FormDescription,
 } from '@/components/ui/form';
+import {
+  Dialog, DialogContent, DialogDescription, DialogFooter,
+  DialogHeader, DialogTitle,
+} from '@/components/ui/dialog';
+import { ConfirmDialog } from '@/components/ui/ConfirmDialog';
 import {
   User, Mail, Lock, Bell, Shield, Trash2, Camera,
   CheckCircle2, Eye, EyeOff, Globe, Zap,
@@ -57,13 +64,22 @@ const item = {
 };
 
 export default function SettingsPage() {
-  const { user, logout } = useAuth();
+  const { user, logout, refreshUser } = useAuth();
   const { toast } = useToast();
   const [active, setActive] = useState('profile');
   const [savingProfile, setSavingProfile] = useState(false);
   const [savingPassword, setSavingPassword] = useState(false);
   const [showCurrent, setShowCurrent] = useState(false);
   const [showNext, setShowNext] = useState(false);
+
+  // Dialog state
+  const [confirmLogoutAll, setConfirmLogoutAll] = useState(false);
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+  const [deleteConfirmEmail, setDeleteConfirmEmail] = useState('');
+  const [avatarDialogOpen, setAvatarDialogOpen] = useState(false);
+  const [avatarPreview, setAvatarPreview] = useState<string | null>(null);
+  const [localAvatar, setLocalAvatar] = useState<string | null>(null);
+  const avatarInputRef = useRef<HTMLInputElement>(null);
 
   const [notifications, setNotifications] = useState({
     matchRequests: true,
@@ -97,20 +113,46 @@ export default function SettingsPage() {
   });
 
   const handleProfileSave = async (data: ProfileFormData) => {
+    if (!user) return;
     setSavingProfile(true);
-    // TODO: call PUT /api/users/:id with data
-    await new Promise((r) => setTimeout(r, 900));
-    setSavingProfile(false);
-    toast({ title: 'Profile updated', description: 'Your changes have been saved.', variant: 'success' });
+    try {
+      await UserService.updateProfile(user.id, {
+        name: data.name,
+        university: data.university,
+        bio: data.bio ?? '',
+      });
+      // Refresh in-memory user so the sidebar/header reflect the new name/bio
+      await refreshUser();
+      toast({ title: 'Profile updated', description: 'Your changes have been saved.', variant: 'success' });
+    } catch (err) {
+      toast({
+        variant: 'destructive',
+        title: 'Update failed',
+        description: err instanceof Error ? err.message : 'Could not save profile.',
+      });
+    } finally {
+      setSavingProfile(false);
+    }
   };
 
   const handlePasswordSave = async (data: PasswordFormData) => {
     setSavingPassword(true);
-    // TODO: call POST /api/auth/change-password
-    await new Promise((r) => setTimeout(r, 900));
-    setSavingPassword(false);
-    passwordForm.reset();
-    toast({ title: 'Password changed', description: 'Your password has been updated.', variant: 'success' });
+    try {
+      await api.post('/users/me/change-password', {
+        currentPassword: data.current,
+        newPassword: data.next,
+      });
+      passwordForm.reset();
+      toast({ title: 'Password changed', description: 'Your password has been updated.', variant: 'success' });
+    } catch (err) {
+      toast({
+        variant: 'destructive',
+        title: 'Password change failed',
+        description: err instanceof Error ? err.message : 'Could not update password.',
+      });
+    } finally {
+      setSavingPassword(false);
+    }
   };
 
   const charCount = profileForm.watch('bio')?.length ?? 0;
@@ -174,11 +216,12 @@ export default function SettingsPage() {
                     <div className="mb-6 flex items-center gap-4">
                       <div className="relative">
                         <Avatar className="h-20 w-20 ring-4 ring-primary/20">
-                          <AvatarImage src={user?.avatar} alt={user?.name} />
+                          <AvatarImage src={localAvatar ?? user?.avatar} alt={user?.name} />
                           <AvatarFallback className="text-xl font-bold">{user?.name?.charAt(0)}</AvatarFallback>
                         </Avatar>
                         <Button
                           size="icon"
+                          onClick={() => setAvatarDialogOpen(true)}
                           className="absolute bottom-0 right-0 flex h-7 w-7 items-center justify-center rounded-full bg-primary text-primary-foreground shadow hover:bg-primary/90 transition-colors"
                         >
                           <Camera className="h-3.5 w-3.5" />
@@ -431,7 +474,7 @@ export default function SettingsPage() {
                       <p className="font-semibold">Log out of all devices</p>
                       <p className="text-sm text-muted-foreground">Sign out everywhere and revoke all active sessions.</p>
                     </div>
-                    <Button variant="outline" className="border-orange-500/30 text-orange-600 hover:bg-orange-500/10" onClick={logout}>
+                    <Button variant="outline" className="border-orange-500/30 text-orange-600 hover:bg-orange-500/10" onClick={() => setConfirmLogoutAll(true)}>
                       Log Out
                     </Button>
                   </div>
@@ -443,7 +486,7 @@ export default function SettingsPage() {
                     <Button
                       variant="destructive"
                       className="rounded-xl"
-                      onClick={() => toast({ title: 'Not yet implemented', description: 'Contact support to delete your account.', variant: 'destructive' })}
+                      onClick={() => setDeleteDialogOpen(true)}
                     >
                       Delete Account
                     </Button>
@@ -454,6 +497,118 @@ export default function SettingsPage() {
           </motion.div>
         </div>
       </div>
+
+      {/* ── Avatar upload dialog ── */}
+      <Dialog open={avatarDialogOpen} onOpenChange={(o) => { setAvatarDialogOpen(o); if (!o) setAvatarPreview(null); }}>
+        <DialogContent className="sm:max-w-sm">
+          <DialogHeader>
+            <DialogTitle>Update Profile Photo</DialogTitle>
+            <DialogDescription>Choose a new photo for your profile.</DialogDescription>
+          </DialogHeader>
+          <div className="mt-2 flex flex-col items-center gap-4">
+            <Avatar className="h-28 w-28 ring-4 ring-primary/20">
+              <AvatarImage src={avatarPreview ?? user?.avatar} alt={user?.name} />
+              <AvatarFallback className="text-3xl font-bold">{user?.name?.charAt(0)}</AvatarFallback>
+            </Avatar>
+            <input
+              ref={avatarInputRef}
+              type="file"
+              accept="image/png, image/jpeg, image/webp"
+              className="hidden"
+              onChange={(e) => {
+                const file = e.target.files?.[0];
+                if (!file) return;
+                const reader = new FileReader();
+                reader.onload = (ev) => setAvatarPreview(ev.target?.result as string);
+                reader.readAsDataURL(file);
+              }}
+            />
+            <Button variant="outline" className="w-full" onClick={() => avatarInputRef.current?.click()}>
+              <Camera className="mr-2 h-4 w-4" /> Choose Photo
+            </Button>
+          </div>
+          <DialogFooter className="mt-2 gap-2 sm:gap-0">
+            <Button variant="outline" onClick={() => { setAvatarDialogOpen(false); setAvatarPreview(null); }}>
+              Cancel
+            </Button>
+            <Button
+              variant="gradient" disabled={!avatarPreview}
+              onClick={() => {
+                if (avatarPreview) setLocalAvatar(avatarPreview);
+                setAvatarDialogOpen(false);
+                setAvatarPreview(null);
+                toast({ title: 'Profile photo updated!', description: 'Your new profile photo is now showing.' });
+              }}
+            >
+              Save Photo
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* ── Log out all devices confirm ── */}
+      <ConfirmDialog
+        open={confirmLogoutAll}
+        onOpenChange={setConfirmLogoutAll}
+        title="Log out of all devices?"
+        description="You'll be signed out everywhere. You'll need to sign in again on every device."
+        confirmLabel="Log out everywhere"
+        cancelLabel="Cancel"
+        variant="destructive"
+        onConfirm={logout}
+      />
+
+      {/* ── Delete account dialog ── */}
+      <Dialog open={deleteDialogOpen} onOpenChange={(o) => { setDeleteDialogOpen(o); if (!o) setDeleteConfirmEmail(''); }}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2 text-destructive">
+              <Trash2 className="h-4 w-4" /> Delete Account
+            </DialogTitle>
+            <DialogDescription>
+              This action is <strong>permanent and irreversible</strong>. All your matches, sessions, and data will be erased.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="mt-2 space-y-4">
+            <div className="rounded-xl border border-destructive/30 bg-destructive/5 p-4 text-sm text-destructive">
+              You are about to permanently delete <strong>{user?.email}</strong> and all associated data.
+            </div>
+            <div className="space-y-1.5">
+              <Label htmlFor="confirm-delete-email" className="text-sm font-medium">
+                Type your email address to confirm
+              </Label>
+              <Input
+                id="confirm-delete-email"
+                type="email"
+                placeholder={user?.email ?? 'your@email.com'}
+                value={deleteConfirmEmail}
+                onChange={(e) => setDeleteConfirmEmail(e.target.value)}
+              />
+            </div>
+          </div>
+          <DialogFooter className="mt-2 gap-2 sm:gap-0">
+            <Button variant="outline" onClick={() => { setDeleteDialogOpen(false); setDeleteConfirmEmail(''); }}>
+              Cancel
+            </Button>
+            <Button
+              variant="destructive"
+              disabled={deleteConfirmEmail !== user?.email}
+              onClick={async () => {
+                try {
+                  await UserService.deleteAccount();
+                  setDeleteDialogOpen(false);
+                  setDeleteConfirmEmail('');
+                  logout();
+                } catch {
+                  toast({ title: 'Failed to delete account', description: 'Please try again or contact support.', variant: 'destructive' });
+                }
+              }}
+            >
+              <Trash2 className="mr-2 h-4 w-4" /> Delete my account
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </DashboardLayout>
   );
 }

@@ -16,6 +16,7 @@ const MatchPage = React.lazy(() => import('./features/match/pages/MatchPage'));
 const CommunityPage = React.lazy(() => import('./features/community/pages/CommunityPage'));
 const ProfilePage = React.lazy(() => import('./features/profile/pages/ProfilePage'));
 const SettingsPage = React.lazy(() => import('./features/settings/pages/SettingsPage'));
+const MessagesPage = React.lazy(() => import('./features/messages/pages/MessagesPage'));
 const OnboardingPage = React.lazy(() => import('./features/onboarding/pages/OnboardingPage'));
 const NotFoundPage = React.lazy(() => import('./features/error/NotFoundPage'));
 const AboutPage = React.lazy(() => import('./features/marketing/pages/AboutPage'));
@@ -119,6 +120,8 @@ export default function App() {
                     <Route path="/community" element={<CommunityPage />} />
                     <Route path="/profile/:userId" element={<ProfilePage />} />
                     <Route path="/settings" element={<SettingsPage />} />
+                    <Route path="/messages" element={<MessagesPage />} />
+                    <Route path="/messages/:userId" element={<MessagesPage />} />
                     <Route path="/onboarding" element={<OnboardingPage />} />
                     <Route path="/about" element={<AboutPage />} />
                     <Route path="/careers" element={<CareersPage />} />

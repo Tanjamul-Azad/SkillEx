@@ -13,6 +13,7 @@ import java.util.UUID;
 
 @Service
 @RequiredArgsConstructor
+@SuppressWarnings("null")
 public class SkillServiceImpl implements SkillService {
 
     private final SkillRepository skillRepository;

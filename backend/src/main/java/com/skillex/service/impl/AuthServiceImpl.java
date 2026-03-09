@@ -4,7 +4,12 @@ import com.skillex.dto.auth.AuthResponse;
 import com.skillex.dto.auth.LoginRequest;
 import com.skillex.dto.auth.RegisterRequest;
 import com.skillex.model.User;
+import com.skillex.model.UserSkillOffered;
+import com.skillex.model.UserSkillWanted;
+import com.skillex.repository.SkillRepository;
 import com.skillex.repository.UserRepository;
+import com.skillex.repository.UserSkillOfferedRepository;
+import com.skillex.repository.UserSkillWantedRepository;
 import com.skillex.service.AuthService;
 import com.skillex.service.DtoMapper;
 import com.skillex.config.JwtUtil;
@@ -24,16 +29,19 @@ import org.springframework.transaction.annotation.Transactional;
  */
 @Service
 @RequiredArgsConstructor
+@SuppressWarnings("null")
 public class AuthServiceImpl implements AuthService {
 
     private final UserRepository userRepository;
+    private final SkillRepository skillRepository;
+    private final UserSkillOfferedRepository offeredRepo;
+    private final UserSkillWantedRepository wantedRepo;
     private final PasswordEncoder passwordEncoder;
     private final JwtUtil jwtUtil;
     private final DtoMapper mapper;
 
     @Override
     @Transactional
-    @SuppressWarnings("null")
     public AuthResponse register(RegisterRequest req) {
         if (userRepository.existsByEmail(req.email())) {
             throw new IllegalArgumentException("An account with this email already exists.");
@@ -47,6 +55,10 @@ public class AuthServiceImpl implements AuthService {
             .build();
 
         user = userRepository.save(user);
+
+        // Persist initial skills chosen during registration
+        saveRegistrationSkills(user, req);
+
         String token = jwtUtil.generateToken(user.getId(), user.getEmail(), user.getRole().name());
         return toAuthResponse(token, user);
     }
@@ -77,5 +89,45 @@ public class AuthServiceImpl implements AuthService {
     /** Builds the auth response with a full profile DTO so no second round-trip is needed. */
     private AuthResponse toAuthResponse(String token, User user) {
         return new AuthResponse(token, mapper.toProfile(user));
+    }
+
+    /**
+     * Saves the skillToTeach (offered) and skillToLearn (wanted) chosen on the
+     * registration form.  Unrecognised skill names are silently ignored so that
+     * a typo on the client side never blocks registration.
+     */
+    private void saveRegistrationSkills(User user, RegisterRequest req) {
+        UserSkillOffered.SkillProficiency proficiency = parseProficiency(req.level());
+
+        // Write only through the junction entity repos — DtoMapper.toProfile() reads them
+        // directly.  Do NOT also add to user.getSkillsOffered() / getSkillsWanted() and
+        // call userRepository.save(), as that would generate a duplicate-key INSERT on the
+        // same user_skills_offered / user_skills_wanted row.
+        if (req.skillToTeach() != null && !req.skillToTeach().isBlank()) {
+            skillRepository.findByNameIgnoreCase(req.skillToTeach().trim()).ifPresent(skill ->
+                offeredRepo.save(UserSkillOffered.builder()
+                    .id(new UserSkillOffered.UserSkillId(user.getId(), skill.getId()))
+                    .user(user).skill(skill).level(proficiency)
+                    .build())
+            );
+        }
+
+        if (req.skillToLearn() != null && !req.skillToLearn().isBlank()) {
+            skillRepository.findByNameIgnoreCase(req.skillToLearn().trim()).ifPresent(skill ->
+                wantedRepo.save(UserSkillWanted.builder()
+                    .id(new UserSkillWanted.UserSkillId(user.getId(), skill.getId()))
+                    .user(user).skill(skill).level(proficiency)
+                    .build())
+            );
+        }
+    }
+
+    private UserSkillOffered.SkillProficiency parseProficiency(String raw) {
+        if (raw == null) return UserSkillOffered.SkillProficiency.BEGINNER;
+        try {
+            return UserSkillOffered.SkillProficiency.valueOf(raw.toUpperCase());
+        } catch (IllegalArgumentException e) {
+            return UserSkillOffered.SkillProficiency.BEGINNER;
+        }
     }
 }

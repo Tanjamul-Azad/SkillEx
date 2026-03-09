@@ -33,6 +33,7 @@ export const dashboardNav: NavGroup[] = [
       { label: 'Dashboard',  href: '/dashboard',  icon: 'LayoutDashboard', requiresAuth: true },
       { label: 'Match',      href: '/match',       icon: 'Zap',             requiresAuth: true },
       { label: 'Community',  href: '/community',   icon: 'Users',           requiresAuth: true },
+      { label: 'Messages',   href: '/messages',    icon: 'MessageSquare',   requiresAuth: true },
     ],
   },
   {

@@ -53,13 +53,13 @@ export function RequestExchangeDialog({ open, onClose, targetUser }: Props) {
     setSubmitting(true);
     try {
       const offeredSkill = mySkills.find((s) => s.id === data.offeredSkillId);
-      const wantedSkill  = targetUser.skillsOffered?.find((s) => s.id === data.wantedSkillId)
-                        ?? targetUser.skillsOffered?.[0];
+      const wantedSkill = targetUser.skillsOffered?.find((s) => s.id === data.wantedSkillId)
+        ?? targetUser.skillsOffered?.[0];
       await exchangeService.create({
-        receiverId:   targetUser.id,
-        offeredSkill: offeredSkill,
-        wantedSkill:  wantedSkill,
-        message:      data.message,
+        receiverId: targetUser.id,
+        offeredSkillId: offeredSkill?.id,
+        wantedSkillId: wantedSkill?.id,
+        message: data.message,
       });
       setStep('success');
     } catch (err) {
@@ -156,11 +156,10 @@ export function RequestExchangeDialog({ open, onClose, targetUser }: Props) {
                             <label
                               key={s.id}
                               htmlFor={`skill-${s.id}`}
-                              className={`flex cursor-pointer items-center gap-3 rounded-xl border p-3 transition-colors ${
-                                field.value === s.id
+                              className={`flex cursor-pointer items-center gap-3 rounded-xl border p-3 transition-colors ${field.value === s.id
                                   ? 'border-primary bg-primary/5'
                                   : 'border-border/40 hover:border-primary/40 hover:bg-muted/50'
-                              }`}
+                                }`}
                             >
                               <RadioGroupItem value={s.id} id={`skill-${s.id}`} className="shrink-0" />
                               <span className="text-lg">{s.icon}</span>

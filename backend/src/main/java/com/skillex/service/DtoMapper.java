@@ -14,8 +14,6 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Component;
 
 import java.util.List;
-import java.util.Map;
-import java.util.stream.Collectors;
 
 /**
  * Stateless mapper component that converts JPA entities → DTOs.
@@ -43,28 +41,25 @@ public class DtoMapper {
     }
 
     public UserProfileDto toProfile(User u) {
-        // Fetch per-skill levels from junction tables
-        Map<String, String> offeredLevels = offeredRepo.findByIdUserId(u.getId()).stream()
-            .collect(Collectors.toMap(
-                r -> r.getId().getSkillId(),
-                r -> r.getLevel().name()
-            ));
-        Map<String, String> wantedLevels = wantedRepo.findByIdUserId(u.getId()).stream()
-            .collect(Collectors.toMap(
-                r -> r.getId().getSkillId(),
-                r -> r.getLevel().name()
-            ));
-
-        List<UserProfileDto.SkillWithLevel> offered = u.getSkillsOffered().stream()
-            .map(s -> new UserProfileDto.SkillWithLevel(
-                s.getId(), s.getName(), s.getIcon(), s.getCategory(), s.getDescription(),
-                offeredLevels.getOrDefault(s.getId(), "BEGINNER")))
+        // Build skill lists entirely from the junction entity rows so the result
+        // is always consistent with the DB — this avoids relying on the in-memory
+        // @ManyToMany collection which may be stale (e.g. right after registration).
+        List<UserProfileDto.SkillWithLevel> offered = offeredRepo.findByIdUserId(u.getId()).stream()
+            .map(r -> {
+                Skill s = r.getSkill();
+                return new UserProfileDto.SkillWithLevel(
+                    s.getId(), s.getName(), s.getIcon(), s.getCategory(), s.getDescription(),
+                    r.getLevel().name());
+            })
             .toList();
 
-        List<UserProfileDto.SkillWithLevel> wanted = u.getSkillsWanted().stream()
-            .map(s -> new UserProfileDto.SkillWithLevel(
-                s.getId(), s.getName(), s.getIcon(), s.getCategory(), s.getDescription(),
-                wantedLevels.getOrDefault(s.getId(), "BEGINNER")))
+        List<UserProfileDto.SkillWithLevel> wanted = wantedRepo.findByIdUserId(u.getId()).stream()
+            .map(r -> {
+                Skill s = r.getSkill();
+                return new UserProfileDto.SkillWithLevel(
+                    s.getId(), s.getName(), s.getIcon(), s.getCategory(), s.getDescription(),
+                    r.getLevel().name());
+            })
             .toList();
 
         return new UserProfileDto(

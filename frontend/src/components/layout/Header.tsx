@@ -1,5 +1,5 @@
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { Link } from 'react-router-dom';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { useAuth } from '@/hooks/useAuth';
@@ -15,21 +15,23 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
-import { Badge } from '@/components/ui/badge';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
   Sun, Moon, LogOut, User as UserIcon, Settings,
-  LayoutDashboard, Zap, Bell, ChevronDown, CheckCheck,
+  LayoutDashboard, Bell, ChevronDown, CheckCheck,
   ArrowLeftRight, Star, Calendar, MessageSquare, Menu,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { NotificationService } from '@/services/notificationService';
+import { TokenStore } from '@/services/http/ApiClient';
+import { useWebSocket } from '@/hooks/useWebSocket';
 import type { Notification } from '@/types';
 import Logo from '@/components/ui/Logo';
+import { ConfirmDialog } from '@/components/ui/ConfirmDialog';
 
 const LogoWrapper = () => (
-  <Link to="/dashboard" className="group">
+  <Link to="/" className="group lg:hidden">
     <Logo size="md" />
   </Link>
 );
@@ -72,18 +74,41 @@ export default function Header({
   const navigate = useNavigate();
   const { setMobileOpen } = useSidebar();
 
+  const [confirmLogout, setConfirmLogout] = useState(false);
+
   const matchedKey = Object.keys(PAGE_TITLES).find(k => pathname.startsWith(k));
   const pageTitle = PAGE_TITLES[pathname] ?? (matchedKey ? PAGE_TITLES[matchedKey] : 'SkillEx');
 
   const [readIds, setReadIds] = useState<Set<string>>(new Set());
   const [notifs, setNotifs] = useState<Notification[]>([]);
 
+  // ── Initial notification fetch ────────────────────────────────────────────
   useEffect(() => {
     if (!user) return;
     NotificationService.getAll(0, 8)
       .then((res) => setNotifs(res.content ?? []))
       .catch(() => { /* silently fail — notifications are non-critical */ });
   }, [user]);
+
+  // ── Real-time WebSocket notifications ────────────────────────────────────
+  const token = TokenStore.get();
+  const { connected, subscribe } = useWebSocket(user ? token : null);
+  const unsubRef = useRef<(() => void) | undefined>(undefined);
+
+  useEffect(() => {
+    if (!connected || !user) return;
+    // Subscribe to user-specific notification queue
+    const unsub = subscribe(`/user/queue/notifications`, (msg) => {
+      try {
+        const incoming = JSON.parse(msg.body) as Notification;
+        setNotifs((prev) => [incoming, ...prev].slice(0, 20));
+      } catch {
+        // ignore malformed frames
+      }
+    });
+    unsubRef.current = unsub;
+    return () => unsubRef.current?.();
+  }, [connected, user, subscribe]);
 
   const unreadCount = notifs.filter((n) => !n.isRead && !readIds.has(n.id)).length;
 
@@ -286,7 +311,7 @@ export default function Header({
                   Settings
                 </DropdownMenuItem>
                 <DropdownMenuSeparator />
-                <DropdownMenuItem onClick={logout} className="gap-2 cursor-pointer text-destructive focus:text-destructive">
+                <DropdownMenuItem onClick={() => setConfirmLogout(true)} className="gap-2 cursor-pointer text-destructive focus:text-destructive">
                   <LogOut className="h-4 w-4" />
                   Log out
                 </DropdownMenuItem>
@@ -295,6 +320,17 @@ export default function Header({
           )}
         </div>
       </div>
+
+      <ConfirmDialog
+        open={confirmLogout}
+        onOpenChange={setConfirmLogout}
+        title="Log out?"
+        description="You'll be signed out of your account on this device."
+        confirmLabel="Log out"
+        cancelLabel="Stay signed in"
+        variant="destructive"
+        onConfirm={logout}
+      />
     </header>
   );
 }

@@ -193,3 +193,74 @@ CREATE INDEX idx_sessions_scheduled     ON sessions(scheduled_at);
 CREATE INDEX idx_reviews_to_user        ON reviews(to_user);
 CREATE INDEX idx_discussions_author     ON discussions(author_id);
 CREATE INDEX idx_discussions_pinned     ON discussions(is_pinned);
+
+-- ── posts ─────────────────────────────────────────────────────
+-- Feed posts. Spring Boot entity: Post.java
+CREATE TABLE IF NOT EXISTS posts (
+  id          VARCHAR(36)   NOT NULL DEFAULT (UUID()),
+  author_id   VARCHAR(36)   NOT NULL,
+  type        ENUM('SHOWCASE','ACHIEVEMENT','EXCHANGE','QUESTION') NOT NULL DEFAULT 'EXCHANGE',
+  content     TEXT          NOT NULL,
+  skill_id    VARCHAR(36)   DEFAULT NULL,
+  badge       VARCHAR(100)  DEFAULT NULL,
+  likes       INT           NOT NULL DEFAULT 0,
+  comments    INT           NOT NULL DEFAULT 0,
+  shares      INT           NOT NULL DEFAULT 0,
+  created_at  DATETIME      NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  updated_at  DATETIME      NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  PRIMARY KEY (id),
+  CONSTRAINT fk_p_author FOREIGN KEY (author_id) REFERENCES users(id)  ON DELETE CASCADE,
+  CONSTRAINT fk_p_skill  FOREIGN KEY (skill_id)  REFERENCES skills(id) ON DELETE SET NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- ── stories ───────────────────────────────────────────────────
+CREATE TABLE IF NOT EXISTS stories (
+  id          VARCHAR(36)   NOT NULL DEFAULT (UUID()),
+  user_id     VARCHAR(36)   NOT NULL,
+  content     TEXT          DEFAULT NULL,
+  image_url   VARCHAR(500)  DEFAULT NULL,
+  is_seen     TINYINT(1)    NOT NULL DEFAULT 0,
+  expires_at  DATETIME      NOT NULL,
+  created_at  DATETIME      NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  PRIMARY KEY (id),
+  CONSTRAINT fk_st_user FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- ── notifications ─────────────────────────────────────────────
+CREATE TABLE IF NOT EXISTS notifications (
+  id          VARCHAR(36)   NOT NULL DEFAULT (UUID()),
+  user_id     VARCHAR(36)   NOT NULL                COMMENT 'Recipient',
+  type        VARCHAR(50)   NOT NULL                COMMENT 'exchange_request | message | review | system',
+  title       VARCHAR(200)  NOT NULL,
+  message     TEXT          DEFAULT NULL,
+  is_read     TINYINT(1)    NOT NULL DEFAULT 0,
+  link        VARCHAR(500)  DEFAULT NULL            COMMENT 'Deep-link URL',
+  created_at  DATETIME      NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  PRIMARY KEY (id),
+  CONSTRAINT fk_n_user FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- ── event_attendees ───────────────────────────────────────────
+CREATE TABLE IF NOT EXISTS event_attendees (
+  event_id    VARCHAR(36)   NOT NULL,
+  user_id     VARCHAR(36)   NOT NULL,
+  registered_at DATETIME    NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  PRIMARY KEY (event_id, user_id),
+  CONSTRAINT fk_ea_event FOREIGN KEY (event_id) REFERENCES events(id) ON DELETE CASCADE,
+  CONSTRAINT fk_ea_user  FOREIGN KEY (user_id)  REFERENCES users(id)  ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- ── skill_circle_members ──────────────────────────────────────
+CREATE TABLE IF NOT EXISTS skill_circle_members (
+  circle_id   VARCHAR(36)   NOT NULL,
+  user_id     VARCHAR(36)   NOT NULL,
+  joined_at   DATETIME      NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  PRIMARY KEY (circle_id, user_id),
+  CONSTRAINT fk_scm_circle FOREIGN KEY (circle_id) REFERENCES skill_circles(id) ON DELETE CASCADE,
+  CONSTRAINT fk_scm_user   FOREIGN KEY (user_id)   REFERENCES users(id)         ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+CREATE INDEX idx_posts_author      ON posts(author_id);
+CREATE INDEX idx_stories_user      ON stories(user_id);
+CREATE INDEX idx_notif_user        ON notifications(user_id);
+CREATE INDEX idx_notif_unread      ON notifications(user_id, is_read);

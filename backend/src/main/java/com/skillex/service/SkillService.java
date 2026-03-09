@@ -1,6 +1,5 @@
 package com.skillex.service;
 
-import com.skillex.dto.common.PagedResponse;
 import com.skillex.model.Skill;
 
 import java.util.List;

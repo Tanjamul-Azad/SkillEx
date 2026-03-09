@@ -15,6 +15,8 @@ import {
   RefreshCw,
   ServerCrash,
   Link2,
+  ArrowRight,
+  CheckCircle2,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -74,7 +76,13 @@ const defaultFilters: Filters = {
   search: '',
 };
 
-const FilterSidebar: FC<{ filters: Filters; setFilters: (f: Filters) => void; onApply?: () => void }> = React.memo(({ filters, setFilters, onApply }) => {
+const FilterSidebar: FC<{
+  filters: Filters;
+  setFilters: (f: Filters) => void;
+  onApply?: () => void;
+  mobileSheetOpen: boolean;
+  setMobileSheetOpen: (open: boolean) => void;
+}> = React.memo(({ filters, setFilters, onApply, mobileSheetOpen, setMobileSheetOpen }) => {
   const activeFilterCount =
     filters.categories.length +
     filters.levels.length +
@@ -364,11 +372,132 @@ const MatchCard: FC<{ match: MatchUser }> = React.memo(({ match }) => {
 });
 MatchCard.displayName = 'MatchCard';
 
-const ChainComingSoon = () => (
-  <div className="flex w-full flex-col items-center justify-center rounded-3xl glass-subtle py-20 text-center shadow-[inset_0_0_0_1px_rgba(255,255,255,0.1)]">
-    <div className="p-5 bg-primary/10 rounded-full shadow-glow-sm"><Link2 className="h-12 w-12 text-primary" /></div>
-    <h2 className="mt-6 text-2xl font-bold font-headline">Skill Chains Coming Soon</h2>
-    <p className="mt-2 max-w-sm text-muted-foreground">Multi-person skill exchange chains are under development. Check back soon!</p>
+type ChainParticipant = { id: string; name: string; avatar: string; teaches: string; category: string };
+type SkillChain = { id: string; participants: ChainParticipant[]; totalSkills: number; openSpots: number; joined: boolean };
+
+const MOCK_CHAINS: SkillChain[] = [
+  {
+    id: 'chain-1',
+    participants: [
+      { id: 'p1', name: 'Aisha K.', avatar: 'https://i.pravatar.cc/150?img=47', teaches: 'Python', category: 'Tech' },
+      { id: 'p2', name: 'Marcus L.', avatar: 'https://i.pravatar.cc/150?img=12', teaches: 'UI Design', category: 'Design' },
+      { id: 'p3', name: 'Sofia R.', avatar: 'https://i.pravatar.cc/150?img=25', teaches: 'Spanish', category: 'Language' },
+    ],
+    totalSkills: 3,
+    openSpots: 1,
+    joined: false,
+  },
+  {
+    id: 'chain-2',
+    participants: [
+      { id: 'p4', name: 'Jin W.', avatar: 'https://i.pravatar.cc/150?img=33', teaches: 'Guitar', category: 'Creative' },
+      { id: 'p5', name: 'Priya M.', avatar: 'https://i.pravatar.cc/150?img=44', teaches: 'Data Science', category: 'Tech' },
+      { id: 'p6', name: 'Leo T.', avatar: 'https://i.pravatar.cc/150?img=60', teaches: 'Photography', category: 'Creative' },
+      { id: 'p7', name: 'Nadia B.', avatar: 'https://i.pravatar.cc/150?img=9', teaches: 'French', category: 'Language' },
+    ],
+    totalSkills: 4,
+    openSpots: 0,
+    joined: false,
+  },
+  {
+    id: 'chain-3',
+    participants: [
+      { id: 'p8', name: 'Carlos V.', avatar: 'https://i.pravatar.cc/150?img=15', teaches: 'React', category: 'Tech' },
+      { id: 'p9', name: 'Emma S.', avatar: 'https://i.pravatar.cc/150?img=38', teaches: 'Business Strategy', category: 'Business' },
+      { id: 'p10', name: 'Omar F.', avatar: 'https://i.pravatar.cc/150?img=52', teaches: 'Public Speaking', category: 'Communication' },
+    ],
+    totalSkills: 3,
+    openSpots: 2,
+    joined: false,
+  },
+];
+
+const categoryColorMap: Record<string, string> = {
+  Tech: 'bg-blue-500/15 text-blue-400 border-blue-500/30',
+  Design: 'bg-purple-500/15 text-purple-400 border-purple-500/30',
+  Language: 'bg-green-500/15 text-green-400 border-green-500/30',
+  Creative: 'bg-orange-500/15 text-orange-400 border-orange-500/30',
+  Business: 'bg-yellow-500/15 text-yellow-400 border-yellow-500/30',
+  Communication: 'bg-pink-500/15 text-pink-400 border-pink-500/30',
+};
+
+const SkillChainCard: FC<{ chain: SkillChain }> = React.memo(({ chain }) => {
+  const [joined, setJoined] = useState(chain.joined);
+  const full = chain.openSpots === 0;
+  return (
+    <motion.div
+      layout
+      className="rounded-2xl glass-subtle border border-white/10 p-5 shadow-[inset_0_0_0_1px_rgba(255,255,255,0.06)] hover:border-primary/30 transition-colors duration-300"
+      initial={{ opacity: 0, y: 16 }}
+      animate={{ opacity: 1, y: 0 }}
+    >
+      {/* Participants row */}
+      <div className="flex items-center gap-1.5 overflow-x-auto pb-1">
+        {chain.participants.map((p, idx) => (
+          <React.Fragment key={p.id}>
+            <div className="flex flex-col items-center gap-1.5 min-w-[72px]">
+              <Avatar className="h-12 w-12 ring-2 ring-border">
+                <AvatarImage src={p.avatar} />
+                <AvatarFallback>{p.name.charAt(0)}</AvatarFallback>
+              </Avatar>
+              <p className="text-xs font-semibold text-center leading-tight max-w-[72px] truncate">{p.name}</p>
+              <span className={cn('text-[10px] font-medium px-1.5 py-0.5 rounded-full border', categoryColorMap[p.category] ?? 'bg-muted text-muted-foreground border-border')}>
+                {p.teaches}
+              </span>
+            </div>
+            {idx < chain.participants.length - 1 && (
+              <ArrowRight className="h-4 w-4 shrink-0 text-muted-foreground/50 mx-0.5" />
+            )}
+          </React.Fragment>
+        ))}
+        {chain.openSpots > 0 && (
+          <>
+            <ArrowRight className="h-4 w-4 shrink-0 text-muted-foreground/50 mx-0.5" />
+            <div className="flex flex-col items-center gap-1.5 min-w-[72px]">
+              <div className="h-12 w-12 rounded-full border-2 border-dashed border-primary/40 flex items-center justify-center bg-primary/5">
+                <span className="text-lg text-primary/60">+</span>
+              </div>
+              <p className="text-xs text-muted-foreground text-center">{chain.openSpots} open</p>
+            </div>
+          </>
+        )}
+      </div>
+
+      {/* Footer */}
+      <div className="mt-4 flex items-center justify-between gap-3">
+        <div className="flex items-center gap-3 text-xs text-muted-foreground">
+          <span className="flex items-center gap-1"><Link2 className="h-3.5 w-3.5" /> {chain.totalSkills} skills</span>
+          <span className="flex items-center gap-1"><Users className="h-3.5 w-3.5" /> {chain.participants.length} members</span>
+        </div>
+        {joined ? (
+          <Button size="sm" variant="outline" disabled className="gap-1.5 text-secondary border-secondary/40 bg-secondary/10">
+            <CheckCircle2 className="h-4 w-4" /> Joined
+          </Button>
+        ) : full ? (
+          <Button size="sm" variant="outline" disabled className="text-muted-foreground">Chain Full</Button>
+        ) : (
+          <Button size="sm" variant="gradient" onClick={() => setJoined(true)}>Join Chain</Button>
+        )}
+      </div>
+    </motion.div>
+  );
+});
+SkillChainCard.displayName = 'SkillChainCard';
+
+const SkillChainsTab = () => (
+  <div className="space-y-4">
+    <div className="rounded-xl glass-subtle border border-white/10 px-4 py-3 flex items-start gap-3">
+      <div className="p-2 bg-primary/10 rounded-full shrink-0 mt-0.5"><Link2 className="h-4 w-4 text-primary" /></div>
+      <div>
+        <p className="text-sm font-semibold">What are Skill Chains?</p>
+        <p className="mt-0.5 text-xs text-muted-foreground">Multi-person exchange rings where each member teaches their skill to the next. Join an open chain or wait for a spot.</p>
+      </div>
+    </div>
+    <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
+      {MOCK_CHAINS.map((chain) => (
+        <SkillChainCard key={chain.id} chain={chain} />
+      ))}
+    </div>
   </div>
 );
 
@@ -422,7 +551,13 @@ export default function MatchPage() {
   return (
     <DashboardLayout>
       <div className="flex flex-1">
-        <FilterSidebar filters={filters} setFilters={setFilters} onApply={() => setMobileSheetOpen(false)} />
+        <FilterSidebar
+          filters={filters}
+          setFilters={setFilters}
+          onApply={() => setMobileSheetOpen(false)}
+          mobileSheetOpen={mobileSheetOpen}
+          setMobileSheetOpen={setMobileSheetOpen}
+        />
         <div className="flex-1 p-4 md:p-8">
           <div className="mx-auto max-w-7xl">
             <motion.div initial={{ opacity: 0, y: -20 }} animate={{ opacity: 1, y: 0 }}>
@@ -461,7 +596,7 @@ export default function MatchPage() {
                         {otherMatches.length === 0 && !bestMatch ? <EmptyState onReset={() => setFilters(defaultFilters)} /> : (<motion.div key={view} variants={containerVariants} initial="hidden" animate="visible" className={cn(view === 'grid' ? 'grid grid-cols-1 gap-6 md:grid-cols-2 xl:grid-cols-3' : 'space-y-4')}>{otherMatches.map((match) => (<motion.div variants={itemVariants} key={match.id}><MatchCard match={match} /></motion.div>))}</motion.div>)}
                       </>
                     ) : (
-                      <ChainComingSoon />
+                      <SkillChainsTab />
                     )}
                   </>
                 )}

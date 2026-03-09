@@ -296,7 +296,8 @@ function LoginForm() {
       <Button
         variant="outline"
         className="w-full transition-shadow hover:shadow-md h-11"
-        disabled={isGoogleLoading}
+        disabled
+        title="Google sign-in is coming soon"
         onClick={async () => {
           setIsGoogleLoading(true);
           try { await loginWithGoogle(); }
@@ -304,7 +305,7 @@ function LoginForm() {
         }}
       >
         <GoogleIcon className="mr-2 h-4 w-4" />
-        {isGoogleLoading ? 'Redirecting...' : 'Google'}
+        Google (Coming Soon)
       </Button>
     </>
   );
@@ -343,6 +344,9 @@ function RegisterForm({ setFormType }: { setFormType: (type: 'login') => void })
       email: data.email,
       password: data.password,
       university: '',
+      skillToTeach: data.skillToTeach,
+      skillToLearn: data.skillToLearn,
+      level: data.level,
     });
 
     if (result.success) {

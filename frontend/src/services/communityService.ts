@@ -40,4 +40,7 @@ export const CommunityService = {
 
   upvoteDiscussion: (discussionId: string): Promise<Discussion> =>
     api.post<Discussion>(`/community/discussions/${discussionId}/upvote`, {}),
+
+  createPost: (data: { type: string; content: string; skillId?: string }): Promise<Post> =>
+    api.post<Post>('/community/posts', data),
 };

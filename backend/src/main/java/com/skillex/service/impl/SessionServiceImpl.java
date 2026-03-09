@@ -24,6 +24,7 @@ import java.util.UUID;
 
 @Service
 @RequiredArgsConstructor
+@SuppressWarnings("null")
 public class SessionServiceImpl implements SessionService {
 
     private final SessionRepository sessionRepository;

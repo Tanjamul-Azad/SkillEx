@@ -25,6 +25,7 @@ import java.util.stream.Collectors;
  */
 @Service
 @RequiredArgsConstructor
+@SuppressWarnings("null")
 public class MatchServiceImpl implements MatchService {
 
     private final UserRepository userRepository;
@@ -69,11 +70,6 @@ public class MatchServiceImpl implements MatchService {
      * wantsToLearnFromYou = skills candidate wants that I offer
      */
     private MatchUserDto buildMatchDto(User candidate, Set<String> myOfferedIds, Set<String> myWantedIds) {
-        Set<String> theirOfferedIds = candidate.getSkillsOffered().stream()
-            .map(Skill::getId).collect(Collectors.toSet());
-        Set<String> theirWantedIds  = candidate.getSkillsWanted().stream()
-            .map(Skill::getId).collect(Collectors.toSet());
-
         // Skills they teach that I want to learn
         List<String> teachesYou = candidate.getSkillsOffered().stream()
             .filter(s -> myWantedIds.contains(s.getId()))

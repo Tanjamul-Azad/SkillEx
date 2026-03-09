@@ -7,6 +7,14 @@
  */
 
 import { Suspense, useEffect, useRef } from 'react';
+
+// Suppress the once-per-mount THREE.Clock deprecation emitted by @react-three/fiber internals
+// (R3F creates THREE.Clock in its renderer; we can't change that without patching the library)
+const _warn = console.warn.bind(console);
+console.warn = (...args: unknown[]) => {
+  if (typeof args[0] === 'string' && args[0].includes('THREE.Clock')) return;
+  _warn(...args);
+};
 import { Canvas, useFrame } from '@react-three/fiber';
 import { Float, Stars, Html } from '@react-three/drei';
 import { EffectComposer, Bloom } from '@react-three/postprocessing';
@@ -22,9 +30,11 @@ const RING_DATA = [
 /* -- Wireframe orb: line-art globe + geodesic inner --------------- */
 function WireframeOrb() {
   const group = useRef<THREE.Group>(null!);
+  const elapsed = useRef(0);
 
-  useFrame(({ clock }) => {
-    const t = clock.elapsedTime;
+  useFrame((_, delta) => {
+    elapsed.current += delta;
+    const t = elapsed.current;
     group.current.rotation.y = t * 0.06;
     group.current.rotation.x = Math.sin(t * 0.025) * 0.10;
   });
@@ -66,9 +76,10 @@ function WireframeOrb() {
 function OrbitalRing({ radius, rotation, color, speed, nodes }: typeof RING_DATA[0]) {
   const orbitGroup = useRef<THREE.Group>(null!);
 
-  useFrame(({ clock }) => {
-    // Only rotate the nodes around the local Z axis (which matches the ring's path)
-    orbitGroup.current.rotation.z = clock.elapsedTime * speed;
+  const elapsed = useRef(0);
+  useFrame((_, delta) => {
+    elapsed.current += delta;
+    orbitGroup.current.rotation.z = elapsed.current * speed;
   });
 
   return (
@@ -147,9 +158,10 @@ function ParallaxGroup({ children }: { children: React.ReactNode }) {
     return () => window.removeEventListener('mousemove', fn);
   }, []);
 
-  useFrame(({ clock }) => {
-    // Subtle continuous rotation for the entire scene
-    const t = clock.elapsedTime;
+  const elapsed = useRef(0);
+  useFrame((_, delta) => {
+    elapsed.current += delta;
+    const t = elapsed.current;
 
     // Mouse parallax
     const targetX = mouse.current.x * 0.15;

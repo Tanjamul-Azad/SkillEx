@@ -6,11 +6,11 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { Link } from 'react-router-dom';
-import { Eye, EyeOff, Lock, Mail, User, UploadCloud, CheckCircle2 } from 'lucide-react';
+import { Eye, EyeOff, Lock, Mail, User, UploadCloud, CheckCircle2, Sparkles } from 'lucide-react';
 import { useAuth } from '@/hooks/useAuth';
 import { useToast } from '@/hooks/use-toast';
 import { cn } from '@/lib/utils';
-import { SkillService } from '@/services/skillService';
+import { SkillService, SkillIntentInterpretResponse } from '@/services/skillService';
 import type { Skill } from '@/types';
 import { AuthGraphic } from '@/components/auth/AuthGraphic';
 
@@ -19,6 +19,7 @@ import { Input } from '@/components/ui/input';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
+import { Textarea } from '@/components/ui/textarea';
 import { GoogleIcon } from '@/components/icons/GoogleIcon';
 import Logo from '@/components/ui/Logo';
 import { Progress } from '@/components/ui/progress';
@@ -37,9 +38,11 @@ const registerSchema = z
     email: z.string().email({ message: 'Please enter a valid email.' }),
     password: z.string().min(8, { message: 'Password must be at least 8 characters.' }),
     confirmPassword: z.string(),
-    skillToTeach: z.string({ required_error: 'Please select a skill to teach.' }),
-    skillToLearn: z.string({ required_error: 'Please select a skill to learn.' }),
-    level: z.enum(['Beginner', 'Moderate', 'Expert'], { required_error: 'Please select your level.' }),
+    teachIntentText: z.string().max(400).optional(),
+    learnIntentText: z.string().max(400).optional(),
+    skillToTeach: z.string().optional(),
+    skillToLearn: z.string().optional(),
+    level: z.enum(['Beginner', 'Moderate', 'Expert']).optional(),
     terms: z.boolean().refine((val) => val === true, {
       message: 'You must accept the terms and conditions.',
     }),
@@ -170,12 +173,15 @@ function LoginForm() {
       navigate('/dashboard');
     } else {
       const isUnconfirmed = result.error?.toLowerCase().includes('email not confirmed');
+      const isWrongCreds = result.error?.toLowerCase().includes('invalid email or password');
       toast({
         variant: 'destructive',
-        title: isUnconfirmed ? 'Email Not Confirmed' : 'Login Failed',
+        title: isUnconfirmed ? 'Confirm your email first' : isWrongCreds ? 'Wrong email or password' : 'Could not sign in',
         description: isUnconfirmed
-          ? 'Please check your inbox and confirm your email before logging in.'
-          : (result.error ?? 'Invalid credentials. Please try again.'),
+          ? 'We sent you a confirmation link. Check your inbox and click it before signing in.'
+          : isWrongCreds
+          ? 'The email or password you entered is incorrect. Please try again.'
+          : (result.error ?? 'Something went wrong. Please try again in a moment.'),
       });
       setIsLoading(false);
     }
@@ -321,6 +327,8 @@ function RegisterForm({ setFormType }: { setFormType: (type: 'login') => void })
   const [showConfirmPassword, setShowConfirmPassword] = React.useState(false);
   const [isSuccess, setIsSuccess] = React.useState(false);
   const [skillOptions, setSkillOptions] = React.useState<Skill[]>([]);
+  const [isInterpreting, setIsInterpreting] = React.useState(false);
+  const [interpretation, setInterpretation] = React.useState<SkillIntentInterpretResponse | null>(null);
 
   React.useEffect(() => {
     SkillService.getAll().then((s) => setSkillOptions(Array.isArray(s) ? s : [])).catch(() => {});
@@ -333,9 +341,63 @@ function RegisterForm({ setFormType }: { setFormType: (type: 'login') => void })
       email: '',
       password: '',
       confirmPassword: '',
+      teachIntentText: '',
+      learnIntentText: '',
       terms: false,
     },
   });
+
+  const applyInterpretation = React.useCallback((result: SkillIntentInterpretResponse) => {
+    setInterpretation(result);
+
+    const teachPrimary = result.teach?.primary?.skillName;
+    const learnPrimary = result.learn?.primary?.skillName;
+    const inferredLevel = result.learn?.inferredLevel ?? result.teach?.inferredLevel;
+
+    if (teachPrimary) {
+      form.setValue('skillToTeach', teachPrimary, { shouldValidate: true });
+    }
+    if (learnPrimary) {
+      form.setValue('skillToLearn', learnPrimary, { shouldValidate: true });
+    }
+    if (inferredLevel && !form.getValues('level')) {
+      form.setValue('level', inferredLevel, { shouldValidate: true });
+    }
+  }, [form]);
+
+  const handleInterpretIntent = React.useCallback(async () => {
+    const teachText = form.getValues('teachIntentText')?.trim();
+    const learnText = form.getValues('learnIntentText')?.trim();
+
+    if (!teachText && !learnText) {
+      toast({
+        variant: 'destructive',
+        title: 'Write your intent first',
+        description: 'Add at least one natural-language line so AI can suggest skills.',
+      });
+      return;
+    }
+
+    setIsInterpreting(true);
+    try {
+      const result = await SkillService.interpretIntent({ teachText, learnText });
+      applyInterpretation(result);
+
+      toast({
+        title: 'AI suggestions ready',
+        description: 'We mapped your text to skill(s). Review and adjust if needed.',
+        variant: 'success',
+      });
+    } catch {
+      toast({
+        variant: 'destructive',
+        title: 'AI suggestion failed',
+        description: 'Could not interpret your text right now. You can still select skills manually.',
+      });
+    } finally {
+      setIsInterpreting(false);
+    }
+  }, [applyInterpretation, form, toast]);
 
   const onSubmit = async (data: RegisterFormData) => {
     setIsLoading(true);
@@ -344,9 +406,9 @@ function RegisterForm({ setFormType }: { setFormType: (type: 'login') => void })
       email: data.email,
       password: data.password,
       university: '',
-      skillToTeach: data.skillToTeach,
-      skillToLearn: data.skillToLearn,
-      level: data.level,
+      skillToTeach: data.skillToTeach || undefined,
+      skillToLearn: data.skillToLearn || undefined,
+      level: data.level || undefined,
     });
 
     if (result.success) {
@@ -362,13 +424,18 @@ function RegisterForm({ setFormType }: { setFormType: (type: 'login') => void })
       }
       setIsLoading(false);
     } else {
-      const isRateLimit = result.error?.toLowerCase().includes('rate limit');
+      const isRateLimit   = result.error?.toLowerCase().includes('rate limit');
+      const isEmailTaken  = result.error?.toLowerCase().includes('already exists');
       toast({
         variant: 'destructive',
-        title: isRateLimit ? 'Too Many Attempts' : 'Registration Failed',
+        title: isRateLimit  ? 'Too many attempts'
+             : isEmailTaken ? 'Email already registered'
+             : 'Could not create account',
         description: isRateLimit
-          ? 'You have made too many requests. Please wait a few minutes and try again.'
-          : (result.error ?? 'Something went wrong. Please try again.'),
+          ? 'You\'ve made too many requests. Please wait a few minutes and try again.'
+          : isEmailTaken
+          ? 'An account with that email already exists. Try signing in instead.'
+          : (result.error ?? 'Something went wrong on our end. Please try again in a moment.'),
       });
       setIsLoading(false);
     }
@@ -510,10 +577,79 @@ function RegisterForm({ setFormType }: { setFormType: (type: 'login') => void })
                 transition={{ duration: 0.2 }}
                 className="space-y-4"
               >
+                <div className="rounded-2xl border border-primary/20 bg-primary/5 p-3 space-y-3">
+                  <div className="flex items-center justify-between gap-3">
+                    <p className="text-xs font-semibold text-primary flex items-center gap-1.5">
+                      <Sparkles className="h-3.5 w-3.5" /> AI Skill Detection (Natural Language)
+                    </p>
+                    <Button
+                      type="button"
+                      size="sm"
+                      variant="outline"
+                      className="h-8"
+                      disabled={isInterpreting}
+                      onClick={handleInterpretIntent}
+                    >
+                      {isInterpreting ? 'Analyzing...' : 'Suggest Skills'}
+                    </Button>
+                  </div>
+
+                  <FormField
+                    control={form.control}
+                    name="teachIntentText"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel className="text-xs">What can you teach? (free text)</FormLabel>
+                        <FormControl>
+                          <Textarea
+                            {...field}
+                            rows={2}
+                            placeholder="Example: I can teach Python automation, basic data analysis, and pandas."
+                            className="text-sm"
+                          />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+
+                  <FormField
+                    control={form.control}
+                    name="learnIntentText"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel className="text-xs">What do you want to learn? (free text)</FormLabel>
+                        <FormControl>
+                          <Textarea
+                            {...field}
+                            rows={2}
+                            placeholder="Example: I want to learn UI/UX design for mobile apps and product thinking."
+                            className="text-sm"
+                          />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+
+                  {interpretation && (
+                    <div className="text-[11px] text-muted-foreground space-y-1">
+                      <p>
+                        Teach suggestion: <span className="font-semibold text-foreground">{interpretation.teach?.primary?.skillName ?? 'Not confident yet'}</span>
+                        {interpretation.teach?.primary ? ` (${interpretation.teach.primary.confidence}%)` : ''}
+                      </p>
+                      <p>
+                        Learn suggestion: <span className="font-semibold text-foreground">{interpretation.learn?.primary?.skillName ?? 'Not confident yet'}</span>
+                        {interpretation.learn?.primary ? ` (${interpretation.learn.primary.confidence}%)` : ''}
+                      </p>
+                    </div>
+                  )}
+                </div>
+
                 <div className="grid gap-4 sm:grid-cols-2">
                   <FormField control={form.control} name="skillToTeach" render={({ field }) => (
                     <FormItem>
-                      <Select onValueChange={field.onChange} defaultValue={field.value}>
+                      <Select onValueChange={field.onChange} value={field.value ?? ''}>
                         <FormControl>
                           <SelectTrigger className="h-11 shadow-sm"><SelectValue placeholder="Skill to teach" /></SelectTrigger>
                         </FormControl>
@@ -526,7 +662,7 @@ function RegisterForm({ setFormType }: { setFormType: (type: 'login') => void })
                   )} />
                   <FormField control={form.control} name="skillToLearn" render={({ field }) => (
                     <FormItem>
-                      <Select onValueChange={field.onChange} defaultValue={field.value}>
+                      <Select onValueChange={field.onChange} value={field.value ?? ''}>
                         <FormControl>
                           <SelectTrigger className="h-11 shadow-sm"><SelectValue placeholder="Skill to learn" /></SelectTrigger>
                         </FormControl>
@@ -541,7 +677,7 @@ function RegisterForm({ setFormType }: { setFormType: (type: 'login') => void })
 
                 <FormField control={form.control} name="level" render={({ field }) => (
                   <FormItem>
-                    <Select onValueChange={field.onChange} defaultValue={field.value}>
+                    <Select onValueChange={field.onChange} value={field.value ?? ''}>
                       <FormControl>
                         <SelectTrigger className="h-11 shadow-sm"><SelectValue placeholder="Your proficiency level" /></SelectTrigger>
                       </FormControl>
@@ -587,6 +723,21 @@ function RegisterForm({ setFormType }: { setFormType: (type: 'login') => void })
                   </Button>
                   <Button type="submit" variant="gradient" className="flex-[2] h-11 shadow-lg shadow-primary/20" disabled={isLoading}>
                     {isLoading ? 'Creating...' : 'Create Account'}
+
+                                  <button
+                                    type="button"
+                                    className="w-full text-center text-xs text-muted-foreground hover:text-foreground transition-colors pt-1 pb-2"
+                                    onClick={async () => {
+                                      const isValid = await form.trigger(['terms']);
+                                      if (!isValid) return;
+                                      form.setValue('skillToTeach', undefined);
+                                      form.setValue('skillToLearn', undefined);
+                                      form.setValue('level', undefined);
+                                      form.handleSubmit(onSubmit)();
+                                    }}
+                                  >
+                                    Skip for now — I'll add skills later
+                                  </button>
                   </Button>
                 </div>
               </motion.div>

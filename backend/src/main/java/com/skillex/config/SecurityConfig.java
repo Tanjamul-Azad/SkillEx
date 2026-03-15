@@ -45,6 +45,7 @@ public class SecurityConfig {
             .sessionManagement(s -> s.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
             .authorizeHttpRequests(auth -> auth
                 .requestMatchers(HttpMethod.POST, "/api/auth/login", "/api/auth/register").permitAll()
+                .requestMatchers(HttpMethod.POST, "/api/skills/interpret").permitAll()
                 .requestMatchers("/api/auth/google/**").permitAll()
                 // WebSocket handshake endpoints (SockJS negotiation)
                 .requestMatchers("/ws/**", "/ws/info").permitAll()
@@ -62,6 +63,13 @@ public class SecurityConfig {
                     "/api/community/skill-circles/**"
                 ).permitAll()
                 .anyRequest().authenticated()
+            )
+            .exceptionHandling(ex -> ex
+                .authenticationEntryPoint((request, response, authException) -> {
+                    response.setContentType("application/json");
+                    response.setStatus(401);
+                    response.getWriter().write("{\"success\":false,\"message\":\"Unauthorized\"}");
+                })
             )
             .addFilterBefore(jwtAuthFilter, UsernamePasswordAuthenticationFilter.class);
 

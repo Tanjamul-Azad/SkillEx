@@ -25,7 +25,12 @@ export class ApiError extends Error {
     public readonly statusText: string,
     public readonly data?: unknown,
   ) {
-    super(`[API ${status}] ${statusText}`);
+    // Prefer the server's own message (inside ApiResponse envelope) over the raw HTTP status text
+    const serverMessage =
+      data != null && typeof data === 'object' && 'message' in data && typeof (data as Record<string, unknown>).message === 'string'
+        ? (data as Record<string, unknown>).message as string
+        : null;
+    super(serverMessage ?? `Request failed (${status})`);
     this.name = 'ApiError';
   }
 }
@@ -34,11 +39,11 @@ export class ApiError extends Error {
 //  TokenStore – Single-responsibility helper for JWT storage
 // ──────────────────────────────────────────────────────────────────────────────
 
-/** Manages the JWT stored in localStorage — isolated responsibility */
+/** Manages the JWT stored in sessionStorage — cleared when the browser tab is closed */
 export const TokenStore = {
-  get:   ()           => localStorage.getItem(TOKEN_KEY),
-  set:   (t: string)  => localStorage.setItem(TOKEN_KEY, t),
-  clear: ()           => localStorage.removeItem(TOKEN_KEY),
+  get:   ()           => sessionStorage.getItem(TOKEN_KEY),
+  set:   (t: string)  => sessionStorage.setItem(TOKEN_KEY, t),
+  clear: ()           => sessionStorage.removeItem(TOKEN_KEY),
 } as const;
 
 // ──────────────────────────────────────────────────────────────────────────────

@@ -21,4 +21,6 @@ public interface ReviewRepository extends JpaRepository<Review, String> {
     // Calculates avg rating for a user to update User.rating
     @Query("SELECT AVG(r.rating) FROM Review r WHERE r.toUser.id = :userId")
     Double findAverageRatingByToUserId(@Param("userId") String userId);
+
+    long countByToUserId(String toUserId);
 }

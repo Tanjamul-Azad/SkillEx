@@ -9,15 +9,17 @@ export interface MatchUserDto {
   skillexScore: number;
   rating: number;
   isOnline: boolean;
+  sessionsCompleted: number;
   compatibilityScore: number;
-  teachesYou: string | null;
-  wantsToLearnFromYou: string | null;
+  semanticSimilarity: number;
+  strategyUsed: string;
+  teachesYou: string[];
+  wantsToLearnFromYou: string[];
+  matchReasons: string[];
 }
 
 export const MatchService = {
   /** GET /api/match/users?limit=20 — ranked compatible users for the current user */
-  findMatches: async (limit = 20): Promise<MatchUserDto[]> => {
-    const res = await api.get<{ data: MatchUserDto[] }>(`/match/users?limit=${limit}`);
-    return (res as unknown as { data: MatchUserDto[] }).data ?? (res as unknown as MatchUserDto[]);
-  },
+  findMatches: (limit = 20): Promise<MatchUserDto[]> =>
+    api.get<MatchUserDto[]>(`/match/users?limit=${limit}`),
 };

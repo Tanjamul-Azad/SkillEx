@@ -16,7 +16,11 @@ public record MatchUserDto(
     int skillexScore,
     BigDecimal rating,
     boolean isOnline,
+    int sessionsCompleted,
     int compatibilityScore,          // 0–100
+    int semanticSimilarity,          // 0–100 semantic alignment percent
+    String strategyUsed,             // basic | smart-ai
     List<String> teachesYou,         // skills they offer that you want
-    List<String> wantsToLearnFromYou // skills they want that you offer
+    List<String> wantsToLearnFromYou,// skills they want that you offer
+    List<String> matchReasons        // explainable reasons shown in UI
 ) {}

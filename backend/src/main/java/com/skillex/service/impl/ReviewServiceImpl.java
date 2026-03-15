@@ -10,8 +10,10 @@ import com.skillex.repository.SessionRepository;
 import com.skillex.repository.UserRepository;
 import com.skillex.service.DtoMapper;
 import com.skillex.service.ReviewService;
+import com.skillex.service.reputation.ReputationUpdateEvent;
 import jakarta.persistence.EntityNotFoundException;
 import lombok.RequiredArgsConstructor;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
@@ -29,6 +31,7 @@ public class ReviewServiceImpl implements ReviewService {
     private final SessionRepository sessionRepository;
     private final UserRepository userRepository;
     private final DtoMapper mapper;
+    private final ApplicationEventPublisher eventPublisher;
 
     @Override
     @Transactional(readOnly = true)
@@ -65,10 +68,10 @@ public class ReviewServiceImpl implements ReviewService {
         if (avg != null) {
             toUser.setRating(BigDecimal.valueOf(avg).setScale(1, java.math.RoundingMode.HALF_UP));
         }
-        // Increment skillexScore for receiving a review
-        if (toUser.getSkillexScore() == null) toUser.setSkillexScore(0);
-        toUser.setSkillexScore(toUser.getSkillexScore() + 5);
         userRepository.save(toUser);
+
+        // Publish reputation update event — ReputationServiceImpl will recompute skillexScore
+        eventPublisher.publishEvent(new ReputationUpdateEvent(req.toUserId(), ReputationUpdateEvent.Trigger.REVIEW_ADDED));
 
         return mapper.toReview(saved);
     }

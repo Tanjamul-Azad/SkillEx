@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
@@ -29,6 +29,10 @@ const schema = z.object({
 
 type FormData = z.infer<typeof schema>;
 
+const UUID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+
+const isPersistedSkillId = (skillId?: string): boolean => Boolean(skillId && UUID_PATTERN.test(skillId));
+
 interface Props {
   open: boolean;
   onClose: () => void;
@@ -49,16 +53,32 @@ export function RequestExchangeDialog({ open, onClose, targetUser }: Props) {
   const mySkills: Skill[] = user?.skillsOffered ?? [];
   const charCount = form.watch('message')?.length ?? 0;
 
+  useEffect(() => {
+    if (!open) return;
+
+    const currentOffered = form.getValues('offeredSkillId');
+    if (!currentOffered && mySkills.length > 0) {
+      form.setValue('offeredSkillId', mySkills[0].id, { shouldValidate: true });
+    }
+
+    const currentWanted = form.getValues('wantedSkillId');
+    const firstTargetSkillId = targetUser.skillsOffered?.[0]?.id;
+    if (!currentWanted && isPersistedSkillId(firstTargetSkillId)) {
+      form.setValue('wantedSkillId', firstTargetSkillId);
+    }
+  }, [form, mySkills, open, targetUser.skillsOffered]);
+
   const handleSubmit = async (data: FormData) => {
     setSubmitting(true);
     try {
       const offeredSkill = mySkills.find((s) => s.id === data.offeredSkillId);
       const wantedSkill = targetUser.skillsOffered?.find((s) => s.id === data.wantedSkillId)
         ?? targetUser.skillsOffered?.[0];
+      const wantedSkillId = isPersistedSkillId(wantedSkill?.id) ? wantedSkill?.id : undefined;
       await exchangeService.create({
         receiverId: targetUser.id,
         offeredSkillId: offeredSkill?.id,
-        wantedSkillId: wantedSkill?.id,
+        wantedSkillId,
         message: data.message,
       });
       setStep('success');
@@ -75,7 +95,13 @@ export function RequestExchangeDialog({ open, onClose, targetUser }: Props) {
 
   const handleClose = () => {
     setStep('form');
-    form.reset();
+    form.reset({
+      offeredSkillId: mySkills[0]?.id ?? '',
+      wantedSkillId: isPersistedSkillId(targetUser.skillsOffered?.[0]?.id)
+        ? targetUser.skillsOffered?.[0]?.id
+        : undefined,
+      message: '',
+    });
     onClose();
   };
 

@@ -26,4 +26,7 @@ public interface SessionRepository extends JpaRepository<Session, String> {
 
     @Query("SELECT COUNT(s) FROM Session s WHERE (s.teacher.id = :userId OR s.learner.id = :userId) AND s.status = :status")
     long countByUserIdAndStatus(@Param("userId") String userId, @Param("status") SessionStatus status);
+
+    /** Platform-wide count of all completed sessions. */
+    long countByStatus(SessionStatus status);
 }

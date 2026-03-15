@@ -4,7 +4,7 @@ export type { SkillLevel };
 
 export type MatchStatus = 'pending' | 'active' | 'completed' | 'cancelled';
 export type SessionStatus = 'scheduled' | 'completed' | 'cancelled';
-export type NotificationType = 'match_request' | 'session_scheduled' | 'review_left' | 'system_update';
+export type NotificationType = 'MATCH_REQUEST' | 'SESSION_SCHEDULED' | 'REVIEW_LEFT' | 'SYSTEM_UPDATE';
 
 export interface Skill {
   id: string;
@@ -54,14 +54,19 @@ export interface SkillChain {
 
 export interface Session {
   id: string;
-  matchId: string;
-  teacherId: string;
-  learnerId: string;
-  skill: Skill;
+  /** Maps to SessionDto.exchangeId */
+  exchangeId: string;
+  /** Maps to SessionDto.teacher (UserSummaryDto) */
+  teacher: { id: string; name: string; avatar: string | null; university: string | null };
+  /** Maps to SessionDto.learner (UserSummaryDto) */
+  learner: { id: string; name: string; avatar: string | null; university: string | null };
+  skill: { id: string; name: string; icon: string; category: string };
   scheduledAt: string;
-  duration: number; // in minutes
+  /** Maps to SessionDto.durationMins */
+  durationMins: number;
   status: SessionStatus;
   meetLink?: string;
+  createdAt?: string;
 }
 
 export interface Review {
@@ -79,7 +84,8 @@ export interface Event {
   title: string;
   description: string;
   host: User;
-  date: string;
+  /** Maps to EventDto.eventDate from backend */
+  eventDate: string;
   location: string;
   isOnline: boolean;
   skills: Skill[];
@@ -109,7 +115,8 @@ export interface Notification {
   isRead: boolean;
 }
 
-export type ActivityLevel = '🔥 Very Active' | '⚡ Active' | '😴 Quiet';
+/** Backend enum values serialized as strings */
+export type ActivityLevel = 'VERY_ACTIVE' | 'ACTIVE' | 'QUIET';
 
 export interface SkillCircle {
   id: string;

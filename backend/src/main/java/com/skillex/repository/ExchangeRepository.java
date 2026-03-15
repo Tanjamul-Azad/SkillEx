@@ -24,6 +24,18 @@ public interface ExchangeRepository extends JpaRepository<Exchange, String> {
 
     boolean existsByRequesterIdAndReceiverIdAndStatus(String requesterId, String receiverId, ExchangeStatus status);
 
+    java.util.Optional<Exchange> findFirstByRequesterIdAndReceiverIdAndStatusOrderByCreatedAtDesc(
+        String requesterId,
+        String receiverId,
+        ExchangeStatus status
+    );
+
+    /** Total exchanges the user has ever initiated (any status). */
+    long countByRequesterId(String requesterId);
+
+    /** Total exchanges the user has ever received (any status). */
+    long countByReceiverId(String receiverId);
+
     @Query("SELECT e FROM Exchange e WHERE (e.requester.id = :userId OR e.receiver.id = :userId) AND e.status = :status")
     Page<Exchange> findByRequesterIdOrReceiverIdAndStatus(
         @Param("userId") String userId1,

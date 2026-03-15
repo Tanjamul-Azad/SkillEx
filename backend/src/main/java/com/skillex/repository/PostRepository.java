@@ -14,4 +14,6 @@ public interface PostRepository extends JpaRepository<Post, String> {
     Page<Post> findByAuthorId(String authorId, Pageable pageable);
 
     Page<Post> findByType(Post.PostType type, Pageable pageable);
+
+    long countByAuthorId(String authorId);
 }

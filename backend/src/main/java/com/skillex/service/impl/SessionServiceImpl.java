@@ -12,15 +12,15 @@ import com.skillex.repository.SkillRepository;
 import com.skillex.repository.UserRepository;
 import com.skillex.service.DtoMapper;
 import com.skillex.service.SessionService;
+import com.skillex.service.reputation.ReputationUpdateEvent;
 import jakarta.persistence.EntityNotFoundException;
 import lombok.RequiredArgsConstructor;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Sort;
 import org.springframework.security.access.AccessDeniedException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-
-import java.util.UUID;
 
 @Service
 @RequiredArgsConstructor
@@ -32,6 +32,7 @@ public class SessionServiceImpl implements SessionService {
     private final UserRepository userRepository;
     private final SkillRepository skillRepository;
     private final DtoMapper mapper;
+    private final ApplicationEventPublisher eventPublisher;
 
     @Override
     @Transactional(readOnly = true)
@@ -62,7 +63,6 @@ public class SessionServiceImpl implements SessionService {
             .orElseThrow(() -> new EntityNotFoundException("Skill not found: " + req.skillId()));
 
         Session session = new Session();
-        session.setId(UUID.randomUUID().toString());
         session.setExchange(exchange);
         session.setTeacher(teacher);
         session.setLearner(learner);
@@ -80,7 +80,15 @@ public class SessionServiceImpl implements SessionService {
         Session session = findSession(sessionId);
         assertParticipant(session, requestingUserId);
         session.setStatus(Session.SessionStatus.COMPLETED);
-        return mapper.toSession(sessionRepository.save(session));
+        SessionDto result = mapper.toSession(sessionRepository.save(session));
+
+        // Notify reputation system for both participants
+        eventPublisher.publishEvent(new ReputationUpdateEvent(
+            session.getTeacher().getId(), ReputationUpdateEvent.Trigger.SESSION_COMPLETED));
+        eventPublisher.publishEvent(new ReputationUpdateEvent(
+            session.getLearner().getId(), ReputationUpdateEvent.Trigger.SESSION_COMPLETED));
+
+        return result;
     }
 
     @Override

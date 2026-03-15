@@ -29,5 +29,5 @@ export { SessionService }          from './sessionService';
 export { ReviewService }           from './reviewService';
 export { CommunityService }        from './communityService';
 export { exchangeService }         from './exchangeService';
-export type { Exchange, ExchangeProfile } from './exchangeService';
+export type { Exchange } from './exchangeService';
 

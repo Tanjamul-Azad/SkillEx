@@ -9,7 +9,7 @@ export const UserService = {
       size: size.toString(),
     });
     if (search) params.append('query', search);
-    return api.get<{ data: User[]; total: number }>(`/users?${params.toString()}`);
+    return api.get<{ content: User[]; totalElements: number }>(`/users?${params.toString()}`);
   },
 
   getById: async (id: string) => {
@@ -21,9 +21,19 @@ export const UserService = {
     return api.patch<User>('/users/me', data);
   },
 
-  /** POST /api/users/me/skills — add a skill to offered or wanted list */
+  /** POST /api/users/me/skills — add an existing catalog skill */
   addSkill: async (skillId: string, type: 'offered' | 'wanted', level = 'BEGINNER'): Promise<void> => {
     return api.post<void>('/users/me/skills', { skillId, type, level: level.toUpperCase() });
+  },
+
+  /** POST /api/users/me/skills — add a custom (non-catalog) skill by name */
+  addCustomSkill: async (skillName: string, skillCategory: string, type: 'offered' | 'wanted', level = 'BEGINNER'): Promise<void> => {
+    return api.post<void>('/users/me/skills', { skillName, skillCategory, type, level: level.toUpperCase() });
+  },
+
+  /** DELETE /api/users/me/skills/{skillId}?type=offered|wanted */
+  removeSkill: async (skillId: string, type: 'offered' | 'wanted'): Promise<void> => {
+    return api.delete<void>(`/users/me/skills/${skillId}?type=${type}`);
   },
 
   /** DELETE /api/users/me — permanently delete authenticated user's account */

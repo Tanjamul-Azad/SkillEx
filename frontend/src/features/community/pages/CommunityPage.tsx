@@ -547,7 +547,7 @@ const EventCard = React.memo(({ event }: { event: Event }) => {
       </div>
       <CardContent className="p-4 flex-grow flex flex-col">
         <div className="text-sm space-y-2">
-          <p className="flex items-center gap-2"><Calendar className="h-4 w-4" /> {new Date(event.date).toLocaleDateString('en-US', { weekday: 'long', month: 'short', day: 'numeric' })}</p>
+          <p className="flex items-center gap-2"><Calendar className="h-4 w-4" /> {new Date(event.eventDate).toLocaleDateString('en-US', { weekday: 'long', month: 'short', day: 'numeric' })}</p>
           <p className="flex items-center gap-2"><MapPin className="h-4 w-4" /> {event.isOnline ? `Online via Zoom` : event.location}</p>
         </div>
         <div className="mt-3">
@@ -617,7 +617,7 @@ const EventsTab = () => {
       {featuredEvent ? (
         <div className={cn("relative h-48 rounded-lg overflow-hidden p-8 flex flex-col justify-end text-white", featuredEvent.coverGradient)}>
           <h2 className="text-3xl font-bold font-headline">{featuredEvent.title}</h2>
-          <p>{new Date(featuredEvent.date).toDateString()}</p>
+          <p>{new Date(featuredEvent.eventDate).toDateString()}</p>
         </div>
       ) : (
         <div className="h-48 rounded-lg bg-muted flex items-center justify-center text-muted-foreground">Loading events...</div>
@@ -635,6 +635,12 @@ const EventsTab = () => {
 }
 
 // --- SKILL CIRCLES TAB ---
+const ACTIVITY_LABELS: Record<string, string> = {
+  VERY_ACTIVE: '🔥 Very Active',
+  ACTIVE: '⚡ Active',
+  QUIET: '😴 Quiet',
+};
+
 const CircleCard = React.memo(({ circle }: { circle: SkillCircle }) => {
   const [joined, setJoined] = React.useState(false);
   const [leaveConfirmOpen, setLeaveConfirmOpen] = React.useState(false);
@@ -645,7 +651,7 @@ const CircleCard = React.memo(({ circle }: { circle: SkillCircle }) => {
         <CardContent className="p-6 flex-grow flex flex-col">
           <div className="flex justify-between items-start">
             <div className="p-3 glass-strong rounded-xl text-4xl shadow-[inset_0_0_0_1px_rgba(255,255,255,0.2)] group-hover:scale-110 transition-transform">{circle.icon}</div>
-            <Badge variant={circle.activity.includes('Very Active') ? 'secondary' : circle.activity.includes('Quiet') ? 'destructive' : 'default'}>{circle.activity}</Badge>
+            <Badge variant={circle.activity === 'VERY_ACTIVE' ? 'secondary' : circle.activity === 'QUIET' ? 'destructive' : 'default'}>{ACTIVITY_LABELS[circle.activity] ?? circle.activity}</Badge>
           </div>
           <h3 className="mt-4 text-xl font-bold font-headline">{circle.name}</h3>
           <div className="flex flex-wrap gap-2 mt-2">
@@ -658,9 +664,9 @@ const CircleCard = React.memo(({ circle }: { circle: SkillCircle }) => {
             </div>
             <p className="text-sm font-medium">{circle.memberCount} members</p>
           </div>
-          <div className="mt-4 text-xs text-muted-foreground">Last session: {circle.lastSession}</div>
+          <div className="mt-4 text-xs text-muted-foreground">Last session: {circle.lastSession ? new Date(circle.lastSession).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) : 'N/A'}</div>
           <div className="mt-4 flex gap-2">
-            <Button variant="ghost" className="w-full" onClick={() => toast({ title: circle.name, description: `${circle.memberCount} members · ${circle.activity}` })}>Preview</Button>
+            <Button variant="ghost" className="w-full" onClick={() => toast({ title: circle.name, description: `${circle.memberCount} members · ${ACTIVITY_LABELS[circle.activity] ?? circle.activity}` })}>Preview</Button>
             <Button
               variant={joined ? 'outline' : 'gradient'}
               className="w-full"
@@ -823,32 +829,30 @@ export default function CommunityPage() {
         <p className="text-muted-foreground">Join discussions, attend events, and connect with other learners.</p>
 
         <div className="mt-6">
-          <div className="relative border-b">
-            <div className="flex space-x-2 overflow-x-auto pb-px">
+          <div className="border-b">
+            <div className="flex space-x-2 overflow-x-auto">
               {tabs.map((tab) => (
                 <Button
                   key={tab.id}
                   variant="ghost"
                   onClick={() => setActiveTab(tab.id)}
                   className={cn(
-                    "relative flex-shrink-0 whitespace-nowrap py-2 px-3 font-medium transition-colors hover:bg-transparent",
+                    "relative flex-shrink-0 whitespace-nowrap py-2 px-3 font-medium transition-colors hover:bg-transparent rounded-none",
                     activeTab === tab.id ? 'text-primary' : 'text-muted-foreground hover:text-foreground'
                   )}
                 >
                   <tab.icon className="mr-2 inline h-4 w-4" />
                   {tab.label}
+                  {activeTab === tab.id && (
+                    <motion.div
+                      layoutId="community-tab-underline"
+                      className="absolute bottom-0 left-0 right-0 h-0.5 bg-primary"
+                      transition={{ type: 'spring', stiffness: 300, damping: 30 }}
+                    />
+                  )}
                 </Button>
               ))}
             </div>
-            <motion.div
-              className="absolute bottom-0 h-0.5 bg-primary"
-              layoutId="community-tab-underline"
-              transition={{ type: 'spring', stiffness: 300, damping: 30 }}
-              style={{
-                width: `${100 / tabs.length}%`,
-                left: `${(tabs.findIndex(t => t.id === activeTab) * (100 / tabs.length))}%`
-              }}
-            />
           </div>
 
           <AnimatePresence mode="wait">

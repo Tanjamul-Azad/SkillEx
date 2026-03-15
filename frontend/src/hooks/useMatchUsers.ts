@@ -1,12 +1,27 @@
 
 import { useState, useEffect, useCallback } from 'react';
 import { api } from '@/services/api';
-import type { User, Skill } from '@/types';
 
-export interface MatchUser extends User {
+/** Matches backend MatchUserDto */
+export interface MatchUser {
+  id: string;
+  name: string;
+  avatar: string | null;
+  university: string | null;
+  level: string;
+  skillexScore: number;
+  rating: number;
+  isOnline: boolean;
+  sessionsCompleted: number;
   compatibilityScore: number;
-  iOffer: Skill | null;   // skill I can teach them
-  theyOffer: Skill | null; // skill they can teach me
+  semanticSimilarity: number;
+  strategyUsed: string;
+  /** Skill names they can teach you (from backend teachesYou list) */
+  teachesYou: string[];
+  /** Skill names they want to learn from you (from backend wantsToLearnFromYou list) */
+  wantsToLearnFromYou: string[];
+  /** Short explainable reasons for the AI-driven match */
+  matchReasons: string[];
 }
 
 interface UseMatchUsersOptions {
@@ -27,9 +42,8 @@ export function useMatchUsers(options: UseMatchUsersOptions = {}) {
       if (options.search) params.set('q', options.search);
       if (options.limit)  params.set('limit', String(options.limit));
       const qs = params.toString();
-      const raw = await api.get<{ data: MatchUser[] } | MatchUser[]>(`/match/users${qs ? `?${qs}` : ''}`);
-      const list = Array.isArray(raw) ? raw : (raw as { data: MatchUser[] }).data ?? [];
-      setUsers(list);
+      const list = await api.get<MatchUser[]>(`/match/users${qs ? `?${qs}` : ''}`);
+      setUsers(Array.isArray(list) ? list : []);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to load matches');
     } finally {

@@ -9,15 +9,13 @@ import {
   Video,
   ArrowLeft,
   Smile,
-  Paperclip,
   Check,
   CheckCheck,
-  Circle,
   MessageSquarePlus,
   Image as ImageIcon,
-  X,
   Pin,
   Trash2,
+  Loader2,
 } from 'lucide-react';
 import { useAuth } from '@/hooks/useAuth';
 import { useToast } from '@/hooks/use-toast';
@@ -37,6 +35,11 @@ import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover
 import { cn } from '@/lib/utils';
 import DashboardLayout from '@/components/layout/DashboardLayout';
 import { Skeleton } from '@/components/ui/skeleton';
+import { useWebSocket } from '@/hooks/useWebSocket';
+import { TokenStore } from '@/services/http/ApiClient';
+import { MessageService } from '@/services/messageService';
+import type { MessageDto, ConversationDto } from '@/services/messageService';
+import { UserService } from '@/services/userService';
 
 /* ── Types ──────────────────────────────────────────────────────────── */
 interface Message {
@@ -65,59 +68,36 @@ interface Conversation {
   messages: Message[];
 }
 
-/* ── Mock data ──────────────────────────────────────────────────────── */
-const MOCK_CONVERSATIONS: Conversation[] = [
-  {
-    id: 'conv-1',
-    user: { id: 'u1', name: 'Aryan Sharma', avatar: undefined, online: true },
-    lastMessage: "See you at the session tomorrow!",
-    lastMessageTime: new Date(Date.now() - 2 * 60 * 1000),
-    unreadCount: 2,
-    pinned: true,
-    messages: [
-      { id: 'm1', senderId: 'u1', content: "Hey! I just accepted your exchange request.", timestamp: new Date(Date.now() - 60 * 60 * 1000), read: true, type: 'text' },
-      { id: 'm2', senderId: 'me', content: "Great! I'm really excited to learn React from you.", timestamp: new Date(Date.now() - 55 * 60 * 1000), read: true, type: 'text' },
-      { id: 'm3', senderId: 'u1', content: "Same! Your Python skills look impressive from your profile.", timestamp: new Date(Date.now() - 50 * 60 * 1000), read: true, type: 'text' },
-      { id: 'm4', senderId: 'me', content: "Thanks! When works best for you? I'm free most evenings.", timestamp: new Date(Date.now() - 30 * 60 * 1000), read: true, type: 'text' },
-      { id: 'm5', senderId: 'u1', content: "Tomorrow evening at 7PM?", timestamp: new Date(Date.now() - 10 * 60 * 1000), read: false, type: 'text' },
-      { id: 'm6', senderId: 'u1', content: "See you at the session tomorrow!", timestamp: new Date(Date.now() - 2 * 60 * 1000), read: false, type: 'text' },
-    ],
-  },
-  {
-    id: 'conv-2',
-    user: { id: 'u2', name: 'Priya Kapoor', avatar: undefined, online: false, lastSeen: '2h ago' },
-    lastMessage: "The Figma file is in the drive.",
-    lastMessageTime: new Date(Date.now() - 2 * 60 * 60 * 1000),
-    unreadCount: 0,
-    messages: [
-      { id: 'm7', senderId: 'u2', content: "Hi! Thanks for accepting my design exchange.", timestamp: new Date(Date.now() - 3 * 60 * 60 * 1000), read: true, type: 'text' },
-      { id: 'm8', senderId: 'me', content: "Of course! Your portfolio looks stunning.", timestamp: new Date(Date.now() - 2.5 * 60 * 60 * 1000), read: true, type: 'text' },
-      { id: 'm9', senderId: 'u2', content: "The Figma file is in the drive.", timestamp: new Date(Date.now() - 2 * 60 * 60 * 1000), read: true, type: 'text' },
-    ],
-  },
-  {
-    id: 'conv-3',
-    user: { id: 'u3', name: 'Rahul Dev', avatar: undefined, online: true },
-    lastMessage: "Let's connect on video call?",
-    lastMessageTime: new Date(Date.now() - 24 * 60 * 60 * 1000),
-    unreadCount: 0,
-    messages: [
-      { id: 'm10', senderId: 'u3', content: "Hey, I saw you teach JavaScript. I'm learning it!", timestamp: new Date(Date.now() - 25 * 60 * 60 * 1000), read: true, type: 'text' },
-      { id: 'm11', senderId: 'me', content: "Happy to help! What topic specifically?", timestamp: new Date(Date.now() - 24.5 * 60 * 60 * 1000), read: true, type: 'text' },
-      { id: 'm12', senderId: 'u3', content: "Let's connect on video call?", timestamp: new Date(Date.now() - 24 * 60 * 60 * 1000), read: true, type: 'text' },
-    ],
-  },
-  {
-    id: 'conv-4',
-    user: { id: 'u4', name: 'Sneha Iyer', avatar: undefined, online: false, lastSeen: '3d ago' },
-    lastMessage: "Thanks, that was really helpful!",
-    lastMessageTime: new Date(Date.now() - 3 * 24 * 60 * 60 * 1000),
-    unreadCount: 0,
-    messages: [
-      { id: 'm13', senderId: 'u4', content: "Thanks, that was really helpful!", timestamp: new Date(Date.now() - 3 * 24 * 60 * 60 * 1000), read: true, type: 'text' },
-    ],
-  },
-];
+/* ── Mappers ─────────────────────────────────────────────────────────── */
+function mapMessageDto(dto: MessageDto, currentUserId: string): Message {
+  return {
+    id: dto.id,
+    senderId: dto.senderId === currentUserId ? 'me' : dto.senderId,
+    content: dto.content,
+    timestamp: new Date(dto.createdAt),
+    read: dto.isRead,
+    type: (dto.type?.toLowerCase() ?? 'text') as 'text' | 'image',
+    imageUrl: dto.imageUrl ?? undefined,
+  };
+}
+
+function mapConversationDto(dto: ConversationDto): Conversation {
+  return {
+    id: dto.peerId,
+    user: {
+      id: dto.peerId,
+      name: dto.peerName,
+      avatar: dto.peerAvatar ?? undefined,
+      online: dto.peerIsOnline,
+      lastSeen: undefined,
+    },
+    lastMessage: dto.lastMessage ?? '',
+    lastMessageTime: dto.lastMessageTime ? new Date(dto.lastMessageTime) : new Date(0),
+    unreadCount: dto.unreadCount,
+    pinned: false,
+    messages: [],
+  };
+}
 
 /* ── Helpers ─────────────────────────────────────────────────────────── */
 function formatMessageTime(d: Date): string {
@@ -166,6 +146,7 @@ function ConversationItem({
     >
       <div className="relative shrink-0">
         <Avatar className="h-11 w-11">
+          <AvatarImage src={conv.user.avatar} alt={conv.user.name} />
           <AvatarFallback className="bg-gradient-to-br from-primary/20 to-secondary/20 text-sm font-bold">
             {getInitials(conv.user.name)}
           </AvatarFallback>
@@ -264,64 +245,152 @@ export default function MessagesPage() {
   const navigate = useNavigate();
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  // Track active conv ID inside WS callback without causing re-subscriptions
+  const activeConvIdRef = useRef<string | null>(null);
 
-  const [conversations, setConversations] = useState<Conversation[]>(MOCK_CONVERSATIONS);
-  const [activeConvId, setActiveConvId] = useState<string | null>(
-    paramUserId
-      ? (MOCK_CONVERSATIONS.find(c => c.user.id === paramUserId)?.id ?? MOCK_CONVERSATIONS[0].id)
-      : MOCK_CONVERSATIONS[0].id
-  );
+  const token = TokenStore.get();
+  const { connected, subscribe, send } = useWebSocket(user ? token : null);
+
+  const [conversations, setConversations] = useState<Conversation[]>([]);
+  const [activeConvId, setActiveConvId] = useState<string | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [historyLoading, setHistoryLoading] = useState(false);
   const [search, setSearch] = useState('');
   const [newMessage, setNewMessage] = useState('');
   const [sending, setSending] = useState(false);
   const [mobileShowChat, setMobileShowChat] = useState(!!paramUserId);
   const [emojiOpen, setEmojiOpen] = useState(false);
 
-  const activeConv = conversations.find(c => c.id === activeConvId) ?? null;
-  const filteredConvs = conversations.filter(c =>
-    c.user.name.toLowerCase().includes(search.toLowerCase()) ||
-    c.lastMessage.toLowerCase().includes(search.toLowerCase())
-  );
+  // Keep ref in sync for WebSocket callback
+  useEffect(() => { activeConvIdRef.current = activeConvId; }, [activeConvId]);
 
-  // Mark messages as read when opening conversation
+  // ── Load conversations on mount ──────────────────────────────────────────
   useEffect(() => {
-    if (!activeConvId) return;
-    setConversations(prev =>
-      prev.map(c =>
-        c.id === activeConvId
-          ? { ...c, unreadCount: 0, messages: c.messages.map(m => ({ ...m, read: true })) }
-          : c
-      )
-    );
-  }, [activeConvId]);
+    if (!user) return;
+    setLoading(true);
+    MessageService.getConversations()
+      .then((dtos) => {
+        const convs = dtos.map(mapConversationDto);
+        setConversations(convs);
+        if (paramUserId) {
+          const found = convs.find(c => c.user.id === paramUserId);
+          if (found) {
+            setActiveConvId(found.id);
+          } else {
+            // paramUserId not in conversations yet — fetch profile and create stub entry
+            UserService.getById(paramUserId)
+              .then((peer) => {
+                const stub: Conversation = {
+                  id: peer.id,
+                  user: { id: peer.id, name: peer.name, avatar: peer.avatar ?? undefined, online: false },
+                  lastMessage: '',
+                  lastMessageTime: new Date(0),
+                  unreadCount: 0,
+                  pinned: false,
+                  messages: [],
+                };
+                setConversations(prev => [stub, ...prev]);
+                setActiveConvId(peer.id);
+              })
+              .catch(() => setActiveConvId(convs[0]?.id ?? null));
+          }
+        } else {
+          setActiveConvId(convs[0]?.id ?? null);
+        }
+      })
+      .catch(() => toast({ title: 'Could not load conversations', variant: 'destructive' }))
+      .finally(() => setLoading(false));
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [user?.id]);
 
-  // Auto-scroll to bottom on new messages
+  // ── Load message history when active conversation changes ───────────────
+  useEffect(() => {
+    if (!activeConvId || !user) return;
+    setHistoryLoading(true);
+    MessageService.getHistory(activeConvId)
+      .then(({ content }) => {
+        const msgs = content.map(dto => mapMessageDto(dto, user.id));
+        setConversations(prev =>
+          prev.map(c => c.id === activeConvId ? { ...c, messages: msgs, unreadCount: 0 } : c)
+        );
+      })
+      .catch(() => toast({ title: 'Could not load messages', variant: 'destructive' }))
+      .finally(() => setHistoryLoading(false));
+    MessageService.markRead(activeConvId).catch(() => {});
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [activeConvId, user?.id]);
+
+  // ── WebSocket: receive real-time messages ───────────────────────────────
+  useEffect(() => {
+    if (!connected || !user) return;
+    const unsub = subscribe('/user/queue/messages', (stompMsg) => {
+      const incoming = JSON.parse(stompMsg.body) as MessageDto;
+      const isFromMe = incoming.senderId === user.id;
+      // Skip echo of own messages — they were already added optimistically in handleSend
+      if (isFromMe) return;
+      const peerId = incoming.senderId;
+      const isActive = activeConvIdRef.current === peerId;
+      setConversations(prev => {
+        const idx = prev.findIndex(c => c.id === peerId);
+        if (idx < 0) {
+          // Unknown peer — will be picked up on next conversations refresh
+          MessageService.getConversations()
+            .then(dtos => setConversations(dtos.map(mapConversationDto)))
+            .catch(() => {});
+          return prev;
+        }
+        return prev.map(c => {
+          if (c.id !== peerId) return c;
+          if (c.messages.some(m => m.id === incoming.id)) return c; // dedup
+          const newMsg = mapMessageDto(incoming, user.id);
+          return {
+            ...c,
+            messages: [...c.messages, newMsg],
+            lastMessage: incoming.type === 'IMAGE' ? '📷 Image' : incoming.content,
+            lastMessageTime: new Date(incoming.createdAt),
+            unreadCount: isActive ? 0 : c.unreadCount + 1,
+          };
+        });
+      });
+    });
+    return () => unsub?.();
+  }, [connected, user, subscribe]);
+
+  // ── Auto-scroll to bottom on new messages ───────────────────────────────
+  const activeConv = conversations.find(c => c.id === activeConvId) ?? null;
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [activeConv?.messages.length]);
 
+  // ── Send message ─────────────────────────────────────────────────────────
   const handleSend = async () => {
-    if (!newMessage.trim() || !activeConvId) return;
-    setSending(true);
+    if (!newMessage.trim() || !activeConvId || !user) return;
+    if (!connected) {
+      toast({ title: 'Not connected', description: 'Waiting for connection…', variant: 'destructive' });
+      return;
+    }
     const text = newMessage.trim();
     setNewMessage('');
+    setSending(true);
 
-    const msg: Message = {
-      id: `m-${Date.now()}`,
+    // Optimistic add — replaced by real data on next history load
+    const tempMsg: Message = {
+      id: `temp-${Date.now()}`,
       senderId: 'me',
       content: text,
       timestamp: new Date(),
       read: false,
       type: 'text',
     };
-
     setConversations(prev =>
       prev.map(c =>
         c.id === activeConvId
-          ? { ...c, messages: [...c.messages, msg], lastMessage: text, lastMessageTime: new Date() }
+          ? { ...c, messages: [...c.messages, tempMsg], lastMessage: text, lastMessageTime: new Date() }
           : c
       )
     );
+
+    send('/app/chat.send', { toUserId: activeConvId, content: text, type: 'TEXT' });
     setSending(false);
   };
 
@@ -333,25 +402,8 @@ export default function MessagesPage() {
   };
 
   const handleAttachImage = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file || !activeConvId) return;
-    const url = URL.createObjectURL(file);
-    const msg: Message = {
-      id: `m-${Date.now()}`,
-      senderId: 'me',
-      content: '',
-      imageUrl: url,
-      timestamp: new Date(),
-      read: false,
-      type: 'image',
-    };
-    setConversations(prev =>
-      prev.map(c =>
-        c.id === activeConvId
-          ? { ...c, messages: [...c.messages, msg], lastMessage: '📷 Image', lastMessageTime: new Date() }
-          : c
-      )
-    );
+    // Image upload to be implemented with file storage
+    toast({ title: 'Image sharing', description: 'Image upload coming soon.' });
     e.target.value = '';
   };
 
@@ -359,6 +411,11 @@ export default function MessagesPage() {
     setActiveConvId(id);
     setMobileShowChat(true);
   };
+
+  const filteredConvs = conversations.filter(c =>
+    c.user.name.toLowerCase().includes(search.toLowerCase()) ||
+    c.lastMessage.toLowerCase().includes(search.toLowerCase())
+  );
 
   // Group messages by date for date separators
   const groupedMessages = activeConv?.messages.reduce<{ date: string; messages: Message[] }[]>(
@@ -411,23 +468,38 @@ export default function MessagesPage() {
 
             {/* Conversation list */}
             <div className="flex-1 overflow-y-auto p-2 space-y-1">
-              <AnimatePresence>
-                {filteredConvs.length === 0 ? (
-                  <div className="flex flex-col items-center justify-center py-12 text-center">
-                    <MessageSquarePlus className="h-10 w-10 text-muted-foreground/40 mb-3" />
-                    <p className="text-sm text-muted-foreground">No conversations found</p>
-                  </div>
-                ) : (
-                  filteredConvs.map(conv => (
-                    <ConversationItem
-                      key={conv.id}
-                      conv={conv}
-                      active={conv.id === activeConvId}
-                      onClick={() => openConversation(conv.id)}
-                    />
-                  ))
-                )}
-              </AnimatePresence>
+              {loading ? (
+                <div className="space-y-2 p-2">
+                  {[1, 2, 3].map(i => (
+                    <div key={i} className="flex items-center gap-3 p-3">
+                      <Skeleton className="h-11 w-11 rounded-full shrink-0" />
+                      <div className="flex-1 space-y-2">
+                        <Skeleton className="h-3 w-32" />
+                        <Skeleton className="h-3 w-48" />
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <AnimatePresence>
+                  {filteredConvs.length === 0 ? (
+                    <div className="flex flex-col items-center justify-center py-12 text-center">
+                      <MessageSquarePlus className="h-10 w-10 text-muted-foreground/40 mb-3" />
+                      <p className="text-sm text-muted-foreground">No conversations yet</p>
+                      <p className="text-xs text-muted-foreground/70 mt-1">Exchange matches will appear here</p>
+                    </div>
+                  ) : (
+                    filteredConvs.map(conv => (
+                      <ConversationItem
+                        key={conv.id}
+                        conv={conv}
+                        active={conv.id === activeConvId}
+                        onClick={() => openConversation(conv.id)}
+                      />
+                    ))
+                  )}
+                </AnimatePresence>
+              )}
             </div>
           </div>
 
@@ -456,6 +528,7 @@ export default function MessagesPage() {
                   </Button>
                   <div className="relative">
                     <Avatar className="h-9 w-9">
+                      <AvatarImage src={activeConv.user.avatar} alt={activeConv.user.name} />
                       <AvatarFallback className="bg-gradient-to-br from-primary/20 to-secondary/20 text-xs font-bold">
                         {getInitials(activeConv.user.name)}
                       </AvatarFallback>
@@ -513,31 +586,46 @@ export default function MessagesPage() {
 
                 {/* Messages */}
                 <div className="flex-1 overflow-y-auto px-4 py-4 space-y-4">
-                  {groupedMessages.map((group) => (
-                    <div key={group.date} className="space-y-2">
-                      <div className="flex items-center gap-3 py-1">
-                        <div className="flex-1 h-px bg-border/50" />
-                        <span className="text-[10px] text-muted-foreground px-2">{group.date}</span>
-                        <div className="flex-1 h-px bg-border/50" />
-                      </div>
-                      <div className="space-y-1.5">
-                        {group.messages.map((msg, idx) => {
-                          const isMe = msg.senderId === 'me';
-                          const nextMsg = group.messages[idx + 1];
-                          const showAvatar = !nextMsg || nextMsg.senderId !== msg.senderId;
-                          return (
-                            <MessageBubble
-                              key={msg.id}
-                              msg={msg}
-                              isMe={isMe}
-                              showAvatar={showAvatar}
-                              peerName={activeConv.user.name}
-                            />
-                          );
-                        })}
-                      </div>
+                  {historyLoading ? (
+                    <div className="flex items-center justify-center py-8">
+                      <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
                     </div>
-                  ))}
+                  ) : groupedMessages.length === 0 ? (
+                    <div className="flex flex-col items-center justify-center h-full text-center gap-3 py-16">
+                      <div className="p-4 rounded-full bg-primary/10">
+                        <MessageSquarePlus className="h-8 w-8 text-primary" />
+                      </div>
+                      <p className="text-sm text-muted-foreground">
+                        Start the conversation with {activeConv.user.name}!
+                      </p>
+                    </div>
+                  ) : (
+                    groupedMessages.map((group) => (
+                      <div key={group.date} className="space-y-2">
+                        <div className="flex items-center gap-3 py-1">
+                          <div className="flex-1 h-px bg-border/50" />
+                          <span className="text-[10px] text-muted-foreground px-2">{group.date}</span>
+                          <div className="flex-1 h-px bg-border/50" />
+                        </div>
+                        <div className="space-y-1.5">
+                          {group.messages.map((msg, idx) => {
+                            const isMe = msg.senderId === 'me';
+                            const nextMsg = group.messages[idx + 1];
+                            const showAvatar = !nextMsg || nextMsg.senderId !== msg.senderId;
+                            return (
+                              <MessageBubble
+                                key={msg.id}
+                                msg={msg}
+                                isMe={isMe}
+                                showAvatar={showAvatar}
+                                peerName={activeConv.user.name}
+                              />
+                            );
+                          })}
+                        </div>
+                      </div>
+                    ))
+                  )}
                   <div ref={messagesEndRef} />
                 </div>
 
@@ -605,7 +693,7 @@ export default function MessagesPage() {
                     </div>
                     <Button
                       size="icon"
-                      disabled={!newMessage.trim() || sending}
+                      disabled={!newMessage.trim() || sending || !connected}
                       onClick={handleSend}
                       className="h-9 w-9 shrink-0 rounded-xl"
                     >
@@ -613,7 +701,7 @@ export default function MessagesPage() {
                     </Button>
                   </div>
                   <p className="text-[10px] text-muted-foreground mt-1.5 text-center">
-                    Press Enter to send · Shift+Enter for new line
+                    {connected ? 'Press Enter to send · Shift+Enter for new line' : 'Connecting…'}
                   </p>
                 </div>
               </motion.div>
@@ -636,3 +724,4 @@ export default function MessagesPage() {
     </DashboardLayout>
   );
 }
+

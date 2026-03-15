@@ -1,6 +1,9 @@
 package com.skillex.config;
 
+import lombok.RequiredArgsConstructor;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.lang.NonNull;
+import org.springframework.messaging.simp.config.ChannelRegistration;
 import org.springframework.messaging.simp.config.MessageBrokerRegistry;
 import org.springframework.web.socket.config.annotation.EnableWebSocketMessageBroker;
 import org.springframework.web.socket.config.annotation.StompEndpointRegistry;
@@ -19,21 +22,24 @@ import org.springframework.web.socket.config.annotation.WebSocketMessageBrokerCo
  *
  * Security:
  *  SecurityConfig permits /ws/** so the HTTP handshake goes through.
- *  After upgrade the JWT is validated in JwtChannelInterceptor.
+ *  After upgrade the JWT is validated in JwtChannelInterceptor on every CONNECT frame.
  */
 @Configuration
 @EnableWebSocketMessageBroker
+@RequiredArgsConstructor
 public class WebSocketConfig implements WebSocketMessageBrokerConfigurer {
 
+    private final JwtChannelInterceptor jwtChannelInterceptor;
+
     @Override
-    public void registerStompEndpoints(StompEndpointRegistry registry) {
+    public void registerStompEndpoints(@NonNull StompEndpointRegistry registry) {
         registry.addEndpoint("/ws")
             .setAllowedOriginPatterns("*")
             .withSockJS();
     }
 
     @Override
-    public void configureMessageBroker(MessageBrokerRegistry registry) {
+    public void configureMessageBroker(@NonNull MessageBrokerRegistry registry) {
         // In-memory broker for /topic (broadcasts) and /user (point-to-point)
         registry.enableSimpleBroker("/topic", "/user");
         // Client sends messages to /app/…
@@ -41,4 +47,11 @@ public class WebSocketConfig implements WebSocketMessageBrokerConfigurer {
         // Enables /user/{name}/queue/… routing for convertAndSendToUser
         registry.setUserDestinationPrefix("/user");
     }
+
+    @Override
+    public void configureClientInboundChannel(@NonNull ChannelRegistration registration) {
+        // Validate JWT on every CONNECT and set Principal for the STOMP session
+        registration.interceptors(jwtChannelInterceptor);
+    }
 }
+

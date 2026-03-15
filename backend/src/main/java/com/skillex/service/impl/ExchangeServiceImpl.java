@@ -18,8 +18,6 @@ import org.springframework.security.access.AccessDeniedException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import java.util.UUID;
-
 @Service
 @RequiredArgsConstructor
 @SuppressWarnings("null")
@@ -36,6 +34,18 @@ public class ExchangeServiceImpl implements ExchangeService {
         User requester = findUser(requesterId);
         User receiver  = findUser(req.receiverId());
 
+        if (requester.getId().equals(receiver.getId())) {
+            throw new IllegalArgumentException("You cannot create an exchange request with yourself.");
+        }
+
+        Exchange existingPending = exchangeRepository
+            .findFirstByRequesterIdAndReceiverIdAndStatusOrderByCreatedAtDesc(
+                requester.getId(), receiver.getId(), Exchange.ExchangeStatus.PENDING)
+            .orElse(null);
+        if (existingPending != null) {
+            return mapper.toExchange(existingPending);
+        }
+
         Skill offeredSkill = (req.offeredSkillId() != null)
             ? skillRepository.findById(req.offeredSkillId())
                 .orElseThrow(() -> new EntityNotFoundException("Skill not found: " + req.offeredSkillId()))
@@ -46,7 +56,6 @@ public class ExchangeServiceImpl implements ExchangeService {
             : null;
 
         Exchange exchange = new Exchange();
-        exchange.setId(UUID.randomUUID().toString());
         exchange.setRequester(requester);
         exchange.setReceiver(receiver);
         exchange.setOfferedSkill(offeredSkill);

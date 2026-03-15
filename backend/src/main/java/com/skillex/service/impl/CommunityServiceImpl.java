@@ -6,8 +6,10 @@ import com.skillex.model.*;
 import com.skillex.repository.*;
 import com.skillex.service.CommunityService;
 import com.skillex.service.DtoMapper;
+import com.skillex.service.reputation.ReputationUpdateEvent;
 import jakarta.persistence.EntityNotFoundException;
 import lombok.RequiredArgsConstructor;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
@@ -30,6 +32,7 @@ public class CommunityServiceImpl implements CommunityService {
     private final UserRepository userRepository;
     private final SkillRepository skillRepository;
     private final DtoMapper mapper;
+    private final ApplicationEventPublisher eventPublisher;
 
     // ── Events ──────────────────────────────────────────────────────────────
 
@@ -95,7 +98,12 @@ public class CommunityServiceImpl implements CommunityService {
         discussion.setReplies(0);
         discussion.setViews(0);
         discussion.setIsPinned(false);
-        return mapper.toDiscussion(discussionRepository.save(discussion));
+        CommunityDtos.DiscussionDto result = mapper.toDiscussion(discussionRepository.save(discussion));
+
+        eventPublisher.publishEvent(new ReputationUpdateEvent(
+            authorId, ReputationUpdateEvent.Trigger.COMMUNITY_INTERACTION));
+
+        return result;
     }
 
     @Override
@@ -128,7 +136,12 @@ public class CommunityServiceImpl implements CommunityService {
         post.setLikes(0);
         post.setComments(0);
         post.setShares(0);
-        return mapper.toPost(postRepository.save(post));
+        CommunityDtos.PostDto result = mapper.toPost(postRepository.save(post));
+
+        eventPublisher.publishEvent(new ReputationUpdateEvent(
+            authorId, ReputationUpdateEvent.Trigger.COMMUNITY_INTERACTION));
+
+        return result;
     }
 
     @Override

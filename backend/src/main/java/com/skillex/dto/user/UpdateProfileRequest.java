@@ -12,5 +12,5 @@ public record UpdateProfileRequest(
     @Email @Size(max = 255)   String email,
     @Size(max = 200)          String university,
     @Size(max = 500)          String bio,
-    @Size(max = 500)          String avatar
+    String                    avatar  // TEXT column — stores compressed base64 data-URL
 ) {}

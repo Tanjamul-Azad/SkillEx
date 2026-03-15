@@ -23,6 +23,9 @@ export const SessionService = {
   /** POST /api/sessions — schedule a new session */
   create: async (data: {
     exchangeId: string;
+    teacherId: string;
+    learnerId: string;
+    skillId: string;
     scheduledAt: string;
     durationMins: number;
     meetLink?: string;

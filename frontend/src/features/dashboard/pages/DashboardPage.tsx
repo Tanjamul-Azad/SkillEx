@@ -135,12 +135,14 @@ StatCard.displayName = 'StatCard';
 
 /* ── Exchange Card ───────────────────────────────────────────────────── */
 function ExchangeCard({ exchange, currentUserId }: { exchange: Exchange; currentUserId: string }) {
-  const partner = exchange.requester_id === currentUserId ? exchange.receiver : exchange.requester;
-  const mySkill = exchange.requester_id === currentUserId ? exchange.offered_skill : exchange.wanted_skill;
-  const theirSkill = exchange.requester_id === currentUserId ? exchange.wanted_skill : exchange.offered_skill;
+  const isRequester = exchange.requester.id === currentUserId;
+  const partner = isRequester ? exchange.receiver : exchange.requester;
+  const mySkill = isRequester ? exchange.offeredSkill : exchange.wantedSkill;
+  const theirSkill = isRequester ? exchange.wantedSkill : exchange.offeredSkill;
   const { toast } = useToast();
   const navigate = useNavigate();
-  const [localStatus, setLocalStatus] = React.useState(exchange.status);
+  // Normalize to lowercase so comparisons work regardless of backend casing
+  const [localStatus, setLocalStatus] = React.useState(exchange.status?.toLowerCase() ?? 'pending');
   const [dismissed, setDismissed] = React.useState(false);
   const [declineConfirmOpen, setDeclineConfirmOpen] = React.useState(false);
   const [scheduleOpen, setScheduleOpen] = React.useState(false);
@@ -198,17 +200,17 @@ function ExchangeCard({ exchange, currentUserId }: { exchange: Exchange; current
             )}
           </div>
 
-          {exchange.session_date && (
+          {exchange.sessionDate && (
             <div className="mt-3 flex items-center gap-1.5 text-[11px] text-muted-foreground">
               <Clock className="h-3 w-3 shrink-0" />
-              {new Date(exchange.session_date).toLocaleDateString('en-US', {
+              {new Date(exchange.sessionDate).toLocaleDateString('en-US', {
                 weekday: 'short', month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit',
               })}
             </div>
           )}
 
           <div className="mt-4 grid grid-cols-2 gap-2">
-            {localStatus === 'pending' && exchange.receiver_id === currentUserId ? (
+            {localStatus === 'pending' && exchange.receiver.id === currentUserId ? (
               <>
                 <Button variant="outline" size="sm" className="rounded-xl text-xs border-destructive/20 text-destructive hover:bg-destructive/10" onClick={() => setDeclineConfirmOpen(true)}>
                   Decline
@@ -416,16 +418,17 @@ function ExchangeSkeleton() {
 }
 
 function activityFromExchange(exchange: Exchange, currentUserId: string) {
-  const partner = exchange.requester_id === currentUserId ? exchange.receiver : exchange.requester;
-  const ms = Date.now() - new Date(exchange.updated_at).getTime();
+  const partner = exchange.requester.id === currentUserId ? exchange.receiver : exchange.requester;
+  const ms = Date.now() - new Date(exchange.createdAt).getTime();
   const mins = Math.round(ms / 60000);
   const timeLabel = mins < 60 ? `${mins}m ago` : mins < 1440 ? `${Math.round(mins / 60)}h ago` : `${Math.round(mins / 1440)}d ago`;
+  const status = exchange.status?.toLowerCase();
 
-  switch (exchange.status) {
+  switch (status) {
     case 'accepted':
       return { icon: CheckCircle, color: 'text-emerald-500', bg: 'bg-emerald-500/10', text: <><span className="font-bold text-foreground">{partner.name.split(' ')[0]}</span> accepted your request.</>, time: timeLabel };
     case 'pending':
-      return exchange.requester_id === currentUserId
+      return exchange.requester.id === currentUserId
         ? { icon: Clock, color: 'text-primary', bg: 'bg-primary/10', text: <>Waiting for <span className="font-bold text-foreground">{partner.name.split(' ')[0]}</span>.</>, time: timeLabel }
         : { icon: Users, color: 'text-primary', bg: 'bg-primary/10', text: <><span className="font-bold text-foreground">{partner.name.split(' ')[0]}</span> sent a request.</>, time: timeLabel };
     case 'completed':
@@ -440,10 +443,10 @@ function activityFromExchange(exchange: Exchange, currentUserId: string) {
 function OnboardingProgress({ user, exchanges }: { user: any; exchanges: Exchange[] }) {
   const hasSkills = (user?.skillsOffered?.length ?? 0) > 0 || (user?.skillsWanted?.length ?? 0) > 0;
   const hasMatch = exchanges.length > 0;
-  const hasSession = exchanges.some(e => e.status === 'accepted' && e.session_date);
+  const hasSession = exchanges.some(e => e.status?.toLowerCase() === 'accepted' && e.sessionDate);
 
   const steps = [
-    { title: "Add your skills", desc: "List what you can teach and what you want to learn.", done: hasSkills, link: `/profile/${user?.id}` },
+    { title: "Add your skills", desc: "List what you can teach and what you want to learn.", done: hasSkills, link: '/settings?tab=skills' },
     { title: "Find a match", desc: "Send an exchange request to a fellow student.", done: hasMatch, link: '/match' },
     { title: "Schedule a session", desc: "Set a time to meet up and exchange knowledge.", done: hasSession, link: '/match' }
   ];
@@ -520,8 +523,8 @@ export default function DashboardPage() {
   }, []);
 
   const currentUserId = user?.id ?? '';
-  const activeExchanges = exchanges.filter(e => e.status === 'pending' || e.status === 'accepted');
-  const upcomingSessions = exchanges.filter(e => e.status === 'accepted' && e.session_date);
+  const activeExchanges = exchanges.filter(e => { const s = e.status?.toLowerCase(); return s === 'pending' || s === 'accepted'; });
+  const upcomingSessions = exchanges.filter(e => e.status?.toLowerCase() === 'accepted' && e.sessionDate);
   const activityItems = exchanges.slice(0, 5).map(e => activityFromExchange(e, currentUserId)).filter(Boolean);
 
   const getGreeting = () => {
@@ -695,8 +698,8 @@ export default function DashboardPage() {
                     <div className="relative space-y-5">
                       <div className="absolute left-[18px] top-4 bottom-4 w-px bg-gradient-to-b from-primary/40 via-border to-transparent" />
                       {upcomingSessions.slice(0, 3).map((exchange, i) => {
-                        const partner = exchange.requester_id === currentUserId ? exchange.receiver : exchange.requester;
-                        const skill = exchange.offered_skill ?? exchange.wanted_skill;
+                        const partner = exchange.requester.id === currentUserId ? exchange.receiver : exchange.requester;
+                        const skill = exchange.offeredSkill ?? exchange.wantedSkill;
                         return (
                           <div key={exchange.id} className="relative flex items-center gap-4">
                             <div className={cn(
@@ -713,8 +716,8 @@ export default function DashboardPage() {
                               <div className="min-w-0 flex-1">
                                 <p className="font-semibold text-sm truncate">{skill?.name ?? 'Skill Exchange'} <span className="font-normal text-muted-foreground">with</span> {partner.name.split(' ')[0]}</p>
                                 <p className="text-xs text-muted-foreground mt-0.5">
-                                  {exchange.session_date
-                                    ? new Date(exchange.session_date).toLocaleDateString('en-US', { weekday: 'long', hour: 'numeric', minute: 'numeric' })
+                                  {exchange.sessionDate
+                                    ? new Date(exchange.sessionDate).toLocaleDateString('en-US', { weekday: 'long', hour: 'numeric', minute: 'numeric' })
                                     : 'Date TBD'}
                                 </p>
                               </div>

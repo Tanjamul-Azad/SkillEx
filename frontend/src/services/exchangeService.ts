@@ -1,32 +1,37 @@
 import { api } from './api';
-import type { Skill } from '@/types';
 
-export interface ExchangeProfile {
+/** Matches backend UserSummaryDto */
+export interface ExchangeUser {
   id: string;
   name: string;
   avatar: string | null;
-  email: string;
   university: string | null;
-  skills_offered: Skill[];
-  skills_wanted: Skill[];
-  skillex_score: number;
+  level: string;
+  skillexScore: number;
   rating: number;
-  is_online: boolean;
+  isOnline: boolean;
 }
 
+/** Matches backend ExchangeDto.SkillRef */
+export interface ExchangeSkillRef {
+  id: string;
+  name: string;
+  icon: string;
+  category: string;
+}
+
+/** Matches backend ExchangeDto — all camelCase */
 export interface Exchange {
   id: string;
-  requester_id: string;
-  receiver_id: string;
-  offered_skill: Skill | null;
-  wanted_skill: Skill | null;
+  requester: ExchangeUser;
+  receiver: ExchangeUser;
+  offeredSkill: ExchangeSkillRef | null;
+  wantedSkill: ExchangeSkillRef | null;
   message: string | null;
-  status: 'pending' | 'accepted' | 'declined' | 'completed' | 'cancelled';
-  session_date: string | null;
-  created_at: string;
-  updated_at: string;
-  requester: ExchangeProfile;
-  receiver: ExchangeProfile;
+  /** Uppercase from backend: PENDING | ACCEPTED | DECLINED | COMPLETED | CANCELLED */
+  status: string;
+  sessionDate: string | null;
+  createdAt: string;
 }
 
 export interface PagedResponse<T> {

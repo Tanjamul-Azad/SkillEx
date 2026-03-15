@@ -37,18 +37,20 @@ const LogoWrapper = () => (
 );
 
 const getNotifIcon = (type: string) => {
-  if (type.includes('match')) return ArrowLeftRight;
-  if (type.includes('review')) return Star;
-  if (type.includes('session')) return Calendar;
-  if (type.includes('message')) return MessageSquare;
+  const t = type.toLowerCase();
+  if (t.includes('match')) return ArrowLeftRight;
+  if (t.includes('review')) return Star;
+  if (t.includes('session')) return Calendar;
+  if (t.includes('message')) return MessageSquare;
   return Bell;
 };
 
 const getNotifColor = (type: string): string => {
-  if (type.includes('match')) return 'bg-primary/10 text-primary';
-  if (type.includes('review')) return 'bg-amber-500/10 text-amber-500';
-  if (type.includes('session')) return 'bg-secondary/10 text-secondary';
-  if (type.includes('message')) return 'bg-purple-500/10 text-purple-500';
+  const t = type.toLowerCase();
+  if (t.includes('match')) return 'bg-primary/10 text-primary';
+  if (t.includes('review')) return 'bg-amber-500/10 text-amber-500';
+  if (t.includes('session')) return 'bg-secondary/10 text-secondary';
+  if (t.includes('message')) return 'bg-purple-500/10 text-purple-500';
   return 'bg-muted text-muted-foreground';
 };
 

@@ -77,24 +77,38 @@ public class UserServiceImpl implements UserService {
     @Override
     @Transactional
     public void addSkill(String userId, AddSkillRequest req) {
-        User user  = findUserById(userId);
-        Skill skill = skillRepository.findById(req.skillId())
-            .orElseThrow(() -> new EntityNotFoundException("Skill not found: " + req.skillId()));
+        User user = findUserById(userId);
+
+        // ── Resolve skill: catalog lookup by ID, or find/create by name ──────
+        final Skill skill;
+        if (req.skillId() != null && !req.skillId().isBlank()) {
+            skill = skillRepository.findById(req.skillId())
+                .orElseThrow(() -> new EntityNotFoundException("Skill not found: " + req.skillId()));
+        } else {
+            String name = req.skillName().trim();
+            skill = skillRepository.findByNameIgnoreCase(name)
+                .orElseGet(() -> {
+                    Skill s = new Skill();
+                    s.setName(name);
+                    s.setIcon("Zap");
+                    s.setCategory(req.skillCategory() != null && !req.skillCategory().isBlank()
+                        ? req.skillCategory() : "Other");
+                    if (req.skillDescription() != null && !req.skillDescription().isBlank())
+                        s.setDescription(req.skillDescription());
+                    return skillRepository.save(s);
+                });
+        }
 
         UserSkillOffered.SkillProficiency level =
             UserSkillOffered.SkillProficiency.valueOf(req.level());
 
         if ("offered".equalsIgnoreCase(req.type())) {
-            // Avoid duplicate — delete existing entry first if present
             offeredRepo.deleteByIdUserIdAndIdSkillId(userId, skill.getId());
             UserSkillOffered entry = UserSkillOffered.builder()
                 .id(new UserSkillOffered.UserSkillId(userId, skill.getId()))
                 .user(user).skill(skill).level(level)
                 .build();
             offeredRepo.save(entry);
-            if (!user.getSkillsOffered().contains(skill)) {
-                user.getSkillsOffered().add(skill);
-            }
         } else {
             wantedRepo.deleteByIdUserIdAndIdSkillId(userId, skill.getId());
             UserSkillWanted entry = UserSkillWanted.builder()
@@ -102,11 +116,7 @@ public class UserServiceImpl implements UserService {
                 .user(user).skill(skill).level(level)
                 .build();
             wantedRepo.save(entry);
-            if (!user.getSkillsWanted().contains(skill)) {
-                user.getSkillsWanted().add(skill);
-            }
         }
-        userRepository.save(user);
     }
 
     @Override
@@ -114,14 +124,8 @@ public class UserServiceImpl implements UserService {
     public void removeSkill(String userId, String skillId, String type) {
         if ("offered".equalsIgnoreCase(type)) {
             offeredRepo.deleteByIdUserIdAndIdSkillId(userId, skillId);
-            User user = findUserById(userId);
-            user.getSkillsOffered().removeIf(s -> s.getId().equals(skillId));
-            userRepository.save(user);
         } else {
             wantedRepo.deleteByIdUserIdAndIdSkillId(userId, skillId);
-            User user = findUserById(userId);
-            user.getSkillsWanted().removeIf(s -> s.getId().equals(skillId));
-            userRepository.save(user);
         }
     }
 

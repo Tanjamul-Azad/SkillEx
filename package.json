@@ -4,8 +4,9 @@
   "private": true,
   "scripts": {
     "dev": "concurrently --kill-others-on-fail --names backend,frontend --prefix-colors cyan,magenta \"npm run dev:backend\" \"npm run dev:frontend\"",
-    "dev:backend": "cd backend && apache-maven-3.9.6\\bin\\mvn.cmd spring-boot:run",
-    "dev:frontend": "cd frontend && npm run dev"
+    "dev:backend": "cd backend && set \"JAVA_HOME=C:\\Users\\User\\.jdk\\jdk-21.0.8\" && apache-maven-3.9.6\\bin\\mvn.cmd spring-boot:run",
+    "dev:frontend": "cd frontend && npm run dev",
+    "stop": "powershell -NoProfile -ExecutionPolicy Bypass -File .\\start.ps1 -Stop"
   },
   "devDependencies": {
     "concurrently": "^9.0.0"

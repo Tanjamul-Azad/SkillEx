@@ -3,6 +3,7 @@ package com.skillex.service;
 import com.skillex.dto.notification.NotificationDto;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.lang.NonNull;
 import org.springframework.messaging.simp.SimpMessagingTemplate;
 import org.springframework.stereotype.Service;
 
@@ -29,7 +30,7 @@ public class NotificationPublisher {
      * @param userId  the recipient's ID (used as the WebSocket user destination)
      * @param dto     the notification to deliver in real-time
      */
-    public void push(String userId, NotificationDto dto) {
+    public void push(@NonNull String userId, @NonNull NotificationDto dto) {
         try {
             messagingTemplate.convertAndSendToUser(
                 userId,

@@ -14,4 +14,6 @@ public interface DiscussionRepository extends JpaRepository<Discussion, String> 
     Page<Discussion> findByIsPinnedTrueOrderByCreatedAtDesc(Pageable pageable);
 
     Page<Discussion> findByAuthorId(String authorId, Pageable pageable);
+
+    long countByAuthorId(String authorId);
 }

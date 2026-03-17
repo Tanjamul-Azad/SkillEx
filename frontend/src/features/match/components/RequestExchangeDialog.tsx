@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
@@ -50,7 +50,7 @@ export function RequestExchangeDialog({ open, onClose, targetUser }: Props) {
     defaultValues: { offeredSkillId: '', message: '' },
   });
 
-  const mySkills: Skill[] = user?.skillsOffered ?? [];
+  const mySkills: Skill[] = useMemo(() => user?.skillsOffered ?? [], [user?.skillsOffered]);
   const charCount = form.watch('message')?.length ?? 0;
 
   useEffect(() => {

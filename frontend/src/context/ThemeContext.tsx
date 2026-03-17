@@ -7,6 +7,7 @@ type Theme = 'light' | 'dark';
 interface ThemeContextType {
   theme: Theme;
   toggleTheme: () => void;
+  setTheme: (theme: Theme) => void;
 }
 
 export const ThemeContext = createContext<ThemeContextType | undefined>(undefined);
@@ -34,7 +35,11 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
     setTheme(prevTheme => (prevTheme === 'light' ? 'dark' : 'light'));
   }, []);
 
-  const value = useMemo(() => ({ theme, toggleTheme }), [theme, toggleTheme]);
+  const setThemeMode = useCallback((nextTheme: Theme) => {
+    setTheme(nextTheme);
+  }, []);
+
+  const value = useMemo(() => ({ theme, toggleTheme, setTheme: setThemeMode }), [theme, toggleTheme, setThemeMode]);
 
   return (
     <ThemeContext.Provider value={value}>

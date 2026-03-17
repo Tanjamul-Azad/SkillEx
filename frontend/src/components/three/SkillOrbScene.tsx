@@ -7,16 +7,8 @@
  */
 
 import { Suspense, useEffect, useRef } from 'react';
-
-// Suppress the once-per-mount THREE.Clock deprecation emitted by @react-three/fiber internals
-// (R3F creates THREE.Clock in its renderer; we can't change that without patching the library)
-const _warn = console.warn.bind(console);
-console.warn = (...args: unknown[]) => {
-  if (typeof args[0] === 'string' && args[0].includes('THREE.Clock')) return;
-  _warn(...args);
-};
 import { Canvas, useFrame } from '@react-three/fiber';
-import { Float, Stars, Html } from '@react-three/drei';
+import { Stars, Html } from '@react-three/drei';
 import { EffectComposer, Bloom } from '@react-three/postprocessing';
 import * as THREE from 'three';
 
@@ -193,11 +185,11 @@ function SceneContents() {
           <OrbitalRing key={i} {...r} />
         ))}
         {/* Dense starfield tied to parallax group for deep 3D movement */}
-        <Stars radius={50} depth={150} count={6000} factor={6} saturation={0.5} fade speed={0.4} />
+        <Stars radius={50} depth={150} count={4200} factor={5} saturation={0.5} fade speed={0.35} />
       </ParallaxGroup>
 
       {/* Background static stars for infinite depth */}
-      <Stars radius={100} depth={50} count={3000} factor={3} saturation={0} fade speed={0.1} />
+      <Stars radius={100} depth={50} count={1800} factor={2.5} saturation={0} fade speed={0.1} />
 
       {/* Bloom: Intense core, glowing lines */}
       <EffectComposer>

@@ -33,7 +33,7 @@ const NavLogo = () => (
   </Link>
 );
 
-export default function Navbar() {
+export default function Navbar({ showThemeToggle = true }: { showThemeToggle?: boolean }) {
   const { theme, toggleTheme } = useTheme();
   const { user, isAuthenticated, logout } = useAuth();
   const [scrolled, setScrolled] = useState(false);
@@ -80,7 +80,7 @@ export default function Navbar() {
       };
       requestAnimationFrame(() => attempt());
     }
-  }, [pathname]);
+  }, [pathname, scrolled]);
 
   useMotionValueEvent(scrollY, 'change', (latest) => {
     setScrolled(latest > 20);
@@ -211,36 +211,40 @@ export default function Navbar() {
                 </Button>
               </>
             )}
-            <Button variant="ghost" size="icon" onClick={toggleTheme} aria-label="Toggle theme" className="hover:bg-primary/5">
-              <AnimatePresence mode="wait" initial={false}>
-                <motion.div
-                  key={theme}
-                  initial={{ y: -14, opacity: 0, rotate: -20 }}
-                  animate={{ y: 0, opacity: 1, rotate: 0 }}
-                  exit={{ y: 14, opacity: 0, rotate: 20 }}
-                  transition={{ duration: 0.22 }}
-                >
-                  {theme === 'dark' ? <Sun className="h-4 w-4" /> : <Moon className="h-4 w-4" />}
-                </motion.div>
-              </AnimatePresence>
-            </Button>
+            {showThemeToggle && (
+              <Button variant="ghost" size="icon" onClick={toggleTheme} aria-label="Toggle theme" className="hover:bg-primary/5">
+                <AnimatePresence mode="wait" initial={false}>
+                  <motion.div
+                    key={theme}
+                    initial={{ y: -14, opacity: 0, rotate: -20 }}
+                    animate={{ y: 0, opacity: 1, rotate: 0 }}
+                    exit={{ y: 14, opacity: 0, rotate: 20 }}
+                    transition={{ duration: 0.22 }}
+                  >
+                    {theme === 'dark' ? <Sun className="h-4 w-4" /> : <Moon className="h-4 w-4" />}
+                  </motion.div>
+                </AnimatePresence>
+              </Button>
+            )}
           </div>
 
           {/* Mobile controls */}
           <div className="flex items-center gap-1 md:hidden">
-            <Button variant="ghost" size="icon" onClick={toggleTheme} aria-label="Toggle theme">
-              <AnimatePresence mode="wait" initial={false}>
-                <motion.div
-                  key={theme}
-                  initial={{ y: -14, opacity: 0 }}
-                  animate={{ y: 0, opacity: 1 }}
-                  exit={{ y: 14, opacity: 0 }}
-                  transition={{ duration: 0.2 }}
-                >
-                  {theme === 'dark' ? <Sun className="h-4 w-4" /> : <Moon className="h-4 w-4" />}
-                </motion.div>
-              </AnimatePresence>
-            </Button>
+            {showThemeToggle && (
+              <Button variant="ghost" size="icon" onClick={toggleTheme} aria-label="Toggle theme">
+                <AnimatePresence mode="wait" initial={false}>
+                  <motion.div
+                    key={theme}
+                    initial={{ y: -14, opacity: 0 }}
+                    animate={{ y: 0, opacity: 1 }}
+                    exit={{ y: 14, opacity: 0 }}
+                    transition={{ duration: 0.2 }}
+                  >
+                    {theme === 'dark' ? <Sun className="h-4 w-4" /> : <Moon className="h-4 w-4" />}
+                  </motion.div>
+                </AnimatePresence>
+              </Button>
+            )}
             <Button variant="ghost" size="icon" onClick={() => setMobileMenuOpen((v) => !v)} aria-label="Toggle menu">
               <AnimatePresence mode="wait" initial={false}>
                 <motion.div

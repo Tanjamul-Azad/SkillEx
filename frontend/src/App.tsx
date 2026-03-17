@@ -50,7 +50,11 @@ function SplashScreen({ onDone }: { onDone: () => void }) {
     // Preload the chunk immediately when splash mounts
     preloadCurrentRoute();
 
-    const t = setTimeout(onDone, 2200); // visible for ~1.8 s then exit
+    const prefersReducedMotion =
+      typeof window !== 'undefined' &&
+      window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+    const t = setTimeout(onDone, prefersReducedMotion ? 900 : 1600);
     return () => clearTimeout(t);
   }, [onDone]);
 

@@ -53,6 +53,10 @@ export const ToastContext = createContext<ToastContextType | undefined>(undefine
 export function ToastStateProvider({ children }: { children: React.ReactNode }) {
   const [state, dispatch] = useReducer(toastReducer, { toasts: [] });
 
+  const dismiss = useCallback((id: string) => {
+    dispatch({ type: 'DISMISS_TOAST', id });
+  }, []);
+
   const toast = useCallback((toast: Toast) => {
     const id = (toastCount++).toString();
     const duration = toast.duration || DEFAULT_DURATION;
@@ -62,11 +66,7 @@ export function ToastStateProvider({ children }: { children: React.ReactNode }) 
     setTimeout(() => {
       dismiss(id);
     }, duration);
-  }, []);
-
-  const dismiss = useCallback((id: string) => {
-    dispatch({ type: 'DISMISS_TOAST', id });
-  }, []);
+  }, [dismiss]);
   
   const value = useMemo(() => ({ ...state, toast, dismiss }), [state, toast, dismiss]);
 
@@ -75,4 +75,4 @@ export function ToastStateProvider({ children }: { children: React.ReactNode }) 
       {children}
     </ToastContext.Provider>
   );
-};
+}

@@ -76,15 +76,23 @@ function NavItem({
       onClick={onClick}
       aria-current={isActive ? 'page' : undefined}
       className={cn(
-        'group relative flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium',
-        'transition-all duration-150 ease-out select-none outline-none',
+        'group relative flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium overflow-hidden',
+        'transition-all duration-300 ease-out select-none outline-none',
         'focus-visible:ring-2 focus-visible:ring-primary/40 focus-visible:ring-offset-2 ring-offset-background',
         isActive
           ? 'bg-primary/10 text-primary shadow-[inset_0_0_0_1px_hsl(var(--primary)/0.25)]'
-          : 'text-muted-foreground hover:bg-muted/60 hover:text-foreground',
+          : 'text-muted-foreground hover:text-foreground',
         collapsed && 'justify-center px-0 py-2.5'
       )}
     >
+      {/* Background Hover Effect */}
+      {!isActive && (
+        <div className="absolute inset-0 bg-gradient-to-r from-primary/0 via-primary/5 to-primary/0 translate-x-[-100%] transition-transform duration-500 ease-out group-hover:translate-x-[100%]" />
+      )}
+      {!isActive && (
+        <div className="absolute inset-0 bg-muted/60 opacity-0 group-hover:opacity-100 transition-opacity duration-300 pointer-events-none" />
+      )}
+
       {/* Active indicator bar */}
       {isActive && (
         <motion.span

@@ -49,6 +49,8 @@ public class SecurityConfig {
                 .requestMatchers("/api/auth/google/**").permitAll()
                 // WebSocket handshake endpoints (SockJS negotiation)
                 .requestMatchers("/ws/**", "/ws/info").permitAll()
+                // Static uploads
+                .requestMatchers("/uploads/**").permitAll()
                 // Public read-only routes — skills catalogue and community browsing
                 .requestMatchers(HttpMethod.GET, "/api/skills", "/api/skills/**").permitAll()
                 .requestMatchers(HttpMethod.GET,
@@ -100,6 +102,7 @@ public class SecurityConfig {
         UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
         source.registerCorsConfiguration("/api/**", config);
         source.registerCorsConfiguration("/ws/**", config);
+        source.registerCorsConfiguration("/uploads/**", config);
         return source;
     }
 }

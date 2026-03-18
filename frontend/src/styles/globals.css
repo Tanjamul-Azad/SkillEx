@@ -5,29 +5,25 @@
 @layer base {
   :root {
     /* ── Core palette ─────────────────────────────────────── */
-    --background: 220 30% 97%;
-    /* soft blue-tinted off-white, not pure white */
-    --foreground: 224 71.4% 4.1%;
+    --background: 210 40% 98%;
+    --foreground: 222.2 84% 4.9%;
     --card: 0 0% 100%;
-    /* cards are pure white — crisp on tinted bg */
-    --card-foreground: 224 71.4% 4.1%;
+    --card-foreground: 222.2 84% 4.9%;
     --popover: 0 0% 100%;
-    --popover-foreground: 224 71.4% 4.1%;
-    --primary: 171 100% 45%;
-    /* Electric Teal #00E5C3 */
-    --primary-foreground: 210 40% 98%;
-    --secondary: 41 96% 50%;
-    /* Amber #F59E0B */
-    --secondary-foreground: 210 40% 98%;
-    --muted: 220 20% 94%;
-    --muted-foreground: 220 10% 44%;
-    --accent: 38 92% 50%;
-    --accent-foreground: 224 71.4% 4.1%;
+    --popover-foreground: 222.2 84% 4.9%;
+    --primary: 171 70% 35%; /* Deep teal */
+    --primary-foreground: 0 0% 100%;
+    --secondary: 41 96% 45%; /* Amber / Gold for contrast */
+    --secondary-foreground: 0 0% 100%;
+    --muted: 220 14% 96%;
+    --muted-foreground: 215.4 16.3% 46.9%;
+    --accent: 210 40% 96.1%;
+    --accent-foreground: 222.2 47.4% 11.2%;
     --destructive: 0 84.2% 60.2%;
     --destructive-foreground: 210 40% 98%;
-    --border: 220 18% 88%;
-    --input: 220 18% 88%;
-    --ring: 171 100% 45%;
+    --border: 214.3 31.8% 91.4%;
+    --input: 214.3 31.8% 91.4%;
+    --ring: 171 80% 30%;
     --radius: 1rem;
     /* Increased to 16px default for softer look */
     /* ── Glow tokens ──────────────────────────────────────── */
@@ -573,16 +569,16 @@
 
   /* Glass morphism variants (Premium frosted glass) */
   .glass {
-    @apply backdrop-blur-2xl bg-white/40 dark:bg-black/40 border border-white/30 dark:border-white/10;
+    @apply backdrop-blur-2xl bg-background/60 dark:bg-black/40 border border-border/60 dark:border-white/10;
     box-shadow: 0 4px 30px rgba(0, 0, 0, 0.05);
   }
 
   .glass-subtle {
-    @apply backdrop-blur-lg bg-white/20 dark:bg-black/20 border border-white/20 dark:border-white/5;
+    @apply backdrop-blur-lg bg-background/40 dark:bg-black/20 border border-border/40 dark:border-white/5;
   }
 
   .glass-strong {
-    @apply backdrop-blur-3xl bg-white/60 dark:bg-black/60 border border-white/40 dark:border-white/20;
+    @apply backdrop-blur-3xl bg-background/80 dark:bg-black/60 border border-border/80 dark:border-white/20;
     box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
   }
 

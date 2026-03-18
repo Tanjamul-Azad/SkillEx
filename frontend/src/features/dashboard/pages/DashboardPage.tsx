@@ -82,7 +82,7 @@ const StatCard = React.memo(({ icon: Icon, title, value, trend, trendLabel, colo
         c.border,
       )}>
         {/* Subtle top inner highlight replacing flat gradient */}
-        <div className={cn('absolute inset-x-0 top-0 h-px mix-blend-overlay opacity-50 bg-white dark:bg-white/20')} />
+        <div className={cn('absolute inset-x-0 top-0 h-px mix-blend-overlay opacity-50 bg-primary/20 dark:bg-white/20')} />
 
         {/* Sophisticated background radial glow on hover */}
         <div className={cn('pointer-events-none absolute -right-6 -top-6 h-32 w-32 rounded-full blur-3xl opacity-0 group-hover:opacity-100 transition-opacity duration-700', c.bg)} />
@@ -372,24 +372,39 @@ function ExchangeCard({ exchange, currentUserId }: { exchange: Exchange; current
 /* ── Empty / Skeleton states ─────────────────────────────────────────── */
 function EmptyExchanges() {
   return (
-    <Card className="border-dashed border-2 border-border/60 bg-transparent shadow-none">
-      <CardContent className="flex flex-col items-center justify-center py-14 text-center">
-        <motion.div
-          animate={{ y: [0, -8, 0] }}
-          transition={{ duration: 4, repeat: Infinity, ease: "easeInOut" }}
-          className="mb-4 flex h-16 w-16 items-center justify-center rounded-2xl glass-subtle shadow-[inset_0_0_0_1px_hsl(var(--primary)/0.15)] relative"
-        >
-          <div className="absolute inset-0 rounded-2xl bg-primary/20 blur-xl animate-pulse" />
-          <Inbox className="h-7 w-7 text-primary relative z-10" />
-        </motion.div>
-        <p className="font-bold text-base">No active exchanges yet</p>
-        <p className="mt-1.5 text-sm text-muted-foreground max-w-[22ch] leading-relaxed">
-          Find a match, send a request, and start teaching!
-        </p>
-        <Button asChild className="mt-6 rounded-xl font-bold" size="sm">
-          <Link to="/match"><Search className="mr-2 h-3.5 w-3.5" />Find a Match</Link>
-        </Button>
-      </CardContent>
+      <Card className="relative overflow-hidden border-dashed border-2 border-border/80 bg-background/50 shadow-none group">
+        {/* Decorative background blob */}
+        <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-64 h-64 bg-primary/5 rounded-full blur-[60px] pointer-events-none transition-transform duration-1000 group-hover:scale-150" />
+        <div className="absolute top-0 right-0 w-32 h-32 bg-secondary/5 rounded-full blur-[40px] pointer-events-none" />
+        
+        <CardContent className="relative z-10 flex flex-col items-center justify-center py-16 text-center">
+          <motion.div
+            animate={{ y: [0, -10, 0], rotate: [0, -5, 5, 0] }}
+            transition={{ duration: 5, repeat: Infinity, ease: "easeInOut" }}
+            className="mb-6 flex h-20 w-20 items-center justify-center rounded-3xl bg-gradient-to-br from-primary/20 to-primary/5 shadow-glow-sm relative ring-1 ring-primary/20 backdrop-blur-md"
+          >
+            <div className="absolute inset-0 rounded-3xl bg-primary/20 blur-xl animate-pulse" style={{ animationDuration: '3s' }} />
+            <Inbox className="h-10 w-10 text-primary relative z-10" />
+            <motion.div 
+              initial={{ scale: 0, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              transition={{ delay: 0.5, type: 'spring' }}
+              className="absolute -top-2 -right-2 h-6 w-6 bg-secondary rounded-full flex items-center justify-center border-2 border-background shadow-lg"
+            >
+              <Zap className="h-3 w-3 text-secondary-foreground" />
+            </motion.div>
+          </motion.div>
+          <h3 className="font-bold text-lg text-foreground tracking-tight">No active exchanges yet</h3>
+          <p className="mt-2 text-sm text-muted-foreground max-w-[28ch] leading-relaxed">
+            Your knowledge journey begins here. Find a match, send a request, and start teaching!
+          </p>
+          <Button asChild className="mt-8 rounded-xl font-semibold shadow-glow-sm hover:shadow-glow transition-all duration-300" size="default">
+            <Link to="/match">
+              <Search className="mr-2 h-4 w-4" />
+              Explore Marketplace
+            </Link>
+          </Button>
+        </CardContent>
     </Card>
   );
 }
@@ -426,13 +441,13 @@ function activityFromExchange(exchange: Exchange, currentUserId: string) {
 
   switch (status) {
     case 'accepted':
-      return { icon: CheckCircle, color: 'text-emerald-500', bg: 'bg-emerald-500/10', text: <><span className="font-bold text-foreground">{partner.name.split(' ')[0]}</span> accepted your request.</>, time: timeLabel };
+      return { avatar: partner.avatar, name: partner.name, icon: CheckCircle, color: 'text-emerald-500', bg: 'bg-emerald-500/10 text-emerald-500 border-emerald-500/20', text: <><span className="font-bold text-foreground">{partner.name.split(' ')[0]}</span> accepted your request.</>, time: timeLabel };
     case 'pending':
       return exchange.requester.id === currentUserId
-        ? { icon: Clock, color: 'text-primary', bg: 'bg-primary/10', text: <>Waiting for <span className="font-bold text-foreground">{partner.name.split(' ')[0]}</span>.</>, time: timeLabel }
-        : { icon: Users, color: 'text-primary', bg: 'bg-primary/10', text: <><span className="font-bold text-foreground">{partner.name.split(' ')[0]}</span> sent a request.</>, time: timeLabel };
+        ? { avatar: partner.avatar, name: partner.name, icon: Clock, color: 'text-primary', bg: 'bg-primary/10 text-primary border-primary/20', text: <>Waiting for <span className="font-bold text-foreground">{partner.name.split(' ')[0]}</span>.</>, time: timeLabel }
+        : { avatar: partner.avatar, name: partner.name, icon: Users, color: 'text-primary', bg: 'bg-primary/10 text-primary border-primary/20', text: <><span className="font-bold text-foreground">{partner.name.split(' ')[0]}</span> sent a request.</>, time: timeLabel };
     case 'completed':
-      return { icon: Star, color: 'text-amber-500', bg: 'bg-amber-500/10', text: <>Session with <span className="font-bold text-foreground">{partner.name.split(' ')[0]}</span> completed!</>, time: timeLabel };
+      return { avatar: partner.avatar, name: partner.name, icon: Star, color: 'text-amber-500', bg: 'bg-amber-500/10 text-amber-500 border-amber-500/20', text: <>Session with <span className="font-bold text-foreground">{partner.name.split(' ')[0]}</span> completed!</>, time: timeLabel };
     default:
       return null;
   }
@@ -558,10 +573,19 @@ export default function DashboardPage() {
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.45, type: 'spring', stiffness: 110, damping: 20 }}
         >
-          <div className="relative overflow-hidden rounded-3xl glass-strong p-6 md:p-8 border border-white/5 dark:border-white/10 shadow-glow-sm">
-            {/* Gradient mesh inside banner - Teal & Blue */}
-            <div className="pointer-events-none absolute inset-0 bg-gradient-to-br from-primary/10 via-background/50 to-primary/5" />
-            <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(ellipse_80%_60%_at_70%_-10%,hsl(var(--primary)/0.15),hsl(var(--primary)/0.04))]" />
+          <div className="relative overflow-hidden rounded-3xl glass-strong p-6 md:p-8 border border-border/50 shadow-glow-sm">
+            {/* Dynamic Background Image Sequence */}
+            <motion.div
+              className="absolute inset-0 z-0 pointer-events-none opacity-[0.03] dark:opacity-20 mix-blend-overlay"
+              animate={{ scale: [1.02, 1.05, 1.02], rotate: [0, 0.5, 0], x: [0, -5, 0] }}
+              transition={{ duration: 30, repeat: Infinity, ease: 'linear' }}
+            >
+              <img src="https://images.unsplash.com/photo-1550745165-9bc0b252726f?q=80&w=2000&auto=format&fit=crop" className="w-full h-full object-cover grayscale brightness-110 contrast-125 blur-sm" alt="Dashboard Abstract" />
+            </motion.div>
+
+            {/* Gradient mesh inside banner */}
+            <div className="pointer-events-none absolute inset-0 bg-gradient-to-r from-primary/10 via-background/60 to-secondary/10 dark:from-primary/20 dark:via-background/80 dark:to-accent/10 z-0" />
+            <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(ellipse_100%_100%_at_100%_0%,hsl(var(--secondary)/0.15),transparent)] z-0" />
             {/* Ambient blobs */}
             <div className="pointer-events-none absolute -top-12 -left-12 h-44 w-44 rounded-full bg-primary/20 blur-[80px]" />
             <div className="pointer-events-none absolute -bottom-12 -right-8 h-52 w-52 rounded-full bg-primary/15 blur-[80px]" />
@@ -756,7 +780,12 @@ export default function DashboardPage() {
                     {!user ? (
                       <div className="flex flex-wrap gap-1.5">{[0, 1, 2].map(i => <Skeleton key={i} className="h-6 w-16 rounded-full" />)}</div>
                     ) : (user.skillsOffered ?? []).length === 0 ? (
-                      <p className="text-xs text-muted-foreground">No skills added. <Link to={`/profile/${user?.id}`} className="text-primary hover:underline font-medium">Add them →</Link></p>
+                        <div className="flex flex-col items-center justify-center p-4 rounded-xl border border-dashed border-border/50 bg-muted/10 text-center">
+                          <p className="text-xs text-muted-foreground mb-2">No skills added yet.</p>
+                          <Button asChild size="sm" variant="outline" className="h-7 text-[11px] rounded-lg">
+                            <Link to={`/profile/${user?.id}`} className="text-primary hover:text-primary">Add skills to teach</Link>
+                          </Button>
+                        </div>
                     ) : (
                       <div className="flex flex-wrap gap-2">
                         {(user.skillsOffered ?? []).slice(0, 5).map((skill: Skill) => (
@@ -783,7 +812,9 @@ export default function DashboardPage() {
                     {!user ? (
                       <div className="flex flex-wrap gap-1.5">{[0, 1, 2].map(i => <Skeleton key={i} className="h-6 w-16 rounded-full" />)}</div>
                     ) : (user.skillsWanted ?? []).length === 0 ? (
-                      <p className="text-xs text-muted-foreground">No skills added yet.</p>
+                        <div className="flex flex-col items-center justify-center p-4 rounded-xl border border-dashed border-border/50 bg-muted/10 text-center">
+                          <p className="text-xs text-muted-foreground">You haven't listed what you want to learn.</p>
+                        </div>
                     ) : (
                       <div className="flex flex-wrap gap-2">
                         {(user.skillsWanted ?? []).slice(0, 5).map((skill: Skill) => (
@@ -798,7 +829,7 @@ export default function DashboardPage() {
                         )}
                       </div>
                     )}
-                    <Button asChild variant="outline" size="sm" className="mt-5 w-full rounded-xl text-xs border-white/5 bg-background shadow-none hover:bg-background/80">
+                    <Button asChild variant="outline" size="sm" className="mt-5 w-full rounded-xl text-xs border-border bg-background shadow-none hover:bg-muted">
                       <Link to={`/profile/${user?.id}`}>Edit Skills <ArrowRight className="ml-1.5 h-3.5 w-3.5" /></Link>
                     </Button>
                   </div>
@@ -823,11 +854,21 @@ export default function DashboardPage() {
                       {activityItems.length > 0 ? (
                         activityItems.map((item, i) => (
                           item ? (
-                            <div key={i} className="flex items-start gap-3 rounded-xl p-2.5 transition-colors hover:bg-white/5 dark:hover:bg-white/5">
-                              <div className={cn('flex h-8 w-8 shrink-0 items-center justify-center rounded-xl md:shadow-glow-sm', item.bg)}>
-                                {item.icon && <item.icon className={cn('h-3.5 w-3.5', item.color)} />}
+                            <div key={i} className="group relative flex items-start gap-3 rounded-xl p-2.5 transition-colors hover:bg-muted/50 dark:hover:bg-white/5 cursor-default">
+                              <div className="relative flex h-9 w-9 shrink-0 items-center justify-center rounded-xl overflow-hidden ring-1 ring-white/10 shadow-glow-sm">
+                                {item.avatar ? (
+                                  <img src={item.avatar} alt={item.name} className="h-full w-full object-cover transition-transform duration-500 group-hover:scale-110" />
+                                ) : (
+                                  <div className={cn('flex h-full w-full flex-col items-center justify-center bg-background', item.bg)}>
+                                    <span className="text-xs font-bold text-primary">{item.name?.charAt(0)}</span>
+                                  </div>
+                                )}
+                                {/* Tiny bottom-right badge for status */}
+                                <div className={cn('absolute -bottom-0.5 -right-0.5 flex h-4 w-4 shrink-0 items-center justify-center rounded-full border-[1.5px] border-background bg-background', item.bg)}>
+                                  {item.icon && <item.icon className="h-2.5 w-2.5 drop-shadow-md" />}
+                                </div>
                               </div>
-                              <div className="flex-1 min-w-0">
+                              <div className="flex-1 min-w-0 flex flex-col justify-center pt-0.5">
                                 <p className="text-xs text-muted-foreground leading-relaxed">
                                   {item.text}
                                 </p>
@@ -837,8 +878,18 @@ export default function DashboardPage() {
                           ) : null
                         ))
                       ) : (
-                        <div className="text-center py-6 text-sm text-muted-foreground">
-                          No recent activity yet.
+                        <div className="text-center py-10 flex flex-col items-center justify-center relative overflow-hidden rounded-xl border border-dashed border-border/60 bg-muted/20">
+                          <motion.div
+                            animate={{ scale: [1, 1.05, 1], opacity: [0.7, 1, 0.7] }}
+                            transition={{ duration: 3, repeat: Infinity }}
+                            className="w-12 h-12 rounded-full bg-primary/10 flex items-center justify-center mb-3"
+                          >
+                            <Sparkles className="h-5 w-5 text-primary" />
+                          </motion.div>
+                          <p className="font-semibold text-sm">Quiet Network</p>
+                          <p className="text-xs text-muted-foreground mt-1 max-w-[20ch]">
+                            No recent activity yet. When users match and learn, it will appear here.
+                          </p>
                         </div>
                       )}
                     </div>

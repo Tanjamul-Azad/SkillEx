@@ -3,6 +3,60 @@
 -- 20 skills from mockData.ts seeded so the platform works on fresh DB
 -- ============================================================
 
+-- Backward-compatibility guard:
+-- Some local databases were created from older schemas that lacked one or more
+-- of these columns. Ensure the expected V3 columns exist before seeding.
+SET @add_icon_sql := (
+  SELECT IF(
+    EXISTS (
+      SELECT 1
+      FROM information_schema.COLUMNS
+      WHERE TABLE_SCHEMA = DATABASE()
+        AND TABLE_NAME = 'skills'
+        AND COLUMN_NAME = 'icon'
+    ),
+    'SELECT 1',
+    'ALTER TABLE skills ADD COLUMN icon VARCHAR(100) NOT NULL DEFAULT ''Code'' COMMENT ''Lucide icon name'''
+  )
+);
+PREPARE add_icon_stmt FROM @add_icon_sql;
+EXECUTE add_icon_stmt;
+DEALLOCATE PREPARE add_icon_stmt;
+
+SET @add_category_sql := (
+  SELECT IF(
+    EXISTS (
+      SELECT 1
+      FROM information_schema.COLUMNS
+      WHERE TABLE_SCHEMA = DATABASE()
+        AND TABLE_NAME = 'skills'
+        AND COLUMN_NAME = 'category'
+    ),
+    'SELECT 1',
+    'ALTER TABLE skills ADD COLUMN category VARCHAR(50) NOT NULL DEFAULT ''Tech'' COMMENT ''Tech / Design / Creative / …'''
+  )
+);
+PREPARE add_category_stmt FROM @add_category_sql;
+EXECUTE add_category_stmt;
+DEALLOCATE PREPARE add_category_stmt;
+
+SET @add_description_sql := (
+  SELECT IF(
+    EXISTS (
+      SELECT 1
+      FROM information_schema.COLUMNS
+      WHERE TABLE_SCHEMA = DATABASE()
+        AND TABLE_NAME = 'skills'
+        AND COLUMN_NAME = 'description'
+    ),
+    'SELECT 1',
+    'ALTER TABLE skills ADD COLUMN description VARCHAR(500) DEFAULT '''''
+  )
+);
+PREPARE add_description_stmt FROM @add_description_sql;
+EXECUTE add_description_stmt;
+DEALLOCATE PREPARE add_description_stmt;
+
 INSERT IGNORE INTO skills (id, name, icon, category, description) VALUES
   (UUID(), 'Video Editing',      'Video',          'Creative',      'Edit and produce professional videos using modern tools like Premiere Pro and DaVinci Resolve'),
   (UUID(), 'Guitar',             'Music',          'Creative',      'Learn acoustic or electric guitar from beginner chords to advanced techniques'),

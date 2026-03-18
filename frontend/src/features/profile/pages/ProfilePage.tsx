@@ -121,11 +121,17 @@ function SkillSection({
       </CardHeader>
       <CardContent>
         {skills.length === 0 ? (
-          <div className="flex flex-col items-center gap-2 py-3 text-center">
-            <p className="text-sm text-muted-foreground">{emptyText}</p>
+          <div className="flex flex-col items-center justify-center gap-3 py-8 px-4 text-center rounded-xl bg-muted/20 border border-dashed border-border/60">
+            <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center">
+              <Icon className="w-5 h-5 text-primary/70" />
+            </div>
+            <div className="space-y-1">
+              <p className="text-sm font-medium">{emptyText}</p>
+              <p className="text-xs text-muted-foreground">Add your first skill to get started on your journey.</p>
+            </div>
             {isOwner && (
-              <Button size="sm" variant="outline" className="rounded-xl text-xs h-7" onClick={onAdd}>
-                <Plus className="h-3 w-3 mr-1" /> Add Skill
+              <Button size="sm" variant="default" className="mt-2 rounded-xl text-xs h-8 shadow-glow-sm" onClick={onAdd}>
+                <Plus className="h-3.5 w-3.5 mr-1" /> Add Skill
               </Button>
             )}
           </div>
@@ -288,11 +294,13 @@ export default function ProfilePage() {
         >
           <Card className="overflow-hidden border-border/60">
             {/* Cover banner */}
-            <div className="relative h-40 bg-gradient-to-br from-primary/30 via-secondary/20 to-accent/20 overflow-hidden" style={localCover ? { backgroundImage: `url(${localCover})`, backgroundSize: 'cover', backgroundPosition: 'center' } : undefined}>
-              {/* Animated blobs in banner */}
-              <div className="animate-blob absolute -top-10 -left-10 h-48 w-48 rounded-full bg-primary/20 blur-3xl" />
-              <div className="animate-blob absolute -bottom-10 -right-10 h-48 w-48 rounded-full bg-secondary/20 blur-3xl" style={{ animationDelay: '4s' }} />
-              <div className="dot-grid absolute inset-0 opacity-20" />
+            <div className="relative h-48 sm:h-56 bg-gradient-to-r from-primary/80 via-accent/80 to-secondary/80 overflow-hidden" style={localCover ? { backgroundImage: `url(${localCover})`, backgroundSize: 'cover', backgroundPosition: 'center' } : undefined}>
+              {/* Vibrant Animated blobs in banner */}
+              <div className="absolute inset-0 bg-background/20 dark:bg-background/40 backdrop-blur-[2px] mix-blend-overlay" />
+              <div className="animate-blob absolute -top-20 -left-10 h-72 w-72 rounded-full bg-primary/40 blur-3xl mix-blend-multiply dark:mix-blend-screen" />
+              <div className="animate-blob absolute -bottom-20 -right-10 h-72 w-72 rounded-full bg-secondary/40 blur-3xl mix-blend-multiply dark:mix-blend-screen" style={{ animationDelay: '4s' }} />
+              <div className="animate-blob absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 h-56 w-56 rounded-full bg-accent/40 blur-3xl mix-blend-multiply dark:mix-blend-screen" style={{ animationDelay: '2s' }} />
+              <div className="dot-grid absolute inset-0 opacity-40 mix-blend-overlay" />
               {isOwnProfile && (
                 <Button
                   variant="ghost"
@@ -308,20 +316,32 @@ export default function ProfilePage() {
             <CardContent className="px-6 pb-6">
               {/* Avatar + action buttons */}
               <div className="flex flex-wrap items-end justify-between gap-4 -mt-12 mb-4">
-                <div className="relative">
-                  <Avatar className="w-24 h-24 border-4 border-background ring-4 ring-primary/20 shadow-glow">
+                <motion.div 
+                  initial={{ scale: 0.8, y: 10 }}
+                  animate={{ scale: 1, y: 0 }}
+                  transition={{ type: "spring", stiffness: 300, damping: 20 }}
+                  whileHover={{ scale: 1.05 }}
+                  className="relative group cursor-pointer"
+                >
+                  <Avatar className="w-28 h-28 border-4 border-background ring-4 ring-primary/20 shadow-glow transition-all duration-300 group-hover:ring-primary/40 group-hover:shadow-[0_0_30px_hsl(var(--primary)/0.3)]">
                     <AvatarImage
                       src={profileUser.avatar}
                       alt={profileUser.name}
                     />
-                    <AvatarFallback className="text-2xl font-bold">
+                    <AvatarFallback className="text-2xl font-bold bg-primary/5 text-primary">
                       {profileUser.name.charAt(0)}
                     </AvatarFallback>
                   </Avatar>
+                  <div className="absolute inset-0 rounded-full bg-gradient-to-tr from-primary/10 to-transparent opacity-0 transition-opacity duration-300 group-hover:opacity-100 pointer-events-none" />
+                  
                   {profileUser.isOnline && (
-                    <span className="absolute bottom-1 right-1 w-4 h-4 bg-secondary rounded-full border-2 border-background shadow-sm" />
+                    <motion.span 
+                      initial={{ scale: 0 }}
+                      animate={{ scale: 1 }}
+                      className="absolute bottom-1 right-1 w-5 h-5 bg-secondary rounded-full border-[3px] border-background shadow-md z-10" 
+                    />
                   )}
-                </div>
+                </motion.div>
 
                 <div className="flex items-center gap-2 mt-12 sm:mt-0">
                   {isOwnProfile ? (

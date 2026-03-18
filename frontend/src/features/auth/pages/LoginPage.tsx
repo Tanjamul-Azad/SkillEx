@@ -174,11 +174,20 @@ function LoginForm() {
     } else {
       const isUnconfirmed = result.error?.toLowerCase().includes('email not confirmed');
       const isWrongCreds = result.error?.toLowerCase().includes('invalid email or password');
+      const isBackendOffline = result.error?.toLowerCase().includes('unable to reach api server');
       toast({
         variant: 'destructive',
-        title: isUnconfirmed ? 'Confirm your email first' : isWrongCreds ? 'Wrong email or password' : 'Could not sign in',
+        title: isBackendOffline
+          ? 'Server is offline'
+          : isUnconfirmed
+          ? 'Confirm your email first'
+          : isWrongCreds
+          ? 'Wrong email or password'
+          : 'Could not sign in',
         description: isUnconfirmed
           ? 'We sent you a confirmation link. Check your inbox and click it before signing in.'
+          : isBackendOffline
+          ? 'Cannot connect to backend on port 8080. Start the backend server and try again.'
           : isWrongCreds
           ? 'The email or password you entered is incorrect. Please try again.'
           : (result.error ?? 'Something went wrong. Please try again in a moment.'),

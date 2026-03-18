@@ -1130,8 +1130,8 @@ export default function SettingsPage() {
                 setSavingAvatar(true);
                 try {
                   const compressed = await compressImage(avatarPreview);
-                  await api.patch('/users/me', { avatar: compressed });
-                  setLocalAvatar(compressed);
+                  $res = await fetch(compressed); $blob = await $res.blob(); $file = new File([$blob], 'avatar.jpg', { type: 'image/jpeg' }); $formData = new FormData(); $formData.append('file', $file); $upRes = await api.post('/upload', $formData, { headers: { 'Content-Type': 'multipart/form-data' } }); $newAvatarUrl = 'http://localhost:8080' + ($upRes.data as any).data.url; await api.patch('/users/me', { avatar: $newAvatarUrl });
+                  setLocalAvatar(newAvatarUrl);
                   await refreshUser();
                   setAvatarDialogOpen(false);
                   setAvatarPreview(null);

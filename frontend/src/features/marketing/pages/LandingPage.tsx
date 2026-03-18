@@ -43,12 +43,12 @@ const skills = [
 ];
 
 const users = [
-  { id: 'u1', name: 'Rahim Ahmed',   avatar: 'https://picsum.photos/seed/1/200/200', university: 'BUET', rating: 4.5, skillexScore: 500, isOnline: true  },
-  { id: 'u2', name: 'Nadia Ahmed',   avatar: 'https://picsum.photos/seed/2/200/200', university: 'DU',   rating: 4.6, skillexScore: 550, isOnline: false },
-  { id: 'u3', name: 'Karim Ahmed',   avatar: 'https://picsum.photos/seed/3/200/200', university: 'NSU',  rating: 4.7, skillexScore: 600, isOnline: true  },
-  { id: 'u4', name: 'Fatema Ahmed',  avatar: 'https://picsum.photos/seed/4/200/200', university: 'BRAC', rating: 4.8, skillexScore: 650, isOnline: false },
-  { id: 'u5', name: 'Arif Ahmed',    avatar: 'https://picsum.photos/seed/5/200/200', university: 'IUT',  rating: 4.9, skillexScore: 700, isOnline: true  },
-  { id: 'u6', name: 'Sumaiya Ahmed', avatar: 'https://picsum.photos/seed/6/200/200', university: 'CUET', rating: 4.5, skillexScore: 750, isOnline: false },
+  { id: 'u1', name: 'Rahim Ahmed',   avatar: 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?auto=format&fit=crop&w=200&q=80', university: 'BUET', rating: 4.5, skillexScore: 500, isOnline: true  },
+  { id: 'u2', name: 'Nadia Ahmed',   avatar: 'https://images.unsplash.com/photo-1494790108377-be9c29b29330?auto=format&fit=crop&w=200&q=80', university: 'DU',   rating: 4.6, skillexScore: 550, isOnline: false },
+  { id: 'u3', name: 'Karim Ahmed',   avatar: 'https://images.unsplash.com/photo-1599566150163-29194dcaad36?auto=format&fit=crop&w=200&q=80', university: 'NSU',  rating: 4.7, skillexScore: 600, isOnline: true  },
+  { id: 'u4', name: 'Fatema Ahmed',  avatar: 'https://images.unsplash.com/photo-1438761681033-6461ffad8d80?auto=format&fit=crop&w=200&q=80', university: 'BRAC', rating: 4.8, skillexScore: 650, isOnline: false },
+  { id: 'u5', name: 'Arif Ahmed',    avatar: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?auto=format&fit=crop&w=200&q=80', university: 'IUT',  rating: 4.9, skillexScore: 700, isOnline: true  },
+  { id: 'u6', name: 'Sumaiya Ahmed', avatar: 'https://images.unsplash.com/photo-1544005313-94ddf0286df2?auto=format&fit=crop&w=200&q=80', university: 'CUET', rating: 4.5, skillexScore: 750, isOnline: false },
 ];
 import MarketingLayout from '@/components/layout/MarketingLayout';
 
@@ -236,8 +236,8 @@ const SkillExchangeAnimation = () => (
     <div className="relative flex items-center justify-between gap-3">
       {/* ── User A ── */}
       <div className="flex flex-col items-center gap-2.5 shrink-0">
-        <div className="flex h-14 w-14 items-center justify-center rounded-2xl border border-violet-500/25 bg-violet-500/10">
-          <Figma className="h-6 w-6 text-violet-400" />
+        <div className="flex h-14 w-14 items-center justify-center overflow-hidden rounded-2xl border border-violet-500/25 ring-2 ring-background shadow-lg">
+          <img src="https://images.unsplash.com/photo-1544005313-94ddf0286df2?auto=format&fit=crop&w=150&q=80" alt="Arya" className="h-full w-full object-cover" />
         </div>
         <p className="text-sm font-bold">Arya</p>
         <Badge variant="outline" className="text-[10px] border-violet-500/30 text-violet-400 bg-violet-500/5">
@@ -271,8 +271,8 @@ const SkillExchangeAnimation = () => (
 
       {/* ── User B ── */}
       <div className="flex flex-col items-center gap-2.5 shrink-0">
-        <div className="flex h-14 w-14 items-center justify-center rounded-2xl border border-primary/25 bg-primary/10">
-          <Code className="h-6 w-6 text-primary" />
+        <div className="flex h-14 w-14 items-center justify-center overflow-hidden rounded-2xl border border-primary/25 ring-2 ring-background shadow-lg">
+          <img src="https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?auto=format&fit=crop&w=150&q=80" alt="Dev" className="h-full w-full object-cover" />
         </div>
         <p className="text-sm font-bold">Dev</p>
         <Badge variant="outline" className="text-[10px] border-primary/30 text-primary bg-primary/5">
@@ -410,15 +410,15 @@ const ComparisonSection = () => {
 // None are near the center content area (max-w-5xl)
 const floatingSkillsData = [
   // ── Left column ──────────────────────────────────────────
-  { name: 'Guitar', icon: Music, side: 'left', top: '12%', delay: 0, duration: 3.8 },
-  { name: 'Photography', icon: Camera, side: 'left', top: '32%', delay: 0.6, duration: 4.2 },
-  { name: 'Video Editing', icon: Film, side: 'left', top: '54%', delay: 1.2, duration: 3.5 },
-  { name: 'Git & GitHub', icon: TrendingUp, side: 'left', top: '74%', delay: 1.8, duration: 4.6 },
+  { name: 'Guitar', icon: Music, image: 'https://images.unsplash.com/photo-1510915361894-db8b60106cb1?auto=format&fit=crop&w=150&q=80', side: 'left', top: '12%', delay: 0, duration: 3.8 },
+  { name: 'Photography', icon: Camera, image: 'https://images.unsplash.com/photo-1516245834210-c4c14271569b?auto=format&fit=crop&w=150&q=80', side: 'left', top: '32%', delay: 0.6, duration: 4.2 },
+  { name: 'Video Editing', icon: Film, image: 'https://images.unsplash.com/photo-1574717024653-61fd2cf4d44d?auto=format&fit=crop&w=150&q=80', side: 'left', top: '54%', delay: 1.2, duration: 3.5 },
+  { name: 'Git & GitHub', icon: TrendingUp, image: 'https://images.unsplash.com/photo-1618401471353-b98afee0b2eb?auto=format&fit=crop&w=150&q=80', side: 'left', top: '74%', delay: 1.8, duration: 4.6 },
   // ── Right column ─────────────────────────────────────────
-  { name: 'Python', icon: Code, side: 'right', top: '18%', delay: 0.3, duration: 4.0 },
-  { name: 'Data Science', icon: Database, side: 'right', top: '38%', delay: 0.9, duration: 3.6 },
-  { name: 'Figma', icon: Figma, side: 'right', top: '58%', delay: 1.5, duration: 4.4 },
-  { name: 'Public Speaking', icon: Mic, side: 'right', top: '76%', delay: 2.1, duration: 3.9 },
+  { name: 'Python', icon: Code, image: 'https://images.unsplash.com/photo-1526374965328-7f61d4dc18c5?auto=format&fit=crop&w=150&q=80', side: 'right', top: '18%', delay: 0.3, duration: 4.0 },
+  { name: 'Data Science', icon: Database, image: 'https://images.unsplash.com/photo-1551288049-bebda4e38f71?auto=format&fit=crop&w=150&q=80', side: 'right', top: '38%', delay: 0.9, duration: 3.6 },
+  { name: 'Figma', icon: Figma, image: 'https://images.unsplash.com/photo-1611162617474-5b21e879e113?auto=format&fit=crop&w=150&q=80', side: 'right', top: '58%', delay: 1.5, duration: 4.4 },
+  { name: 'Public Speaking', icon: Mic, image: 'https://images.unsplash.com/photo-1475721025505-8b3d602db069?auto=format&fit=crop&w=150&q=80', side: 'right', top: '76%', delay: 2.1, duration: 3.9 },
 ];
 
 /* Bubble component with continuous floating animation */
@@ -441,8 +441,8 @@ const FloatingBubble = React.memo(({ skill }: {
     >
       {/* Inner: continuous bubble float */}
       <motion.div
-        className="flex items-center gap-2.5 rounded-2xl border border-white/10 bg-white/5 backdrop-blur-md px-4 py-2.5 text-sm font-medium shadow-lg cursor-default select-none"
-        animate={{ y: [0, -10, 0], scale: [1, 1.03, 1] }}
+        className="flex items-center gap-3 rounded-full border border-white/5 bg-white-[2%] backdrop-blur-xl p-1.5 pr-5 text-sm font-medium shadow-2xl shadow-primary/5 cursor-default select-none glass-subtle overflow-hidden relative"
+        animate={{ y: [0, -10, 0] }}
         transition={{
           duration: skill.duration,
           repeat: Infinity,
@@ -450,10 +450,11 @@ const FloatingBubble = React.memo(({ skill }: {
           delay: skill.delay,
         }}
       >
-        <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-xl bg-primary/15">
-          <skill.icon className="h-3.5 w-3.5 text-primary" />
+        <div className="absolute inset-0 bg-gradient-to-r from-primary/10 via-transparent to-transparent opacity-50 z-0" />
+        <div className="relative z-10 flex h-10 w-10 shrink-0 items-center justify-center rounded-full overflow-hidden bg-background">
+          <img src={skill.image} alt={skill.name} className="h-full w-full object-cover transition-transform duration-700 hover:scale-110" />
         </div>
-        <span className="text-foreground/80 whitespace-nowrap">{skill.name}</span>
+        <span className="relative z-10 text-foreground/90 whitespace-nowrap font-semibold tracking-tight">{skill.name}</span>
       </motion.div>
     </motion.div>
   );
@@ -1011,7 +1012,7 @@ const testimonials = [
   {
     name: 'Nadia Rahman',
     university: 'BUET',
-    avatar: 'https://picsum.photos/seed/101/100/100',
+    avatar: 'https://images.unsplash.com/photo-1494790108377-be9c29b29330?auto=format&fit=crop&w=100&q=80',
     role: 'Computer Science, 3rd Year',
     text: "SkillEx is a game-changer. I learned Python from a senior without spending a single taka. The platform is intuitive and the community is incredibly supportive.",
     rating: 5,
@@ -1019,7 +1020,7 @@ const testimonials = [
   {
     name: 'Karim Chowdhury',
     university: 'Dhaka University',
-    avatar: 'https://picsum.photos/seed/102/100/100',
+    avatar: 'https://images.unsplash.com/photo-1599566150163-29194dcaad36?auto=format&fit=crop&w=100&q=80',
     role: 'Business Studies, 2nd Year',
     text: "I was struggling with public speaking. Through SkillEx I found a practice partner who's now a close friend. It's boosted my confidence immensely.",
     rating: 5,
@@ -1027,7 +1028,7 @@ const testimonials = [
   {
     name: 'Fatema Akhter',
     university: 'NSU',
-    avatar: 'https://picsum.photos/seed/103/100/100',
+    avatar: 'https://images.unsplash.com/photo-1438761681033-6461ffad8d80?auto=format&fit=crop&w=100&q=80',
     role: 'Graphic Design, 4th Year',
     text: "I traded Figma lessons for music production sessions. That's the magic — everyone wins, no one pays. Completely changed how I think about learning.",
     rating: 5,

@@ -21,6 +21,17 @@ export const UserService = {
     return api.patch<User>('/users/me', data);
   },
 
+  /** Upload a file (POST /api/upload) */
+  uploadFile: async (file: File): Promise<{ url: string }> => {
+    const formData = new FormData();
+    formData.append('file', file);
+    return api.post<{ url: string }>('/upload', formData, {
+      headers: {
+        'Content-Type': 'multipart/form-data',
+      },
+    });
+  },
+
   /** POST /api/users/me/skills — add an existing catalog skill */
   addSkill: async (skillId: string, type: 'offered' | 'wanted', level = 'BEGINNER'): Promise<void> => {
     return api.post<void>('/users/me/skills', { skillId, type, level: level.toUpperCase() });

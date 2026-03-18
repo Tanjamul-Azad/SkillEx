@@ -80,7 +80,18 @@ export class ApiClient {
       ...(options?.headers as Record<string, string> ?? {}),
     };
 
-    const response = await fetch(url, { ...options, headers });
+    let response: Response;
+    try {
+      response = await fetch(url, { ...options, headers });
+    } catch (error) {
+      const message =
+        error instanceof Error && error.message
+          ? error.message
+          : 'Network request failed';
+      throw new ApiError(0, 'Network Error', {
+        message: `Unable to reach API server. Make sure backend is running. (${message})`,
+      });
+    }
 
     if (!response.ok) {
       const errorData = await response.json().catch(() => ({}));

@@ -541,9 +541,11 @@ const EventCard = React.memo(({ event }: { event: Event }) => {
   const { toast } = useToast();
   return (
     <Card className="overflow-hidden h-full flex flex-col transition-all duration-400 ease-snappy hover:shadow-glow-sm hover:-translate-y-2 group">
-      <div className={cn("h-40 w-full flex flex-col justify-end p-4 text-white", event.coverGradient)}>
-        <Badge className="w-fit bg-black/20 text-white backdrop-blur-sm">UPCOMING</Badge>
-        <h3 className="mt-2 text-xl font-bold text-shadow-lg">{event.title}</h3>
+      <div className={cn("relative h-40 w-full flex flex-col justify-end p-4 text-white overflow-hidden", event.coverGradient)}>
+        <img src="https://images.unsplash.com/photo-1505373877841-8d25f7d46678?auto=format&fit=crop&w=400&q=80" alt="Event Cover" className="absolute inset-0 h-full w-full object-cover mix-blend-overlay opacity-60 group-hover:scale-110 transition-transform duration-700" />
+        <div className="absolute inset-0 bg-gradient-to-t from-black/90 to-transparent z-10" />
+        <Badge className="relative z-20 w-fit bg-black/40 text-white backdrop-blur-sm border-white/20">UPCOMING</Badge>
+        <h3 className="relative z-20 mt-2 text-xl font-bold text-shadow-lg drop-shadow-md">{event.title}</h3>
       </div>
       <CardContent className="p-4 flex-grow flex flex-col">
         <div className="text-sm space-y-2">
@@ -615,9 +617,14 @@ const EventsTab = () => {
   return (
     <div className="space-y-6">
       {featuredEvent ? (
-        <div className={cn("relative h-48 rounded-lg overflow-hidden p-8 flex flex-col justify-end text-white", featuredEvent.coverGradient)}>
-          <h2 className="text-3xl font-bold font-headline">{featuredEvent.title}</h2>
-          <p>{new Date(featuredEvent.eventDate).toDateString()}</p>
+        <div className={cn("relative h-56 rounded-2xl overflow-hidden p-8 flex flex-col justify-end text-white shadow-xl group", featuredEvent.coverGradient)}>
+          <img src="https://images.unsplash.com/photo-1540575467063-178a50c2df87?auto=format&fit=crop&w=1200&q=80" alt="Featured Event" className="absolute inset-0 h-full w-full object-cover mix-blend-overlay opacity-60 group-hover:scale-105 transition-transform duration-700" />
+          <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-black/40 to-transparent z-10" />
+          <div className="relative z-20">
+            <Badge className="mb-3 bg-primary text-primary-foreground border-none shadow-glow-sm">FEATURED EVENT</Badge>
+            <h2 className="text-3xl md:text-4xl font-bold font-headline drop-shadow-md">{featuredEvent.title}</h2>
+            <p className="mt-2 text-white/90 font-medium flex items-center gap-2 drop-shadow-sm"><Calendar className="h-4 w-4" /> {new Date(featuredEvent.eventDate).toDateString()}</p>
+          </div>
         </div>
       ) : (
         <div className="h-48 rounded-lg bg-muted flex items-center justify-center text-muted-foreground">Loading events...</div>

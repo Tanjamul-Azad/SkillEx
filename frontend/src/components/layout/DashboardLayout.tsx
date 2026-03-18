@@ -63,9 +63,9 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
 
           {/* Ambient background */}
           <div className="pointer-events-none fixed inset-0 z-0 overflow-hidden" aria-hidden="true">
-            <div className="absolute -top-32 -left-32 h-80 w-80 rounded-full bg-primary/8 blur-3xl animate-blob" />
-            <div className="absolute -bottom-32 -right-32 h-96 w-96 rounded-full bg-secondary/6 blur-3xl animate-blob" style={{ animationDelay: '4s' }} />
-            <div className="absolute top-1/2 left-1/2 h-64 w-64 -translate-x-1/2 -translate-y-1/2 rounded-full bg-accent/4 blur-3xl animate-blob" style={{ animationDelay: '8s' }} />
+            <div className="absolute -top-40 -left-40 h-96 w-96 rounded-full bg-primary/20 dark:bg-primary/10 blur-[100px] animate-blob mix-blend-multiply dark:mix-blend-screen" />
+            <div className="absolute -bottom-40 -right-40 h-[28rem] w-[28rem] rounded-full bg-secondary/20 dark:bg-secondary/10 blur-[120px] animate-blob mix-blend-multiply dark:mix-blend-screen" style={{ animationDelay: '4s' }} />
+            <div className="absolute top-1/3 left-1/3 h-80 w-80 -translate-x-1/2 -translate-y-1/2 rounded-full bg-accent/20 dark:bg-accent/10 blur-[100px] animate-blob mix-blend-multiply dark:mix-blend-screen" style={{ animationDelay: '8s' }} />
           </div>
 
           {/* Desktop sidebar */}

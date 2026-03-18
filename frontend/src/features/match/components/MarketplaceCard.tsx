@@ -17,17 +17,25 @@ export const MarketplaceCard: FC<{ profile: User }> = React.memo(({ profile }) =
 
   return (
     <>
-      <Card className="group h-full overflow-hidden transition-all duration-400 ease-snappy hover:-translate-y-1.5 hover:border-primary/40 hover:shadow-[0_12px_40px_-12px_hsl(var(--primary)/0.25),0_4px_12px_hsl(220_20%_40%/0.1)]">
-        <div className="absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-white/40 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
-        <CardContent className="relative p-5">
-          <div className="flex items-start justify-between gap-3">
+      <Card className="group relative h-full overflow-hidden transition-all duration-400 ease-snappy hover:-translate-y-1.5 hover:border-primary/40 hover:shadow-[0_12px_40px_-12px_hsl(var(--primary)/0.25),0_4px_12px_hsl(220_20%_40%/0.1)]">
+        <div className="absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-white/40 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500 z-20" />
+        
+        {/* Dynamic Cover Image */}
+        <div className="absolute inset-x-0 top-0 h-20 overflow-hidden z-0">
+          <div className="absolute inset-0 bg-gradient-to-r from-primary/40 to-secondary/40 mix-blend-overlay opacity-50 z-10" />
+          <img src="https://images.unsplash.com/photo-1550745165-9bc0b252726f?q=80&w=400&auto=format&fit=crop" alt="Cover" className="h-full w-full object-cover opacity-40 mix-blend-luminosity grayscale group-hover:grayscale-0 transition-all duration-700 group-hover:scale-110 group-hover:opacity-70" />
+          <div className="absolute inset-0 bg-gradient-to-t from-card via-card/90 to-transparent z-10" />
+        </div>
+
+        <CardContent className="relative z-10 p-5 pt-12">
+          <div className="flex items-start justify-between gap-3 relative z-20">
             <div className="flex items-center gap-3">
-              <Avatar className="h-14 w-14 ring-2 ring-border group-hover:ring-primary/30 transition-all">
-                <AvatarImage src={profile.avatar ?? undefined} />
-                <AvatarFallback>{profile.name.charAt(0)}</AvatarFallback>
+              <Avatar className="h-14 w-14 ring-4 ring-card group-hover:ring-primary/30 transition-all shadow-lg bg-card">
+                <AvatarImage src={profile.avatar ?? undefined} className="object-cover" />
+                <AvatarFallback className="bg-muted text-foreground font-bold">{profile.name.charAt(0)}</AvatarFallback>
               </Avatar>
-              <div>
-                <h3 className="font-headline text-base font-bold">{profile.name}</h3>
+              <div className="mt-2">
+                <h3 className="font-headline text-base font-bold drop-shadow-sm">{profile.name}</h3>
                 <p className="text-sm text-muted-foreground">{profile.university || 'Global Community'}</p>
                 {profile.isOnline && (
                   <span className="mt-0.5 inline-flex items-center gap-1 text-xs font-medium text-secondary">

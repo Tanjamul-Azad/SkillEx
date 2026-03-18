@@ -342,18 +342,26 @@ const MatchCard: FC<{ match: MatchUser }> = React.memo(({ match }) => {
   const [requestOpen, setRequestOpen] = useState(false);
   return (
     <>
-      <Card className="group h-full overflow-hidden transition-all duration-400 ease-snappy hover:-translate-y-1.5 hover:border-primary/40 hover:shadow-[0_12px_40px_-12px_hsl(var(--primary)/0.25),0_4px_12px_hsl(220_20%_40%/0.1)]">
+      <Card className="group relative h-full overflow-hidden transition-all duration-400 ease-snappy hover:-translate-y-1.5 hover:border-primary/40 hover:shadow-[0_12px_40px_-12px_hsl(var(--primary)/0.25),0_4px_12px_hsl(220_20%_40%/0.1)]">
         {/* Animated sheen line */}
-        <div className="absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-white/40 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
-        <CardContent className="relative p-5">
-          <div className="absolute top-5 right-4"><MatchScoreRing score={match.compatibilityScore} size={48} /></div>
-          <div className="flex items-center gap-3 pr-14">
-            <Avatar className="h-14 w-14 ring-2 ring-border group-hover:ring-primary/30 transition-all">
-              <AvatarImage src={match.avatar ?? undefined} />
-              <AvatarFallback>{match.name.charAt(0)}</AvatarFallback>
+        <div className="absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-white/40 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500 z-20" />
+        
+        {/* Dynamic Cover Image */}
+        <div className="absolute inset-x-0 top-0 h-20 overflow-hidden z-0">
+          <div className="absolute inset-0 bg-gradient-to-r from-primary/40 to-secondary/40 mix-blend-overlay opacity-60 z-10" />
+          <img src="https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?q=80&w=400&auto=format&fit=crop" alt="Cover" className="h-full w-full object-cover opacity-50 mix-blend-luminosity grayscale group-hover:grayscale-0 transition-all duration-700 group-hover:scale-110 group-hover:opacity-80" />
+          <div className="absolute inset-0 bg-gradient-to-t from-card via-card/90 to-transparent z-10" />
+        </div>
+
+        <CardContent className="relative z-10 p-5 pt-12">
+          <div className="absolute top-12 right-4"><MatchScoreRing score={match.compatibilityScore} size={48} /></div>
+          <div className="flex items-center gap-3 pr-14 relative z-20">
+            <Avatar className="h-14 w-14 ring-4 ring-card group-hover:ring-primary/30 transition-all shadow-lg bg-card">
+              <AvatarImage src={match.avatar ?? undefined} className="object-cover" />
+              <AvatarFallback className="bg-muted text-foreground font-bold">{match.name.charAt(0)}</AvatarFallback>
             </Avatar>
-            <div>
-              <h3 className="font-headline text-base font-bold">{match.name}</h3>
+            <div className="mt-2">
+              <h3 className="font-headline text-base font-bold drop-shadow-sm">{match.name}</h3>
               <p className="text-sm text-muted-foreground">{match.university}</p>
               {match.isOnline && (
                 <span className="flex items-center gap-1 text-xs font-medium text-secondary">

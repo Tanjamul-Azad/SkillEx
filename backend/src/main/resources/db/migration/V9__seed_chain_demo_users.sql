@@ -18,6 +18,35 @@
 -- Password hash = BCrypt("SkiilEX@demo2026") — demo users only.
 -- ============================================================
 
+-- Compatibility guard for older `users` schemas.
+SET @users_rating_sql := (
+  SELECT IF(
+    EXISTS (
+      SELECT 1 FROM information_schema.COLUMNS
+      WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'users' AND COLUMN_NAME = 'rating'
+    ),
+    'SELECT 1',
+    'ALTER TABLE users ADD COLUMN rating DECIMAL(3,2) NOT NULL DEFAULT 0.00'
+  )
+);
+PREPARE users_rating_stmt FROM @users_rating_sql;
+EXECUTE users_rating_stmt;
+DEALLOCATE PREPARE users_rating_stmt;
+
+SET @users_online_sql := (
+  SELECT IF(
+    EXISTS (
+      SELECT 1 FROM information_schema.COLUMNS
+      WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'users' AND COLUMN_NAME = 'is_online'
+    ),
+    'SELECT 1',
+    'ALTER TABLE users ADD COLUMN is_online TINYINT(1) NOT NULL DEFAULT 0'
+  )
+);
+PREPARE users_online_stmt FROM @users_online_sql;
+EXECUTE users_online_stmt;
+DEALLOCATE PREPARE users_online_stmt;
+
 -- ── Demo users ───────────────────────────────────────────────
 INSERT IGNORE INTO users
   (id, name, email, password_hash, university, bio,

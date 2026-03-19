@@ -100,3 +100,30 @@ The app starts on `http://localhost:8080`. Flyway will automatically run
 | GET | /api/matches | Get skill matches |
 | POST | /api/exchanges | Request exchange |
 | GET | /api/exchanges | List exchanges |
+
+## Matching + Embeddings (What Powers Semantic Match)
+
+SkillEX uses a hybrid matcher (catalog skill graph + free-text intent similarity).
+
+### Embedding Generation
+
+- Interface: `TextEmbeddingProvider`
+- Active provider: `AdaptiveTextEmbeddingProvider` (runtime switch)
+- Modes:
+  - `app.embedding.provider=local`
+    - Uses `HashingTextEmbeddingProvider`
+    - Deterministic 128-d local vector built from normalized tokens + domain synonym expansion
+    - Fully offline (no external API call)
+  - `app.embedding.provider=api`
+    - Uses `GeminiApiTextEmbeddingProvider` (Gemini embedding endpoint)
+    - If API fails and `app.embedding.fallback-to-local=true`, it safely falls back to local vectors
+
+### Embedding Cache
+
+- Layer 1: in-memory LRU cache (`app.matching.intent.embedding-cache-max-entries`)
+- Layer 2 (optional): Redis cache with TTL (survives backend restart)
+  - Enable: `app.matching.intent.redis-enabled=true`
+  - TTL: `app.matching.intent.redis-ttl-hours` (default 24h)
+  - Key prefix: `app.matching.intent.redis-key-prefix`
+
+If Redis is disabled, a restart causes cold cache warm-up for first requests.

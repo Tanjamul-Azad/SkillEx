@@ -1,5 +1,5 @@
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useNavigate } from 'react-router-dom';
 import { useForm } from 'react-hook-form';
@@ -16,17 +16,19 @@ import { Input } from '@/components/ui/input';
 import { Form, FormControl, FormField, FormItem, FormMessage } from '@/components/ui/form';
 import { cn } from '@/lib/utils';
 import { useAuth } from '@/hooks/useAuth';
+import { useToast } from '@/hooks/use-toast';
 import { UserService } from '@/services/userService';
+import { SkillService } from '@/services/skillService';
 import type { Skill } from '@/types';
 
-// ── Static skill catalog ──────────────────────────────────────
+// ── Fallback static catalog (used while API loads) ────────────
 const ICON_MAP: Record<string, React.FC<{ className?: string }>> = {
   Film, Music, Code, Camera, Mic, Database, Paintbrush, PenTool,
   Laptop, Disc, Box, Megaphone, Languages, ChefHat, Palette,
   Table, AppWindow, BookOpen, Globe, Lightbulb,
 };
 
-const SKILL_CATALOG: Omit<Skill, 'level' | 'description'>[] = [
+const FALLBACK_CATALOG: Omit<Skill, 'level' | 'description'>[] = [
   { id: 'skill-1', name: 'Video Editing', icon: 'Film', category: 'Creative' },
   { id: 'skill-2', name: 'Guitar', icon: 'Music', category: 'Creative' },
   { id: 'skill-3', name: 'Python', icon: 'Code', category: 'Tech' },
@@ -143,9 +145,20 @@ const slideVariants = {
 export default function OnboardingPage() {
   const { user, isLoading } = useAuth();
   const navigate = useNavigate();
+  const { toast } = useToast();
   const [step, setStep] = useState(0);
   const [dir, setDir] = useState(1);
   const [saving, setSaving] = useState(false);
+  const [skillCatalog, setSkillCatalog] = useState<Omit<Skill, 'level' | 'description'>[]>(FALLBACK_CATALOG);
+
+  useEffect(() => {
+    SkillService.getAll()
+      .then((data) => {
+        const list = Array.isArray(data) ? data : [];
+        if (list.length > 0) setSkillCatalog(list as Omit<Skill, 'level' | 'description'>[]);
+      })
+      .catch(() => {}); // keep fallback on error
+  }, []);
 
   const [profileData, setProfileData] = useState<Step1Data>({ name: '', university: '' });
   const [skillsOffered, setSkillsOffered] = useState<string[]>([]);
@@ -173,20 +186,23 @@ export default function OnboardingPage() {
     if (!user) return;
     setSaving(true);
     try {
-      const toSkill = (id: string, isOffered: boolean): Skill => {
-        const s = SKILL_CATALOG.find((c) => c.id === id)!;
-        return { ...s, level: 'beginner', description: '' };
-      };
       await UserService.updateProfile(user.id, {
         name: profileData.name,
         university: profileData.university,
-        skillsOffered: skillsOffered.map((id) => toSkill(id, true)),
-        skillsWanted: skillsWanted.map((id) => toSkill(id, false)),
       });
+      await Promise.all([
+        ...skillsOffered.map((id) => UserService.addSkill(id, 'offered', 'BEGINNER')),
+        ...skillsWanted.map((id) => UserService.addSkill(id, 'wanted', 'BEGINNER')),
+      ]);
       go(3); // success screen
       setTimeout(() => navigate('/dashboard'), 1800);
     } catch (e) {
       console.error('Onboarding save failed', e);
+      toast({
+        title: 'Setup failed',
+        description: e instanceof Error ? e.message : 'Could not save your profile. Please try again.',
+        variant: 'destructive',
+      });
       setSaving(false);
     }
   };
@@ -247,7 +263,7 @@ export default function OnboardingPage() {
                 <h2 className="text-xl font-bold mb-1">What can you teach?</h2>
                 <p className="text-muted-foreground text-sm mb-6">Pick up to <strong>3 skills</strong> you can share with others.</p>
                 <div className="grid grid-cols-4 gap-2.5 mb-6">
-                  {SKILL_CATALOG.map((skill) => (
+                  {skillCatalog.map((skill) => (
                     <SkillCard
                       key={skill.id}
                       skill={skill}
@@ -277,7 +293,7 @@ export default function OnboardingPage() {
                 <h2 className="text-xl font-bold mb-1">What do you want to learn?</h2>
                 <p className="text-muted-foreground text-sm mb-6">Pick up to <strong>3 skills</strong> you're excited to learn.</p>
                 <div className="grid grid-cols-4 gap-2.5 mb-6">
-                  {SKILL_CATALOG.map((skill) => (
+                  {skillCatalog.map((skill) => (
                     <SkillCard
                       key={skill.id}
                       skill={skill}

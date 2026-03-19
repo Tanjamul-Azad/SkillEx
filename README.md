@@ -102,6 +102,16 @@ Controller (thin, routing only)
 
 ## Quick Start
 
+### Full Stack (recommended)
+```bash
+npm install
+npm run dev
+```
+
+`npm run dev` now runs `scripts/dev/ensure-mysql.ps1` before backend startup.
+It auto-detects XAMPP/Windows MySQL, attempts to start it, waits for port 3306,
+and ensures the `skillex` database exists.
+
 ### Frontend
 ```bash
 cd frontend
@@ -131,4 +141,14 @@ Flyway automatically applies `V1__initial_schema.sql` on first run.
 | File | Purpose |
 |------|---------|
 | `frontend/.env.local` | Vite dev vars (`VITE_API_URL`, `VITE_APP_URL`) |
-| `backend/src/main/resources/application.properties` | Spring Boot datasource, JWT secret |
+| `backend/.env` | Backend secrets/config for local runs (DB, JWT, embedding provider/API keys) |
+| `backend/src/main/resources/application.properties` | Spring Boot defaults + env var bindings |
+
+### Gemini Embedding API Setup
+
+1. Copy `backend/.env.example` to `backend/.env`.
+2. Set `EMBEDDING_PROVIDER=api`.
+3. Set either `GEMINI_API_KEY` or `EMBEDDING_API_KEY`.
+4. Run `./start.ps1` from the repo root.
+
+If API mode is enabled but no key is present, the backend automatically falls back to local embeddings.

@@ -10,22 +10,12 @@ const Card = React.forwardRef<
     ref={ref}
     className={cn(
       // Base - using premium glassmorphism
-      "relative overflow-hidden rounded-2xl bg-card/60 backdrop-blur-xl",
-      // Subdued border to simulate glass reflection
-      "border border-white/20 dark:border-white/10",
-      // Clean, cool-toned shadows
-      "shadow-[0_4px_24px_-8px_hsl(220_20%_40%/0.12),0_1px_3px_hsl(220_20%_40%/0.08)]",
-      "dark:shadow-[0_4px_24px_-8px_hsl(0_0%_0%/0.5),0_1px_3px_hsl(0_0%_0%/0.3)]",
+      "relative overflow-hidden rounded-xl bg-card border border-border text-card-foreground shadow-sm",
       // GPU compositing and transitions
       "transform-gpu will-change-transform",
-      "transition-all duration-400 ease-snappy",
-      // Hover properties - levitate slightly + intense glow + sharp border highlight
-      "hover:-translate-y-1.5",
-      "hover:border-primary/40",
-      "hover:bg-card/80",
-      "hover:shadow-[0_12px_40px_-12px_hsl(var(--primary)/0.25),0_4px_12px_hsl(220_20%_40%/0.1)]",
-      "dark:hover:shadow-[0_12px_40px_-12px_hsl(var(--primary)/0.3),0_4px_12px_hsl(0_0%_0%/0.4)]",
-      // The "sheen" inner effect on hover
+      "transition-all duration-300 ease-out",
+      // Hover properties - levitate slightly
+      "hover:-translate-y-1 hover:shadow-md",
       "group",
       className
     )}

@@ -8,7 +8,7 @@
 
 import { Suspense, useEffect, useRef } from 'react';
 import { Canvas, useFrame } from '@react-three/fiber';
-import { Float, Stars, Html } from '@react-three/drei';
+import { Stars, Html } from '@react-three/drei';
 import { EffectComposer, Bloom } from '@react-three/postprocessing';
 import * as THREE from 'three';
 
@@ -22,9 +22,11 @@ const RING_DATA = [
 /* -- Wireframe orb: line-art globe + geodesic inner --------------- */
 function WireframeOrb() {
   const group = useRef<THREE.Group>(null!);
+  const elapsed = useRef(0);
 
-  useFrame(({ clock }) => {
-    const t = clock.elapsedTime;
+  useFrame((_, delta) => {
+    elapsed.current += delta;
+    const t = elapsed.current;
     group.current.rotation.y = t * 0.06;
     group.current.rotation.x = Math.sin(t * 0.025) * 0.10;
   });
@@ -66,9 +68,10 @@ function WireframeOrb() {
 function OrbitalRing({ radius, rotation, color, speed, nodes }: typeof RING_DATA[0]) {
   const orbitGroup = useRef<THREE.Group>(null!);
 
-  useFrame(({ clock }) => {
-    // Only rotate the nodes around the local Z axis (which matches the ring's path)
-    orbitGroup.current.rotation.z = clock.elapsedTime * speed;
+  const elapsed = useRef(0);
+  useFrame((_, delta) => {
+    elapsed.current += delta;
+    orbitGroup.current.rotation.z = elapsed.current * speed;
   });
 
   return (
@@ -147,9 +150,10 @@ function ParallaxGroup({ children }: { children: React.ReactNode }) {
     return () => window.removeEventListener('mousemove', fn);
   }, []);
 
-  useFrame(({ clock }) => {
-    // Subtle continuous rotation for the entire scene
-    const t = clock.elapsedTime;
+  const elapsed = useRef(0);
+  useFrame((_, delta) => {
+    elapsed.current += delta;
+    const t = elapsed.current;
 
     // Mouse parallax
     const targetX = mouse.current.x * 0.15;
@@ -181,11 +185,11 @@ function SceneContents() {
           <OrbitalRing key={i} {...r} />
         ))}
         {/* Dense starfield tied to parallax group for deep 3D movement */}
-        <Stars radius={50} depth={150} count={6000} factor={6} saturation={0.5} fade speed={0.4} />
+        <Stars radius={50} depth={150} count={4200} factor={5} saturation={0.5} fade speed={0.35} />
       </ParallaxGroup>
 
       {/* Background static stars for infinite depth */}
-      <Stars radius={100} depth={50} count={3000} factor={3} saturation={0} fade speed={0.1} />
+      <Stars radius={100} depth={50} count={1800} factor={2.5} saturation={0} fade speed={0.1} />
 
       {/* Bloom: Intense core, glowing lines */}
       <EffectComposer>

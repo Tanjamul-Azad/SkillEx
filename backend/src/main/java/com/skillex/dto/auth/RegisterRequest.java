@@ -12,8 +12,17 @@ public record RegisterRequest(
     @NotBlank @Email
     String email,
 
-    @NotBlank @Size(min = 6, max = 72)
+    @NotBlank @Size(min = 8, max = 72)
     String password,
 
-    String university
+    String university,
+
+    /** Name of the skill the user wants to teach (matched by name, case-insensitive) */
+    String skillToTeach,
+
+    /** Name of the skill the user wants to learn */
+    String skillToLearn,
+
+    /** Proficiency level: BEGINNER | MODERATE | EXPERT */
+    String level
 ) {}

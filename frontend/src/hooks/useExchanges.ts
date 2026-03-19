@@ -15,8 +15,8 @@ export function useExchanges(options: UseExchangesOptions = {}) {
     try {
       setLoading(true);
       setError(null);
-      const { data } = await exchangeService.list(options.status);
-      setExchanges(data);
+      const result = await exchangeService.list(options.status);
+      setExchanges(result.content ?? []);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to load exchanges');
     } finally {

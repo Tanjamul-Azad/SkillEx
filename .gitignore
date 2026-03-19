@@ -16,6 +16,10 @@ backend/apache-maven-3.9.6/
 ##──── Environment / secrets ────────────────────────
 .env.local
 .env.*.local
+backend/.env
+# Backend local secrets — never commit real credentials
+backend/src/main/resources/application-local.properties
+backend/src/main/resources/application-secrets.properties
 
 ##──── Editor / OS ───────────────────────────────────
 .DS_Store

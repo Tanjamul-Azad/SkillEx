@@ -1,0 +1,14 @@
+{
+  "name": "skillex-root",
+  "version": "0.1.0",
+  "private": true,
+  "scripts": {
+    "dev": "concurrently --kill-others-on-fail --names backend,frontend --prefix-colors cyan,magenta \"npm run dev:backend\" \"npm run dev:frontend\"",
+    "dev:backend": "powershell -NoProfile -ExecutionPolicy Bypass -File .\\scripts\\dev\\run-backend.ps1",
+    "dev:frontend": "cd frontend && npm run dev",
+    "stop": "powershell -NoProfile -ExecutionPolicy Bypass -File .\\start.ps1 -Stop"
+  },
+  "devDependencies": {
+    "concurrently": "^9.0.0"
+  }
+}

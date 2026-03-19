@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import {
   Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription,
@@ -14,7 +14,8 @@ import { ScrollArea } from '@/components/ui/scroll-area';
 import { useToast } from '@/hooks/use-toast';
 import { cn } from '@/lib/utils';
 import { Search, Plus, Check } from 'lucide-react';
-import { skills as allSkills } from '@data/mock/mockData';
+import { SkillService } from '@/services/skillService';
+import { UserService } from '@/services/userService';
 import type { Skill } from '@/types';
 
 interface Props {
@@ -37,18 +38,29 @@ const levelColor: Record<string, string> = {
 
 export function AddSkillDialog({ open, onClose, mode, existingIds, onSave }: Props) {
   const { toast } = useToast();
+  const [skills, setSkills] = useState<Skill[]>([]);
   const [query, setQuery] = useState('');
   const [category, setCategory] = useState('All');
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [saving, setSaving] = useState(false);
+  // custom skill state
+  const [customSelected, setCustomSelected] = useState(false);
+  const [customCategory, setCustomCategory] = useState('Other');
+
+  useEffect(() => {
+    if (!open) return;
+    SkillService.getAll()
+      .then((data) => setSkills(Array.isArray(data) ? data : []))
+      .catch(() => setSkills([]));
+  }, [open]);
 
   const filtered = useMemo(() => {
-    return (allSkills as Skill[]).filter((s) => {
+    return skills.filter((s) => {
       const qMatch = s.name.toLowerCase().includes(query.toLowerCase()) || s.description?.toLowerCase().includes(query.toLowerCase());
       const cMatch = category === 'All' || s.category === category;
       return qMatch && cMatch;
     });
-  }, [query, category]);
+  }, [skills, query, category]);
 
   const toggle = (id: string) => {
     setSelected((prev) => {
@@ -58,30 +70,57 @@ export function AddSkillDialog({ open, onClose, mode, existingIds, onSave }: Pro
     });
   };
 
+  // Show "create custom" card when query has no catalog matches
+  const showCreateCustom = query.trim().length > 0 && filtered.length === 0;
+  const totalToAdd = selected.size + (customSelected ? 1 : 0);
+
   const handleSave = async () => {
-    if (selected.size === 0) {
+    if (totalToAdd === 0) {
       toast({ title: 'Select at least one skill', variant: 'destructive' });
       return;
     }
     setSaving(true);
-    // TODO: PATCH /api/users/:id with new skill ids
-    await new Promise((r) => setTimeout(r, 700));
-    const added = (allSkills as Skill[]).filter((s) => selected.has(s.id));
-    onSave(added);
-    setSaving(false);
-    setSelected(new Set());
-    setQuery('');
-    setCategory('All');
-    onClose();
-    toast({
-      title: `${selected.size} skill${selected.size > 1 ? 's' : ''} added`,
-      description: `Added to your ${mode === 'offered' ? 'teach' : 'learn'} list.`,
-      variant: 'success',
-    });
+    try {
+      await Promise.all([
+        ...Array.from(selected).map((id) => UserService.addSkill(id, mode, 'BEGINNER')),
+        ...(customSelected
+          ? [UserService.addCustomSkill(query.trim(), customCategory, mode, 'BEGINNER')]
+          : []),
+      ]);
+      const added: Skill[] = [
+        ...skills.filter((s) => selected.has(s.id)),
+        ...(customSelected
+          ? [{ id: `custom_${Date.now()}`, name: query.trim(), icon: 'Zap', category: customCategory, level: 'beginner' as Skill['level'], description: '' }]
+          : []),
+      ];
+      onSave(added);
+      setSaving(false);
+      setSelected(new Set());
+      setCustomSelected(false);
+      setCustomCategory('Other');
+      setQuery('');
+      setCategory('All');
+      onClose();
+      toast({
+        title: `${added.length} skill${added.length > 1 ? 's' : ''} added`,
+        description: `Added to your ${mode === 'offered' ? 'teach' : 'learn'} list.`,
+        variant: 'success',
+      });
+    } catch (err) {
+      setSaving(false);
+      const msg = err instanceof Error ? err.message : null;
+      toast({
+        title: 'Could not add skill',
+        description: msg ?? 'Something went wrong. Please try again in a moment.',
+        variant: 'destructive',
+      });
+    }
   };
 
   const handleClose = () => {
     setSelected(new Set());
+    setCustomSelected(false);
+    setCustomCategory('Other');
     setQuery('');
     setCategory('All');
     onClose();
@@ -136,7 +175,7 @@ export function AddSkillDialog({ open, onClose, mode, existingIds, onSave }: Pro
         {/* Skill list */}
         <ScrollArea className="h-64 -mx-1 px-1">
           <div className="space-y-1.5">
-            {filtered.length === 0 && (
+            {filtered.length === 0 && !showCreateCustom && (
               <p className="py-8 text-center text-sm text-muted-foreground">No skills match your search.</p>
             )}
             {filtered.map((skill) => {
@@ -175,22 +214,72 @@ export function AddSkillDialog({ open, onClose, mode, existingIds, onSave }: Pro
                 </motion.label>
               );
             })}
+
+            {/* Create custom skill card */}
+            {showCreateCustom && (
+              <motion.div
+                initial={{ opacity: 0, y: 6 }}
+                animate={{ opacity: 1, y: 0 }}
+                className={`rounded-xl border p-3 transition-colors cursor-pointer ${
+                  customSelected
+                    ? 'border-primary bg-primary/5'
+                    : 'border-dashed border-border/60 hover:border-primary/40 hover:bg-muted/30'
+                }`}
+                onClick={() => setCustomSelected((v) => !v)}
+              >
+                <div className="flex items-center gap-3">
+                  <div className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-lg border-2 border-dashed ${
+                    customSelected ? 'border-primary bg-primary/10' : 'border-border/50'
+                  }`}>
+                    {customSelected
+                      ? <Check className="h-4 w-4 text-primary" />
+                      : <Plus className="h-4 w-4 text-muted-foreground" />}
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <p className="text-sm font-semibold">
+                      Create &ldquo;<span className="text-primary">{query.trim()}</span>&rdquo;
+                    </p>
+                    <p className="text-xs text-muted-foreground">Custom skill &mdash; not in the catalog yet</p>
+                  </div>
+                </div>
+
+                {/* Category picker — only visible when toggled on */}
+                {customSelected && (
+                  <div className="mt-3 flex flex-wrap gap-1.5" onClick={(e) => e.stopPropagation()}>
+                    {['Programming', 'Design', 'Music', 'Language', 'Science', 'Business', 'Arts', 'Other'].map((c) => (
+                      <button
+                        key={c}
+                        type="button"
+                        onClick={() => setCustomCategory(c)}
+                        className={`rounded-full px-2.5 py-0.5 text-xs font-semibold border transition-colors ${
+                          customCategory === c
+                            ? 'bg-primary text-primary-foreground border-primary'
+                            : 'border-border/40 text-muted-foreground hover:border-primary/40 hover:text-foreground'
+                        }`}
+                      >
+                        {c}
+                      </button>
+                    ))}
+                  </div>
+                )}
+              </motion.div>
+            )}
           </div>
         </ScrollArea>
 
         {/* Footer */}
         <div className="flex items-center justify-between gap-3 border-t border-border/40 pt-3">
           <span className="text-sm text-muted-foreground">
-            {selected.size > 0 ? `${selected.size} selected` : 'None selected'}
+            {totalToAdd > 0 ? `${totalToAdd} selected` : 'None selected'}
           </span>
           <div className="flex gap-2">
             <Button variant="outline" className="rounded-xl" onClick={handleClose}>Cancel</Button>
             <Button
               variant="gradient"
-              disabled={selected.size === 0 || saving}
+              disabled={totalToAdd === 0 || saving}
               onClick={handleSave}
             >
-              {saving ? 'Saving...' : `Add ${selected.size > 0 ? selected.size : ''} Skill${selected.size !== 1 ? 's' : ''}`}
+              {saving ? 'Saving...' : `Add ${totalToAdd > 0 ? totalToAdd : ''} Skill${totalToAdd !== 1 ? 's' : ''}`}
             </Button>
           </div>
         </div>

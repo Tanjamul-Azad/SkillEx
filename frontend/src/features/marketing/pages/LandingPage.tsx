@@ -16,8 +16,40 @@ import { Card, CardContent } from '@/components/ui/card';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { useCounter } from '@/hooks/useCounter';
 import { useScrollAnimation } from '@/hooks/useScrollAnimation';
-import { skills, users } from '@data/mock/mockData';
 import { cn } from '@/lib/utils';
+
+/* Static display data for the marketing page — no auth/API needed */
+const skills = [
+  { id: 'sk1',  name: 'Video Editing',    icon: 'Film',     category: 'Creative',      level: 'beginner'  as const },
+  { id: 'sk2',  name: 'Guitar',           icon: 'Music',    category: 'Creative',      level: 'moderate'  as const },
+  { id: 'sk3',  name: 'Python',           icon: 'Code',     category: 'Tech',          level: 'expert'    as const },
+  { id: 'sk4',  name: 'Figma',            icon: 'Figma',    category: 'Design',        level: 'beginner'  as const },
+  { id: 'sk5',  name: 'Photography',      icon: 'Camera',   category: 'Creative',      level: 'moderate'  as const },
+  { id: 'sk6',  name: 'Public Speaking',  icon: 'Mic',      category: 'Communication', level: 'expert'    as const },
+  { id: 'sk7',  name: 'Data Science',     icon: 'Database', category: 'Tech',          level: 'beginner'  as const },
+  { id: 'sk8',  name: 'Graphic Design',   icon: 'Pencil',   category: 'Design',        level: 'moderate'  as const },
+  { id: 'sk9',  name: 'English Writing',  icon: 'Pencil',   category: 'Language',      level: 'expert'    as const },
+  { id: 'sk10', name: 'Web Dev',          icon: 'Code',     category: 'Tech',          level: 'beginner'  as const },
+  { id: 'sk11', name: 'Music Production', icon: 'Music',    category: 'Creative',      level: 'moderate'  as const },
+  { id: 'sk12', name: 'Digital Marketing',icon: 'TrendingUp',category: 'Business',     level: 'expert'    as const },
+  { id: 'sk13', name: 'French Language',  icon: 'Bot',      category: 'Language',      level: 'beginner'  as const },
+  { id: 'sk14', name: 'Drawing',          icon: 'Pencil',   category: 'Creative',      level: 'moderate'  as const },
+  { id: 'sk15', name: 'Chess',            icon: 'RefreshCw',category: 'Strategy',      level: 'expert'    as const },
+  { id: 'sk16', name: 'Excel',            icon: 'Database', category: 'Business',      level: 'beginner'  as const },
+  { id: 'sk17', name: 'UI/UX Design',     icon: 'Figma',    category: 'Design',        level: 'moderate'  as const },
+  { id: 'sk18', name: '3D Modeling',      icon: 'Code',     category: 'Design',        level: 'expert'    as const },
+  { id: 'sk19', name: 'Calligraphy',      icon: 'Pencil',   category: 'Creative',      level: 'beginner'  as const },
+  { id: 'sk20', name: 'Cooking',          icon: 'Star',     category: 'Lifestyle',     level: 'moderate'  as const },
+];
+
+const users = [
+  { id: 'u1', name: 'Rahim Ahmed',   avatar: 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?auto=format&fit=crop&w=200&q=80', university: 'BUET', rating: 4.5, skillexScore: 500, isOnline: true  },
+  { id: 'u2', name: 'Nadia Ahmed',   avatar: 'https://images.unsplash.com/photo-1494790108377-be9c29b29330?auto=format&fit=crop&w=200&q=80', university: 'DU',   rating: 4.6, skillexScore: 550, isOnline: false },
+  { id: 'u3', name: 'Karim Ahmed',   avatar: 'https://images.unsplash.com/photo-1599566150163-29194dcaad36?auto=format&fit=crop&w=200&q=80', university: 'NSU',  rating: 4.7, skillexScore: 600, isOnline: true  },
+  { id: 'u4', name: 'Fatema Ahmed',  avatar: 'https://images.unsplash.com/photo-1438761681033-6461ffad8d80?auto=format&fit=crop&w=200&q=80', university: 'BRAC', rating: 4.8, skillexScore: 650, isOnline: false },
+  { id: 'u5', name: 'Arif Ahmed',    avatar: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?auto=format&fit=crop&w=200&q=80', university: 'IUT',  rating: 4.9, skillexScore: 700, isOnline: true  },
+  { id: 'u6', name: 'Sumaiya Ahmed', avatar: 'https://images.unsplash.com/photo-1544005313-94ddf0286df2?auto=format&fit=crop&w=200&q=80', university: 'CUET', rating: 4.5, skillexScore: 750, isOnline: false },
+];
 import MarketingLayout from '@/components/layout/MarketingLayout';
 
 /* Lazy-loaded: Three.js module never downloaded on mobile */
@@ -204,8 +236,8 @@ const SkillExchangeAnimation = () => (
     <div className="relative flex items-center justify-between gap-3">
       {/* ── User A ── */}
       <div className="flex flex-col items-center gap-2.5 shrink-0">
-        <div className="flex h-14 w-14 items-center justify-center rounded-2xl border border-violet-500/25 bg-violet-500/10">
-          <Figma className="h-6 w-6 text-violet-400" />
+        <div className="flex h-14 w-14 items-center justify-center overflow-hidden rounded-2xl border border-violet-500/25 ring-2 ring-background shadow-lg">
+          <img src="https://images.unsplash.com/photo-1544005313-94ddf0286df2?auto=format&fit=crop&w=150&q=80" alt="Arya" className="h-full w-full object-cover" />
         </div>
         <p className="text-sm font-bold">Arya</p>
         <Badge variant="outline" className="text-[10px] border-violet-500/30 text-violet-400 bg-violet-500/5">
@@ -239,8 +271,8 @@ const SkillExchangeAnimation = () => (
 
       {/* ── User B ── */}
       <div className="flex flex-col items-center gap-2.5 shrink-0">
-        <div className="flex h-14 w-14 items-center justify-center rounded-2xl border border-primary/25 bg-primary/10">
-          <Code className="h-6 w-6 text-primary" />
+        <div className="flex h-14 w-14 items-center justify-center overflow-hidden rounded-2xl border border-primary/25 ring-2 ring-background shadow-lg">
+          <img src="https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?auto=format&fit=crop&w=150&q=80" alt="Dev" className="h-full w-full object-cover" />
         </div>
         <p className="text-sm font-bold">Dev</p>
         <Badge variant="outline" className="text-[10px] border-primary/30 text-primary bg-primary/5">
@@ -378,15 +410,15 @@ const ComparisonSection = () => {
 // None are near the center content area (max-w-5xl)
 const floatingSkillsData = [
   // ── Left column ──────────────────────────────────────────
-  { name: 'Guitar', icon: Music, side: 'left', top: '12%', delay: 0, duration: 3.8 },
-  { name: 'Photography', icon: Camera, side: 'left', top: '32%', delay: 0.6, duration: 4.2 },
-  { name: 'Video Editing', icon: Film, side: 'left', top: '54%', delay: 1.2, duration: 3.5 },
-  { name: 'Git & GitHub', icon: TrendingUp, side: 'left', top: '74%', delay: 1.8, duration: 4.6 },
+  { name: 'Guitar', icon: Music, image: 'https://images.unsplash.com/photo-1510915361894-db8b60106cb1?auto=format&fit=crop&w=150&q=80', side: 'left', top: '12%', delay: 0, duration: 3.8 },
+  { name: 'Photography', icon: Camera, image: 'https://images.unsplash.com/photo-1516245834210-c4c14271569b?auto=format&fit=crop&w=150&q=80', side: 'left', top: '32%', delay: 0.6, duration: 4.2 },
+  { name: 'Video Editing', icon: Film, image: 'https://images.unsplash.com/photo-1574717024653-61fd2cf4d44d?auto=format&fit=crop&w=150&q=80', side: 'left', top: '54%', delay: 1.2, duration: 3.5 },
+  { name: 'Git & GitHub', icon: TrendingUp, image: 'https://images.unsplash.com/photo-1618401471353-b98afee0b2eb?auto=format&fit=crop&w=150&q=80', side: 'left', top: '74%', delay: 1.8, duration: 4.6 },
   // ── Right column ─────────────────────────────────────────
-  { name: 'Python', icon: Code, side: 'right', top: '18%', delay: 0.3, duration: 4.0 },
-  { name: 'Data Science', icon: Database, side: 'right', top: '38%', delay: 0.9, duration: 3.6 },
-  { name: 'Figma', icon: Figma, side: 'right', top: '58%', delay: 1.5, duration: 4.4 },
-  { name: 'Public Speaking', icon: Mic, side: 'right', top: '76%', delay: 2.1, duration: 3.9 },
+  { name: 'Python', icon: Code, image: 'https://images.unsplash.com/photo-1526374965328-7f61d4dc18c5?auto=format&fit=crop&w=150&q=80', side: 'right', top: '18%', delay: 0.3, duration: 4.0 },
+  { name: 'Data Science', icon: Database, image: 'https://images.unsplash.com/photo-1551288049-bebda4e38f71?auto=format&fit=crop&w=150&q=80', side: 'right', top: '38%', delay: 0.9, duration: 3.6 },
+  { name: 'Figma', icon: Figma, image: 'https://images.unsplash.com/photo-1611162617474-5b21e879e113?auto=format&fit=crop&w=150&q=80', side: 'right', top: '58%', delay: 1.5, duration: 4.4 },
+  { name: 'Public Speaking', icon: Mic, image: 'https://images.unsplash.com/photo-1475721025505-8b3d602db069?auto=format&fit=crop&w=150&q=80', side: 'right', top: '76%', delay: 2.1, duration: 3.9 },
 ];
 
 /* Bubble component with continuous floating animation */
@@ -409,8 +441,8 @@ const FloatingBubble = React.memo(({ skill }: {
     >
       {/* Inner: continuous bubble float */}
       <motion.div
-        className="flex items-center gap-2.5 rounded-2xl border border-white/10 bg-white/5 backdrop-blur-md px-4 py-2.5 text-sm font-medium shadow-lg cursor-default select-none"
-        animate={{ y: [0, -10, 0], scale: [1, 1.03, 1] }}
+        className="flex items-center gap-3 rounded-full border border-white/5 bg-white-[2%] backdrop-blur-xl p-1.5 pr-5 text-sm font-medium shadow-2xl shadow-primary/5 cursor-default select-none glass-subtle overflow-hidden relative"
+        animate={{ y: [0, -10, 0] }}
         transition={{
           duration: skill.duration,
           repeat: Infinity,
@@ -418,10 +450,11 @@ const FloatingBubble = React.memo(({ skill }: {
           delay: skill.delay,
         }}
       >
-        <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-xl bg-primary/15">
-          <skill.icon className="h-3.5 w-3.5 text-primary" />
+        <div className="absolute inset-0 bg-gradient-to-r from-primary/10 via-transparent to-transparent opacity-50 z-0" />
+        <div className="relative z-10 flex h-10 w-10 shrink-0 items-center justify-center rounded-full overflow-hidden bg-background">
+          <img src={skill.image} alt={skill.name} className="h-full w-full object-cover transition-transform duration-700 hover:scale-110" />
         </div>
-        <span className="text-foreground/80 whitespace-nowrap">{skill.name}</span>
+        <span className="relative z-10 text-foreground/90 whitespace-nowrap font-semibold tracking-tight">{skill.name}</span>
       </motion.div>
     </motion.div>
   );
@@ -479,12 +512,11 @@ const HeroSection = () => {
               {/* Line 1: "Trade Skills" — High-speed slide from left */}
               <motion.div
                 initial={{ opacity: 0, x: -120, filter: 'blur(15px)' }}
-                animate={{
-                  opacity: 1, x: 0, filter: 'blur(0px)',
-                  transition: {
-                    type: 'spring', stiffness: 100, damping: 15, mass: 0.8,
-                    delay: 0.5
-                  }
+                animate={{ opacity: 1, x: 0, filter: 'blur(0px)' }}
+                transition={{
+                  type: 'spring', stiffness: 100, damping: 15, mass: 0.8,
+                  delay: 0.5,
+                  filter: { type: 'tween', duration: 0.7, ease: 'easeOut', delay: 0.5 },
                 }}
                 className="flex flex-nowrap gap-x-4 mb-2 overflow-visible select-none"
               >
@@ -498,12 +530,11 @@ const HeroSection = () => {
               {/* Line 2: "Not Money." — Cinematic reveal following the slide */}
               <motion.div
                 initial={{ opacity: 0, y: 30, scale: 0.95, filter: 'blur(10px)', rotateX: -10 }}
-                animate={{
-                  opacity: 1, y: 0, scale: 1, filter: 'blur(0px)', rotateX: 0,
-                  transition: {
-                    type: 'spring', stiffness: 60, damping: 18, mass: 1,
-                    delay: 1.1
-                  }
+                animate={{ opacity: 1, y: 0, scale: 1, filter: 'blur(0px)', rotateX: 0 }}
+                transition={{
+                  type: 'spring', stiffness: 60, damping: 18, mass: 1,
+                  delay: 1.1,
+                  filter: { type: 'tween', duration: 0.9, ease: 'easeOut', delay: 1.1 },
                 }}
                 className="flex flex-nowrap gap-x-4 select-none"
               >
@@ -537,8 +568,8 @@ const HeroSection = () => {
                   </Link>
                 </Button>
               </Magnetic>
-              <Button asChild size="lg" variant="outline" className="h-14 rounded-2xl px-8 text-base font-semibold border-border/60 hover:border-primary/40 hover:bg-primary/5">
-                <Link to="#how-it-works">See how it works</Link>
+              <Button size="lg" variant="outline" className="h-14 rounded-2xl px-8 text-base font-semibold border-border/60 hover:border-primary/40 hover:bg-primary/5" onClick={() => { const el = document.getElementById('how-it-works'); if (el) el.scrollIntoView({ behavior: 'smooth', block: 'start' }); }}>
+                See how it works
               </Button>
             </motion.div>
 
@@ -981,7 +1012,7 @@ const testimonials = [
   {
     name: 'Nadia Rahman',
     university: 'BUET',
-    avatar: 'https://picsum.photos/seed/101/100/100',
+    avatar: 'https://images.unsplash.com/photo-1494790108377-be9c29b29330?auto=format&fit=crop&w=100&q=80',
     role: 'Computer Science, 3rd Year',
     text: "SkillEx is a game-changer. I learned Python from a senior without spending a single taka. The platform is intuitive and the community is incredibly supportive.",
     rating: 5,
@@ -989,7 +1020,7 @@ const testimonials = [
   {
     name: 'Karim Chowdhury',
     university: 'Dhaka University',
-    avatar: 'https://picsum.photos/seed/102/100/100',
+    avatar: 'https://images.unsplash.com/photo-1599566150163-29194dcaad36?auto=format&fit=crop&w=100&q=80',
     role: 'Business Studies, 2nd Year',
     text: "I was struggling with public speaking. Through SkillEx I found a practice partner who's now a close friend. It's boosted my confidence immensely.",
     rating: 5,
@@ -997,7 +1028,7 @@ const testimonials = [
   {
     name: 'Fatema Akhter',
     university: 'NSU',
-    avatar: 'https://picsum.photos/seed/103/100/100',
+    avatar: 'https://images.unsplash.com/photo-1438761681033-6461ffad8d80?auto=format&fit=crop&w=100&q=80',
     role: 'Graphic Design, 4th Year',
     text: "I traded Figma lessons for music production sessions. That's the magic — everyone wins, no one pays. Completely changed how I think about learning.",
     rating: 5,
@@ -1085,12 +1116,12 @@ const CtaBanner = () => {
               <Link to="/login">Join for Free <ArrowRight className="ml-2 h-4 w-4" /></Link>
             </Button>
             <Button
-              asChild
               size="lg"
               variant="outline"
               className="h-14 rounded-2xl px-8 text-base font-semibold border-white/10 hover:bg-white/5"
+              onClick={() => { const el = document.getElementById('how-it-works'); if (el) el.scrollIntoView({ behavior: 'smooth', block: 'start' }); }}
             >
-              <Link to="#how-it-works">See how it works</Link>
+              See how it works
             </Button>
           </motion.div>
         </SpotlightCard>

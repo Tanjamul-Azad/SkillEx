@@ -1,10 +1,12 @@
 package com.skillex.controller;
 
 import com.skillex.dto.common.ApiResponse;
+import com.skillex.dto.skill.SkillIntentInterpretRequest;
+import com.skillex.dto.skill.SkillIntentInterpretResponse;
 import com.skillex.model.Skill;
-import com.skillex.repository.SkillRepository;
+import com.skillex.service.SkillIntentService;
+import com.skillex.service.SkillService;
 import lombok.RequiredArgsConstructor;
-import org.springframework.lang.NonNull;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
@@ -19,30 +21,29 @@ import java.util.List;
 @RequiredArgsConstructor
 public class SkillController {
 
-    private final SkillRepository skillRepository;
+    private final SkillService skillService;
+    private final SkillIntentService skillIntentService;
 
-    /** GET /api/skills — list all skills (optionally filter by keyword or category) */
+    /** GET /api/skills */
     @GetMapping
-    public ResponseEntity<ApiResponse<List<Skill>>> list(
-        @RequestParam(required = false) String keyword,
-        @RequestParam(required = false) String category
-    ) {
-        List<Skill> skills;
-        if (keyword != null && !keyword.isBlank()) {
-            skills = skillRepository.findByNameContainingIgnoreCase(keyword);
-        } else if (category != null && !category.isBlank()) {
-            skills = skillRepository.findByCategoryIgnoreCase(category);
-        } else {
-            skills = skillRepository.findAll();
-        }
-        return ResponseEntity.ok(ApiResponse.ok(skills));
+    public ResponseEntity<ApiResponse<List<Skill>>> list() {
+        return ResponseEntity.ok(ApiResponse.ok(skillService.getAllSkills()));
     }
 
     /** GET /api/skills/{id} */
     @GetMapping("/{id}")
-    public ResponseEntity<ApiResponse<Skill>> getById(@PathVariable @NonNull String id) {
-        return skillRepository.findById(id)
-            .map(skill -> ResponseEntity.ok(ApiResponse.ok(skill)))
-            .orElse(ResponseEntity.notFound().build());
+    public ResponseEntity<ApiResponse<Skill>> getById(@PathVariable String id) {
+        return ResponseEntity.ok(ApiResponse.ok(skillService.getSkillById(id)));
+    }
+
+    /**
+     * POST /api/skills/interpret
+     * Accepts natural language (teach/learn intents) and returns mapped skill suggestions.
+     */
+    @PostMapping("/interpret")
+    public ResponseEntity<ApiResponse<SkillIntentInterpretResponse>> interpret(
+        @RequestBody SkillIntentInterpretRequest request
+    ) {
+        return ResponseEntity.ok(ApiResponse.ok(skillIntentService.interpret(request)));
     }
 }

@@ -1,11 +1,14 @@
 
-import React, { useState } from 'react';
+import React, { useState, useRef, useCallback, useEffect, useMemo } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
 import { motion } from 'framer-motion';
 import { useAuth } from '@/hooks/useAuth';
 import { useToast } from '@/hooks/use-toast';
+import { UserService } from '@/services/userService';
+import { api } from '@/services/api';
 import DashboardLayout from '@/components/layout/DashboardLayout';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -16,13 +19,22 @@ import { Separator } from '@/components/ui/separator';
 import { Switch } from '@/components/ui/switch';
 import { Label } from '@/components/ui/label';
 import { Badge } from '@/components/ui/badge';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import {
   Form, FormControl, FormField, FormItem, FormLabel, FormMessage, FormDescription,
 } from '@/components/ui/form';
 import {
+  Dialog, DialogContent, DialogDescription, DialogFooter,
+  DialogHeader, DialogTitle,
+} from '@/components/ui/dialog';
+import { ConfirmDialog } from '@/components/ui/ConfirmDialog';
+import {
   User, Mail, Lock, Bell, Shield, Trash2, Camera,
   CheckCircle2, Eye, EyeOff, Globe, Zap,
 } from 'lucide-react';
+import { BookOpen, Sparkles, X, Plus, Loader2 } from 'lucide-react';
+import { SkillService, type SkillIntentInterpretResponse, type SkillIntentSuggestion } from '@/services/skillService';
+import type { Skill } from '@/types';
 import { cn } from '@/lib/utils';
 
 /* ── Schemas ─────────────────────────────────────────────── */
@@ -31,6 +43,8 @@ const profileSchema = z.object({
   email: z.string().email('Please enter a valid email.'),
   university: z.string().min(2, 'University name is required.'),
   bio: z.string().max(300, 'Bio cannot exceed 300 characters.').optional(),
+  teachIntentText: z.string().max(500, 'Teach intent cannot exceed 500 characters.').optional(),
+  learnIntentText: z.string().max(500, 'Learn intent cannot exceed 500 characters.').optional(),
 });
 
 const passwordSchema = z.object({
@@ -45,11 +59,33 @@ type PasswordFormData = z.infer<typeof passwordSchema>;
 /* ── Sidebar nav ─────────────────────────────────────────── */
 const sections = [
   { id: 'profile', label: 'Profile', icon: User },
+  { id: 'skills', label: 'My Skills', icon: BookOpen },
   { id: 'security', label: 'Security', icon: Lock },
   { id: 'notifications', label: 'Notifications', icon: Bell },
   { id: 'privacy', label: 'Privacy', icon: Shield },
   { id: 'danger', label: 'Danger Zone', icon: Trash2 },
 ];
+
+const LEVEL_DISPLAY: Record<string, string> = {
+  BEGINNER: 'Beginner',
+  MODERATE: 'Moderate',
+  EXPERT: 'Expert',
+  Beginner: 'Beginner',
+  Moderate: 'Moderate',
+  Expert: 'Expert',
+};
+
+const LEVEL_OPTIONS = ['BEGINNER', 'MODERATE', 'EXPERT'] as const;
+const SKILL_TYPE_LABEL: Record<'offered' | 'wanted', string> = {
+  offered: 'Skills I Teach',
+  wanted: 'Skills I Want to Learn',
+};
+
+const normalizeLevel = (level?: string): 'BEGINNER' | 'MODERATE' | 'EXPERT' => {
+  const upper = (level ?? 'MODERATE').toUpperCase();
+  if (upper === 'BEGINNER' || upper === 'MODERATE' || upper === 'EXPERT') return upper;
+  return 'MODERATE';
+};
 
 const item = {
   hidden: { opacity: 0, y: 16 },
@@ -57,13 +93,301 @@ const item = {
 };
 
 export default function SettingsPage() {
-  const { user, logout } = useAuth();
+  const { user, logout, refreshUser } = useAuth();
   const { toast } = useToast();
-  const [active, setActive] = useState('profile');
+  const [searchParams] = useSearchParams();
+  const [active, setActive] = useState(() => {
+    const tab = searchParams.get('tab');
+    return tab && sections.some(s => s.id === tab) ? tab : 'profile';
+  });
+  useEffect(() => {
+    const tab = searchParams.get('tab');
+    if (tab && sections.some(s => s.id === tab)) setActive(tab);
+  }, [searchParams]);
   const [savingProfile, setSavingProfile] = useState(false);
   const [savingPassword, setSavingPassword] = useState(false);
   const [showCurrent, setShowCurrent] = useState(false);
   const [showNext, setShowNext] = useState(false);
+
+  // Dialog state
+  const [confirmLogoutAll, setConfirmLogoutAll] = useState(false);
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+  const [deleteConfirmEmail, setDeleteConfirmEmail] = useState('');
+  const [avatarDialogOpen, setAvatarDialogOpen] = useState(false);
+  const [avatarPreview, setAvatarPreview] = useState<string | null>(null);
+  const [localAvatar, setLocalAvatar] = useState<string | null>(null);
+  const [savingAvatar, setSavingAvatar] = useState(false);
+  const avatarInputRef = useRef<HTMLInputElement>(null);
+
+  // My Skills state
+  const [skillTeachText, setSkillTeachText] = useState('');
+  const [skillLearnText, setSkillLearnText] = useState('');
+  const [isInterpreting, setIsInterpreting] = useState(false);
+  const [interpretation, setInterpretation] = useState<SkillIntentInterpretResponse | null>(null);
+  const [addingSkill, setAddingSkill] = useState(false);
+  const [removingSkillId, setRemovingSkillId] = useState<string | null>(null);
+  const [skillCatalog, setSkillCatalog] = useState<Skill[]>([]);
+  const [catalogLoading, setCatalogLoading] = useState(false);
+  const [manualQuery, setManualQuery] = useState('');
+  const [manualType, setManualType] = useState<'offered' | 'wanted'>('offered');
+  const [manualLevel, setManualLevel] = useState<'BEGINNER' | 'MODERATE' | 'EXPERT'>('MODERATE');
+  const [selectedSkillIds, setSelectedSkillIds] = useState<string[]>([]);
+  const [bulkAdding, setBulkAdding] = useState(false);
+  const [editingSkillKey, setEditingSkillKey] = useState<string | null>(null);
+  const [editingSkillLevel, setEditingSkillLevel] = useState<'BEGINNER' | 'MODERATE' | 'EXPERT'>('MODERATE');
+  const [savingEditSkillKey, setSavingEditSkillKey] = useState<string | null>(null);
+
+  /** Crop to square center and compress to 256×256 JPEG at 75% quality (~10-20 KB) */
+  const compressImage = (dataUrl: string): Promise<string> =>
+    new Promise((resolve) => {
+      const img = new Image();
+      img.onload = () => {
+        const SIZE = 256;
+        const canvas = document.createElement('canvas');
+        canvas.width = SIZE;
+        canvas.height = SIZE;
+        const ctx = canvas.getContext('2d')!;
+
+        // Calculate crop to center square
+        const size = Math.min(img.width, img.height);
+        const x = (img.width - size) / 2;
+        const y = (img.height - size) / 2;
+
+        // Draw cropped square image centered
+        ctx.drawImage(img, x, y, size, size, 0, 0, SIZE, SIZE);
+        resolve(canvas.toDataURL('image/jpeg', 0.75));
+      };
+      img.src = dataUrl;
+    });
+
+  const handleInterpretSkills = useCallback(async () => {
+    if (!skillTeachText.trim() && !skillLearnText.trim()) return;
+    setIsInterpreting(true);
+    try {
+      const result = await SkillService.interpretIntent({
+        teachText: skillTeachText || undefined,
+        learnText: skillLearnText || undefined,
+      });
+      setInterpretation(result);
+      if (result.teach?.primary || result.learn?.primary) {
+        toast({ title: 'AI suggestions ready', description: 'Review below and click Add to confirm.', variant: 'success' });
+      } else {
+        toast({ title: 'No match found', description: 'Try rephrasing or pick manually.', variant: 'destructive' });
+      }
+    } catch {
+      toast({ variant: 'destructive', title: 'Suggestion failed', description: 'Could not interpret text right now.' });
+    } finally {
+      setIsInterpreting(false);
+    }
+  }, [skillTeachText, skillLearnText, toast]);
+
+  const handleAddSkill = useCallback(async (suggestion: SkillIntentSuggestion, type: 'offered' | 'wanted') => {
+    const currentSkills = type === 'offered' ? (user?.skillsOffered ?? []) : (user?.skillsWanted ?? []);
+    const currentSkillIds = new Set(currentSkills.map((s) => s.id));
+    const currentSkillNames = new Set(currentSkills.map((s) => s.name.toLowerCase()));
+
+    const isCatalogSuggestion = Boolean(suggestion.skillId);
+
+    if (isCatalogSuggestion && currentSkillIds.has(suggestion.skillId!)) {
+      toast({
+        title: 'Already added',
+        description: `"${suggestion.skillName}" is already in ${SKILL_TYPE_LABEL[type]}.`,
+      });
+      return;
+    }
+
+    if (!isCatalogSuggestion && currentSkillNames.has(suggestion.skillName.toLowerCase())) {
+      toast({
+        title: 'Already added',
+        description: `"${suggestion.skillName}" is already in ${SKILL_TYPE_LABEL[type]}.`,
+      });
+      return;
+    }
+
+    if (!isCatalogSuggestion) {
+      toast({
+        variant: 'destructive',
+        title: 'No catalog match',
+        description: 'Please choose one of the retrieved catalog skills from suggestions.',
+      });
+      return;
+    }
+
+    setAddingSkill(true);
+    try {
+      await UserService.addSkill(suggestion.skillId!, type, 'MODERATE');
+      await refreshUser();
+      toast({
+        title: `"${suggestion.skillName}" added!`,
+        description: 'Added from existing catalog.',
+        variant: 'success',
+      });
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : 'Try again.';
+      if (typeof msg === 'string' && /(already|exists|duplicate)/i.test(msg)) {
+        toast({
+          title: 'Already added',
+          description: `"${suggestion.skillName}" is already in ${SKILL_TYPE_LABEL[type]}.`,
+        });
+      } else {
+        toast({ variant: 'destructive', title: 'Could not add skill', description: msg });
+      }
+    } finally {
+      setAddingSkill(false);
+    }
+  }, [refreshUser, toast, user?.skillsOffered, user?.skillsWanted]);
+
+  const handleRemoveSkill = useCallback(async (skillId: string, type: 'offered' | 'wanted') => {
+    setRemovingSkillId(skillId);
+    try {
+      await UserService.removeSkill(skillId, type);
+      await refreshUser();
+      toast({ title: 'Skill removed', variant: 'success' });
+    } catch (err) {
+      toast({ variant: 'destructive', title: 'Could not remove skill', description: err instanceof Error ? err.message : 'Try again.' });
+    } finally {
+      setRemovingSkillId(null);
+    }
+  }, [refreshUser, toast]);
+
+  useEffect(() => {
+    let mounted = true;
+    setCatalogLoading(true);
+    SkillService.getAll()
+      .then((skills) => {
+        if (mounted) setSkillCatalog(Array.isArray(skills) ? skills : []);
+      })
+      .catch(() => {
+        if (mounted) setSkillCatalog([]);
+      })
+      .finally(() => {
+        if (mounted) setCatalogLoading(false);
+      });
+    return () => {
+      mounted = false;
+    };
+  }, []);
+
+  const existingTargetSkillIds = useMemo(() => {
+    const source = manualType === 'offered' ? (user?.skillsOffered ?? []) : (user?.skillsWanted ?? []);
+    return new Set(source.map((s) => s.id));
+  }, [manualType, user?.skillsOffered, user?.skillsWanted]);
+
+  const filteredCatalog = useMemo(() => {
+    const query = manualQuery.trim().toLowerCase();
+    return skillCatalog
+      .filter((skill) => !existingTargetSkillIds.has(skill.id))
+      .filter((skill) => {
+        if (!query) return true;
+        return skill.name.toLowerCase().includes(query) || skill.category.toLowerCase().includes(query);
+      })
+      .slice(0, 12);
+  }, [existingTargetSkillIds, manualQuery, skillCatalog]);
+
+  const toggleSelectedSkill = useCallback((skillId: string) => {
+    setSelectedSkillIds((prev) => (prev.includes(skillId) ? prev.filter((id) => id !== skillId) : [...prev, skillId]));
+  }, []);
+
+  const handleBulkAddSkills = useCallback(async () => {
+    if (selectedSkillIds.length === 0) return;
+    setBulkAdding(true);
+    let added = 0;
+    let failed = 0;
+    const duplicateNames: string[] = [];
+    const failedNames: string[] = [];
+    const targetExistingIds = new Set((manualType === 'offered' ? (user?.skillsOffered ?? []) : (user?.skillsWanted ?? [])).map((s) => s.id));
+    const catalogNameById = new Map(skillCatalog.map((s) => [s.id, s.name]));
+
+    for (const skillId of selectedSkillIds) {
+      const skillName = catalogNameById.get(skillId) ?? 'Unknown skill';
+      if (targetExistingIds.has(skillId)) {
+        duplicateNames.push(skillName);
+        continue;
+      }
+
+      try {
+        await UserService.addSkill(skillId, manualType, manualLevel);
+        added += 1;
+        targetExistingIds.add(skillId);
+      } catch {
+        failed += 1;
+        failedNames.push(skillName);
+      }
+    }
+
+    await refreshUser();
+    setSelectedSkillIds([]);
+    setBulkAdding(false);
+
+    if (added > 0) {
+      toast({
+        title: `${added} skill${added > 1 ? 's' : ''} added`,
+        description:
+          duplicateNames.length > 0
+            ? `Skipped duplicates: ${duplicateNames.join(', ')}.`
+            : failed > 0
+              ? `${failed} failed. You can retry them.`
+              : 'Your profile is updated.',
+        variant: 'success',
+      });
+      if (failedNames.length > 0) {
+        toast({
+          variant: 'destructive',
+          title: 'Some skills were not added',
+          description: `Failed: ${failedNames.join(', ')}.`,
+        });
+      }
+    } else {
+      if (duplicateNames.length > 0 && failed === 0) {
+        toast({
+          title: 'No new skills to add',
+          description: `All selected skills are already in ${SKILL_TYPE_LABEL[manualType]}: ${duplicateNames.join(', ')}.`,
+        });
+      } else {
+        toast({
+          variant: 'destructive',
+          title: 'Could not add selected skills',
+          description:
+            failedNames.length > 0
+              ? `Failed: ${failedNames.join(', ')}.`
+              : 'Please try again in a moment.',
+        });
+      }
+    }
+  }, [manualLevel, manualType, refreshUser, selectedSkillIds, toast, user?.skillsOffered, user?.skillsWanted, skillCatalog]);
+
+  const startEditingSkill = useCallback((skill: Skill, type: 'offered' | 'wanted') => {
+    setEditingSkillKey(`${type}:${skill.id}`);
+    setEditingSkillLevel(normalizeLevel(skill.level));
+  }, []);
+
+  const saveEditedSkill = useCallback(async (skill: Skill, type: 'offered' | 'wanted') => {
+    const key = `${type}:${skill.id}`;
+    setSavingEditSkillKey(key);
+
+    try {
+      await UserService.removeSkill(skill.id, type);
+      const existsInCatalog = skillCatalog.some((catalogSkill) => catalogSkill.id === skill.id);
+
+      if (existsInCatalog) {
+        await UserService.addSkill(skill.id, type, editingSkillLevel);
+      } else {
+        await UserService.addCustomSkill(skill.name, skill.category, type, editingSkillLevel);
+      }
+
+      await refreshUser();
+      setEditingSkillKey(null);
+      toast({ title: `Updated ${skill.name}`, description: `Level set to ${LEVEL_DISPLAY[editingSkillLevel]}.`, variant: 'success' });
+    } catch (err) {
+      toast({
+        variant: 'destructive',
+        title: 'Could not update skill',
+        description: err instanceof Error ? err.message : 'Please try again.',
+      });
+    } finally {
+      setSavingEditSkillKey(null);
+    }
+  }, [editingSkillLevel, refreshUser, skillCatalog, toast]);
 
   const [notifications, setNotifications] = useState({
     matchRequests: true,
@@ -87,8 +411,21 @@ export default function SettingsPage() {
       email: user?.email ?? '',
       university: user?.university ?? '',
       bio: user?.bio ?? '',
+      teachIntentText: user?.teachIntentText ?? '',
+      learnIntentText: user?.learnIntentText ?? '',
     },
   });
+
+  useEffect(() => {
+    profileForm.reset({
+      name: user?.name ?? '',
+      email: user?.email ?? '',
+      university: user?.university ?? '',
+      bio: user?.bio ?? '',
+      teachIntentText: user?.teachIntentText ?? '',
+      learnIntentText: user?.learnIntentText ?? '',
+    });
+  }, [profileForm, user]);
 
   /* Password form */
   const passwordForm = useForm<PasswordFormData>({
@@ -97,23 +434,55 @@ export default function SettingsPage() {
   });
 
   const handleProfileSave = async (data: ProfileFormData) => {
+    if (!user) return;
     setSavingProfile(true);
-    // TODO: call PUT /api/users/:id with data
-    await new Promise((r) => setTimeout(r, 900));
-    setSavingProfile(false);
-    toast({ title: 'Profile updated', description: 'Your changes have been saved.', variant: 'success' });
+    try {
+      await UserService.updateProfile(user.id, {
+        name: data.name,
+        university: data.university,
+        bio: data.bio ?? '',
+        teachIntentText: data.teachIntentText ?? '',
+        learnIntentText: data.learnIntentText ?? '',
+      });
+      // Refresh in-memory user so the sidebar/header reflect the new name/bio
+      await refreshUser();
+      toast({ title: 'Profile updated', description: 'Your changes have been saved.', variant: 'success' });
+    } catch (err) {
+      toast({
+        variant: 'destructive',
+        title: 'Update failed',
+        description: err instanceof Error ? err.message : 'Could not save profile.',
+      });
+    } finally {
+      setSavingProfile(false);
+    }
   };
 
   const handlePasswordSave = async (data: PasswordFormData) => {
     setSavingPassword(true);
-    // TODO: call POST /api/auth/change-password
-    await new Promise((r) => setTimeout(r, 900));
-    setSavingPassword(false);
-    passwordForm.reset();
-    toast({ title: 'Password changed', description: 'Your password has been updated.', variant: 'success' });
+    try {
+      await api.post('/users/me/change-password', {
+        currentPassword: data.current,
+        newPassword: data.next,
+      });
+      passwordForm.reset();
+      toast({ title: 'Password changed', description: 'Your password has been updated.', variant: 'success' });
+    } catch (err) {
+      toast({
+        variant: 'destructive',
+        title: 'Password change failed',
+        description: err instanceof Error ? err.message : 'Could not update password.',
+      });
+    } finally {
+      setSavingPassword(false);
+    }
   };
 
   const charCount = profileForm.watch('bio')?.length ?? 0;
+  const teachIntentCount = profileForm.watch('teachIntentText')?.length ?? 0;
+  const learnIntentCount = profileForm.watch('learnIntentText')?.length ?? 0;
+  const offeredSkills = user?.skillsOffered ?? [];
+  const wantedSkills = user?.skillsWanted ?? [];
 
   return (
     <DashboardLayout>
@@ -174,11 +543,12 @@ export default function SettingsPage() {
                     <div className="mb-6 flex items-center gap-4">
                       <div className="relative">
                         <Avatar className="h-20 w-20 ring-4 ring-primary/20">
-                          <AvatarImage src={user?.avatar} alt={user?.name} />
+                          <AvatarImage src={localAvatar ?? user?.avatar} alt={user?.name} />
                           <AvatarFallback className="text-xl font-bold">{user?.name?.charAt(0)}</AvatarFallback>
                         </Avatar>
                         <Button
                           size="icon"
+                          onClick={() => setAvatarDialogOpen(true)}
                           className="absolute bottom-0 right-0 flex h-7 w-7 items-center justify-center rounded-full bg-primary text-primary-foreground shadow hover:bg-primary/90 transition-colors"
                         >
                           <Camera className="h-3.5 w-3.5" />
@@ -234,6 +604,46 @@ export default function SettingsPage() {
                             </div>
                           </FormItem>
                         )} />
+                        <div className="grid gap-4 sm:grid-cols-2">
+                          <FormField control={profileForm.control} name="teachIntentText" render={({ field }) => (
+                            <FormItem>
+                              <FormLabel>What You Want To Teach (Intent)</FormLabel>
+                              <FormControl>
+                                <Textarea
+                                  {...field}
+                                  placeholder="e.g. I can teach crafting with household waste materials"
+                                  className="resize-none h-24"
+                                />
+                              </FormControl>
+                              <div className="flex items-center justify-between">
+                                <FormDescription className="text-xs">Used for intent-based smart matching.</FormDescription>
+                                <span className={`text-xs ${teachIntentCount > 470 ? 'text-destructive' : 'text-muted-foreground'}`}>
+                                  {teachIntentCount}/500
+                                </span>
+                              </div>
+                              <FormMessage />
+                            </FormItem>
+                          )} />
+                          <FormField control={profileForm.control} name="learnIntentText" render={({ field }) => (
+                            <FormItem>
+                              <FormLabel>What You Want To Learn (Intent)</FormLabel>
+                              <FormControl>
+                                <Textarea
+                                  {...field}
+                                  placeholder="e.g. I want to learn DIY upcycling craft"
+                                  className="resize-none h-24"
+                                />
+                              </FormControl>
+                              <div className="flex items-center justify-between">
+                                <FormDescription className="text-xs">Keep it practical and specific for better matches.</FormDescription>
+                                <span className={`text-xs ${learnIntentCount > 470 ? 'text-destructive' : 'text-muted-foreground'}`}>
+                                  {learnIntentCount}/500
+                                </span>
+                              </div>
+                              <FormMessage />
+                            </FormItem>
+                          )} />
+                        </div>
                         <Button
                           type="submit"
                           variant="gradient"
@@ -272,8 +682,336 @@ export default function SettingsPage() {
               </>
             )}
 
-            {/* ── SECURITY ── */}
-            {active === 'security' && (
+            {/* ── MY SKILLS ── */}
+            {active === 'skills' && (
+              <div className="space-y-6">
+                {/* AI Detection Panel */}
+                <Card className="border-primary/20 bg-primary/5">
+                  <CardHeader className="pb-3">
+                    <CardTitle className="flex items-center gap-2 text-base text-primary">
+                      <Sparkles className="h-4 w-4" /> AI Skill Detection
+                    </CardTitle>
+                    <CardDescription>Describe what you can teach and what you want to learn. We'll suggest matching skills.</CardDescription>
+                  </CardHeader>
+                  <CardContent className="space-y-3">
+                    <div className="grid gap-3 sm:grid-cols-2">
+                      <div className="space-y-1.5">
+                        <label className="text-xs font-medium text-muted-foreground">What can you teach?</label>
+                        <textarea
+                          value={skillTeachText}
+                          onChange={(e) => { setSkillTeachText(e.target.value); setInterpretation(null); }}
+                          placeholder="e.g. I can teach React, TypeScript and frontend architecture"
+                          className="w-full resize-none rounded-xl border border-border/60 bg-background px-3 py-2 text-sm placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary/40 min-h-[80px]"
+                        />
+                      </div>
+                      <div className="space-y-1.5">
+                        <label className="text-xs font-medium text-muted-foreground">What do you want to learn?</label>
+                        <textarea
+                          value={skillLearnText}
+                          onChange={(e) => { setSkillLearnText(e.target.value); setInterpretation(null); }}
+                          placeholder="e.g. I want to learn digital marketing and SEO"
+                          className="w-full resize-none rounded-xl border border-border/60 bg-background px-3 py-2 text-sm placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary/40 min-h-[80px]"
+                        />
+                      </div>
+                    </div>
+                    <Button
+                      variant="gradient"
+                      className="gap-2"
+                      disabled={isInterpreting || (!skillTeachText.trim() && !skillLearnText.trim())}
+                      onClick={handleInterpretSkills}
+                    >
+                      {isInterpreting ? <><Loader2 className="h-4 w-4 animate-spin" /> Analyzing...</> : <><Sparkles className="h-4 w-4" /> Suggest Skills</>}
+                    </Button>
+
+                    {interpretation && (
+                      <div className="grid gap-3 sm:grid-cols-2 pt-1">
+                        {interpretation.teach?.primary && (
+                          <div className="flex items-center justify-between rounded-xl border border-primary/20 bg-background/70 px-3 py-2.5">
+                            <div>
+                              <p className="text-xs text-muted-foreground">Teach suggestion</p>
+                              <p className="font-semibold text-sm">
+                                {interpretation.teach.primary.skillName}{' '}
+                                <span className="text-xs text-muted-foreground">({interpretation.teach.primary.confidence}%)</span>
+                                {interpretation.teach.primary.custom && (
+                                  <span className="ml-1 rounded-full border border-primary/30 bg-primary/10 px-1.5 py-0.5 text-[10px] font-medium text-primary">AI New</span>
+                                )}
+                              </p>
+                            </div>
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              className="h-7 text-xs gap-1 border-primary/30 text-primary hover:bg-primary/10"
+                              disabled={addingSkill}
+                              onClick={() => handleAddSkill(interpretation.teach!.primary!, 'offered')}
+                            >
+                              <Plus className="h-3 w-3" /> Add
+                            </Button>
+                          </div>
+                        )}
+                        {interpretation.learn?.primary && (
+                          <div className="flex items-center justify-between rounded-xl border border-primary/20 bg-background/70 px-3 py-2.5">
+                            <div>
+                              <p className="text-xs text-muted-foreground">Learn suggestion</p>
+                              <p className="font-semibold text-sm">
+                                {interpretation.learn.primary.skillName}{' '}
+                                <span className="text-xs text-muted-foreground">({interpretation.learn.primary.confidence}%)</span>
+                                {interpretation.learn.primary.custom && (
+                                  <span className="ml-1 rounded-full border border-primary/30 bg-primary/10 px-1.5 py-0.5 text-[10px] font-medium text-primary">AI New</span>
+                                )}
+                              </p>
+                            </div>
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              className="h-7 text-xs gap-1 border-primary/30 text-primary hover:bg-primary/10"
+                              disabled={addingSkill}
+                              onClick={() => handleAddSkill(interpretation.learn!.primary!, 'wanted')}
+                            >
+                              <Plus className="h-3 w-3" /> Add
+                            </Button>
+                          </div>
+                        )}
+                      </div>
+                    )}
+                  </CardContent>
+                </Card>
+
+                {/* Manual Add Panel */}
+                <Card className="border-border/60">
+                  <CardHeader className="pb-3">
+                    <CardTitle className="flex items-center gap-2 text-base">Manual Add</CardTitle>
+                    <CardDescription>Select multiple skills and add them in one click.</CardDescription>
+                  </CardHeader>
+                  <CardContent className="space-y-4">
+                    <div className="grid gap-3 md:grid-cols-3">
+                      <div className="md:col-span-2">
+                        <Input
+                          value={manualQuery}
+                          onChange={(e) => setManualQuery(e.target.value)}
+                          placeholder="Search by skill name or category..."
+                        />
+                      </div>
+                      <div>
+                        <Select value={manualType} onValueChange={(value: 'offered' | 'wanted') => { setManualType(value); setSelectedSkillIds([]); }}>
+                          <SelectTrigger>
+                            <SelectValue placeholder="Skill type" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="offered">I can teach this</SelectItem>
+                            <SelectItem value="wanted">I want to learn this</SelectItem>
+                          </SelectContent>
+                        </Select>
+                      </div>
+                    </div>
+
+                    <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                      <div className="w-full sm:max-w-[220px]">
+                        <Select value={manualLevel} onValueChange={(value: 'BEGINNER' | 'MODERATE' | 'EXPERT') => setManualLevel(value)}>
+                          <SelectTrigger>
+                            <SelectValue placeholder="Skill level" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {LEVEL_OPTIONS.map((level) => (
+                              <SelectItem key={level} value={level}>{LEVEL_DISPLAY[level]}</SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      </div>
+                      <Button
+                        variant="gradient"
+                        className="gap-2"
+                        disabled={bulkAdding || selectedSkillIds.length === 0}
+                        onClick={handleBulkAddSkills}
+                      >
+                        {bulkAdding ? <><Loader2 className="h-4 w-4 animate-spin" /> Adding...</> : <><Plus className="h-4 w-4" /> Add selected ({selectedSkillIds.length})</>}
+                      </Button>
+                    </div>
+
+                    <div className="rounded-xl border border-border/60 bg-muted/20 p-3">
+                      {catalogLoading ? (
+                        <p className="text-sm text-muted-foreground">Loading skill catalog...</p>
+                      ) : filteredCatalog.length === 0 ? (
+                        <p className="text-sm text-muted-foreground">No matching skills found for this filter.</p>
+                      ) : (
+                        <div className="flex flex-wrap gap-2">
+                          {filteredCatalog.map((skill) => {
+                            const selected = selectedSkillIds.includes(skill.id);
+                            return (
+                              <button
+                                key={skill.id}
+                                type="button"
+                                onClick={() => toggleSelectedSkill(skill.id)}
+                                className={cn(
+                                  'rounded-full border px-3 py-1.5 text-xs font-medium transition-colors',
+                                  selected
+                                    ? 'border-primary bg-primary text-primary-foreground'
+                                    : 'border-border/60 bg-background hover:border-primary/40 hover:bg-primary/5'
+                                )}
+                              >
+                                {skill.name} <span className="opacity-70">· {skill.category}</span>
+                              </button>
+                            );
+                          })}
+                        </div>
+                      )}
+                    </div>
+                  </CardContent>
+                </Card>
+
+                {/* Skills I Teach */}
+                <Card className="border-border/60">
+                  <CardHeader className="pb-3">
+                    <div className="flex items-center justify-between">
+                      <CardTitle className="flex items-center gap-2 text-base">
+                        <BookOpen className="h-4 w-4 text-primary" /> Skills I Teach
+                      </CardTitle>
+                      <span className="text-xs text-muted-foreground">{offeredSkills.length} skill{offeredSkills.length !== 1 ? 's' : ''}</span>
+                    </div>
+                    <CardDescription>Manage your teaching skills and adjust levels anytime.</CardDescription>
+                  </CardHeader>
+                  <CardContent>
+                    {offeredSkills.length === 0 ? (
+                      <p className="text-sm text-muted-foreground italic">No teaching skills yet. Use AI Detection or Manual Add above.</p>
+                    ) : (
+                      <div className="space-y-2">
+                        {offeredSkills.map((skill) => {
+                          const rowKey = `offered:${skill.id}`;
+                          const isEditing = editingSkillKey === rowKey;
+                          const isSavingEdit = savingEditSkillKey === rowKey;
+                          return (
+                            <div key={rowKey} className="rounded-xl border border-border/60 bg-background px-3 py-2">
+                              <div className="flex flex-wrap items-center justify-between gap-2">
+                                <div className="flex items-center gap-2">
+                                  <span className="font-medium text-sm">{skill.name}</span>
+                                  <Badge variant="secondary" className="text-[10px]">{LEVEL_DISPLAY[normalizeLevel(skill.level)]}</Badge>
+                                </div>
+                                <div className="flex items-center gap-1">
+                                  <Button size="sm" variant="outline" className="h-7 text-xs" onClick={() => startEditingSkill(skill, 'offered')}>
+                                    Edit Level
+                                  </Button>
+                                  <Button
+                                    size="icon"
+                                    variant="ghost"
+                                    className="h-7 w-7 text-destructive hover:text-destructive"
+                                    disabled={removingSkillId === skill.id}
+                                    onClick={() => handleRemoveSkill(skill.id, 'offered')}
+                                  >
+                                    {removingSkillId === skill.id ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <X className="h-3.5 w-3.5" />}
+                                  </Button>
+                                </div>
+                              </div>
+
+                              {isEditing && (
+                                <div className="mt-2 flex flex-col gap-2 sm:flex-row sm:items-center">
+                                  <div className="sm:w-[180px]">
+                                    <Select value={editingSkillLevel} onValueChange={(value: 'BEGINNER' | 'MODERATE' | 'EXPERT') => setEditingSkillLevel(value)}>
+                                      <SelectTrigger className="h-8">
+                                        <SelectValue />
+                                      </SelectTrigger>
+                                      <SelectContent>
+                                        {LEVEL_OPTIONS.map((level) => (
+                                          <SelectItem key={level} value={level}>{LEVEL_DISPLAY[level]}</SelectItem>
+                                        ))}
+                                      </SelectContent>
+                                    </Select>
+                                  </div>
+                                  <div className="flex items-center gap-2">
+                                    <Button size="sm" className="h-8" disabled={isSavingEdit} onClick={() => saveEditedSkill(skill, 'offered')}>
+                                      {isSavingEdit ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : 'Save'}
+                                    </Button>
+                                    <Button size="sm" variant="ghost" className="h-8" disabled={isSavingEdit} onClick={() => setEditingSkillKey(null)}>
+                                      Cancel
+                                    </Button>
+                                  </div>
+                                </div>
+                              )}
+                            </div>
+                          );
+                        })}
+                      </div>
+                    )}
+                  </CardContent>
+                </Card>
+
+                {/* Skills I Want to Learn */}
+                <Card className="border-border/60">
+                  <CardHeader className="pb-3">
+                    <div className="flex items-center justify-between">
+                      <CardTitle className="flex items-center gap-2 text-base">
+                        <BookOpen className="h-4 w-4 text-accent" /> Skills I Want to Learn
+                      </CardTitle>
+                      <span className="text-xs text-muted-foreground">{wantedSkills.length} skill{wantedSkills.length !== 1 ? 's' : ''}</span>
+                    </div>
+                    <CardDescription>Track your learning goals and tune level preferences.</CardDescription>
+                  </CardHeader>
+                  <CardContent>
+                    {wantedSkills.length === 0 ? (
+                      <p className="text-sm text-muted-foreground italic">No learning goals yet. Use AI Detection or Manual Add above.</p>
+                    ) : (
+                      <div className="space-y-2">
+                        {wantedSkills.map((skill) => {
+                          const rowKey = `wanted:${skill.id}`;
+                          const isEditing = editingSkillKey === rowKey;
+                          const isSavingEdit = savingEditSkillKey === rowKey;
+                          return (
+                            <div key={rowKey} className="rounded-xl border border-border/60 bg-background px-3 py-2">
+                              <div className="flex flex-wrap items-center justify-between gap-2">
+                                <div className="flex items-center gap-2">
+                                  <span className="font-medium text-sm">{skill.name}</span>
+                                  <Badge variant="secondary" className="text-[10px]">{LEVEL_DISPLAY[normalizeLevel(skill.level)]}</Badge>
+                                </div>
+                                <div className="flex items-center gap-1">
+                                  <Button size="sm" variant="outline" className="h-7 text-xs" onClick={() => startEditingSkill(skill, 'wanted')}>
+                                    Edit Level
+                                  </Button>
+                                  <Button
+                                    size="icon"
+                                    variant="ghost"
+                                    className="h-7 w-7 text-destructive hover:text-destructive"
+                                    disabled={removingSkillId === skill.id}
+                                    onClick={() => handleRemoveSkill(skill.id, 'wanted')}
+                                  >
+                                    {removingSkillId === skill.id ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <X className="h-3.5 w-3.5" />}
+                                  </Button>
+                                </div>
+                              </div>
+
+                              {isEditing && (
+                                <div className="mt-2 flex flex-col gap-2 sm:flex-row sm:items-center">
+                                  <div className="sm:w-[180px]">
+                                    <Select value={editingSkillLevel} onValueChange={(value: 'BEGINNER' | 'MODERATE' | 'EXPERT') => setEditingSkillLevel(value)}>
+                                      <SelectTrigger className="h-8">
+                                        <SelectValue />
+                                      </SelectTrigger>
+                                      <SelectContent>
+                                        {LEVEL_OPTIONS.map((level) => (
+                                          <SelectItem key={level} value={level}>{LEVEL_DISPLAY[level]}</SelectItem>
+                                        ))}
+                                      </SelectContent>
+                                    </Select>
+                                  </div>
+                                  <div className="flex items-center gap-2">
+                                    <Button size="sm" className="h-8" disabled={isSavingEdit} onClick={() => saveEditedSkill(skill, 'wanted')}>
+                                      {isSavingEdit ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : 'Save'}
+                                    </Button>
+                                    <Button size="sm" variant="ghost" className="h-8" disabled={isSavingEdit} onClick={() => setEditingSkillKey(null)}>
+                                      Cancel
+                                    </Button>
+                                  </div>
+                                </div>
+                              )}
+                            </div>
+                          );
+                        })}
+                      </div>
+                    )}
+                  </CardContent>
+                </Card>
+              </div>
+            )}
+
+                          {/* ── SECURITY ── */}
+                          {active === 'security' && (
               <Card className="border-border/60">
                 <CardHeader>
                   <CardTitle className="flex items-center gap-2 text-base">
@@ -431,7 +1169,7 @@ export default function SettingsPage() {
                       <p className="font-semibold">Log out of all devices</p>
                       <p className="text-sm text-muted-foreground">Sign out everywhere and revoke all active sessions.</p>
                     </div>
-                    <Button variant="outline" className="border-orange-500/30 text-orange-600 hover:bg-orange-500/10" onClick={logout}>
+                    <Button variant="outline" className="border-orange-500/30 text-orange-600 hover:bg-orange-500/10" onClick={() => setConfirmLogoutAll(true)}>
                       Log Out
                     </Button>
                   </div>
@@ -443,7 +1181,7 @@ export default function SettingsPage() {
                     <Button
                       variant="destructive"
                       className="rounded-xl"
-                      onClick={() => toast({ title: 'Not yet implemented', description: 'Contact support to delete your account.', variant: 'destructive' })}
+                      onClick={() => setDeleteDialogOpen(true)}
                     >
                       Delete Account
                     </Button>
@@ -454,6 +1192,147 @@ export default function SettingsPage() {
           </motion.div>
         </div>
       </div>
+
+      {/* ── Avatar upload dialog ── */}
+      <Dialog open={avatarDialogOpen} onOpenChange={(o) => { setAvatarDialogOpen(o); if (!o) setAvatarPreview(null); }}>
+        <DialogContent className="sm:max-w-sm">
+          <DialogHeader>
+            <DialogTitle>Update Profile Photo</DialogTitle>
+            <DialogDescription>Choose a new photo for your profile.</DialogDescription>
+          </DialogHeader>
+          <div className="mt-2 flex flex-col items-center gap-4">
+            <Avatar className="h-28 w-28 ring-4 ring-primary/20">
+              <AvatarImage src={avatarPreview ?? user?.avatar} alt={user?.name} />
+              <AvatarFallback className="text-3xl font-bold">{user?.name?.charAt(0)}</AvatarFallback>
+            </Avatar>
+            <input
+              ref={avatarInputRef}
+              type="file"
+              accept="image/png, image/jpeg, image/webp"
+              className="hidden"
+              onChange={(e) => {
+                const file = e.target.files?.[0];
+                if (!file) return;
+                const reader = new FileReader();
+                reader.onload = (ev) => setAvatarPreview(ev.target?.result as string);
+                reader.readAsDataURL(file);
+              }}
+            />
+            <Button variant="outline" className="w-full" onClick={() => avatarInputRef.current?.click()}>
+              <Camera className="mr-2 h-4 w-4" /> Choose Photo
+            </Button>
+          </div>
+          <DialogFooter className="mt-2 gap-2 sm:gap-0">
+            <Button variant="outline" onClick={() => { setAvatarDialogOpen(false); setAvatarPreview(null); }}>
+              Cancel
+            </Button>
+            <Button
+              variant="gradient"
+              disabled={!avatarPreview || savingAvatar}
+              onClick={async () => {
+                if (!avatarPreview) return;
+                setSavingAvatar(true);
+                try {
+                  // Crop to square center and compress
+                  const compressed = await compressImage(avatarPreview);
+                  const res = await fetch(compressed);
+                  const blob = await res.blob();
+                  const file = new File([blob], 'avatar.jpg', { type: 'image/jpeg' });
+
+                  const upRes = await UserService.uploadFile(file);
+
+                  // Update user profile with new avatar URL
+                  const newAvatarUrl = 'http://localhost:8080' + upRes.url;
+                  await api.patch('/users/me', { avatar: newAvatarUrl });
+                  setLocalAvatar(newAvatarUrl);
+                  await refreshUser();
+                  setAvatarDialogOpen(false);
+                  setAvatarPreview(null);
+                  toast({
+                    title: 'Profile photo saved!',
+                    description: 'Your new photo is now visible on your profile.',
+                    variant: 'success',
+                  });
+                } catch (err) {
+                  toast({
+                    variant: 'destructive',
+                    title: 'Could not save photo',
+                    description: err instanceof Error ? err.message : 'Please try again.',
+                  });
+                } finally {
+                  setSavingAvatar(false);
+                }
+              }}
+            >
+              {savingAvatar ? 'Saving...' : 'Save Photo'}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* ── Log out all devices confirm ── */}
+      <ConfirmDialog
+        open={confirmLogoutAll}
+        onOpenChange={setConfirmLogoutAll}
+        title="Log out of all devices?"
+        description="You'll be signed out everywhere. You'll need to sign in again on every device."
+        confirmLabel="Log out everywhere"
+        cancelLabel="Cancel"
+        variant="destructive"
+        onConfirm={logout}
+      />
+
+      {/* ── Delete account dialog ── */}
+      <Dialog open={deleteDialogOpen} onOpenChange={(o) => { setDeleteDialogOpen(o); if (!o) setDeleteConfirmEmail(''); }}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2 text-destructive">
+              <Trash2 className="h-4 w-4" /> Delete Account
+            </DialogTitle>
+            <DialogDescription>
+              This action is <strong>permanent and irreversible</strong>. All your matches, sessions, and data will be erased.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="mt-2 space-y-4">
+            <div className="rounded-xl border border-destructive/30 bg-destructive/5 p-4 text-sm text-destructive">
+              You are about to permanently delete <strong>{user?.email}</strong> and all associated data.
+            </div>
+            <div className="space-y-1.5">
+              <Label htmlFor="confirm-delete-email" className="text-sm font-medium">
+                Type your email address to confirm
+              </Label>
+              <Input
+                id="confirm-delete-email"
+                type="email"
+                placeholder={user?.email ?? 'your@email.com'}
+                value={deleteConfirmEmail}
+                onChange={(e) => setDeleteConfirmEmail(e.target.value)}
+              />
+            </div>
+          </div>
+          <DialogFooter className="mt-2 gap-2 sm:gap-0">
+            <Button variant="outline" onClick={() => { setDeleteDialogOpen(false); setDeleteConfirmEmail(''); }}>
+              Cancel
+            </Button>
+            <Button
+              variant="destructive"
+              disabled={deleteConfirmEmail !== user?.email}
+              onClick={async () => {
+                try {
+                  await UserService.deleteAccount();
+                  setDeleteDialogOpen(false);
+                  setDeleteConfirmEmail('');
+                  logout();
+                } catch {
+                  toast({ title: 'Failed to delete account', description: 'Please try again or contact support.', variant: 'destructive' });
+                }
+              }}
+            >
+              <Trash2 className="mr-2 h-4 w-4" /> Delete my account
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </DashboardLayout>
   );
 }

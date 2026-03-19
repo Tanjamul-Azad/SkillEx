@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
@@ -29,6 +29,10 @@ const schema = z.object({
 
 type FormData = z.infer<typeof schema>;
 
+const UUID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+
+const isPersistedSkillId = (skillId?: string): boolean => Boolean(skillId && UUID_PATTERN.test(skillId));
+
 interface Props {
   open: boolean;
   onClose: () => void;
@@ -46,20 +50,36 @@ export function RequestExchangeDialog({ open, onClose, targetUser }: Props) {
     defaultValues: { offeredSkillId: '', message: '' },
   });
 
-  const mySkills: Skill[] = user?.skillsOffered ?? [];
+  const mySkills: Skill[] = useMemo(() => user?.skillsOffered ?? [], [user?.skillsOffered]);
   const charCount = form.watch('message')?.length ?? 0;
+
+  useEffect(() => {
+    if (!open) return;
+
+    const currentOffered = form.getValues('offeredSkillId');
+    if (!currentOffered && mySkills.length > 0) {
+      form.setValue('offeredSkillId', mySkills[0].id, { shouldValidate: true });
+    }
+
+    const currentWanted = form.getValues('wantedSkillId');
+    const firstTargetSkillId = targetUser.skillsOffered?.[0]?.id;
+    if (!currentWanted && isPersistedSkillId(firstTargetSkillId)) {
+      form.setValue('wantedSkillId', firstTargetSkillId);
+    }
+  }, [form, mySkills, open, targetUser.skillsOffered]);
 
   const handleSubmit = async (data: FormData) => {
     setSubmitting(true);
     try {
       const offeredSkill = mySkills.find((s) => s.id === data.offeredSkillId);
-      const wantedSkill  = targetUser.skillsOffered?.find((s) => s.id === data.wantedSkillId)
-                        ?? targetUser.skillsOffered?.[0];
+      const wantedSkill = targetUser.skillsOffered?.find((s) => s.id === data.wantedSkillId)
+        ?? targetUser.skillsOffered?.[0];
+      const wantedSkillId = isPersistedSkillId(wantedSkill?.id) ? wantedSkill?.id : undefined;
       await exchangeService.create({
-        receiverId:   targetUser.id,
-        offeredSkill: offeredSkill,
-        wantedSkill:  wantedSkill,
-        message:      data.message,
+        receiverId: targetUser.id,
+        offeredSkillId: offeredSkill?.id,
+        wantedSkillId,
+        message: data.message,
       });
       setStep('success');
     } catch (err) {
@@ -75,7 +95,13 @@ export function RequestExchangeDialog({ open, onClose, targetUser }: Props) {
 
   const handleClose = () => {
     setStep('form');
-    form.reset();
+    form.reset({
+      offeredSkillId: mySkills[0]?.id ?? '',
+      wantedSkillId: isPersistedSkillId(targetUser.skillsOffered?.[0]?.id)
+        ? targetUser.skillsOffered?.[0]?.id
+        : undefined,
+      message: '',
+    });
     onClose();
   };
 
@@ -156,11 +182,10 @@ export function RequestExchangeDialog({ open, onClose, targetUser }: Props) {
                             <label
                               key={s.id}
                               htmlFor={`skill-${s.id}`}
-                              className={`flex cursor-pointer items-center gap-3 rounded-xl border p-3 transition-colors ${
-                                field.value === s.id
+                              className={`flex cursor-pointer items-center gap-3 rounded-xl border p-3 transition-colors ${field.value === s.id
                                   ? 'border-primary bg-primary/5'
                                   : 'border-border/40 hover:border-primary/40 hover:bg-muted/50'
-                              }`}
+                                }`}
                             >
                               <RadioGroupItem value={s.id} id={`skill-${s.id}`} className="shrink-0" />
                               <span className="text-lg">{s.icon}</span>

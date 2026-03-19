@@ -1,0 +1,89 @@
+package com.skillex.service.impl;
+
+import com.skillex.dto.common.PagedResponse;
+import com.skillex.dto.review.*;
+import com.skillex.model.Review;
+import com.skillex.model.Session;
+import com.skillex.model.Skill;
+import com.skillex.model.User;
+import com.skillex.repository.SkillRepository;
+import com.skillex.repository.ReviewRepository;
+import com.skillex.repository.SessionRepository;
+import com.skillex.repository.UserRepository;
+import com.skillex.service.DtoMapper;
+import com.skillex.service.ReviewService;
+import com.skillex.service.reputation.ReputationUpdateEvent;
+import jakarta.persistence.EntityNotFoundException;
+import lombok.RequiredArgsConstructor;
+import org.springframework.context.ApplicationEventPublisher;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Sort;
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+
+import java.math.BigDecimal;
+
+@Service
+@RequiredArgsConstructor
+@SuppressWarnings("null")
+public class ReviewServiceImpl implements ReviewService {
+
+    private final ReviewRepository reviewRepository;
+    private final SessionRepository sessionRepository;
+    private final SkillRepository skillRepository;
+    private final UserRepository userRepository;
+    private final DtoMapper mapper;
+    private final ApplicationEventPublisher eventPublisher;
+
+    @Override
+    @Transactional(readOnly = true)
+    public PagedResponse<ReviewDto> getReviewsForUser(String userId, int page, int size) {
+        var pageable = PageRequest.of(page, size, Sort.by("createdAt").descending());
+        return PagedResponse.of(
+            reviewRepository.findByToUserId(userId, pageable).map(mapper::toReview));
+    }
+
+    @Override
+    @Transactional
+    public ReviewDto create(String fromUserId, CreateReviewRequest req) {
+        User fromUser = findUser(fromUserId);
+        User toUser   = findUser(req.toUserId());
+        Skill skill = skillRepository.findById(req.skillId())
+            .orElseThrow(() -> new EntityNotFoundException("Skill not found: " + req.skillId()));
+        Session session = sessionRepository.findById(req.sessionId())
+            .orElseThrow(() -> new EntityNotFoundException("Session not found: " + req.sessionId()));
+
+        // Prevent duplicate reviews for the same session from the same user
+        if (reviewRepository.existsByFromUserIdAndSessionId(fromUserId, req.sessionId())) {
+            throw new IllegalStateException("You have already reviewed this session.");
+        }
+
+        Review review = new Review();
+        review.setFromUser(fromUser);
+        review.setToUser(toUser);
+        review.setSkill(skill);
+        review.setSession(session);
+        review.setRating(req.rating());
+        review.setComment(req.comment());
+        Review saved = reviewRepository.save(review);
+
+        // Recalculate and persist the target user's average rating
+        Double avg = reviewRepository.findAverageRatingByToUserId(req.toUserId());
+        if (avg != null) {
+            toUser.setRating(BigDecimal.valueOf(avg).setScale(1, java.math.RoundingMode.HALF_UP));
+        }
+        userRepository.save(toUser);
+
+        // Publish reputation update event — ReputationServiceImpl will recompute skillexScore
+        eventPublisher.publishEvent(new ReputationUpdateEvent(req.toUserId(), ReputationUpdateEvent.Trigger.REVIEW_ADDED));
+
+        return mapper.toReview(saved);
+    }
+
+    // ── helpers ──────────────────────────────────────────────────────────────
+
+    private User findUser(String id) {
+        return userRepository.findById(id)
+            .orElseThrow(() -> new EntityNotFoundException("User not found: " + id));
+    }
+}

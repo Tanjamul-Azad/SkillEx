@@ -1,0 +1,52 @@
+# ─────────────────────────────────────────────────────────────────
+# SkillEX – Local Developer Secrets
+# Copy this file to application-local.properties and fill in values.
+# application-local.properties is gitignored — NEVER commit it.
+# Spring Boot picks this up automatically as the "local" profile.
+# Start with: java -jar skillex.jar --spring.profiles.active=local
+# Or set SPRING_PROFILES_ACTIVE=local in your IDE / run config.
+# ─────────────────────────────────────────────────────────────────
+
+# ── MySQL ─────────────────────────────────────────────────────────
+DB_URL=jdbc:mysql://localhost:3306/skillex?useSSL=false&allowPublicKeyRetrieval=true&serverTimezone=UTC
+DB_USERNAME=root
+DB_PASSWORD=your_mysql_password
+
+# ── JWT ───────────────────────────────────────────────────────────
+# Generate with: openssl rand -base64 64
+APP_JWT_SECRET=replace_with_a_long_random_secret_at_least_32_chars
+APP_JWT_EXPIRATION_MS=86400000
+
+# ── Google OAuth2 ─────────────────────────────────────────────────
+# Create credentials at: https://console.cloud.google.com/apis/credentials
+# Authorized redirect URI: http://localhost:8080/login/oauth2/code/google
+GOOGLE_CLIENT_ID=your_google_client_id.apps.googleusercontent.com
+GOOGLE_CLIENT_SECRET=your_google_client_secret
+
+# ── AI / Gemini ───────────────────────────────────────────────────
+# Get key at: https://aistudio.google.com/app/apikey
+GEMINI_API_KEY=your_gemini_api_key_here
+
+# ── CORS ──────────────────────────────────────────────────────────
+CORS_ALLOWED_ORIGINS=http://localhost:3000,http://localhost:5173
+
+# ── Optional: intent matching overrides for local experiments ──
+INTENT_CANDIDATE_POOL_FACTOR=4
+INTENT_REASON_THRESHOLD=0.25
+INTENT_EMBED_CACHE_MAX=4000
+INTENT_EMBED_REDIS_ENABLED=false
+INTENT_EMBED_REDIS_TTL_HOURS=24
+INTENT_EMBED_REDIS_PREFIX=skillex:intent-embedding
+INTENT_LEXICAL_WEIGHT=0.40
+INTENT_EMBED_WEIGHT=0.60
+
+# Optional Redis host/port when INTENT_EMBED_REDIS_ENABLED=true
+REDIS_HOST=localhost
+REDIS_PORT=6379
+REDIS_TIMEOUT_MS=2000
+
+# ── Optional: catalog governance pipeline ──
+CATALOG_AUTO_PROMOTE_ENABLED=true
+CATALOG_AUTO_PROMOTE_MIN_OCCURRENCES=3
+CATALOG_AUTO_PROMOTE_MIN_CONFIDENCE=70
+CATALOG_PENDING_LIST_DEFAULT_LIMIT=50

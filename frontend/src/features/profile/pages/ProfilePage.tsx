@@ -1,11 +1,15 @@
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useAuth } from '@/hooks/useAuth';
-import { users, reviews } from '@data/mock/mockData';
+import { useToast } from '@/hooks/use-toast';
+import { UserService } from '@/services/userService';
+import { ReviewService } from '@/services/reviewService';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from '@/components/ui/dialog';
+import { Textarea } from '@/components/ui/textarea';
 import { Progress } from '@/components/ui/progress';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Separator } from '@/components/ui/separator';
@@ -32,7 +36,7 @@ import {
   TrendingUp,
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Link, Navigate } from 'react-router-dom';
+import { Link, Navigate, useNavigate as useNav, useSearchParams } from 'react-router-dom';
 import { cn } from '@/lib/utils';
 import DashboardLayout from '@/components/layout/DashboardLayout';
 import { SkillBadge } from '@/components/ui/SkillBadge';
@@ -81,6 +85,8 @@ function SkillSection({
   variant,
   isOwner,
   onAdd,
+  id,
+  emphasized,
 }: {
   title: string;
   skills: Skill[];
@@ -89,12 +95,14 @@ function SkillSection({
   variant: 'offer' | 'want';
   isOwner?: boolean;
   onAdd?: () => void;
+  id?: string;
+  emphasized?: boolean;
 }) {
   const [showAll, setShowAll] = useState(false);
   const displayed = showAll ? skills : skills.slice(0, 4);
 
   return (
-    <Card className="border-border/60">
+    <Card id={id} className={cn('border-border/60 transition-shadow', emphasized && 'ring-2 ring-primary/50 shadow-[0_0_0_4px_hsl(var(--primary)/0.15)]')}>
       <CardHeader className="pb-3">
         <CardTitle className="flex items-center gap-2 text-base">
           <Icon className="w-4 h-4 text-primary" />
@@ -117,11 +125,17 @@ function SkillSection({
       </CardHeader>
       <CardContent>
         {skills.length === 0 ? (
-          <div className="flex flex-col items-center gap-2 py-3 text-center">
-            <p className="text-sm text-muted-foreground">{emptyText}</p>
+          <div className="flex flex-col items-center justify-center gap-3 py-8 px-4 text-center rounded-xl bg-muted/20 border border-dashed border-border/60">
+            <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center">
+              <Icon className="w-5 h-5 text-primary/70" />
+            </div>
+            <div className="space-y-1">
+              <p className="text-sm font-medium">{emptyText}</p>
+              <p className="text-xs text-muted-foreground">Add your first skill to get started on your journey.</p>
+            </div>
             {isOwner && (
-              <Button size="sm" variant="outline" className="rounded-xl text-xs h-7" onClick={onAdd}>
-                <Plus className="h-3 w-3 mr-1" /> Add Skill
+              <Button size="sm" variant="default" className="mt-2 rounded-xl text-xs h-8 shadow-glow-sm" onClick={onAdd}>
+                <Plus className="h-3.5 w-3.5 mr-1" /> Add Skill
               </Button>
             )}
           </div>
@@ -212,27 +226,93 @@ export default function ProfilePage() {
   const { user: currentUser } = useAuth();
   const navigate = useNavigate();
   const userId = params?.userId as string;
+  const { toast } = useToast();
 
-  const profileUser = users.find((u) => u.id === userId);
+  const [profileUser, setProfileUser] = useState<User | null>(null);
+  const [userReviews, setUserReviews] = useState<Review[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [notFound, setNotFound] = useState(false);
+  const [offeredSkills, setOfferedSkills] = useState<Skill[]>([]);
+  const [wantedSkills, setWantedSkills] = useState<Skill[]>([]);
+  const navTo = useNav();
+  const [searchParams, setSearchParams] = useSearchParams();
+  const [addSkillMode, setAddSkillMode] = useState<'offered' | 'wanted' | null>(null);
+  const [requestOpen, setRequestOpen] = useState(false);
+  const [coverDialogOpen, setCoverDialogOpen] = useState(false);
+  const [coverPreview, setCoverPreview] = useState<string | null>(null);
+  const [localCover, setLocalCover] = useState<string | null>(null);
+  const coverFileRef = React.useRef<HTMLInputElement>(null);
+  const [reviewDialogOpen, setReviewDialogOpen] = useState(false);
+  const [reviewRating, setReviewRating] = useState(0);
+  const [reviewHover, setReviewHover] = useState(0);
+  const [reviewComment, setReviewComment] = useState('');
+  const [reviewSubmitted, setReviewSubmitted] = useState(false);
 
-  if (!profileUser) {
+  const tabParam = searchParams.get('tab');
+  const focusParam = searchParams.get('focus');
+  const resolvedInitialTab = tabParam === 'reviews' || tabParam === 'activity' || tabParam === 'skills'
+    ? tabParam
+    : 'skills';
+  const [activeTab, setActiveTab] = useState<'skills' | 'reviews' | 'activity'>(resolvedInitialTab);
+
+  useEffect(() => {
+    const next = searchParams.get('tab');
+    if (next === 'skills' || next === 'reviews' || next === 'activity') {
+      setActiveTab(next);
+    }
+  }, [searchParams]);
+
+  useEffect(() => {
+    if (!userId) return;
+    setLoading(true);
+    setNotFound(false);
+    Promise.all([
+      UserService.getById(userId),
+      ReviewService.getForUser(userId),
+    ])
+      .then(([userResult, reviewsResult]) => {
+        const u = userResult as User;
+        setProfileUser(u);
+        setOfferedSkills(u.skillsOffered ?? []);
+        setWantedSkills(u.skillsWanted ?? []);
+        const reviews = (reviewsResult as unknown as { content?: Review[] }).content ?? (reviewsResult as unknown as Review[]) ?? [];
+        setUserReviews(reviews);
+      })
+      .catch(() => setNotFound(true))
+      .finally(() => setLoading(false));
+  }, [userId]);
+
+  if (loading) {
+    return (
+      <DashboardLayout>
+        <div className="flex items-center justify-center min-h-[60vh]">
+          <div className="animate-spin h-8 w-8 rounded-full border-4 border-primary border-t-transparent" />
+        </div>
+      </DashboardLayout>
+    );
+  }
+
+  if (notFound || !profileUser) {
     return <Navigate to="/" replace />;
   }
 
   const isOwnProfile = currentUser?.id === profileUser.id;
-  const userReviews: Review[] = reviews.filter((r) => r.toUser.id === userId);
+  const emphasizeOfferedSkills = activeTab === 'skills' && focusParam === 'offered';
+  const handleTabChange = (next: string) => {
+    if (next !== 'skills' && next !== 'reviews' && next !== 'activity') return;
+    setActiveTab(next);
+
+    const nextParams = new URLSearchParams(searchParams);
+    nextParams.set('tab', next);
+    if (next !== 'skills') {
+      nextParams.delete('focus');
+    }
+    setSearchParams(nextParams, { replace: true });
+  };
   const avgRating =
     userReviews.length > 0
       ? userReviews.reduce((sum, r) => sum + r.rating, 0) / userReviews.length
       : profileUser.rating;
-
-  // Local skill state so we can add skills client-side
-  const [offeredSkills, setOfferedSkills] = useState<Skill[]>(profileUser.skillsOffered);
-  const [wantedSkills, setWantedSkills] = useState<Skill[]>(profileUser.skillsWanted);
-
-  // Dialog state
-  const [addSkillMode, setAddSkillMode] = useState<'offered' | 'wanted' | null>(null);
-  const [requestOpen, setRequestOpen] = useState(false);
 
   return (
     <DashboardLayout>
@@ -245,16 +325,19 @@ export default function ProfilePage() {
         >
           <Card className="overflow-hidden border-border/60">
             {/* Cover banner */}
-            <div className="relative h-40 bg-gradient-to-br from-primary/30 via-secondary/20 to-accent/20 overflow-hidden">
-              {/* Animated blobs in banner */}
-              <div className="animate-blob absolute -top-10 -left-10 h-48 w-48 rounded-full bg-primary/20 blur-3xl" />
-              <div className="animate-blob absolute -bottom-10 -right-10 h-48 w-48 rounded-full bg-secondary/20 blur-3xl" style={{ animationDelay: '4s' }} />
-              <div className="dot-grid absolute inset-0 opacity-20" />
+            <div className="relative h-48 sm:h-56 bg-gradient-to-r from-primary/80 via-accent/80 to-secondary/80 overflow-hidden" style={localCover ? { backgroundImage: `url(${localCover})`, backgroundSize: 'cover', backgroundPosition: 'center' } : undefined}>
+              {/* Vibrant Animated blobs in banner */}
+              <div className="absolute inset-0 bg-background/20 dark:bg-background/40 backdrop-blur-[2px] mix-blend-overlay" />
+              <div className="animate-blob absolute -top-20 -left-10 h-72 w-72 rounded-full bg-primary/40 blur-3xl mix-blend-multiply dark:mix-blend-screen" />
+              <div className="animate-blob absolute -bottom-20 -right-10 h-72 w-72 rounded-full bg-secondary/40 blur-3xl mix-blend-multiply dark:mix-blend-screen" style={{ animationDelay: '4s' }} />
+              <div className="animate-blob absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 h-56 w-56 rounded-full bg-accent/40 blur-3xl mix-blend-multiply dark:mix-blend-screen" style={{ animationDelay: '2s' }} />
+              <div className="dot-grid absolute inset-0 opacity-40 mix-blend-overlay" />
               {isOwnProfile && (
                 <Button
                   variant="ghost"
                   size="icon"
                   className="absolute top-3 right-3 bg-background/60 backdrop-blur-sm h-8 w-8 hover:bg-background/80"
+                  onClick={() => setCoverDialogOpen(true)}
                 >
                   <Camera className="w-4 h-4" />
                 </Button>
@@ -264,20 +347,32 @@ export default function ProfilePage() {
             <CardContent className="px-6 pb-6">
               {/* Avatar + action buttons */}
               <div className="flex flex-wrap items-end justify-between gap-4 -mt-12 mb-4">
-                <div className="relative">
-                  <Avatar className="w-24 h-24 border-4 border-background ring-4 ring-primary/20 shadow-glow">
+                <motion.div 
+                  initial={{ scale: 0.8, y: 10 }}
+                  animate={{ scale: 1, y: 0 }}
+                  transition={{ type: "spring", stiffness: 300, damping: 20 }}
+                  whileHover={{ scale: 1.05 }}
+                  className="relative group cursor-pointer"
+                >
+                  <Avatar className="w-28 h-28 border-4 border-background ring-4 ring-primary/20 shadow-glow transition-all duration-300 group-hover:ring-primary/40 group-hover:shadow-[0_0_30px_hsl(var(--primary)/0.3)]">
                     <AvatarImage
                       src={profileUser.avatar}
                       alt={profileUser.name}
                     />
-                    <AvatarFallback className="text-2xl font-bold">
+                    <AvatarFallback className="text-2xl font-bold bg-primary/5 text-primary">
                       {profileUser.name.charAt(0)}
                     </AvatarFallback>
                   </Avatar>
+                  <div className="absolute inset-0 rounded-full bg-gradient-to-tr from-primary/10 to-transparent opacity-0 transition-opacity duration-300 group-hover:opacity-100 pointer-events-none" />
+                  
                   {profileUser.isOnline && (
-                    <span className="absolute bottom-1 right-1 w-4 h-4 bg-secondary rounded-full border-2 border-background shadow-sm" />
+                    <motion.span 
+                      initial={{ scale: 0 }}
+                      animate={{ scale: 1 }}
+                      className="absolute bottom-1 right-1 w-5 h-5 bg-secondary rounded-full border-[3px] border-background shadow-md z-10" 
+                    />
                   )}
-                </div>
+                </motion.div>
 
                 <div className="flex items-center gap-2 mt-12 sm:mt-0">
                   {isOwnProfile ? (
@@ -295,15 +390,21 @@ export default function ProfilePage() {
                     </>
                   ) : (
                     <>
-                      <Button variant="outline" size="sm">
+                      <Button variant="outline" size="sm" onClick={async () => {
+                        const url = window.location.href;
+                        if (navigator.share) {
+                          try { await navigator.share({ title: profileUser.name, url }); } catch { /* user cancelled */ }
+                        } else {
+                          await navigator.clipboard.writeText(url);
+                          toast({ title: 'Link copied!', description: 'Profile link copied to clipboard.' });
+                        }
+                      }}>
                         <Share2 className="w-4 h-4 mr-1.5" />
                         Share
                       </Button>
-                      <Button variant="outline" size="sm" asChild>
-                        <Link to={`/messages/${profileUser.id}`}>
-                          <MessageSquare className="w-4 h-4 mr-1.5" />
-                          Message
-                        </Link>
+                      <Button variant="outline" size="sm" onClick={() => navTo(`/messages/${profileUser.id}`)}>
+                        <MessageSquare className="w-4 h-4 mr-1.5" />
+                        Message
                       </Button>
                       <Button size="sm" onClick={() => setRequestOpen(true)}>
                         <UserPlus className="w-4 h-4 mr-1.5" />
@@ -391,7 +492,7 @@ export default function ProfilePage() {
         </motion.div>
 
         {/* ── Main Content ── */}
-        <Tabs defaultValue="skills" className="w-full">
+        <Tabs value={activeTab} onValueChange={handleTabChange} className="w-full">
           <TabsList className="w-full sm:w-auto">
             <TabsTrigger value="skills" className="flex-1 sm:flex-none">
               <BookOpen className="w-3.5 h-3.5 mr-1.5" />
@@ -422,11 +523,13 @@ export default function ProfilePage() {
             >
               <motion.div variants={itemVariants}>
                 <SkillSection
+                  id="skills-offered"
                   title="Skills I Offer"
                   skills={offeredSkills}
                   icon={CheckCircle}
                   emptyText="No skills listed yet."
                   variant="offer"
+                  emphasized={emphasizeOfferedSkills}
                   isOwner={isOwnProfile}
                   onAdd={() => setAddSkillMode('offered')}
                 />
@@ -481,7 +584,7 @@ export default function ProfilePage() {
                   <Star className="w-8 h-8 mx-auto mb-3 text-muted-foreground/40" />
                   <p className="text-muted-foreground">No reviews yet.</p>
                   {!isOwnProfile && (
-                    <Button size="sm" className="mt-4">
+                    <Button size="sm" className="mt-4" onClick={() => setReviewDialogOpen(true)}>
                       <Plus className="w-4 h-4 mr-1.5" />
                       Leave a Review
                     </Button>
@@ -622,6 +725,154 @@ export default function ProfilePage() {
           targetUser={profileUser as User}
         />
       )}
+
+      {/* Leave a Review Dialog */}
+      {!isOwnProfile && (
+        <Dialog open={reviewDialogOpen} onOpenChange={(o) => { setReviewDialogOpen(o); if (!o) { setReviewRating(0); setReviewComment(''); setReviewSubmitted(false); } }}>
+          <DialogContent className="sm:max-w-md">
+            <DialogHeader>
+              <DialogTitle>Leave a Review</DialogTitle>
+              <DialogDescription>Share your experience with {profileUser?.name}.</DialogDescription>
+            </DialogHeader>
+            {reviewSubmitted ? (
+              <div className="flex flex-col items-center gap-3 py-6 text-center">
+                <div className="p-4 rounded-full bg-secondary/10 text-secondary"><CheckCircle className="h-10 w-10" /></div>
+                <h3 className="text-lg font-bold">Review Submitted!</h3>
+                <p className="text-sm text-muted-foreground">Your review has been added. Thank you for your feedback.</p>
+                <Button className="mt-2" onClick={() => { setReviewDialogOpen(false); setReviewSubmitted(false); }}>Close</Button>
+              </div>
+            ) : (
+              <>
+                <div className="space-y-4 py-2">
+                  <div>
+                    <p className="text-sm font-medium mb-2">Rating</p>
+                    <div className="flex gap-1">
+                      {[1, 2, 3, 4, 5].map((s) => (
+                        <button
+                          key={s}
+                          type="button"
+                          onMouseEnter={() => setReviewHover(s)}
+                          onMouseLeave={() => setReviewHover(0)}
+                          onClick={() => setReviewRating(s)}
+                          className="p-0.5 transition-transform hover:scale-110"
+                        >
+                          <Star className={cn('w-8 h-8 transition-colors', (reviewHover || reviewRating) >= s ? 'fill-amber-400 text-amber-400' : 'fill-muted text-muted-foreground/30')} />
+                        </button>
+                      ))}
+                      {reviewRating > 0 && (
+                        <span className="ml-2 self-center text-sm font-medium text-muted-foreground">
+                          {['', 'Poor', 'Fair', 'Good', 'Great', 'Excellent'][reviewRating]}
+                        </span>
+                      )}
+                    </div>
+                  </div>
+                  <div>
+                    <p className="text-sm font-medium mb-2">Comment</p>
+                    <Textarea
+                      placeholder={`Describe your experience with ${profileUser?.name?.split(' ')[0]}...`}
+                      value={reviewComment}
+                      onChange={(e) => setReviewComment(e.target.value)}
+                      rows={4}
+                      className="resize-none"
+                    />
+                  </div>
+                </div>
+                <DialogFooter>
+                  <Button variant="ghost" onClick={() => setReviewDialogOpen(false)}>Cancel</Button>
+                  <Button
+                    variant="gradient"
+                    disabled={reviewRating === 0 || reviewComment.trim().length < 10}
+                    onClick={() => {
+                      setUserReviews(prev => [{
+                        id: `local-${Date.now()}`,
+                        rating: reviewRating,
+                        comment: reviewComment.trim(),
+                        createdAt: new Date().toISOString(),
+                        fromUser: currentUser,
+                        toUserId: profileUser?.id ?? '',
+                        sessionId: '',
+                      } as unknown as Review, ...prev]);
+                      setReviewSubmitted(true);
+                    }}
+                  >
+                    Submit Review
+                  </Button>
+                </DialogFooter>
+              </>
+            )}
+          </DialogContent>
+        </Dialog>
+      )}
+
+      {/* Cover Photo Dialog */}
+      <Dialog open={coverDialogOpen} onOpenChange={(o) => { setCoverDialogOpen(o); if (!o) setCoverPreview(null); }}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>Update Cover Photo</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4">
+            {/* Preview */}
+            <div
+              className="h-36 w-full rounded-xl bg-gradient-to-br from-primary/30 via-secondary/20 to-accent/20 overflow-hidden border border-border/60 flex items-center justify-center cursor-pointer hover:opacity-90 transition-opacity"
+              style={coverPreview ? { backgroundImage: `url(${coverPreview})`, backgroundSize: 'cover', backgroundPosition: 'center' } : undefined}
+              onClick={() => coverFileRef.current?.click()}
+            >
+              {!coverPreview && (
+                <div className="flex flex-col items-center gap-2 text-muted-foreground">
+                  <Camera className="h-8 w-8" />
+                  <p className="text-sm">Click to select an image</p>
+                </div>
+              )}
+            </div>
+            <input
+              ref={coverFileRef}
+              type="file"
+              accept="image/*"
+              className="hidden"
+              onChange={(e) => {
+                const file = e.target.files?.[0];
+                if (file) setCoverPreview(URL.createObjectURL(file));
+              }}
+            />
+            {/* Gradient presets */}
+            <div>
+              <p className="text-xs font-medium text-muted-foreground mb-2">Or choose a gradient</p>
+              <div className="flex gap-2 flex-wrap">
+                {[
+                  'from-primary/40 via-secondary/20 to-accent/20',
+                  'from-violet-500/40 via-purple-500/20 to-pink-500/20',
+                  'from-cyan-500/40 via-blue-500/20 to-indigo-500/20',
+                  'from-amber-500/40 via-orange-500/20 to-red-500/20',
+                  'from-emerald-500/40 via-teal-500/20 to-cyan-500/20',
+                ].map((grad, i) => (
+                  <button
+                    key={i}
+                    className={`h-10 w-16 rounded-lg bg-gradient-to-br ${grad} border-2 ${coverPreview === `preset-${i}` ? 'border-primary' : 'border-transparent'} hover:border-primary/60 transition-colors`}
+                    onClick={() => setCoverPreview(`preset-${i}`)}
+                  />
+                ))}
+              </div>
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="ghost" onClick={() => { setCoverDialogOpen(false); setCoverPreview(null); }}>Cancel</Button>
+            <Button
+              variant="gradient"
+              disabled={!coverPreview}
+              onClick={() => {
+                if (coverPreview && !coverPreview.startsWith('preset-')) {
+                  setLocalCover(coverPreview);
+                }
+                setCoverDialogOpen(false);
+                setCoverPreview(null);
+                toast({ title: 'Cover photo updated!' });
+              }}
+            >
+              Save
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </DashboardLayout>
   );
 }

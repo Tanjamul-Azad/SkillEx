@@ -16,11 +16,30 @@ const MatchPage = React.lazy(() => import('./features/match/pages/MatchPage'));
 const CommunityPage = React.lazy(() => import('./features/community/pages/CommunityPage'));
 const ProfilePage = React.lazy(() => import('./features/profile/pages/ProfilePage'));
 const SettingsPage = React.lazy(() => import('./features/settings/pages/SettingsPage'));
+const MessagesPage = React.lazy(() => import('./features/messages/pages/MessagesPage'));
 const OnboardingPage = React.lazy(() => import('./features/onboarding/pages/OnboardingPage'));
 const NotFoundPage = React.lazy(() => import('./features/error/NotFoundPage'));
+const AboutPage = React.lazy(() => import('./features/marketing/pages/AboutPage'));
+const CareersPage = React.lazy(() => import('./features/marketing/pages/CareersPage'));
+const TermsPage = React.lazy(() => import('./features/marketing/pages/TermsPage'));
+const PrivacyPage = React.lazy(() => import('./features/marketing/pages/PrivacyPage'));
+const TrustPage = React.lazy(() => import('./features/marketing/pages/TrustPage'));
+
+// Helper for preloading the current route chunk
+const preloadCurrentRoute = () => {
+  const path = window.location.pathname;
+  if (path === '/') import('./features/marketing/pages/LandingPage');
+  else if (path === '/login') import('./features/auth/pages/LoginPage');
+  else if (path === '/dashboard') import('./features/dashboard/pages/DashboardPage');
+  else if (path === '/match') import('./features/match/pages/MatchPage');
+  else if (path === '/community') import('./features/community/pages/CommunityPage');
+  else if (path.startsWith('/profile/')) import('./features/profile/pages/ProfilePage');
+  else if (path === '/settings') import('./features/settings/pages/SettingsPage');
+  else if (path === '/onboarding') import('./features/onboarding/pages/OnboardingPage');
+};
 
 const PageLoader = () => (
-  <div className="flex h-screen w-full items-center justify-center bg-background">
+  <div className="flex xl:h-screen h-[100dvh] w-full items-center justify-center bg-background">
     <div className="h-8 w-8 animate-spin rounded-full border-4 border-primary border-t-transparent" />
   </div>
 );
@@ -28,7 +47,14 @@ const PageLoader = () => (
 /* ── Splash screen shown once per session ──────────────────────────────── */
 function SplashScreen({ onDone }: { onDone: () => void }) {
   useEffect(() => {
-    const t = setTimeout(onDone, 2200); // visible for ~1.8 s then exit
+    // Preload the chunk immediately when splash mounts
+    preloadCurrentRoute();
+
+    const prefersReducedMotion =
+      typeof window !== 'undefined' &&
+      window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+    const t = setTimeout(onDone, prefersReducedMotion ? 900 : 1600);
     return () => clearTimeout(t);
   }, [onDone]);
 
@@ -87,19 +113,30 @@ export default function App() {
                   <SplashScreen key="splash" onDone={() => setSplashDone(true)} />
                 )}
               </AnimatePresence>
-              <Suspense fallback={<PageLoader />}>
-                <Routes>
-                  <Route path="/" element={<LandingPage />} />
-                  <Route path="/login" element={<AuthPage />} />
-                  <Route path="/dashboard" element={<DashboardPage />} />
-                  <Route path="/match" element={<MatchPage />} />
-                  <Route path="/community" element={<CommunityPage />} />
-                  <Route path="/profile/:userId" element={<ProfilePage />} />
-                  <Route path="/settings" element={<SettingsPage />} />
-                  <Route path="/onboarding" element={<OnboardingPage />} />
-                  <Route path="*" element={<NotFoundPage />} />
-                </Routes>
-              </Suspense>
+
+              {splashDone && (
+                <Suspense fallback={<PageLoader />}>
+                  <Routes>
+                    <Route path="/" element={<LandingPage />} />
+                    <Route path="/login" element={<AuthPage />} />
+                    <Route path="/dashboard" element={<DashboardPage />} />
+                    <Route path="/match" element={<MatchPage />} />
+                    <Route path="/community" element={<CommunityPage />} />
+                    <Route path="/profile/:userId" element={<ProfilePage />} />
+                    <Route path="/settings" element={<SettingsPage />} />
+                    <Route path="/messages" element={<MessagesPage />} />
+                    <Route path="/messages/:userId" element={<MessagesPage />} />
+                    <Route path="/onboarding" element={<OnboardingPage />} />
+                    <Route path="/about" element={<AboutPage />} />
+                    <Route path="/careers" element={<CareersPage />} />
+                    <Route path="/terms" element={<TermsPage />} />
+                    <Route path="/privacy" element={<PrivacyPage />} />
+                    <Route path="/trust" element={<TrustPage />} />
+                    <Route path="*" element={<NotFoundPage />} />
+                  </Routes>
+                </Suspense>
+              )}
+
               <Toaster />
             </RadixToastProvider>
           </ToastStateProvider>

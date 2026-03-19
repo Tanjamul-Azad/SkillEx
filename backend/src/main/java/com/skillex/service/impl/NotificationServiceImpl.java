@@ -17,8 +17,6 @@ import org.springframework.security.access.AccessDeniedException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import java.util.UUID;
-
 @Service
 @RequiredArgsConstructor
 @SuppressWarnings("null")
@@ -65,7 +63,6 @@ public class NotificationServiceImpl implements NotificationService {
             : null;
 
         Notification notification = new Notification();
-        notification.setId(UUID.randomUUID().toString());
         notification.setUser(user);
         notification.setFromUser(fromUser);
         notification.setType(Notification.NotificationType.valueOf(type.toUpperCase()));

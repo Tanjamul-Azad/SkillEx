@@ -2,10 +2,11 @@ import { Skill } from '@/types';
 import { api } from './api';
 
 export interface SkillIntentSuggestion {
-  skillId: string;
+  skillId?: string | null;
   skillName: string;
   category: string;
   confidence: number;
+  custom?: boolean;
 }
 
 export interface SkillIntentInterpretResult {
@@ -27,11 +28,6 @@ export const SkillService = {
 
   getById: async (id: string) => {
     return api.get<Skill>(`/skills/${id}`);
-  },
-
-  // Mock implementation for creation as mockData.ts is read-only essentially
-  create: async (data: Partial<Skill>) => {
-    return api.post<Skill>('/skills', data);
   },
 
   interpretIntent: async (payload: { teachText?: string; learnText?: string }) => {

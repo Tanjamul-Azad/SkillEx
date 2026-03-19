@@ -54,12 +54,11 @@ public class UserController {
 
     /** POST /api/users/me/skills — add a skill (offered or wanted) */
     @PostMapping("/me/skills")
-    public ResponseEntity<ApiResponse<String>> addSkill(
+    public ResponseEntity<ApiResponse<AddSkillResult>> addSkill(
         Authentication auth,
         @Valid @RequestBody AddSkillRequest req
     ) {
-        userService.addSkill(userId(auth), req);
-        return ResponseEntity.ok(ApiResponse.ok("Skill added."));
+        return ResponseEntity.ok(ApiResponse.ok(userService.addSkill(userId(auth), req)));
     }
 
     /** DELETE /api/users/me/skills/{skillId}?type=offered|wanted */

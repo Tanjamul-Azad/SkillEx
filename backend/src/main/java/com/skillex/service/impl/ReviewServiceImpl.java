@@ -4,7 +4,9 @@ import com.skillex.dto.common.PagedResponse;
 import com.skillex.dto.review.*;
 import com.skillex.model.Review;
 import com.skillex.model.Session;
+import com.skillex.model.Skill;
 import com.skillex.model.User;
+import com.skillex.repository.SkillRepository;
 import com.skillex.repository.ReviewRepository;
 import com.skillex.repository.SessionRepository;
 import com.skillex.repository.UserRepository;
@@ -20,7 +22,6 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
-import java.util.UUID;
 
 @Service
 @RequiredArgsConstructor
@@ -29,6 +30,7 @@ public class ReviewServiceImpl implements ReviewService {
 
     private final ReviewRepository reviewRepository;
     private final SessionRepository sessionRepository;
+    private final SkillRepository skillRepository;
     private final UserRepository userRepository;
     private final DtoMapper mapper;
     private final ApplicationEventPublisher eventPublisher;
@@ -46,6 +48,8 @@ public class ReviewServiceImpl implements ReviewService {
     public ReviewDto create(String fromUserId, CreateReviewRequest req) {
         User fromUser = findUser(fromUserId);
         User toUser   = findUser(req.toUserId());
+        Skill skill = skillRepository.findById(req.skillId())
+            .orElseThrow(() -> new EntityNotFoundException("Skill not found: " + req.skillId()));
         Session session = sessionRepository.findById(req.sessionId())
             .orElseThrow(() -> new EntityNotFoundException("Session not found: " + req.sessionId()));
 
@@ -55,9 +59,9 @@ public class ReviewServiceImpl implements ReviewService {
         }
 
         Review review = new Review();
-        review.setId(UUID.randomUUID().toString());
         review.setFromUser(fromUser);
         review.setToUser(toUser);
+        review.setSkill(skill);
         review.setSession(session);
         review.setRating(req.rating());
         review.setComment(req.comment());

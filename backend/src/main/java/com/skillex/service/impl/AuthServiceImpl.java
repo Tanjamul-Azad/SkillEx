@@ -3,6 +3,11 @@ package com.skillex.service.impl;
 import com.skillex.dto.auth.AuthResponse;
 import com.skillex.dto.auth.LoginRequest;
 import com.skillex.dto.auth.RegisterRequest;
+import com.skillex.dto.skill.SkillIntentInterpretRequest;
+import com.skillex.dto.skill.SkillIntentInterpretResponse;
+import com.skillex.dto.skill.SkillIntentInterpretResultDto;
+import com.skillex.dto.skill.SkillIntentSuggestionDto;
+import com.skillex.model.Skill;
 import com.skillex.model.User;
 import com.skillex.model.UserSkillOffered;
 import com.skillex.model.UserSkillWanted;
@@ -12,12 +17,16 @@ import com.skillex.repository.UserSkillOfferedRepository;
 import com.skillex.repository.UserSkillWantedRepository;
 import com.skillex.service.AuthService;
 import com.skillex.service.DtoMapper;
+import com.skillex.service.SkillIntentService;
 import com.skillex.config.JwtUtil;
 import lombok.RequiredArgsConstructor;
 import org.springframework.lang.NonNull;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+
+import java.util.List;
+import java.util.Optional;
 
 /**
  * Concrete implementation of AuthService.
@@ -39,6 +48,7 @@ public class AuthServiceImpl implements AuthService {
     private final PasswordEncoder passwordEncoder;
     private final JwtUtil jwtUtil;
     private final DtoMapper mapper;
+    private final SkillIntentService skillIntentService;
 
     @Override
     @Transactional
@@ -52,6 +62,8 @@ public class AuthServiceImpl implements AuthService {
             .email(req.email())
             .passwordHash(passwordEncoder.encode(req.password()))
             .university(req.university())
+            .teachIntentText(sanitizeIntentText(req.skillToTeach()))
+            .learnIntentText(sanitizeIntentText(req.skillToLearn()))
             .build();
 
         user = userRepository.save(user);
@@ -93,8 +105,8 @@ public class AuthServiceImpl implements AuthService {
 
     /**
      * Saves the skillToTeach (offered) and skillToLearn (wanted) chosen on the
-     * registration form.  Unrecognised skill names are silently ignored so that
-     * a typo on the client side never blocks registration.
+     * registration form by resolving text to existing catalog skills.
+     * Unresolved text is ignored so registration never fails on bad input.
      */
     private void saveRegistrationSkills(User user, RegisterRequest req) {
         UserSkillOffered.SkillProficiency proficiency = parseProficiency(req.level());
@@ -104,22 +116,86 @@ public class AuthServiceImpl implements AuthService {
         // call userRepository.save(), as that would generate a duplicate-key INSERT on the
         // same user_skills_offered / user_skills_wanted row.
         if (req.skillToTeach() != null && !req.skillToTeach().isBlank()) {
-            skillRepository.findByNameIgnoreCase(req.skillToTeach().trim()).ifPresent(skill ->
+            resolveRegistrationSkill(req.skillToTeach(), true).ifPresent(skill ->
                 offeredRepo.save(UserSkillOffered.builder()
                     .id(new UserSkillOffered.UserSkillId(user.getId(), skill.getId()))
                     .user(user).skill(skill).level(proficiency)
-                    .build())
-            );
+                    .build()));
         }
 
         if (req.skillToLearn() != null && !req.skillToLearn().isBlank()) {
-            skillRepository.findByNameIgnoreCase(req.skillToLearn().trim()).ifPresent(skill ->
+            resolveRegistrationSkill(req.skillToLearn(), false).ifPresent(skill ->
                 wantedRepo.save(UserSkillWanted.builder()
                     .id(new UserSkillWanted.UserSkillId(user.getId(), skill.getId()))
                     .user(user).skill(skill).level(proficiency)
-                    .build())
-            );
+                    .build()));
         }
+    }
+
+    private Optional<Skill> resolveRegistrationSkill(String rawName, boolean teachSide) {
+        String normalizedName = normalizeSkillName(rawName);
+        Optional<Skill> exact = skillRepository.findByNameIgnoreCase(normalizedName);
+        if (exact.isPresent()) {
+            return exact;
+        }
+
+        SkillIntentInterpretRequest request = teachSide
+            ? new SkillIntentInterpretRequest(rawName, null)
+            : new SkillIntentInterpretRequest(null, rawName);
+
+        SkillIntentInterpretResponse interpreted = skillIntentService.interpret(request);
+        SkillIntentInterpretResultDto side = teachSide ? interpreted.teach() : interpreted.learn();
+        if (side == null) {
+            return Optional.empty();
+        }
+
+        String selectedSkillId = firstCatalogSkillId(side);
+        if (selectedSkillId == null || selectedSkillId.isBlank()) {
+            return Optional.empty();
+        }
+
+        return skillRepository.findById(selectedSkillId);
+    }
+
+    private String normalizeSkillName(String rawName) {
+        String normalized = rawName == null ? "" : rawName
+            .replaceAll("[^A-Za-z0-9\\s+/#.-]", " ")
+            .replaceAll("\\s+", " ")
+            .trim();
+
+        if (normalized.isBlank()) {
+            return "";
+        }
+
+        return normalized;
+    }
+
+    private String sanitizeIntentText(String raw) {
+        if (raw == null) {
+            return null;
+        }
+        String normalized = raw
+            .replaceAll("\\s+", " ")
+            .trim();
+        return normalized.isBlank() ? null : normalized;
+    }
+
+    private String firstCatalogSkillId(SkillIntentInterpretResultDto side) {
+        SkillIntentSuggestionDto primary = side.primary();
+        if (primary != null && primary.skillId() != null && !primary.skillId().isBlank()) {
+            return primary.skillId();
+        }
+
+        List<SkillIntentSuggestionDto> alternatives = side.alternatives();
+        if (alternatives == null) {
+            return null;
+        }
+
+        return alternatives.stream()
+            .map(SkillIntentSuggestionDto::skillId)
+            .filter(id -> id != null && !id.isBlank())
+            .findFirst()
+            .orElse(null);
     }
 
     private UserSkillOffered.SkillProficiency parseProficiency(String raw) {

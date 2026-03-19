@@ -11,7 +11,7 @@ public interface UserService {
 
     void changePassword(String userId, ChangePasswordRequest req);
 
-    void addSkill(String userId, AddSkillRequest req);
+    AddSkillResult addSkill(String userId, AddSkillRequest req);
 
     void removeSkill(String userId, String skillId, String type);
 

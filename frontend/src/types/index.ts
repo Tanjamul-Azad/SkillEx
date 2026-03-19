@@ -22,6 +22,8 @@ export interface User {
   avatar: string;
   university: string;
   bio: string;
+  teachIntentText?: string;
+  learnIntentText?: string;
   skillsOffered: Skill[];
   skillsWanted: Skill[];
   skillexScore: number;

@@ -74,11 +74,22 @@ export class ApiClient {
       ? endpoint
       : `${this.baseUrl}${endpoint}`;
 
+    const body = options?.body;
+    const isFormDataBody = typeof FormData !== 'undefined' && body instanceof FormData;
+
     const headers: Record<string, string> = {
-      'Content-Type': 'application/json',
       ...this.authHeader(),
       ...(options?.headers as Record<string, string> ?? {}),
     };
+
+    const hasContentTypeHeader =
+      Object.keys(headers).some((k) => k.toLowerCase() === 'content-type');
+
+    // Only default to JSON when the caller did not provide Content-Type and the body is not FormData.
+    // FormData must let the browser set boundary automatically.
+    if (!hasContentTypeHeader && !isFormDataBody) {
+      headers['Content-Type'] = 'application/json';
+    }
 
     let response: Response;
     try {
@@ -115,15 +126,36 @@ export class ApiClient {
   }
 
   post<T>(path: string, body: unknown, options?: RequestInit): Promise<T> {
-    return this.request<T>(path, { ...options, method: 'POST', body: JSON.stringify(body) });
+    const payload =
+      (typeof FormData !== 'undefined' && body instanceof FormData) ||
+      body instanceof Blob ||
+      body instanceof URLSearchParams ||
+      typeof body === 'string'
+        ? body
+        : JSON.stringify(body);
+    return this.request<T>(path, { ...options, method: 'POST', body: payload });
   }
 
   put<T>(path: string, body: unknown, options?: RequestInit): Promise<T> {
-    return this.request<T>(path, { ...options, method: 'PUT', body: JSON.stringify(body) });
+    const payload =
+      (typeof FormData !== 'undefined' && body instanceof FormData) ||
+      body instanceof Blob ||
+      body instanceof URLSearchParams ||
+      typeof body === 'string'
+        ? body
+        : JSON.stringify(body);
+    return this.request<T>(path, { ...options, method: 'PUT', body: payload });
   }
 
   patch<T>(path: string, body: unknown, options?: RequestInit): Promise<T> {
-    return this.request<T>(path, { ...options, method: 'PATCH', body: JSON.stringify(body) });
+    const payload =
+      (typeof FormData !== 'undefined' && body instanceof FormData) ||
+      body instanceof Blob ||
+      body instanceof URLSearchParams ||
+      typeof body === 'string'
+        ? body
+        : JSON.stringify(body);
+    return this.request<T>(path, { ...options, method: 'PATCH', body: payload });
   }
 
   delete<T>(path: string, options?: RequestInit): Promise<T> {

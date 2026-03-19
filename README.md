@@ -102,6 +102,16 @@ Controller (thin, routing only)
 
 ## Quick Start
 
+### Full Stack (recommended)
+```bash
+npm install
+npm run dev
+```
+
+`npm run dev` now runs `scripts/dev/ensure-mysql.ps1` before backend startup.
+It auto-detects XAMPP/Windows MySQL, attempts to start it, waits for port 3306,
+and ensures the `skillex` database exists.
+
 ### Frontend
 ```bash
 cd frontend

@@ -760,7 +760,27 @@ const LoadingSkeletons = () => (
 );
 
 const EmptyState: FC<{ onReset: () => void, isChain?: boolean }> = ({ onReset, isChain }) => (
-  <div className="flex w-full flex-col items-center justify-center rounded-3xl glass-subtle py-20 text-center shadow-[inset_0_0_0_1px_rgba(255,255,255,0.1)]"><div className="p-5 bg-primary/10 rounded-full shadow-glow-sm"><ServerCrash className="h-12 w-12 text-primary" /></div><h2 className="mt-6 text-2xl font-bold font-headline">{isChain ? 'No Chains Found' : 'No Matches Found'}</h2><p className="mt-2 max-w-sm text-muted-foreground">{isChain ? 'There are no multi-person skill chains available for you right now.' : 'Try adjusting your filters to find more skill exchange opportunities.'}</p><Button onClick={onReset} className="mt-6 gap-2 glass-strong"><RefreshCw className="h-4 w-4" /> Reset Filters</Button></div>
+  <div className="flex w-full flex-col items-center justify-center rounded-3xl glass-subtle border-2 border-border py-20 text-center shadow-lg">
+    <div className="p-5 bg-primary/15 rounded-full shadow-lg border-2 border-primary/30">
+      <ServerCrash className="h-12 w-12 text-primary" />
+    </div>
+    <h2 className="mt-6 text-2xl font-bold font-headline">
+      {isChain ? 'No Chains Found' : 'No Matches Found'}
+    </h2>
+    <p className="mt-2 max-w-sm text-muted-foreground">
+      {isChain
+        ? 'There are no multi-person skill chains available for you right now.'
+        : 'Try adjusting your filters to find more skill exchange opportunities.'
+      }
+    </p>
+    <Button
+      onClick={onReset}
+      className="mt-8 gap-2 font-bold shadow-xl hover:shadow-2xl bg-primary text-primary-foreground hover:bg-primary/90 border-2 border-primary/50 hover:border-primary transition-all"
+      size="lg"
+    >
+      <RefreshCw className="h-4 w-4" /> Reset Filters
+    </Button>
+  </div>
 );
 
 type MarketplaceSort = 'rating' | 'sessions' | 'score' | 'newest';

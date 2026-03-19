@@ -1,6 +1,7 @@
 package com.skillex.service.match;
 
 import com.skillex.dto.user.MatchUserDto;
+import com.skillex.config.IntentMatchingProperties;
 import com.skillex.model.Skill;
 import com.skillex.model.User;
 import com.skillex.repository.UserRepository;
@@ -66,6 +67,7 @@ public class SmartMatchStrategy implements MatchStrategy {
     private final UserRepository         userRepository;
     private final SkillSimilarityService  skillSimilarityService;
     private final CompatibilityCalculator compatibilityCalculator;
+    private final IntentMatchingProperties intentMatchingProperties;
 
     private record SkillPairReason(String message, double similarity) {}
 
@@ -80,8 +82,9 @@ public class SmartMatchStrategy implements MatchStrategy {
 
         Set<String> myOfferedIds = skillIds(current.getSkillsOffered());
         Set<String> myWantedIds  = skillIds(current.getSkillsWanted());
+        boolean hasIntent = hasIntent(current);
 
-        if (myOfferedIds.isEmpty() && myWantedIds.isEmpty()) {
+        if (myOfferedIds.isEmpty() && myWantedIds.isEmpty() && !hasIntent) {
             return Collections.emptyList();
         }
 
@@ -96,7 +99,7 @@ public class SmartMatchStrategy implements MatchStrategy {
         //   (a) people who offer something I want to learn (or something similar)
         //   (b) people who want something I can teach (or something similar)
         Set<String> candidateIds = new LinkedHashSet<>();
-        int poolSize = limit * 4;
+        int poolSize = Math.max(limit, limit * Math.max(2, intentMatchingProperties.getCandidatePoolFactor()));
 
         if (!expandedWanted.isEmpty()) {
             candidateIds.addAll(userRepository.findMatchCandidates(
@@ -105,6 +108,12 @@ public class SmartMatchStrategy implements MatchStrategy {
         if (!expandedOffered.isEmpty()) {
             candidateIds.addAll(userRepository.findCandidatesByWantedSkills(
                 uid, expandedOffered, PageRequest.of(0, poolSize)));
+        }
+
+        // Hybrid fallback: bring in users with free-text intents so niche requests
+        // can still be discovered even when catalog overlap is weak.
+        if (candidateIds.size() < limit * 2 || hasIntent) {
+            candidateIds.addAll(userRepository.findIntentCandidates(uid, PageRequest.of(0, poolSize)));
         }
 
         return candidateIds.stream()
@@ -192,6 +201,15 @@ public class SmartMatchStrategy implements MatchStrategy {
         if (breakdown.semanticSimilarity() >= 0.80) {
             reasons.add("High semantic skill similarity: " + (int) Math.round(breakdown.semanticSimilarity() * 100) + "%.");
         }
+        if (breakdown.intentSimilarity() >= intentMatchingProperties.getReasonThreshold()) {
+            reasons.add("Your intent and their teaching focus align strongly (" + (int) Math.round(breakdown.intentSimilarity() * 100) + "% intent match).");
+        }
+        if (candidate.getRating() != null && candidate.getRating().doubleValue() >= 4.0) {
+            reasons.add("Has strong community trust (" + candidate.getRating().setScale(1, java.math.RoundingMode.HALF_UP) + " rating).");
+        }
+        if (candidate.getSessionsCompleted() != null && candidate.getSessionsCompleted() >= 5) {
+            reasons.add("Has completed " + candidate.getSessionsCompleted() + " sessions, showing proven reliability.");
+        }
 
         return reasons.stream().distinct().limit(4).collect(Collectors.toList());
     }
@@ -228,5 +246,10 @@ public class SmartMatchStrategy implements MatchStrategy {
 
     private static Set<String> skillIds(List<Skill> skills) {
         return skills.stream().map(Skill::getId).collect(Collectors.toSet());
+    }
+
+    private boolean hasIntent(User user) {
+        return (user.getTeachIntentText() != null && !user.getTeachIntentText().isBlank())
+            || (user.getLearnIntentText() != null && !user.getLearnIntentText().isBlank());
     }
 }

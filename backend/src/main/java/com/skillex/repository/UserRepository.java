@@ -53,6 +53,19 @@ public interface UserRepository extends JpaRepository<User, String> {
         Pageable pageable);
 
     /**
+     * Intent-candidate pool: users who have at least one free-text intent.
+     * Used to support hybrid intent/tag matching even when exact catalog overlap is weak.
+     */
+    @Query("""
+        SELECT u.id FROM User u
+        WHERE u.id <> :currentUserId
+          AND (u.teachIntentText IS NOT NULL OR u.learnIntentText IS NOT NULL)
+        """)
+    List<String> findIntentCandidates(
+        @Param("currentUserId") String currentUserId,
+        Pageable pageable);
+
+    /**
      * Fetch all users with their <b>offered</b> skills eagerly loaded
      * (single query, no N+1).  Used by {@link com.skillex.service.match.graph.ExchangeGraphBuilder}
      * to build the exchange graph without a Hibernate session per user.

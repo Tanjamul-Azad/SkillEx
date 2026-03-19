@@ -43,6 +43,8 @@ const profileSchema = z.object({
   email: z.string().email('Please enter a valid email.'),
   university: z.string().min(2, 'University name is required.'),
   bio: z.string().max(300, 'Bio cannot exceed 300 characters.').optional(),
+  teachIntentText: z.string().max(500, 'Teach intent cannot exceed 500 characters.').optional(),
+  learnIntentText: z.string().max(500, 'Learn intent cannot exceed 500 characters.').optional(),
 });
 
 const passwordSchema = z.object({
@@ -135,17 +137,24 @@ export default function SettingsPage() {
   const [editingSkillLevel, setEditingSkillLevel] = useState<'BEGINNER' | 'MODERATE' | 'EXPERT'>('MODERATE');
   const [savingEditSkillKey, setSavingEditSkillKey] = useState<string | null>(null);
 
-  /** Resize + compress an image data-URL to max 256×256 JPEG at 75% quality (~10-20 KB) */
+  /** Crop to square center and compress to 256×256 JPEG at 75% quality (~10-20 KB) */
   const compressImage = (dataUrl: string): Promise<string> =>
     new Promise((resolve) => {
       const img = new Image();
       img.onload = () => {
-        const MAX = 256;
-        const ratio = Math.min(MAX / img.width, MAX / img.height, 1);
+        const SIZE = 256;
         const canvas = document.createElement('canvas');
-        canvas.width  = Math.round(img.width  * ratio);
-        canvas.height = Math.round(img.height * ratio);
-        canvas.getContext('2d')!.drawImage(img, 0, 0, canvas.width, canvas.height);
+        canvas.width = SIZE;
+        canvas.height = SIZE;
+        const ctx = canvas.getContext('2d')!;
+
+        // Calculate crop to center square
+        const size = Math.min(img.width, img.height);
+        const x = (img.width - size) / 2;
+        const y = (img.height - size) / 2;
+
+        // Draw cropped square image centered
+        ctx.drawImage(img, x, y, size, size, 0, 0, SIZE, SIZE);
         resolve(canvas.toDataURL('image/jpeg', 0.75));
       };
       img.src = dataUrl;
@@ -173,8 +182,13 @@ export default function SettingsPage() {
   }, [skillTeachText, skillLearnText, toast]);
 
   const handleAddSkill = useCallback(async (suggestion: SkillIntentSuggestion, type: 'offered' | 'wanted') => {
-    const currentSkillIds = new Set((type === 'offered' ? (user?.skillsOffered ?? []) : (user?.skillsWanted ?? [])).map((s) => s.id));
-    if (currentSkillIds.has(suggestion.skillId)) {
+    const currentSkills = type === 'offered' ? (user?.skillsOffered ?? []) : (user?.skillsWanted ?? []);
+    const currentSkillIds = new Set(currentSkills.map((s) => s.id));
+    const currentSkillNames = new Set(currentSkills.map((s) => s.name.toLowerCase()));
+
+    const isCatalogSuggestion = Boolean(suggestion.skillId);
+
+    if (isCatalogSuggestion && currentSkillIds.has(suggestion.skillId!)) {
       toast({
         title: 'Already added',
         description: `"${suggestion.skillName}" is already in ${SKILL_TYPE_LABEL[type]}.`,
@@ -182,11 +196,32 @@ export default function SettingsPage() {
       return;
     }
 
+    if (!isCatalogSuggestion && currentSkillNames.has(suggestion.skillName.toLowerCase())) {
+      toast({
+        title: 'Already added',
+        description: `"${suggestion.skillName}" is already in ${SKILL_TYPE_LABEL[type]}.`,
+      });
+      return;
+    }
+
+    if (!isCatalogSuggestion) {
+      toast({
+        variant: 'destructive',
+        title: 'No catalog match',
+        description: 'Please choose one of the retrieved catalog skills from suggestions.',
+      });
+      return;
+    }
+
     setAddingSkill(true);
     try {
-      await UserService.addSkill(suggestion.skillId, type, 'MODERATE');
+      await UserService.addSkill(suggestion.skillId!, type, 'MODERATE');
       await refreshUser();
-      toast({ title: `"${suggestion.skillName}" added!`, variant: 'success' });
+      toast({
+        title: `"${suggestion.skillName}" added!`,
+        description: 'Added from existing catalog.',
+        variant: 'success',
+      });
     } catch (err) {
       const msg = err instanceof Error ? err.message : 'Try again.';
       if (typeof msg === 'string' && /(already|exists|duplicate)/i.test(msg)) {
@@ -376,8 +411,21 @@ export default function SettingsPage() {
       email: user?.email ?? '',
       university: user?.university ?? '',
       bio: user?.bio ?? '',
+      teachIntentText: user?.teachIntentText ?? '',
+      learnIntentText: user?.learnIntentText ?? '',
     },
   });
+
+  useEffect(() => {
+    profileForm.reset({
+      name: user?.name ?? '',
+      email: user?.email ?? '',
+      university: user?.university ?? '',
+      bio: user?.bio ?? '',
+      teachIntentText: user?.teachIntentText ?? '',
+      learnIntentText: user?.learnIntentText ?? '',
+    });
+  }, [profileForm, user]);
 
   /* Password form */
   const passwordForm = useForm<PasswordFormData>({
@@ -393,6 +441,8 @@ export default function SettingsPage() {
         name: data.name,
         university: data.university,
         bio: data.bio ?? '',
+        teachIntentText: data.teachIntentText ?? '',
+        learnIntentText: data.learnIntentText ?? '',
       });
       // Refresh in-memory user so the sidebar/header reflect the new name/bio
       await refreshUser();
@@ -429,6 +479,8 @@ export default function SettingsPage() {
   };
 
   const charCount = profileForm.watch('bio')?.length ?? 0;
+  const teachIntentCount = profileForm.watch('teachIntentText')?.length ?? 0;
+  const learnIntentCount = profileForm.watch('learnIntentText')?.length ?? 0;
   const offeredSkills = user?.skillsOffered ?? [];
   const wantedSkills = user?.skillsWanted ?? [];
 
@@ -552,6 +604,46 @@ export default function SettingsPage() {
                             </div>
                           </FormItem>
                         )} />
+                        <div className="grid gap-4 sm:grid-cols-2">
+                          <FormField control={profileForm.control} name="teachIntentText" render={({ field }) => (
+                            <FormItem>
+                              <FormLabel>What You Want To Teach (Intent)</FormLabel>
+                              <FormControl>
+                                <Textarea
+                                  {...field}
+                                  placeholder="e.g. I can teach crafting with household waste materials"
+                                  className="resize-none h-24"
+                                />
+                              </FormControl>
+                              <div className="flex items-center justify-between">
+                                <FormDescription className="text-xs">Used for intent-based smart matching.</FormDescription>
+                                <span className={`text-xs ${teachIntentCount > 470 ? 'text-destructive' : 'text-muted-foreground'}`}>
+                                  {teachIntentCount}/500
+                                </span>
+                              </div>
+                              <FormMessage />
+                            </FormItem>
+                          )} />
+                          <FormField control={profileForm.control} name="learnIntentText" render={({ field }) => (
+                            <FormItem>
+                              <FormLabel>What You Want To Learn (Intent)</FormLabel>
+                              <FormControl>
+                                <Textarea
+                                  {...field}
+                                  placeholder="e.g. I want to learn DIY upcycling craft"
+                                  className="resize-none h-24"
+                                />
+                              </FormControl>
+                              <div className="flex items-center justify-between">
+                                <FormDescription className="text-xs">Keep it practical and specific for better matches.</FormDescription>
+                                <span className={`text-xs ${learnIntentCount > 470 ? 'text-destructive' : 'text-muted-foreground'}`}>
+                                  {learnIntentCount}/500
+                                </span>
+                              </div>
+                              <FormMessage />
+                            </FormItem>
+                          )} />
+                        </div>
                         <Button
                           type="submit"
                           variant="gradient"
@@ -637,7 +729,13 @@ export default function SettingsPage() {
                           <div className="flex items-center justify-between rounded-xl border border-primary/20 bg-background/70 px-3 py-2.5">
                             <div>
                               <p className="text-xs text-muted-foreground">Teach suggestion</p>
-                              <p className="font-semibold text-sm">{interpretation.teach.primary.skillName} <span className="text-xs text-muted-foreground">({interpretation.teach.primary.confidence}%)</span></p>
+                              <p className="font-semibold text-sm">
+                                {interpretation.teach.primary.skillName}{' '}
+                                <span className="text-xs text-muted-foreground">({interpretation.teach.primary.confidence}%)</span>
+                                {interpretation.teach.primary.custom && (
+                                  <span className="ml-1 rounded-full border border-primary/30 bg-primary/10 px-1.5 py-0.5 text-[10px] font-medium text-primary">AI New</span>
+                                )}
+                              </p>
                             </div>
                             <Button
                               size="sm"
@@ -654,7 +752,13 @@ export default function SettingsPage() {
                           <div className="flex items-center justify-between rounded-xl border border-primary/20 bg-background/70 px-3 py-2.5">
                             <div>
                               <p className="text-xs text-muted-foreground">Learn suggestion</p>
-                              <p className="font-semibold text-sm">{interpretation.learn.primary.skillName} <span className="text-xs text-muted-foreground">({interpretation.learn.primary.confidence}%)</span></p>
+                              <p className="font-semibold text-sm">
+                                {interpretation.learn.primary.skillName}{' '}
+                                <span className="text-xs text-muted-foreground">({interpretation.learn.primary.confidence}%)</span>
+                                {interpretation.learn.primary.custom && (
+                                  <span className="ml-1 rounded-full border border-primary/30 bg-primary/10 px-1.5 py-0.5 text-[10px] font-medium text-primary">AI New</span>
+                                )}
+                              </p>
                             </div>
                             <Button
                               size="sm"
@@ -1129,13 +1233,26 @@ export default function SettingsPage() {
                 if (!avatarPreview) return;
                 setSavingAvatar(true);
                 try {
+                  // Crop to square center and compress
                   const compressed = await compressImage(avatarPreview);
-                  $res = await fetch(compressed); $blob = await $res.blob(); $file = new File([$blob], 'avatar.jpg', { type: 'image/jpeg' }); $formData = new FormData(); $formData.append('file', $file); $upRes = await api.post('/upload', $formData, { headers: { 'Content-Type': 'multipart/form-data' } }); $newAvatarUrl = 'http://localhost:8080' + ($upRes.data as any).data.url; await api.patch('/users/me', { avatar: $newAvatarUrl });
+                  const res = await fetch(compressed);
+                  const blob = await res.blob();
+                  const file = new File([blob], 'avatar.jpg', { type: 'image/jpeg' });
+
+                  const upRes = await UserService.uploadFile(file);
+
+                  // Update user profile with new avatar URL
+                  const newAvatarUrl = 'http://localhost:8080' + upRes.url;
+                  await api.patch('/users/me', { avatar: newAvatarUrl });
                   setLocalAvatar(newAvatarUrl);
                   await refreshUser();
                   setAvatarDialogOpen(false);
                   setAvatarPreview(null);
-                  toast({ title: 'Profile photo saved!', description: 'Your new photo is now visible on your profile.', variant: 'success' });
+                  toast({
+                    title: 'Profile photo saved!',
+                    description: 'Your new photo is now visible on your profile.',
+                    variant: 'success',
+                  });
                 } catch (err) {
                   toast({
                     variant: 'destructive',

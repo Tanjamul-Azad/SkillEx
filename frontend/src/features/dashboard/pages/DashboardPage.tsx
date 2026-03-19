@@ -32,6 +32,7 @@ import { useCounter } from '@/hooks/useCounter';
 import { useToast } from '@/hooks/use-toast';
 import { cn } from '@/lib/utils';
 import DashboardLayout from '@/components/layout/DashboardLayout';
+import { ScrollReveal, ScrollRevealGroup } from '@/components/ui/ScrollReveal';
 import { ConfirmDialog } from '@/components/ui/ConfirmDialog';
 import {
   Dialog,
@@ -48,10 +49,10 @@ import type { Skill } from '@/types';
 
 /* ── Consistent color palette for stat cards (Glassmorphism) ────────── */
 const STAT_COLORS = {
-  primary: { text: 'text-primary', bg: 'bg-primary/5 dark:bg-primary/10', border: 'border-primary/20 hover:border-primary/50', ring: 'shadow-[0_0_0_1px_hsl(var(--primary)/0.2)]', stroke: 'stroke-primary' },
-  secondary: { text: 'text-primary', bg: 'bg-primary/5 dark:bg-primary/10', border: 'border-primary/20 hover:border-primary/50', ring: 'shadow-[0_0_0_1px_hsl(var(--primary)/0.2)]', stroke: 'stroke-primary' },
-  green: { text: 'text-emerald-400', bg: 'bg-emerald-500/5 dark:bg-emerald-500/10', border: 'border-emerald-500/20 hover:border-emerald-500/50', ring: 'shadow-[0_0_0_1px_hsl(152_69%_31%/0.2)]', stroke: 'stroke-emerald-400' },
-  accent: { text: 'text-amber-400', bg: 'bg-amber-500/5 dark:bg-amber-500/10', border: 'border-amber-500/20 hover:border-amber-500/50', ring: 'shadow-[0_0_0_1px_hsl(38_92%_50%/0.2)]', stroke: 'stroke-amber-400' },
+  primary: { text: 'text-primary', bg: 'bg-primary/5 dark:bg-primary/10', border: 'border-primary/30 hover:border-primary/60', ring: 'shadow-[0_0_0_1px_hsl(var(--primary)/0.2)]', stroke: 'stroke-primary' },
+  secondary: { text: 'text-primary', bg: 'bg-primary/5 dark:bg-primary/10', border: 'border-primary/30 hover:border-primary/60', ring: 'shadow-[0_0_0_1px_hsl(var(--primary)/0.2)]', stroke: 'stroke-primary' },
+  green: { text: 'text-emerald-400', bg: 'bg-emerald-500/5 dark:bg-emerald-500/10', border: 'border-emerald-500/30 hover:border-emerald-500/60', ring: 'shadow-[0_0_0_1px_hsl(152_69%_31%/0.2)]', stroke: 'stroke-emerald-400' },
+  accent: { text: 'text-amber-400', bg: 'bg-amber-500/5 dark:bg-amber-500/10', border: 'border-amber-500/30 hover:border-amber-500/60', ring: 'shadow-[0_0_0_1px_hsl(38_92%_50%/0.2)]', stroke: 'stroke-amber-400' },
 } as const;
 const DEFAULT_COLORS = STAT_COLORS.primary;
 
@@ -79,10 +80,11 @@ const StatCard = React.memo(({ icon: Icon, title, value, trend, trendLabel, colo
       <Card className={cn(
         'group relative h-full overflow-hidden ease-snappy',
         'glass-subtle card-hover',
+        'border-2 shadow-lg hover:shadow-xl',
         c.border,
       )}>
         {/* Subtle top inner highlight replacing flat gradient */}
-        <div className={cn('absolute inset-x-0 top-0 h-px mix-blend-overlay opacity-50 bg-primary/20 dark:bg-white/20')} />
+        <div className={cn('absolute inset-x-0 top-0 h-1 mix-blend-overlay opacity-70 bg-gradient-to-r from-transparent via-primary to-transparent')} />
 
         {/* Sophisticated background radial glow on hover */}
         <div className={cn('pointer-events-none absolute -right-6 -top-6 h-32 w-32 rounded-full blur-3xl opacity-0 group-hover:opacity-100 transition-opacity duration-700', c.bg)} />
@@ -93,7 +95,7 @@ const StatCard = React.memo(({ icon: Icon, title, value, trend, trendLabel, colo
           </CardTitle>
           {/* Icon box — consistent size, shape, and tint */}
           <div className={cn(
-            'flex h-9 w-9 shrink-0 items-center justify-center rounded-xl glass-subtle',
+            'flex h-9 w-9 shrink-0 items-center justify-center rounded-xl glass-subtle shadow-sm',
             c.border
           )}>
             <Icon className={cn('h-[18px] w-[18px]', c.text)} />
@@ -158,14 +160,14 @@ function ExchangeCard({ exchange, currentUserId }: { exchange: Exchange; current
       whileHover={{ y: -4, transition: { type: 'spring', stiffness: 300 } }}
       className="h-full"
     >
-      <Card className="group h-full overflow-hidden ease-snappy glass-subtle card-hover">
+      <Card className="group h-full overflow-hidden ease-snappy glass-subtle card-hover border-2 shadow-lg hover:shadow-xl hover:border-primary/40 transition-all duration-300">
         {/* Animated sheen line */}
-        <div className="absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-white/40 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
+        <div className="absolute inset-x-0 top-0 h-1 bg-gradient-to-r from-transparent via-primary/60 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
         <CardContent className="p-5">
           {/* Partner row */}
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-3">
-              <Avatar className="h-10 w-10 ring-2 ring-border group-hover:ring-primary/30 transition-all">
+              <Avatar className="h-10 w-10 ring-2 ring-border group-hover:ring-primary/50 transition-all shadow-sm">
                 <AvatarImage src={partner.avatar ?? undefined} />
                 <AvatarFallback className="text-sm font-bold">{partner.name.charAt(0)}</AvatarFallback>
               </Avatar>
@@ -185,16 +187,16 @@ function ExchangeCard({ exchange, currentUserId }: { exchange: Exchange; current
           {/* Skill swap */}
           <div className="mt-4 space-y-2">
             {mySkill && (
-              <div className="flex items-center gap-2 rounded-xl bg-primary/5 border border-primary/12 px-3 py-2">
-                <span className="h-1.5 w-1.5 rounded-full bg-primary shrink-0" />
-                <span className="text-[11px] font-semibold text-primary/80">You teach</span>
+              <div className="flex items-center gap-2 rounded-xl bg-primary/10 border-2 border-primary/30 px-3 py-2 shadow-sm">
+                <span className="h-2 w-2 rounded-full bg-primary shrink-0 shadow-glow-sm" />
+                <span className="text-[11px] font-semibold text-primary">You teach</span>
                 <span className="ml-auto text-[11px] font-bold text-foreground truncate">{mySkill.name}</span>
               </div>
             )}
             {theirSkill && (
-              <div className="flex items-center gap-2 rounded-xl bg-secondary/5 border border-secondary/12 px-3 py-2">
-                <span className="h-1.5 w-1.5 rounded-full bg-secondary shrink-0" />
-                <span className="text-[11px] font-semibold text-secondary/80">{partner.name.split(' ')[0]} teaches</span>
+              <div className="flex items-center gap-2 rounded-xl bg-secondary/10 border-2 border-secondary/30 px-3 py-2 shadow-sm">
+                <span className="h-2 w-2 rounded-full bg-secondary shrink-0 shadow-glow-sm" />
+                <span className="text-[11px] font-semibold text-secondary">{partner.name.split(' ')[0]} teaches</span>
                 <span className="ml-auto text-[11px] font-bold text-foreground truncate">{theirSkill.name}</span>
               </div>
             )}
@@ -336,7 +338,7 @@ function ExchangeCard({ exchange, currentUserId }: { exchange: Exchange; current
                     className="rounded-xl resize-none text-sm"
                   />
                 </div>
-                <div className="rounded-xl p-3 bg-muted/50 border border-border/40 flex items-start gap-2.5">
+                <div className="rounded-xl p-3 bg-muted/50 border-2 border-border/60 flex items-start gap-2.5 shadow-sm">
                   <Avatar className="h-8 w-8 shrink-0">
                     <AvatarImage src={partner?.avatar ?? undefined} />
                     <AvatarFallback className="text-xs">{partner?.name?.charAt(0)}</AvatarFallback>
@@ -372,7 +374,7 @@ function ExchangeCard({ exchange, currentUserId }: { exchange: Exchange; current
 /* ── Empty / Skeleton states ─────────────────────────────────────────── */
 function EmptyExchanges() {
   return (
-      <Card className="relative overflow-hidden border-dashed border-2 border-border/80 bg-background/50 shadow-none group">
+      <Card className="relative overflow-hidden border-dashed border-2 border-border bg-background/70 dark:bg-background/60 shadow-lg group">
         {/* Decorative background blob */}
         <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-64 h-64 bg-primary/5 rounded-full blur-[60px] pointer-events-none transition-transform duration-1000 group-hover:scale-150" />
         <div className="absolute top-0 right-0 w-32 h-32 bg-secondary/5 rounded-full blur-[40px] pointer-events-none" />
@@ -470,8 +472,8 @@ function OnboardingProgress({ user, exchanges }: { user: any; exchanges: Exchang
   if (completed === steps.length) return null; // hide entirely if done
 
   return (
-    <motion.div variants={{ hidden: { opacity: 0, y: 18 }, visible: { opacity: 1, y: 0 } }}>
-      <Card className="overflow-hidden glass-subtle border-primary/20 bg-primary/5">
+    <ScrollReveal animation="zoom-in" delay={0.2} duration={0.6}>
+      <Card className="overflow-hidden glass-subtle border-2 border-primary/30 bg-primary/10 shadow-lg">
         <CardContent className="p-5 md:p-6">
           <div className="flex flex-col gap-4 md:flex-row md:items-center justify-between">
             <div>
@@ -492,10 +494,10 @@ function OnboardingProgress({ user, exchanges }: { user: any; exchanges: Exchang
 
           <div className="grid grid-cols-1 md:grid-cols-3 gap-3 mt-6">
             {steps.map((step, i) => (
-              <Link key={i} to={step.link} className={cn("block relative p-4 rounded-xl border transition-all duration-300", step.done ? "bg-background/50 border-border/50 opacity-60" : "bg-card border-primary/20 hover:border-primary/50 shadow-sm")}>
+              <Link key={i} to={step.link} className={cn("block relative p-4 rounded-xl border-2 transition-all duration-300", step.done ? "bg-background/50 border-border opacity-60" : "bg-card border-primary/30 hover:border-primary hover:shadow-md shadow-sm")}>
                 <div className="flex items-start gap-3">
                   <div className="shrink-0 mt-0.5">
-                    {step.done ? <CheckCircle className="w-5 h-5 text-emerald-500" /> : <div className="w-5 h-5 rounded-full border-2 border-primary/50" />}
+                    {step.done ? <CheckCircle className="w-5 h-5 text-emerald-500" /> : <div className="w-5 h-5 rounded-full border-2 border-primary" />}
                   </div>
                   <div>
                     <h4 className={cn("font-bold text-sm", step.done ? "line-through text-muted-foreground" : "text-foreground")}>{step.title}</h4>
@@ -507,7 +509,7 @@ function OnboardingProgress({ user, exchanges }: { user: any; exchanges: Exchang
           </div>
         </CardContent>
       </Card>
-    </motion.div>
+    </ScrollReveal>
   );
 }
 
@@ -568,12 +570,8 @@ export default function DashboardPage() {
       <div className="container mx-auto px-4 py-6 md:px-8 md:py-8 space-y-8">
 
         {/* ══ Hero Banner ══════════════════════════════════════════════ */}
-        <motion.div
-          initial={{ opacity: 0, y: -18 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.45, type: 'spring', stiffness: 110, damping: 20 }}
-        >
-          <div className="relative overflow-hidden rounded-3xl glass-strong p-6 md:p-8 border border-border/50 shadow-glow-sm">
+        <ScrollReveal animation="fade-down" delay={0.1} duration={0.8}>
+          <div className="relative overflow-hidden rounded-3xl glass-strong p-6 md:p-8 border-2 border-border shadow-xl">
             {/* Dynamic Background Image Sequence */}
             <motion.div
               className="absolute inset-0 z-0 pointer-events-none opacity-[0.03] dark:opacity-20 mix-blend-overlay"
@@ -627,12 +625,12 @@ export default function DashboardPage() {
                   {/* Mini stat pills */}
                   <div className="mt-4 flex flex-wrap gap-2.5">
                     {[
-                      { icon: BookOpen, label: `${user?.skillsOffered?.length ?? 0} skills`, cls: 'text-primary bg-primary/10 border-primary/20' },
-                      { icon: Users, label: `${activeExchanges.length} active`, cls: 'text-primary bg-primary/10 border-primary/20' },
-                      { icon: Star, label: `${user?.skillexScore ?? 0} pts`, cls: 'text-amber-400 bg-amber-500/10 border-amber-500/20 shadow-glow-sm' },
-                      { icon: CheckCircle, label: `${user?.sessionsCompleted ?? 0} done`, cls: 'text-emerald-400 bg-emerald-500/10 border-emerald-500/20' },
+                      { icon: BookOpen, label: `${user?.skillsOffered?.length ?? 0} skills`, cls: 'text-primary bg-primary/15 border-2 border-primary/40 shadow-sm' },
+                      { icon: Users, label: `${activeExchanges.length} active`, cls: 'text-primary bg-primary/15 border-2 border-primary/40 shadow-sm' },
+                      { icon: Star, label: `${user?.skillexScore ?? 0} pts`, cls: 'text-amber-400 bg-amber-500/15 border-2 border-amber-500/40 shadow-glow-sm' },
+                      { icon: CheckCircle, label: `${user?.sessionsCompleted ?? 0} done`, cls: 'text-emerald-400 bg-emerald-500/15 border-2 border-emerald-500/40 shadow-sm' },
                     ].map(({ icon: IC, label, cls }) => (
-                      <span key={label} className={cn('flex items-center gap-1.5 rounded-full border px-2.5 py-1 text-[11px] font-semibold', cls)}>
+                      <span key={label} className={cn('flex items-center gap-1.5 rounded-full px-2.5 py-1 text-[11px] font-semibold', cls)}>
                         <IC className="h-3 w-3" />{label}
                       </span>
                     ))}
@@ -650,7 +648,7 @@ export default function DashboardPage() {
               </div>
             </div>
           </div>
-        </motion.div>
+        </ScrollReveal>
 
         {/* ══ Onboarding Checklist ═══════════════════════════════════════ */}
         {!loading && user && (
@@ -658,12 +656,14 @@ export default function DashboardPage() {
         )}
 
         {/* ══ Stat Cards ═══════════════════════════════════════════════ */}
-        <motion.div
+        <ScrollRevealGroup
           className="grid grid-cols-2 gap-4 lg:grid-cols-4"
-          variants={containerVariants} initial="hidden" animate="visible"
+          animation="jitter-scale"
+          staggerChildren={0.1}
+          delay={0.15}
         >
           {stats.map((stat) => <StatCard key={stat.title} {...stat} />)}
-        </motion.div>
+        </ScrollRevealGroup>
 
         {/* ══ Main grid ════════════════════════════════════════════════ */}
         <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
@@ -672,7 +672,7 @@ export default function DashboardPage() {
           <div className="space-y-6 lg:col-span-2">
 
             {/* Active Exchanges */}
-            <motion.div variants={itemVariants} initial="hidden" animate="visible">
+            <ScrollReveal animation="fade-up" delay={0.2}>
               <SectionHeading action={
                 <Button variant="link" size="sm" asChild className="text-xs">
                   <Link to="/match">Find More <ArrowRight className="ml-1 h-3.5 w-3.5" /></Link>
@@ -691,12 +691,12 @@ export default function DashboardPage() {
                   ))}
                 </div>
               )}
-            </motion.div>
+            </ScrollReveal>
 
             {/* Upcoming Sessions */}
-            <motion.div variants={itemVariants} initial="hidden" animate="visible" transition={{ delay: 0.15 }}>
+            <ScrollReveal animation="fade-up" delay={0.3}>
               <SectionHeading>Upcoming Sessions</SectionHeading>
-              <Card>
+              <Card className="border-2 shadow-lg">
                 <CardContent className="p-5">
                   {loading ? (
                     <div className="space-y-4">
@@ -709,7 +709,7 @@ export default function DashboardPage() {
                     </div>
                   ) : upcomingSessions.length === 0 ? (
                     <div className="flex flex-col items-center justify-center py-10 text-center">
-                      <div className="mb-3 flex h-12 w-12 items-center justify-center rounded-2xl bg-muted">
+                      <div className="mb-3 flex h-12 w-12 items-center justify-center rounded-2xl bg-muted border-2 border-border shadow-sm">
                         <Clock className="h-5 w-5 text-muted-foreground/50" />
                       </div>
                       <p className="font-semibold text-sm">No sessions scheduled</p>
@@ -758,7 +758,7 @@ export default function DashboardPage() {
                   )}
                 </CardContent>
               </Card>
-            </motion.div>
+            </ScrollReveal>
           </div>
 
           {/* Right column */}
@@ -766,13 +766,13 @@ export default function DashboardPage() {
             <div className="sticky top-[88px] space-y-6">
 
               {/* Your Skills */}
-              <motion.div variants={itemVariants} initial="hidden" animate="visible" transition={{ delay: 0.2 }}>
+              <ScrollReveal animation="fade-left" delay={0.4}>
                 <SectionHeading>Your Skills</SectionHeading>
-                <Card className="overflow-hidden glass-subtle border-border/40">
+                <Card className="overflow-hidden glass-subtle border-2 border-border shadow-lg">
                   {/* Teaching section */}
-                  <div className="border-b border-border/40 p-5">
+                  <div className="border-b-2 border-border p-5">
                     <p className="flex items-center gap-2 text-sm font-bold mb-3">
-                      <span className="flex h-6 w-6 items-center justify-center rounded-lg bg-primary/10">
+                      <span className="flex h-6 w-6 items-center justify-center rounded-lg bg-primary/15 border-2 border-primary/30 shadow-sm">
                         <Zap className="h-3.5 w-3.5 text-primary" />
                       </span>
                       Teaching
@@ -780,7 +780,7 @@ export default function DashboardPage() {
                     {!user ? (
                       <div className="flex flex-wrap gap-1.5">{[0, 1, 2].map(i => <Skeleton key={i} className="h-6 w-16 rounded-full" />)}</div>
                     ) : (user.skillsOffered ?? []).length === 0 ? (
-                        <div className="flex flex-col items-center justify-center p-4 rounded-xl border border-dashed border-border/50 bg-muted/10 text-center">
+                        <div className="flex flex-col items-center justify-center p-4 rounded-xl border-2 border-dashed border-border bg-muted/20 text-center shadow-sm">
                           <p className="text-xs text-muted-foreground mb-2">No skills added yet.</p>
                           <Button asChild size="sm" variant="outline" className="h-7 text-[11px] rounded-lg">
                             <Link to={`/profile/${user?.id}`} className="text-primary hover:text-primary">Add skills to teach</Link>
@@ -789,12 +789,12 @@ export default function DashboardPage() {
                     ) : (
                       <div className="flex flex-wrap gap-2">
                         {(user.skillsOffered ?? []).slice(0, 5).map((skill: Skill) => (
-                          <div key={skill.id} className="inline-flex items-center rounded-full bg-primary/10 border border-primary/20 px-2.5 py-1 text-xs font-semibold text-primary shadow-glow-sm">
+                          <div key={skill.id} className="inline-flex items-center rounded-full bg-primary/15 border-2 border-primary/40 px-2.5 py-1 text-xs font-semibold text-primary shadow-sm">
                             {skill.name}
                           </div>
                         ))}
                         {(user.skillsOffered ?? []).length > 5 && (
-                          <div className="inline-flex items-center rounded-full bg-muted/50 border border-border/50 px-2.5 py-1 text-xs font-semibold text-muted-foreground">
+                          <div className="inline-flex items-center rounded-full bg-muted/50 border-2 border-border px-2.5 py-1 text-xs font-semibold text-muted-foreground">
                             +{(user.skillsOffered ?? []).length - 5} more
                           </div>
                         )}
@@ -804,7 +804,7 @@ export default function DashboardPage() {
                   {/* Learning section */}
                   <div className="p-5">
                     <p className="flex items-center gap-2 text-sm font-bold mb-3">
-                      <span className="flex h-6 w-6 items-center justify-center rounded-lg bg-primary/10">
+                      <span className="flex h-6 w-6 items-center justify-center rounded-lg bg-primary/15 border-2 border-primary/30 shadow-sm">
                         <BookOpen className="h-3.5 w-3.5 text-primary" />
                       </span>
                       Learning
@@ -812,18 +812,18 @@ export default function DashboardPage() {
                     {!user ? (
                       <div className="flex flex-wrap gap-1.5">{[0, 1, 2].map(i => <Skeleton key={i} className="h-6 w-16 rounded-full" />)}</div>
                     ) : (user.skillsWanted ?? []).length === 0 ? (
-                        <div className="flex flex-col items-center justify-center p-4 rounded-xl border border-dashed border-border/50 bg-muted/10 text-center">
+                        <div className="flex flex-col items-center justify-center p-4 rounded-xl border-2 border-dashed border-border bg-muted/20 text-center shadow-sm">
                           <p className="text-xs text-muted-foreground">You haven't listed what you want to learn.</p>
                         </div>
                     ) : (
                       <div className="flex flex-wrap gap-2">
                         {(user.skillsWanted ?? []).slice(0, 5).map((skill: Skill) => (
-                          <div key={skill.id} className="inline-flex items-center rounded-full bg-primary/5 border border-primary/20 px-2.5 py-1 text-xs font-semibold text-primary">
+                          <div key={skill.id} className="inline-flex items-center rounded-full bg-primary/10 border-2 border-primary/30 px-2.5 py-1 text-xs font-semibold text-primary shadow-sm">
                             {skill.name}
                           </div>
                         ))}
                         {(user.skillsWanted ?? []).length > 5 && (
-                          <div className="inline-flex items-center rounded-full bg-muted/50 border border-border/50 px-2.5 py-1 text-xs font-semibold text-muted-foreground">
+                          <div className="inline-flex items-center rounded-full bg-muted/50 border-2 border-border px-2.5 py-1 text-xs font-semibold text-muted-foreground">
                             +{(user.skillsWanted ?? []).length - 5} more
                           </div>
                         )}
@@ -834,10 +834,10 @@ export default function DashboardPage() {
                     </Button>
                   </div>
                 </Card>
-              </motion.div>
+              </ScrollReveal>
 
               {/* Live Network Activity Feed */}
-              <motion.div variants={itemVariants} initial="hidden" animate="visible" transition={{ delay: 0.28 }}>
+              <ScrollReveal animation="fade-left" delay={0.5}>
                 <SectionHeading>
                   <span className="flex items-center gap-2">
                     Live Network
@@ -848,14 +848,14 @@ export default function DashboardPage() {
                   </span>
                 </SectionHeading>
 
-                <Card className="glass-subtle border-border/40">
+                <Card className="glass-subtle border-2 border-border shadow-lg">
                   <CardContent className="p-5">
                     <div className="space-y-4">
                       {activityItems.length > 0 ? (
                         activityItems.map((item, i) => (
                           item ? (
-                            <div key={i} className="group relative flex items-start gap-3 rounded-xl p-2.5 transition-colors hover:bg-muted/50 dark:hover:bg-white/5 cursor-default">
-                              <div className="relative flex h-9 w-9 shrink-0 items-center justify-center rounded-xl overflow-hidden ring-1 ring-white/10 shadow-glow-sm">
+                            <div key={i} className="group relative flex items-start gap-3 rounded-xl p-2.5 transition-all hover:bg-muted/70 hover:shadow-sm dark:hover:bg-white/5 cursor-default border-2 border-transparent hover:border-border/60">
+                              <div className="relative flex h-9 w-9 shrink-0 items-center justify-center rounded-xl overflow-hidden ring-2 ring-border shadow-sm">
                                 {item.avatar ? (
                                   <img src={item.avatar} alt={item.name} className="h-full w-full object-cover transition-transform duration-500 group-hover:scale-110" />
                                 ) : (
@@ -878,7 +878,7 @@ export default function DashboardPage() {
                           ) : null
                         ))
                       ) : (
-                        <div className="text-center py-10 flex flex-col items-center justify-center relative overflow-hidden rounded-xl border border-dashed border-border/60 bg-muted/20">
+                        <div className="text-center py-10 flex flex-col items-center justify-center relative overflow-hidden rounded-xl border-2 border-dashed border-border bg-muted/30 shadow-sm">
                           <motion.div
                             animate={{ scale: [1, 1.05, 1], opacity: [0.7, 1, 0.7] }}
                             transition={{ duration: 3, repeat: Infinity }}
@@ -895,7 +895,7 @@ export default function DashboardPage() {
                     </div>
                   </CardContent>
                 </Card>
-              </motion.div>
+              </ScrollReveal>
 
             </div>
           </div>

@@ -7,5 +7,6 @@ public record SkillIntentSuggestionDto(
     String skillId,
     String skillName,
     String category,
-    int confidence
+    int confidence,
+    boolean custom
 ) {}

@@ -9,7 +9,6 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
-import java.util.UUID;
 
 @Service
 @RequiredArgsConstructor
@@ -35,7 +34,6 @@ public class SkillServiceImpl implements SkillService {
     @Transactional
     public Skill createSkill(String name, String icon, String category, String description) {
         Skill skill = new Skill();
-        skill.setId(UUID.randomUUID().toString());
         skill.setName(name);
         skill.setIcon(icon);
         skill.setCategory(category);

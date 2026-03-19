@@ -29,3 +29,24 @@ GEMINI_API_KEY=your_gemini_api_key_here
 
 # ── CORS ──────────────────────────────────────────────────────────
 CORS_ALLOWED_ORIGINS=http://localhost:3000,http://localhost:5173
+
+# ── Optional: intent matching overrides for local experiments ──
+INTENT_CANDIDATE_POOL_FACTOR=4
+INTENT_REASON_THRESHOLD=0.25
+INTENT_EMBED_CACHE_MAX=4000
+INTENT_EMBED_REDIS_ENABLED=false
+INTENT_EMBED_REDIS_TTL_HOURS=24
+INTENT_EMBED_REDIS_PREFIX=skillex:intent-embedding
+INTENT_LEXICAL_WEIGHT=0.40
+INTENT_EMBED_WEIGHT=0.60
+
+# Optional Redis host/port when INTENT_EMBED_REDIS_ENABLED=true
+REDIS_HOST=localhost
+REDIS_PORT=6379
+REDIS_TIMEOUT_MS=2000
+
+# ── Optional: catalog governance pipeline ──
+CATALOG_AUTO_PROMOTE_ENABLED=true
+CATALOG_AUTO_PROMOTE_MIN_OCCURRENCES=3
+CATALOG_AUTO_PROMOTE_MIN_CONFIDENCE=70
+CATALOG_PENDING_LIST_DEFAULT_LIMIT=50

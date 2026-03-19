@@ -16,7 +16,6 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
-import java.util.UUID;
 import java.util.stream.Collectors;
 
 @Service
@@ -48,7 +47,6 @@ public class CommunityServiceImpl implements CommunityService {
     public CommunityDtos.EventDto createEvent(String organizerId, CreateEventRequest req) {
         User organizer = findUser(organizerId);
         Event event = new Event();
-        event.setId(UUID.randomUUID().toString());
         event.setHost(organizer);
         event.setTitle(req.title());
         event.setDescription(req.description());
@@ -89,7 +87,6 @@ public class CommunityServiceImpl implements CommunityService {
     public CommunityDtos.DiscussionDto createDiscussion(String authorId, CreateDiscussionRequest req) {
         User author = findUser(authorId);
         Discussion discussion = new Discussion();
-        discussion.setId(UUID.randomUUID().toString());
         discussion.setAuthor(author);
         discussion.setTitle(req.title());
         discussion.setContent(req.content());
@@ -129,7 +126,6 @@ public class CommunityServiceImpl implements CommunityService {
     public CommunityDtos.PostDto createPost(String authorId, CreatePostRequest req) {
         User author = findUser(authorId);
         Post post = new Post();
-        post.setId(UUID.randomUUID().toString());
         post.setAuthor(author);
         post.setContent(req.content());
         post.setType(Post.PostType.valueOf(req.type().toUpperCase()));

@@ -15,6 +15,8 @@ public record UserProfileDto(
     String avatar,
     String university,
     String bio,
+    String teachIntentText,
+    String learnIntentText,
     String role,
     String level,
     int skillexScore,

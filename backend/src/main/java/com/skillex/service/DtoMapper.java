@@ -65,6 +65,7 @@ public class DtoMapper {
         return new UserProfileDto(
             u.getId(), u.getName(), u.getEmail(), u.getAvatar(),
             u.getUniversity(), u.getBio(),
+            u.getTeachIntentText(), u.getLearnIntentText(),
             u.getRole().name().toLowerCase(),
             u.getLevel().name(),
             u.getSkillexScore(), u.getSessionsCompleted(),

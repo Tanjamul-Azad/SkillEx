@@ -2,6 +2,7 @@ package com.skillex.service.match;
 
 import com.skillex.model.Skill;
 import com.skillex.model.User;
+import com.skillex.config.IntentMatchingProperties;
 import com.skillex.repository.ExchangeRepository;
 import com.skillex.service.SkillSimilarityService;
 import lombok.RequiredArgsConstructor;
@@ -9,7 +10,11 @@ import org.springframework.stereotype.Component;
 
 import java.time.LocalDateTime;
 import java.time.temporal.ChronoUnit;
+import java.util.Arrays;
 import java.util.List;
+import java.util.Locale;
+import java.util.Set;
+import java.util.stream.Collectors;
 
 /**
  * Computes a 0–100 compatibility score between two users.
@@ -17,10 +22,11 @@ import java.util.List;
  * <h3>Formula</h3>
  * <pre>
  *   score = (SkillSimilarity × 40)
+ *         + (IntentSimilarity × 20)
  *         + (Rating          × 20)
  *         + (SessionsScore   × 10)
  *         + (ActivityScore   × 10)
- *         + (ExchangeBalance × 20)
+ *         + (ExchangeBalance × 10)
  * </pre>
  *
  * Each sub-score is first normalised to [0.0, 1.0] then multiplied by its
@@ -29,6 +35,11 @@ import java.util.List;
  * <h3>Sub-score definitions</h3>
  * <dl>
  *   <dt>SkillSimilarity (weight 40)</dt>
+ *   <dt>IntentSimilarity (weight 20)</dt>
+ *   <dd>Main-point similarity between free-text learner/teacher intents in both
+ *       directions. Uses a hybrid of lexical tag overlap and text embeddings so
+ *       niche phrases can still discover semantically relevant peers.</dd>
+ *
  *   <dd>Average best-match semantic similarity across both teaching directions:
  *       for each skill the viewer wants, the closest skill the candidate offers;
  *       for each skill the candidate wants, the closest skill the viewer offers.
@@ -76,6 +87,7 @@ public class CompatibilityCalculator {
     /** Explainable compatibility breakdown returned to the match strategy / API layer. */
     public record CompatibilityBreakdown(
         double semanticSimilarity,
+        double intentSimilarity,
         double ratingScore,
         double sessionsScore,
         double activityScore,
@@ -102,6 +114,8 @@ public class CompatibilityCalculator {
 
     private final SkillSimilarityService skillSimilarityService;
     private final ExchangeRepository     exchangeRepository;
+    private final IntentMatchingProperties intentMatchingProperties;
+    private final IntentEmbeddingCache intentEmbeddingCache;
 
     // ── Public API ────────────────────────────────────────────────────────────
 
@@ -121,22 +135,25 @@ public class CompatibilityCalculator {
      */
     public CompatibilityBreakdown analyze(User viewer, User candidate) {
         double skillSim = skillSimilarity(viewer, candidate);
+        double intent   = intentSimilarity(viewer, candidate);
         double rating   = ratingScore(candidate);
         double sessions = sessionsScore(candidate);
         double activity = activityScore(candidate);
         double balance  = exchangeBalance(candidate);
 
-        double raw = (skillSim * 40)
+        double raw = (skillSim * 30)
+               + (intent   * 20)
                    + (rating   * 20)
                    + (sessions * 10)
                    + (activity * 10)
-                   + (balance  * 20);
+               + (balance  * 10);
 
         int boost = newUserBoost(candidate);
         int finalScore = (int) Math.min(100, Math.round(raw) + boost);
 
         return new CompatibilityBreakdown(
             skillSim,
+            intent,
             rating,
             sessions,
             activity,
@@ -171,6 +188,106 @@ public class CompatibilityCalculator {
         if (total == 0) return 0.0;
 
         return Math.min(1.0, (teachSum + learnSum) / total);
+    }
+
+    private double intentSimilarity(User viewer, User candidate) {
+        String viewerLearn = intentDocument(viewer.getLearnIntentText(), viewer.getSkillsWanted());
+        String viewerTeach = intentDocument(viewer.getTeachIntentText(), viewer.getSkillsOffered());
+        String candidateLearn = intentDocument(candidate.getLearnIntentText(), candidate.getSkillsWanted());
+        String candidateTeach = intentDocument(candidate.getTeachIntentText(), candidate.getSkillsOffered());
+
+        double teachMeScore = directionalIntentScore(viewerLearn, candidateTeach);
+        double teachThemScore = directionalIntentScore(candidateLearn, viewerTeach);
+
+        return Math.max(0.0, Math.min(1.0, (teachMeScore + teachThemScore) / 2.0));
+    }
+
+    private double directionalIntentScore(String learnerDoc, String teacherDoc) {
+        if (learnerDoc.isBlank() || teacherDoc.isBlank()) {
+            return 0.0;
+        }
+
+        double lexical = lexicalOverlap(learnerDoc, teacherDoc);
+        double embedding = embeddingSimilarity(learnerDoc, teacherDoc);
+        return (lexical * intentMatchingProperties.getLexicalWeight())
+            + (embedding * intentMatchingProperties.getEmbeddingWeight());
+    }
+
+    private String intentDocument(String rawIntent, List<Skill> skills) {
+        String skillText = skills == null ? "" : skills.stream()
+            .map(Skill::getName)
+            .collect(Collectors.joining(" "));
+
+        String merged = ((rawIntent == null ? "" : rawIntent) + " " + skillText).trim();
+        if (merged.isBlank()) {
+            return "";
+        }
+
+        return tokenize(merged).stream().collect(Collectors.joining(" "));
+    }
+
+    private double lexicalOverlap(String left, String right) {
+        Set<String> leftTokens = tokenize(left);
+        Set<String> rightTokens = tokenize(right);
+        if (leftTokens.isEmpty() || rightTokens.isEmpty()) {
+            return 0.0;
+        }
+
+        long intersection = leftTokens.stream().filter(rightTokens::contains).count();
+        long union = leftTokens.size() + rightTokens.size() - intersection;
+        if (union <= 0) {
+            return 0.0;
+        }
+        return (double) intersection / union;
+    }
+
+    private Set<String> tokenize(String text) {
+        if (text == null || text.isBlank()) {
+            return Set.of();
+        }
+
+        return Arrays.stream(text.toLowerCase(Locale.ROOT)
+                .replaceAll("[^\\p{L}\\p{Nd}\\s]", " ")
+                .replaceAll("\\s+", " ")
+                .trim()
+                .split("\\s+"))
+            .map(this::normalizeToken)
+            .filter(token -> token.length() >= 2)
+                .filter(token -> !intentMatchingProperties.getStopWords().contains(token))
+            .collect(Collectors.toSet());
+    }
+
+    private String normalizeToken(String token) {
+            String base = intentMatchingProperties.getSynonyms().getOrDefault(token, token);
+        if (base.endsWith("s") && base.length() > 4) {
+            base = base.substring(0, base.length() - 1);
+        }
+        return base;
+    }
+
+    private double embeddingSimilarity(String leftDoc, String rightDoc) {
+            double[] left = intentEmbeddingCache.embed(leftDoc);
+            double[] right = intentEmbeddingCache.embed(rightDoc);
+        if (left == null || right == null || left.length == 0 || left.length != right.length) {
+            return 0.0;
+        }
+
+        double dot = 0.0;
+        double leftNorm = 0.0;
+        double rightNorm = 0.0;
+
+        for (int i = 0; i < left.length; i++) {
+            dot += left[i] * right[i];
+            leftNorm += left[i] * left[i];
+            rightNorm += right[i] * right[i];
+        }
+
+        if (leftNorm == 0.0 || rightNorm == 0.0) {
+            return 0.0;
+        }
+
+        double cosine = dot / (Math.sqrt(leftNorm) * Math.sqrt(rightNorm));
+        return Math.max(0.0, Math.min(1.0, cosine));
     }
 
     /**

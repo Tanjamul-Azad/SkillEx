@@ -8,6 +8,7 @@ import com.skillex.model.UserSkillOffered;
 import com.skillex.model.UserSkillWanted;
 import com.skillex.repository.*;
 import com.skillex.service.DtoMapper;
+import com.skillex.service.SkillCatalogGovernanceService;
 import com.skillex.service.UserService;
 import jakarta.persistence.EntityNotFoundException;
 import lombok.RequiredArgsConstructor;
@@ -37,6 +38,7 @@ public class UserServiceImpl implements UserService {
     private final UserSkillWantedRepository wantedRepo;
     private final PasswordEncoder passwordEncoder;
     private final DtoMapper mapper;
+    private final SkillCatalogGovernanceService skillCatalogGovernanceService;
 
     @Override
     @Transactional(readOnly = true)
@@ -52,6 +54,8 @@ public class UserServiceImpl implements UserService {
         if (req.name()       != null) user.setName(req.name());
         if (req.university() != null) user.setUniversity(req.university());
         if (req.bio()        != null) user.setBio(req.bio());
+        if (req.teachIntentText() != null) user.setTeachIntentText(req.teachIntentText().trim());
+        if (req.learnIntentText() != null) user.setLearnIntentText(req.learnIntentText().trim());
         if (req.avatar()     != null) user.setAvatar(req.avatar());
         // email change — check uniqueness first
         if (req.email() != null && !req.email().equals(user.getEmail())) {
@@ -76,43 +80,59 @@ public class UserServiceImpl implements UserService {
 
     @Override
     @Transactional
-    public void addSkill(String userId, AddSkillRequest req) {
+    public AddSkillResult addSkill(String userId, AddSkillRequest req) {
         User user = findUserById(userId);
-
-        // ── Resolve skill: catalog lookup by ID, or find/create by name ──────
-        final Skill skill;
-        if (req.skillId() != null && !req.skillId().isBlank()) {
-            skill = skillRepository.findById(req.skillId())
-                .orElseThrow(() -> new EntityNotFoundException("Skill not found: " + req.skillId()));
-        } else {
-            String name = req.skillName().trim();
-            skill = skillRepository.findByNameIgnoreCase(name)
-                .orElseGet(() -> {
-                    Skill s = new Skill();
-                    s.setName(name);
-                    s.setIcon("Zap");
-                    s.setCategory(req.skillCategory() != null && !req.skillCategory().isBlank()
-                        ? req.skillCategory() : "Other");
-                    if (req.skillDescription() != null && !req.skillDescription().isBlank())
-                        s.setDescription(req.skillDescription());
-                    return skillRepository.save(s);
-                });
-        }
-
         UserSkillOffered.SkillProficiency level =
             UserSkillOffered.SkillProficiency.valueOf(req.level());
 
-        if ("offered".equalsIgnoreCase(req.type())) {
-            offeredRepo.deleteByIdUserIdAndIdSkillId(userId, skill.getId());
+        // ── Resolve skill: catalog lookup by ID, or find/create by name ──────
+        if (req.skillId() != null && !req.skillId().isBlank()) {
+            Skill skill = skillRepository.findById(req.skillId())
+                .orElseThrow(() -> new EntityNotFoundException("Skill not found: " + req.skillId()));
+            attachSkill(user, skill, req.type(), level);
+            return new AddSkillResult("ADDED", "Skill added to your profile.", skill.getId(), null);
+        }
+
+        String name = req.skillName().trim();
+        Skill existing = skillRepository.findByNameIgnoreCase(name).orElse(null);
+        if (existing != null) {
+            attachSkill(user, existing, req.type(), level);
+            return new AddSkillResult("ADDED", "Matched an existing catalog skill.", existing.getId(), null);
+        }
+
+        AddSkillResult pendingResult = skillCatalogGovernanceService.submitUnknownSkill(userId, req);
+        if ("ADDED".equalsIgnoreCase(pendingResult.status())
+            && pendingResult.skillId() != null
+            && !pendingResult.skillId().isBlank()) {
+            Skill promoted = skillRepository.findById(pendingResult.skillId())
+                .orElseThrow(() -> new EntityNotFoundException("Promoted skill not found: " + pendingResult.skillId()));
+            attachSkill(user, promoted, req.type(), level);
+            return new AddSkillResult(
+                "ADDED",
+                "Skill auto-promoted and added to your profile.",
+                promoted.getId(),
+                pendingResult.pendingId()
+            );
+        }
+
+        return pendingResult;
+    }
+
+    private void attachSkill(User user,
+                             Skill skill,
+                             String type,
+                             UserSkillOffered.SkillProficiency level) {
+        if ("offered".equalsIgnoreCase(type)) {
+            offeredRepo.deleteByIdUserIdAndIdSkillId(user.getId(), skill.getId());
             UserSkillOffered entry = UserSkillOffered.builder()
-                .id(new UserSkillOffered.UserSkillId(userId, skill.getId()))
+                .id(new UserSkillOffered.UserSkillId(user.getId(), skill.getId()))
                 .user(user).skill(skill).level(level)
                 .build();
             offeredRepo.save(entry);
         } else {
-            wantedRepo.deleteByIdUserIdAndIdSkillId(userId, skill.getId());
+            wantedRepo.deleteByIdUserIdAndIdSkillId(user.getId(), skill.getId());
             UserSkillWanted entry = UserSkillWanted.builder()
-                .id(new UserSkillWanted.UserSkillId(userId, skill.getId()))
+                .id(new UserSkillWanted.UserSkillId(user.getId(), skill.getId()))
                 .user(user).skill(skill).level(level)
                 .build();
             wantedRepo.save(entry);

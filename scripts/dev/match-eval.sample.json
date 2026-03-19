@@ -1,0 +1,10 @@
+[
+  {
+    "name": "Crafting-Intent Case",
+    "learnerEmail": "replace_with_existing_user_email@example.com",
+    "learnerPassword": "replace_with_password",
+    "expectedUserNames": [
+      "replace_with_expected_teacher_name"
+    ]
+  }
+]

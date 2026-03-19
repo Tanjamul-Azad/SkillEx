@@ -25,11 +25,7 @@ export const UserService = {
   uploadFile: async (file: File): Promise<{ url: string }> => {
     const formData = new FormData();
     formData.append('file', file);
-    return api.post<{ url: string }>('/upload', formData, {
-      headers: {
-        'Content-Type': 'multipart/form-data',
-      },
-    });
+    return api.post<{ url: string }>('/upload', formData);
   },
 
   /** POST /api/users/me/skills — add an existing catalog skill */

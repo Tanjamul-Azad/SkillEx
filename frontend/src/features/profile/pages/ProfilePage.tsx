@@ -36,7 +36,7 @@ import {
   TrendingUp,
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Link, Navigate, useNavigate as useNav } from 'react-router-dom';
+import { Link, Navigate, useNavigate as useNav, useSearchParams } from 'react-router-dom';
 import { cn } from '@/lib/utils';
 import DashboardLayout from '@/components/layout/DashboardLayout';
 import { SkillBadge } from '@/components/ui/SkillBadge';
@@ -85,6 +85,8 @@ function SkillSection({
   variant,
   isOwner,
   onAdd,
+  id,
+  emphasized,
 }: {
   title: string;
   skills: Skill[];
@@ -93,12 +95,14 @@ function SkillSection({
   variant: 'offer' | 'want';
   isOwner?: boolean;
   onAdd?: () => void;
+  id?: string;
+  emphasized?: boolean;
 }) {
   const [showAll, setShowAll] = useState(false);
   const displayed = showAll ? skills : skills.slice(0, 4);
 
   return (
-    <Card className="border-border/60">
+    <Card id={id} className={cn('border-border/60 transition-shadow', emphasized && 'ring-2 ring-primary/50 shadow-[0_0_0_4px_hsl(var(--primary)/0.15)]')}>
       <CardHeader className="pb-3">
         <CardTitle className="flex items-center gap-2 text-base">
           <Icon className="w-4 h-4 text-primary" />
@@ -231,6 +235,7 @@ export default function ProfilePage() {
   const [offeredSkills, setOfferedSkills] = useState<Skill[]>([]);
   const [wantedSkills, setWantedSkills] = useState<Skill[]>([]);
   const navTo = useNav();
+  const [searchParams, setSearchParams] = useSearchParams();
   const [addSkillMode, setAddSkillMode] = useState<'offered' | 'wanted' | null>(null);
   const [requestOpen, setRequestOpen] = useState(false);
   const [coverDialogOpen, setCoverDialogOpen] = useState(false);
@@ -242,6 +247,20 @@ export default function ProfilePage() {
   const [reviewHover, setReviewHover] = useState(0);
   const [reviewComment, setReviewComment] = useState('');
   const [reviewSubmitted, setReviewSubmitted] = useState(false);
+
+  const tabParam = searchParams.get('tab');
+  const focusParam = searchParams.get('focus');
+  const resolvedInitialTab = tabParam === 'reviews' || tabParam === 'activity' || tabParam === 'skills'
+    ? tabParam
+    : 'skills';
+  const [activeTab, setActiveTab] = useState<'skills' | 'reviews' | 'activity'>(resolvedInitialTab);
+
+  useEffect(() => {
+    const next = searchParams.get('tab');
+    if (next === 'skills' || next === 'reviews' || next === 'activity') {
+      setActiveTab(next);
+    }
+  }, [searchParams]);
 
   useEffect(() => {
     if (!userId) return;
@@ -278,6 +297,18 @@ export default function ProfilePage() {
   }
 
   const isOwnProfile = currentUser?.id === profileUser.id;
+  const emphasizeOfferedSkills = activeTab === 'skills' && focusParam === 'offered';
+  const handleTabChange = (next: string) => {
+    if (next !== 'skills' && next !== 'reviews' && next !== 'activity') return;
+    setActiveTab(next);
+
+    const nextParams = new URLSearchParams(searchParams);
+    nextParams.set('tab', next);
+    if (next !== 'skills') {
+      nextParams.delete('focus');
+    }
+    setSearchParams(nextParams, { replace: true });
+  };
   const avgRating =
     userReviews.length > 0
       ? userReviews.reduce((sum, r) => sum + r.rating, 0) / userReviews.length
@@ -461,7 +492,7 @@ export default function ProfilePage() {
         </motion.div>
 
         {/* ── Main Content ── */}
-        <Tabs defaultValue="skills" className="w-full">
+        <Tabs value={activeTab} onValueChange={handleTabChange} className="w-full">
           <TabsList className="w-full sm:w-auto">
             <TabsTrigger value="skills" className="flex-1 sm:flex-none">
               <BookOpen className="w-3.5 h-3.5 mr-1.5" />
@@ -492,11 +523,13 @@ export default function ProfilePage() {
             >
               <motion.div variants={itemVariants}>
                 <SkillSection
+                  id="skills-offered"
                   title="Skills I Offer"
                   skills={offeredSkills}
                   icon={CheckCircle}
                   emptyText="No skills listed yet."
                   variant="offer"
+                  emphasized={emphasizeOfferedSkills}
                   isOwner={isOwnProfile}
                   onAdd={() => setAddSkillMode('offered')}
                 />

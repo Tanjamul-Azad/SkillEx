@@ -54,6 +54,12 @@ public class User {
     @Column(columnDefinition = "TEXT")
     private String bio;
 
+    @Column(name = "teach_intent_text", columnDefinition = "TEXT")
+    private String teachIntentText;
+
+    @Column(name = "learn_intent_text", columnDefinition = "TEXT")
+    private String learnIntentText;
+
     @Enumerated(EnumType.STRING)
     @Column(nullable = false, length = 10)
     @Builder.Default

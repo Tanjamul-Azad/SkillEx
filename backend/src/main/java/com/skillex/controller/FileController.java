@@ -4,6 +4,7 @@ import com.skillex.dto.common.ApiResponse;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.http.ResponseEntity;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 
@@ -21,7 +22,9 @@ import java.util.HashMap;
 public class FileController {
 
     private static final Logger log = LoggerFactory.getLogger(FileController.class);
-    private final String UPLOAD_DIR = "uploads/images/";
+
+    @Value("${file.upload-dir:./uploads}")
+    private String uploadDir;
 
     @PostMapping
     public ResponseEntity<ApiResponse<Map<String, String>>> uploadFile(@RequestParam("file") MultipartFile file) {
@@ -33,7 +36,7 @@ public class FileController {
         try {
             log.info("Processing file upload: {}, size: {} bytes", file.getOriginalFilename(), file.getSize());
 
-            Path uploadPath = Paths.get(UPLOAD_DIR);
+            Path uploadPath = Paths.get(uploadDir, "images");
             if (!Files.exists(uploadPath)) {
                 log.info("Creating upload directory: {}", uploadPath.toAbsolutePath());
                 Files.createDirectories(uploadPath);

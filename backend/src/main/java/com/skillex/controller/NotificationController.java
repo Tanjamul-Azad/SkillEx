@@ -41,9 +41,24 @@ public class NotificationController {
             notificationService.markRead(id, userId(auth))));
     }
 
+    @PutMapping("/{id}/read")
+    public ResponseEntity<ApiResponse<NotificationDto>> markReadPut(
+        Authentication auth,
+        @PathVariable String id
+    ) {
+        return ResponseEntity.ok(ApiResponse.ok(
+            notificationService.markRead(id, userId(auth))));
+    }
+
     /** POST /api/notifications/read-all — mark all notifications read */
     @PostMapping("/read-all")
     public ResponseEntity<ApiResponse<String>> markAllRead(Authentication auth) {
+        notificationService.markAllRead(userId(auth));
+        return ResponseEntity.ok(ApiResponse.ok("All notifications marked as read."));
+    }
+
+    @PutMapping("/read-all")
+    public ResponseEntity<ApiResponse<String>> markAllReadPut(Authentication auth) {
         notificationService.markAllRead(userId(auth));
         return ResponseEntity.ok(ApiResponse.ok("All notifications marked as read."));
     }

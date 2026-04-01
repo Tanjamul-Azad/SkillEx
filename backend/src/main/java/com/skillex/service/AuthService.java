@@ -2,6 +2,7 @@ package com.skillex.service;
 
 import com.skillex.dto.auth.AuthResponse;
 import com.skillex.dto.auth.LoginRequest;
+import com.skillex.dto.auth.RefreshTokenRequest;
 import com.skillex.dto.auth.RegisterRequest;
 import com.skillex.model.User;
 
@@ -12,5 +13,7 @@ import com.skillex.model.User;
 public interface AuthService {
     AuthResponse register(RegisterRequest request);
     AuthResponse login(LoginRequest request);
+    AuthResponse refresh(RefreshTokenRequest request);
+    void logout(String userId);
     User getCurrentUser(@org.springframework.lang.NonNull String userId);
 }

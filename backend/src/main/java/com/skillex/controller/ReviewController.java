@@ -33,6 +33,17 @@ public class ReviewController {
             reviewService.getReviewsForUser(userId, page, size)));
     }
 
+    /** GET /api/reviews/user/{userId} */
+    @GetMapping("/user/{userId}")
+    public ResponseEntity<ApiResponse<PagedResponse<ReviewDto>>> listForUserPath(
+        @PathVariable String userId,
+        @RequestParam(defaultValue = "0") int page,
+        @RequestParam(defaultValue = "20") int size
+    ) {
+        return ResponseEntity.ok(ApiResponse.ok(
+            reviewService.getReviewsForUser(userId, page, size)));
+    }
+
     /** POST /api/reviews — submit a review */
     @PostMapping
     public ResponseEntity<ApiResponse<ReviewDto>> create(

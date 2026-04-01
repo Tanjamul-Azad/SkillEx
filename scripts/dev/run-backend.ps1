@@ -20,7 +20,7 @@ if (Test-Path $envFile) {
     }
     Write-Host "[run-backend] Loaded .env from $envFile" -ForegroundColor Green
 } else {
-    Write-Host "[run-backend] No .env found at $envFile — continuing without it." -ForegroundColor DarkYellow
+    Write-Host "[run-backend] No .env found at $envFile - continuing without it." -ForegroundColor DarkYellow
 }
 
 # Log which embedding provider is active

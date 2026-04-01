@@ -72,6 +72,12 @@ public class IntentEmbeddingCache {
         return computed;
     }
 
+    public void clearMemoryCache() {
+        synchronized (cache) {
+            cache.clear();
+        }
+    }
+
     private double[] readRedis(String normalizedDoc) {
         StringRedisTemplate redis = redisTemplateProvider.getIfAvailable();
         if (redis == null) {

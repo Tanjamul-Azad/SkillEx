@@ -20,6 +20,8 @@ public interface NotificationRepository extends JpaRepository<Notification, Stri
 
     long countByUserIdAndIsReadFalse(String userId);
 
+    List<Notification> findTop200ByIsReadFalseOrderByCreatedAtAsc();
+
     @Modifying
     @Query("UPDATE Notification n SET n.isRead = true WHERE n.user.id = :userId AND n.isRead = false")
     void markAllReadByUserId(@Param("userId") String userId);

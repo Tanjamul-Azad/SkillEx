@@ -2,6 +2,7 @@ package com.skillex.controller;
 
 import com.skillex.dto.auth.AuthResponse;
 import com.skillex.dto.auth.LoginRequest;
+import com.skillex.dto.auth.RefreshTokenRequest;
 import com.skillex.dto.auth.RegisterRequest;
 import com.skillex.dto.common.ApiResponse;
 import com.skillex.dto.user.UserProfileDto;
@@ -44,6 +45,22 @@ public class AuthController {
     ) {
         AuthResponse response = authService.login(request);
         return ResponseEntity.ok(ApiResponse.ok(response));
+    }
+
+    /** POST /api/auth/refresh */
+    @PostMapping("/refresh")
+    public ResponseEntity<ApiResponse<AuthResponse>> refresh(
+        @Valid @RequestBody RefreshTokenRequest request
+    ) {
+        return ResponseEntity.ok(ApiResponse.ok(authService.refresh(request)));
+    }
+
+    /** POST /api/auth/logout */
+    @PostMapping("/logout")
+    public ResponseEntity<ApiResponse<String>> logout(Authentication authentication) {
+        String userId = (String) authentication.getPrincipal();
+        authService.logout(userId);
+        return ResponseEntity.ok(ApiResponse.ok("Logged out."));
     }
 
     /** GET /api/auth/me  — requires Authorization: Bearer <token> */

@@ -48,6 +48,13 @@ public class UserServiceImpl implements UserService {
     }
 
     @Override
+    @Transactional(readOnly = true)
+    public UserSkillsDto getSkills(String userId) {
+        UserProfileDto profile = getProfile(userId);
+        return new UserSkillsDto(profile.skillsOffered(), profile.skillsWanted());
+    }
+
+    @Override
     @Transactional
     public UserProfileDto updateProfile(String userId, UpdateProfileRequest req) {
         User user = findUserById(userId);

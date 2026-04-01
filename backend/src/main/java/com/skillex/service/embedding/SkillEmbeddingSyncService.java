@@ -11,6 +11,7 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.boot.context.event.ApplicationReadyEvent;
 import org.springframework.context.event.EventListener;
+import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -60,7 +61,7 @@ public class SkillEmbeddingSyncService {
                 continue;
             }
 
-            double[] vector = embeddingProvider.embed(sourceText);
+            double[] vector = embeddingProvider.getEmbedding(sourceText);
             SkillEmbedding saved = SkillEmbedding.builder()
                 .skillId(skill.getId())
                 .modelName(embeddingProvider.modelName())
@@ -76,6 +77,29 @@ public class SkillEmbeddingSyncService {
         if (updated > 0) {
             log.info("[SkillEmbeddingSync] Synced {} skill embeddings using {}.", updated, embeddingProvider.modelName());
         }
+    }
+
+    @Async("appTaskExecutor")
+    @Transactional
+    @SuppressWarnings("null")
+    public void refreshSkillEmbeddingAsync(String skillId) {
+        Skill skill = skillRepository.findById(skillId).orElse(null);
+        if (skill == null) {
+            return;
+        }
+
+        String sourceText = sourceText(skill);
+        double[] vector = embeddingProvider.getEmbedding(sourceText);
+        SkillEmbedding saved = SkillEmbedding.builder()
+            .skillId(skill.getId())
+            .modelName(embeddingProvider.modelName())
+            .dimensions(vector.length)
+            .vectorJson(writeVector(vector))
+            .sourceText(sourceText)
+            .updatedAt(LocalDateTime.now())
+            .build();
+        skillEmbeddingRepository.save(saved);
+        log.info("[SkillEmbeddingSync] Refreshed embedding for skill {} in background.", skillId);
     }
 
     public Map<String, double[]> loadEmbeddingMap() {

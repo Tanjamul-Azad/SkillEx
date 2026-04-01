@@ -43,5 +43,7 @@ public interface CommunityService {
 
     PagedResponse<CommunityDtos.SkillCircleDto> getSkillCircles(int page, int size);
 
+    CommunityDtos.SkillCircleDto createSkillCircle(String creatorId, CreateSkillCircleRequest req);
+
     CommunityDtos.SkillCircleDto joinSkillCircle(String userId, String circleId);
 }

@@ -61,9 +61,25 @@ public class SessionController {
         return ResponseEntity.ok(ApiResponse.ok(sessionService.markCompleted(id, userId(auth))));
     }
 
+    @PutMapping("/{id}/complete")
+    public ResponseEntity<ApiResponse<SessionDto>> completePut(
+        Authentication auth,
+        @PathVariable String id
+    ) {
+        return ResponseEntity.ok(ApiResponse.ok(sessionService.markCompleted(id, userId(auth))));
+    }
+
     /** PATCH /api/sessions/{id}/cancel */
     @PatchMapping("/{id}/cancel")
     public ResponseEntity<ApiResponse<SessionDto>> cancel(
+        Authentication auth,
+        @PathVariable String id
+    ) {
+        return ResponseEntity.ok(ApiResponse.ok(sessionService.markCancelled(id, userId(auth))));
+    }
+
+    @PutMapping("/{id}/cancel")
+    public ResponseEntity<ApiResponse<SessionDto>> cancelPut(
         Authentication auth,
         @PathVariable String id
     ) {

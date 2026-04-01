@@ -20,7 +20,7 @@ import java.util.Set;
  * local development/demo without extra infrastructure.
  */
 @Component
-public class HashingTextEmbeddingProvider implements TextEmbeddingProvider {
+public class HashingTextEmbeddingProvider extends AbstractEmbeddingProvider {
 
     private static final int DIMENSIONS = 128;
 
@@ -131,7 +131,7 @@ public class HashingTextEmbeddingProvider implements TextEmbeddingProvider {
     }
 
     @Override
-    public double[] embed(String text) {
+    protected double[] computeEmbedding(String text) {
         double[] vector = new double[DIMENSIONS];
         List<String> tokens = expandTokens(tokenize(text));
         if (tokens.isEmpty()) {
@@ -143,8 +143,7 @@ public class HashingTextEmbeddingProvider implements TextEmbeddingProvider {
             vector[bucket] += weight(token);
         }
 
-        normalize(vector);
-        return vector;
+        return normalize(vector);
     }
 
     private List<String> tokenize(String text) {
@@ -191,15 +190,4 @@ public class HashingTextEmbeddingProvider implements TextEmbeddingProvider {
         };
     }
 
-    private void normalize(double[] vector) {
-        double norm = 0.0;
-        for (double value : vector) {
-            norm += value * value;
-        }
-        norm = Math.sqrt(norm);
-        if (norm == 0.0) return;
-        for (int i = 0; i < vector.length; i++) {
-            vector[i] /= norm;
-        }
-    }
 }

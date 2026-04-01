@@ -124,8 +124,34 @@ public class CommunityController {
         return ResponseEntity.ok(ApiResponse.ok(communityService.getSkillCircles(page, size)));
     }
 
+    @GetMapping("/circles")
+    public ResponseEntity<ApiResponse<PagedResponse<CommunityDtos.SkillCircleDto>>> getCirclesAlias(
+        @RequestParam(defaultValue = "0") int page,
+        @RequestParam(defaultValue = "20") int size
+    ) {
+        return ResponseEntity.ok(ApiResponse.ok(communityService.getSkillCircles(page, size)));
+    }
+
+    @PostMapping("/circles")
+    public ResponseEntity<ApiResponse<CommunityDtos.SkillCircleDto>> createCircle(
+        Authentication auth,
+        @Valid @RequestBody CreateSkillCircleRequest req
+    ) {
+        return ResponseEntity.status(HttpStatus.CREATED)
+            .body(ApiResponse.ok(communityService.createSkillCircle(userId(auth), req)));
+    }
+
     @PostMapping("/skill-circles/{circleId}/join")
     public ResponseEntity<ApiResponse<CommunityDtos.SkillCircleDto>> joinCircle(
+        Authentication auth,
+        @PathVariable String circleId
+    ) {
+        return ResponseEntity.ok(ApiResponse.ok(
+            communityService.joinSkillCircle(userId(auth), circleId)));
+    }
+
+    @PostMapping("/circles/{circleId}/join")
+    public ResponseEntity<ApiResponse<CommunityDtos.SkillCircleDto>> joinCircleAlias(
         Authentication auth,
         @PathVariable String circleId
     ) {

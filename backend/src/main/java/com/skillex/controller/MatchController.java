@@ -1,6 +1,7 @@
 package com.skillex.controller;
 
 import com.skillex.dto.common.ApiResponse;
+import com.skillex.dto.user.MatchCompatibilityDto;
 import com.skillex.dto.user.MatchUserDto;
 import com.skillex.service.MatchService;
 import com.skillex.service.match.graph.ExchangeChain;
@@ -32,6 +33,27 @@ public class MatchController {
     ) {
         return ResponseEntity.ok(ApiResponse.ok(
             matchService.findMatches(userId(auth), limit)));
+    }
+
+    /** GET /api/match?limit=20 — alias of /users */
+    @GetMapping
+    public ResponseEntity<ApiResponse<List<MatchUserDto>>> findMatchesAlias(
+        Authentication auth,
+        @RequestParam(defaultValue = "20") int limit
+    ) {
+        return ResponseEntity.ok(ApiResponse.ok(
+            matchService.findMatches(userId(auth), limit)));
+    }
+
+    /** GET /api/match/{userId} — compatibility against one target user */
+    @GetMapping("/{targetUserId:[0-9a-fA-F\\-]{36}}")
+    public ResponseEntity<ApiResponse<MatchCompatibilityDto>> compatibility(
+        Authentication auth,
+        @PathVariable String targetUserId
+    ) {
+        return ResponseEntity.ok(ApiResponse.ok(
+            matchService.getCompatibility(userId(auth), targetUserId)
+        ));
     }
 
     /**

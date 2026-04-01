@@ -60,18 +60,18 @@ public class AdaptiveTextEmbeddingProvider implements TextEmbeddingProvider {
     }
 
     @Override
-    public double[] embed(String text) {
+    public double[] getEmbedding(String text) {
         if (useApi()) {
             try {
-                return apiProvider.embed(text);
+                return apiProvider.getEmbedding(text);
             } catch (Exception ex) {
                 if (!fallbackToLocal) throw ex;
                 forceLocalUntilRestart = true;
                 log.warn("[Embedding] API embed failed, falling back to local model: {}", ex.getMessage());
-                return localProvider.embed(text);
+                return localProvider.getEmbedding(text);
             }
         }
-        return localProvider.embed(text);
+        return localProvider.getEmbedding(text);
     }
 
     private boolean useApi() {

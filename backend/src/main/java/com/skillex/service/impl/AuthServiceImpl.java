@@ -2,6 +2,7 @@ package com.skillex.service.impl;
 
 import com.skillex.dto.auth.AuthResponse;
 import com.skillex.dto.auth.LoginRequest;
+import com.skillex.dto.auth.RefreshTokenRequest;
 import com.skillex.dto.auth.RegisterRequest;
 import com.skillex.dto.skill.SkillIntentInterpretRequest;
 import com.skillex.dto.skill.SkillIntentInterpretResponse;
@@ -87,6 +88,28 @@ public class AuthServiceImpl implements AuthService {
 
         String token = jwtUtil.generateToken(user.getId(), user.getEmail(), user.getRole().name());
         return toAuthResponse(token, user);
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public AuthResponse refresh(RefreshTokenRequest request) {
+        String token = request == null ? null : request.token();
+        if (token == null || token.isBlank()) {
+            throw new IllegalArgumentException("Refresh token is required.");
+        }
+
+        String userId = jwtUtil.extractUserId(token);
+        User user = userRepository.findById(userId)
+            .orElseThrow(() -> new IllegalArgumentException("Invalid refresh token."));
+
+        String newToken = jwtUtil.generateToken(user.getId(), user.getEmail(), user.getRole().name());
+        return toAuthResponse(newToken, user);
+    }
+
+    @Override
+    public void logout(String userId) {
+        // Stateless JWT logout is client-driven (discard token on client).
+        // Hook kept for API contract compatibility and future token blacklist support.
     }
 
     @Override

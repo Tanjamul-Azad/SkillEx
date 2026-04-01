@@ -1,4 +1,4 @@
-# Loads backend/.env into the current process, then runs Spring Boot via Maven.
+# Loads backend/.env into the current process, then runs Spring Boot via Gradle wrapper.
 # Called by the root package.json dev:backend script so env vars survive the
 # subprocess boundary that concurrently creates.
 
@@ -41,7 +41,7 @@ if (Test-Path $ensureMysql) {
     & powershell -NoProfile -ExecutionPolicy Bypass -File $ensureMysql
 }
 
-# Set JAVA_HOME and launch Maven
+# Set JAVA_HOME and launch Gradle wrapper
 $env:JAVA_HOME = "C:\Users\User\.jdk\jdk-21.0.8"
 Set-Location (Join-Path $Root "backend")
-& "apache-maven-3.9.6\bin\mvn.cmd" "spring-boot:run"
+& ".\gradlew.bat" "bootRun"

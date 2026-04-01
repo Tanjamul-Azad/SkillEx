@@ -11,9 +11,11 @@ import java.util.List;
 public record UserProfileDto(
     String id,
     String name,
+    String username,
     String email,
     String avatar,
     String university,
+    String location,
     String bio,
     String teachIntentText,
     String learnIntentText,
@@ -23,6 +25,7 @@ public record UserProfileDto(
     int sessionsCompleted,
     BigDecimal rating,
     boolean isOnline,
+    boolean connectionsPublic,
     LocalDateTime joinedAt,
     List<SkillWithLevel> skillsOffered,
     List<SkillWithLevel> skillsWanted

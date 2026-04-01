@@ -2,6 +2,7 @@ package com.skillex.service;
 
 import com.skillex.dto.user.UserSummaryDto;
 import com.skillex.dto.user.UserProfileDto;
+import com.skillex.dto.connection.ConnectionDto;
 import com.skillex.dto.exchange.ExchangeDto;
 import com.skillex.dto.session.SessionDto;
 import com.skillex.dto.review.ReviewDto;
@@ -34,7 +35,7 @@ public class DtoMapper {
 
     public UserSummaryDto toSummary(User u) {
         return new UserSummaryDto(
-            u.getId(), u.getName(), u.getAvatar(),
+            u.getId(), u.getName(), u.getUsername(), u.getAvatar(),
             u.getUniversity(), u.getLevel().name(),
             u.getSkillexScore(), u.getRating(), u.getIsOnline()
         );
@@ -63,13 +64,13 @@ public class DtoMapper {
             .toList();
 
         return new UserProfileDto(
-            u.getId(), u.getName(), u.getEmail(), u.getAvatar(),
-            u.getUniversity(), u.getBio(),
+            u.getId(), u.getName(), u.getUsername(), u.getEmail(), u.getAvatar(),
+            u.getUniversity(), u.getLocation(), u.getBio(),
             u.getTeachIntentText(), u.getLearnIntentText(),
             u.getRole().name().toLowerCase(),
             u.getLevel().name(),
             u.getSkillexScore(), u.getSessionsCompleted(),
-            u.getRating(), u.getIsOnline(), u.getJoinedAt(),
+            u.getRating(), u.getIsOnline(), u.getConnectionsPublic(), u.getJoinedAt(),
             offered, wanted
         );
     }
@@ -92,6 +93,20 @@ public class DtoMapper {
 
     private ExchangeDto.SkillRef toSkillRef(Skill s) {
         return new ExchangeDto.SkillRef(s.getId(), s.getName(), s.getIcon(), s.getCategory());
+    }
+
+    // ── Connection ───────────────────────────────────────────────────────────
+
+    public ConnectionDto toConnection(Connection c) {
+        return new ConnectionDto(
+            c.getId(),
+            toSummary(c.getRequester()),
+            toSummary(c.getReceiver()),
+            c.getMessage(),
+            c.getStatus().name(),
+            c.getRespondedAt(),
+            c.getCreatedAt()
+        );
     }
 
     // ── Session ───────────────────────────────────────────────────────────────

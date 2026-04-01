@@ -54,6 +54,8 @@ public class Notification {
 
     public enum NotificationType {
         MATCH_REQUEST,
+        CONNECTION_REQUEST,
+        CONNECTION_ACCEPTED,
         SESSION_SCHEDULED,
         REVIEW_LEFT,
         SYSTEM_UPDATE

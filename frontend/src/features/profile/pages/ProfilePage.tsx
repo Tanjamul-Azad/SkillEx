@@ -22,13 +22,11 @@ import {
   UserPlus,
   MessageSquare,
   Share2,
-  Lock,
   Plus,
   Pencil,
   ChevronDown,
   Play,
   Settings,
-  Users as UsersIcon,
   BookOpen,
   Award,
   CheckCircle,
@@ -43,7 +41,10 @@ import { SkillBadge } from '@/components/ui/SkillBadge';
 import { SkillExScoreBadge } from '@/components/ui/SkillExScoreBadge';
 import type { User, Skill, Review } from '@/types';
 import { AddSkillDialog } from '@/features/profile/components/AddSkillDialog';
-import { RequestExchangeDialog } from '@/features/match/components/RequestExchangeDialog';
+import {
+  connectionService,
+  type ConnectionRelationship,
+} from '@/services/connectionService';
 
 const containerVariants = {
   hidden: { opacity: 0 },
@@ -237,7 +238,11 @@ export default function ProfilePage() {
   const navTo = useNav();
   const [searchParams, setSearchParams] = useSearchParams();
   const [addSkillMode, setAddSkillMode] = useState<'offered' | 'wanted' | null>(null);
-  const [requestOpen, setRequestOpen] = useState(false);
+  const [connectionRelationship, setConnectionRelationship] = useState<ConnectionRelationship | null>(null);
+  const [connectionLoading, setConnectionLoading] = useState(false);
+  const [connectionBusy, setConnectionBusy] = useState(false);
+  const [connectDialogOpen, setConnectDialogOpen] = useState(false);
+  const [connectMessage, setConnectMessage] = useState('');
   const [coverDialogOpen, setCoverDialogOpen] = useState(false);
   const [coverPreview, setCoverPreview] = useState<string | null>(null);
   const [localCover, setLocalCover] = useState<string | null>(null);
@@ -282,6 +287,34 @@ export default function ProfilePage() {
       .finally(() => setLoading(false));
   }, [userId]);
 
+  useEffect(() => {
+    if (!profileUser || !currentUser || profileUser.id === currentUser.id) {
+      setConnectionRelationship(null);
+      return;
+    }
+
+    let active = true;
+    setConnectionLoading(true);
+
+    connectionService.getRelationship(profileUser.id)
+      .then((relationship) => {
+        if (!active) return;
+        setConnectionRelationship(relationship);
+      })
+      .catch(() => {
+        if (!active) return;
+        setConnectionRelationship(null);
+      })
+      .finally(() => {
+        if (!active) return;
+        setConnectionLoading(false);
+      });
+
+    return () => {
+      active = false;
+    };
+  }, [profileUser, currentUser]);
+
   if (loading) {
     return (
       <DashboardLayout>
@@ -297,6 +330,10 @@ export default function ProfilePage() {
   }
 
   const isOwnProfile = currentUser?.id === profileUser.id;
+  const relationshipStatus = connectionRelationship?.status ?? 'NONE';
+  const isConnected = relationshipStatus === 'CONNECTED';
+  const isPendingSent = relationshipStatus === 'PENDING_SENT';
+  const isPendingReceived = relationshipStatus === 'PENDING_RECEIVED';
   const emphasizeOfferedSkills = activeTab === 'skills' && focusParam === 'offered';
   const handleTabChange = (next: string) => {
     if (next !== 'skills' && next !== 'reviews' && next !== 'activity') return;
@@ -313,6 +350,67 @@ export default function ProfilePage() {
     userReviews.length > 0
       ? userReviews.reduce((sum, r) => sum + r.rating, 0) / userReviews.length
       : profileUser.rating;
+
+  const openConnectDialog = () => {
+    setConnectMessage(`Hi ${profileUser.name.split(' ')[0]}, I found your profile on SkillEX and would love to connect.`);
+    setConnectDialogOpen(true);
+  };
+
+  const handleSendConnectionRequest = async () => {
+    if (!profileUser) return;
+
+    setConnectionBusy(true);
+    try {
+      await connectionService.create({
+        receiverId: profileUser.id,
+        message: connectMessage.trim() || undefined,
+      });
+
+      setConnectionRelationship({
+        targetUserId: profileUser.id,
+        status: 'PENDING_SENT',
+        connectionId: null,
+        canMessage: false,
+      });
+
+      toast({
+        title: 'Connection sent',
+        description: `Your request was sent to ${profileUser.name}.`,
+        variant: 'success',
+      });
+      setConnectDialogOpen(false);
+      setConnectMessage('');
+    } catch (error) {
+      const message = error instanceof Error ? error.message : 'Could not send request right now.';
+      toast({ title: 'Connect failed', description: message, variant: 'destructive' });
+    } finally {
+      setConnectionBusy(false);
+    }
+  };
+
+  const handleAcceptIncomingConnection = async () => {
+    if (!connectionRelationship?.connectionId || !profileUser) return;
+
+    setConnectionBusy(true);
+    try {
+      await connectionService.updateStatus(connectionRelationship.connectionId, 'accepted');
+      setConnectionRelationship({
+        ...connectionRelationship,
+        status: 'CONNECTED',
+        canMessage: true,
+      });
+      toast({
+        title: 'Connection accepted',
+        description: `You are now connected with ${profileUser.name}.`,
+        variant: 'success',
+      });
+    } catch (error) {
+      const message = error instanceof Error ? error.message : 'Could not accept request right now.';
+      toast({ title: 'Accept failed', description: message, variant: 'destructive' });
+    } finally {
+      setConnectionBusy(false);
+    }
+  };
 
   return (
     <DashboardLayout>
@@ -406,10 +504,29 @@ export default function ProfilePage() {
                         <MessageSquare className="w-4 h-4 mr-1.5" />
                         Message
                       </Button>
-                      <Button size="sm" onClick={() => setRequestOpen(true)}>
-                        <UserPlus className="w-4 h-4 mr-1.5" />
-                        Match
-                      </Button>
+                      {connectionLoading ? (
+                        <Button size="sm" disabled>
+                          Loading...
+                        </Button>
+                      ) : isConnected ? (
+                        <Button size="sm" disabled>
+                          Connected
+                        </Button>
+                      ) : isPendingSent ? (
+                        <Button size="sm" disabled>
+                          Pending
+                        </Button>
+                      ) : isPendingReceived ? (
+                        <Button size="sm" onClick={handleAcceptIncomingConnection} disabled={connectionBusy}>
+                          <UserPlus className="w-4 h-4 mr-1.5" />
+                          {connectionBusy ? 'Accepting...' : 'Accept'}
+                        </Button>
+                      ) : (
+                        <Button size="sm" onClick={openConnectDialog} disabled={connectionBusy}>
+                          <UserPlus className="w-4 h-4 mr-1.5" />
+                          Connect
+                        </Button>
+                      )}
                     </>
                   )}
                 </div>
@@ -673,7 +790,7 @@ export default function ProfilePage() {
           </TabsContent>
         </Tabs>
 
-        {/* Match CTA (only for other users) */}
+        {/* Connect CTA (only for other users) */}
         <AnimatePresence>
           {!isOwnProfile && (
             <motion.div
@@ -686,16 +803,37 @@ export default function ProfilePage() {
                 <CardContent className="py-5 flex flex-col sm:flex-row items-center justify-between gap-4">
                   <div>
                     <h3 className="font-semibold">
-                      Interested in exchanging skills with {profileUser.name}?
+                      {isConnected
+                        ? `You are connected with ${profileUser.name}`
+                        : `Want to connect with ${profileUser.name}?`}
                     </h3>
                     <p className="text-sm text-muted-foreground mt-0.5">
-                      Send a match request and start your learning journey together.
+                      {isConnected
+                        ? 'You can now chat directly and coordinate your next exchange.'
+                        : isPendingSent
+                          ? 'Your connection request is pending approval.'
+                          : isPendingReceived
+                            ? `${profileUser.name.split(' ')[0]} already requested to connect with you.`
+                            : 'Send a connection request and start your learning journey together.'}
                     </p>
                   </div>
-                  <Button className="shrink-0" onClick={() => setRequestOpen(true)}>
-                    <Zap className="w-4 h-4 mr-1.5" />
-                    Send Match Request
-                  </Button>
+                  {connectionLoading ? (
+                    <Button className="shrink-0" disabled>Loading...</Button>
+                  ) : isConnected ? (
+                    <Button className="shrink-0" disabled>Connected</Button>
+                  ) : isPendingSent ? (
+                    <Button className="shrink-0" disabled>Pending</Button>
+                  ) : isPendingReceived ? (
+                    <Button className="shrink-0" onClick={handleAcceptIncomingConnection} disabled={connectionBusy}>
+                      <UserPlus className="w-4 h-4 mr-1.5" />
+                      {connectionBusy ? 'Accepting...' : 'Accept Request'}
+                    </Button>
+                  ) : (
+                    <Button className="shrink-0" onClick={openConnectDialog} disabled={connectionBusy}>
+                      <UserPlus className="w-4 h-4 mr-1.5" />
+                      Send Connection Request
+                    </Button>
+                  )}
                 </CardContent>
               </Card>
             </motion.div>
@@ -717,13 +855,43 @@ export default function ProfilePage() {
         />
       )}
 
-      {/* Request Exchange Dialog */}
+      {/* Connection Request Dialog */}
       {!isOwnProfile && (
-        <RequestExchangeDialog
-          open={requestOpen}
-          onClose={() => setRequestOpen(false)}
-          targetUser={profileUser as User}
-        />
+        <Dialog
+          open={connectDialogOpen}
+          onOpenChange={(openState) => {
+            setConnectDialogOpen(openState);
+            if (!openState) {
+              setConnectMessage('');
+            }
+          }}
+        >
+          <DialogContent className="sm:max-w-md">
+            <DialogHeader>
+              <DialogTitle>Send Connection Request</DialogTitle>
+              <DialogDescription>
+                Introduce yourself to {profileUser.name} so they know why you want to connect.
+              </DialogDescription>
+            </DialogHeader>
+
+            <div className="space-y-2">
+              <Textarea
+                value={connectMessage}
+                onChange={(event) => setConnectMessage(event.target.value.slice(0, 240))}
+                placeholder="Write a short message..."
+                className="min-h-[112px]"
+              />
+              <p className="text-xs text-muted-foreground text-right">{connectMessage.length}/240</p>
+            </div>
+
+            <DialogFooter>
+              <Button variant="outline" onClick={() => setConnectDialogOpen(false)}>Cancel</Button>
+              <Button onClick={handleSendConnectionRequest} disabled={connectionBusy}>
+                {connectionBusy ? 'Sending...' : 'Send Request'}
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
       )}
 
       {/* Leave a Review Dialog */}

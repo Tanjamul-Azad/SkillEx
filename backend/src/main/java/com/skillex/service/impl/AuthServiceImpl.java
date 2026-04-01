@@ -27,6 +27,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
+import java.util.Locale;
 import java.util.Optional;
 
 /**
@@ -60,6 +61,7 @@ public class AuthServiceImpl implements AuthService {
 
         User user = User.builder()
             .name(req.name())
+            .username(generateUniqueUsername(req.name(), req.email()))
             .email(req.email())
             .passwordHash(passwordEncoder.encode(req.password()))
             .university(req.university())
@@ -228,5 +230,34 @@ public class AuthServiceImpl implements AuthService {
         } catch (IllegalArgumentException e) {
             return UserSkillOffered.SkillProficiency.BEGINNER;
         }
+    }
+
+    private String generateUniqueUsername(String name, String email) {
+        String base = toUsernameSeed(name);
+        if (base.isBlank()) {
+            base = toUsernameSeed(email == null ? "" : email.split("@")[0]);
+        }
+        if (base.isBlank()) {
+            base = "user";
+        }
+
+        String candidate = base;
+        int suffix = 1;
+        while (userRepository.existsByUsernameIgnoreCase(candidate)) {
+            candidate = base + "_" + suffix;
+            suffix++;
+        }
+        return candidate;
+    }
+
+    private String toUsernameSeed(String raw) {
+        String normalized = raw == null ? "" : raw.trim().toLowerCase(Locale.ROOT);
+        normalized = normalized.replaceAll("[^a-z0-9_]", "_");
+        normalized = normalized.replaceAll("_+", "_");
+        normalized = normalized.replaceAll("^_+|_+$", "");
+        if (normalized.length() > 30) {
+            normalized = normalized.substring(0, 30);
+        }
+        return normalized;
     }
 }

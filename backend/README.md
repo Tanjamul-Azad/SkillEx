@@ -10,7 +10,7 @@ REST API backend for the SkillEX peer skill-exchange platform.
 | Database | MySQL 8.0 (Flyway migrations) |
 | Security | Spring Security 6 + JWT (jjwt 0.12) |
 | ORM | Spring Data JPA (Hibernate) |
-| Build | Maven 3.9+ |
+| Build | Gradle 8 (wrapper) |
 
 ## Project Structure
 
@@ -40,7 +40,9 @@ backend/
 │   │       └── db/migration/                ← Flyway SQL files
 │   │           └── V1__initial_schema.sql
 │   └── test/
-└── pom.xml
+├── build.gradle
+├── settings.gradle
+└── gradlew.bat
 ```
 
 ## How Frontend ↔ Backend Connect
@@ -81,7 +83,7 @@ cp .env.example .env
 # Set spring.datasource.url / username / password in application.properties
 
 # 3. Run
-mvn spring-boot:run
+gradlew bootRun
 ```
 
 The app starts on `http://localhost:8080`. Flyway will automatically run

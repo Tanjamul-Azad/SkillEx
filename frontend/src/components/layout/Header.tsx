@@ -20,7 +20,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import {
   Sun, Moon, LogOut, User as UserIcon, Settings,
   LayoutDashboard, Bell, ChevronDown, CheckCheck,
-  ArrowLeftRight, Star, Calendar, MessageSquare, Menu,
+  ArrowLeftRight, Star, Calendar, MessageSquare, Menu, UserPlus,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { NotificationService } from '@/services/notificationService';
@@ -29,6 +29,7 @@ import { useWebSocket } from '@/hooks/useWebSocket';
 import type { Notification } from '@/types';
 import Logo from '@/components/ui/Logo';
 import { ConfirmDialog } from '@/components/ui/ConfirmDialog';
+import GlobalSearch from '@/components/search/GlobalSearch';
 
 const LogoWrapper = () => (
   <Link to="/" className="group lg:hidden">
@@ -38,6 +39,7 @@ const LogoWrapper = () => (
 
 const getNotifIcon = (type: string) => {
   const t = type.toLowerCase();
+  if (t.includes('connection')) return UserPlus;
   if (t.includes('match')) return ArrowLeftRight;
   if (t.includes('review')) return Star;
   if (t.includes('session')) return Calendar;
@@ -47,6 +49,7 @@ const getNotifIcon = (type: string) => {
 
 const getNotifColor = (type: string): string => {
   const t = type.toLowerCase();
+  if (t.includes('connection')) return 'bg-cyan-500/10 text-cyan-500';
   if (t.includes('match')) return 'bg-primary/10 text-primary';
   if (t.includes('review')) return 'bg-amber-500/10 text-amber-500';
   if (t.includes('session')) return 'bg-secondary/10 text-secondary';
@@ -57,6 +60,7 @@ const getNotifColor = (type: string): string => {
 const PAGE_TITLES: Record<string, string> = {
   '/dashboard': 'Dashboard',
   '/match': 'Find a Match',
+  '/connections': 'Connections',
   '/community': 'Community',
   '/settings': 'Settings',
   '/profile': 'Profile',
@@ -146,8 +150,13 @@ export default function Header({
         </Button>
 
         {/* Page title — Rule 1 (state visibility) */}
-        <div className="flex min-w-0 flex-1 items-center">
-          <h1 className="truncate text-base font-semibold font-headline">{pageTitle}</h1>
+        <div className="flex min-w-0 flex-1 items-center gap-3">
+          <h1 className={cn('truncate text-base font-semibold font-headline', user ? 'hidden lg:block lg:max-w-[180px]' : '')}>{pageTitle}</h1>
+          {user && (
+            <div className="min-w-0 flex-1">
+              <GlobalSearch />
+            </div>
+          )}
         </div>
 
         {/* Right actions */}

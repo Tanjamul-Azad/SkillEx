@@ -56,8 +56,11 @@ class AuthServiceImplTest {
 
         User saved = User.builder().id("u1").name("Alice").email("alice@example.com").passwordHash("enc").build();
         UserProfileDto profile = new UserProfileDto(
-            "u1", "Alice", "alice@example.com", null, "Uni", null,
-            null, null, "student", "NEWCOMER", 0, 0, java.math.BigDecimal.ZERO, false,
+            "u1", "Alice", "alice_1", "alice@example.com", null,
+            "Uni", null, null,
+            null, null,
+            "student", "NEWCOMER",
+            0, 0, java.math.BigDecimal.ZERO, false, true,
             null, List.of(), List.of()
         );
 
@@ -78,8 +81,11 @@ class AuthServiceImplTest {
         LoginRequest request = new LoginRequest("alice@example.com", "Passw0rd!");
         User existing = User.builder().id("u1").name("Alice").email("alice@example.com").passwordHash("enc").build();
         UserProfileDto profile = new UserProfileDto(
-            "u1", "Alice", "alice@example.com", null, "Uni", null,
-            null, null, "student", "NEWCOMER", 0, 0, java.math.BigDecimal.ZERO, false,
+            "u1", "Alice", "alice_1", "alice@example.com", null,
+            "Uni", null, null,
+            null, null,
+            "student", "NEWCOMER",
+            0, 0, java.math.BigDecimal.ZERO, false, true,
             null, List.of(), List.of()
         );
 

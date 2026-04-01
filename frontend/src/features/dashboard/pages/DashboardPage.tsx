@@ -2,9 +2,12 @@
 import React, { useState } from 'react';
 import { useAuth } from '@/hooks/useAuth';
 import { useExchanges } from '@/hooks/useExchanges';
+import { useConnections } from '@/hooks/useConnections';
 import { exchangeService } from '@/services/exchangeService';
+import { connectionService } from '@/services/connectionService';
 import { DashboardService } from '@/services/dashboardService';
 import type { Exchange } from '@/services/exchangeService';
+import type { Connection } from '@/services/connectionService';
 import { motion } from 'framer-motion';
 import {
   ArrowRight,
@@ -21,6 +24,7 @@ import {
   Zap,
   Inbox,
   Sparkles,
+  UserPlus,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -526,8 +530,20 @@ function SectionHeading({ children, action }: { children: React.ReactNode; actio
 /* ── Main page ───────────────────────────────────────────────────────── */
 export default function DashboardPage() {
   const { user } = useAuth();
+  const { toast } = useToast();
   const { exchanges, loading } = useExchanges();
-  const [serverStats, setServerStats] = React.useState<{ sessionsCompleted?: number; skillexScore?: number; activeExchanges?: number } | null>(null);
+  const {
+    connections: pendingIncomingConnections,
+    loading: connectionsLoading,
+    refetch: refetchConnections,
+  } = useConnections({ status: 'pending', direction: 'received' });
+  const [connectionBusy, setConnectionBusy] = useState<Record<string, boolean>>({});
+  const [serverStats, setServerStats] = React.useState<{
+    sessionsCompleted?: number;
+    skillexScore?: number;
+    activeExchanges?: number;
+    pendingConnections?: number;
+  } | null>(null);
 
   React.useEffect(() => {
     DashboardService.getStats()
@@ -535,6 +551,7 @@ export default function DashboardPage() {
         sessionsCompleted: s.sessionsCompleted,
         skillexScore: s.skillexScore,
         activeExchanges: (s.activeExchanges ?? 0) + (s.pendingExchanges ?? 0),
+        pendingConnections: s.pendingConnections,
       }))
       .catch(() => {}); // silently fall back to client-side values
   }, []);
@@ -543,6 +560,28 @@ export default function DashboardPage() {
   const activeExchanges = exchanges.filter(e => { const s = e.status?.toLowerCase(); return s === 'pending' || s === 'accepted'; });
   const upcomingSessions = exchanges.filter(e => e.status?.toLowerCase() === 'accepted' && e.sessionDate);
   const activityItems = exchanges.slice(0, 5).map(e => activityFromExchange(e, currentUserId)).filter(Boolean);
+  const pendingConnectionCount = connectionsLoading
+    ? (serverStats?.pendingConnections ?? 0)
+    : pendingIncomingConnections.length;
+
+  const handleConnectionUpdate = async (connection: Connection, status: 'accepted' | 'declined') => {
+    const partner = connection.requester.id === currentUserId ? connection.receiver : connection.requester;
+    setConnectionBusy((prev) => ({ ...prev, [connection.id]: true }));
+    try {
+      await connectionService.updateStatus(connection.id, status);
+      await refetchConnections();
+      toast({
+        title: status === 'accepted' ? 'Connection accepted' : 'Connection declined',
+        description: `${partner.name.split(' ')[0]} has been ${status === 'accepted' ? 'added to your network' : 'updated'}.`,
+        variant: status === 'accepted' ? 'success' : 'destructive',
+      });
+    } catch (error) {
+      const message = error instanceof Error ? error.message : 'Could not update connection request.';
+      toast({ title: 'Update failed', description: message, variant: 'destructive' });
+    } finally {
+      setConnectionBusy((prev) => ({ ...prev, [connection.id]: false }));
+    }
+  };
 
   const getGreeting = () => {
     const h = new Date().getHours();
@@ -627,6 +666,7 @@ export default function DashboardPage() {
                     {[
                       { icon: BookOpen, label: `${user?.skillsOffered?.length ?? 0} skills`, cls: 'text-primary bg-primary/15 border-2 border-primary/40 shadow-sm' },
                       { icon: Users, label: `${activeExchanges.length} active`, cls: 'text-primary bg-primary/15 border-2 border-primary/40 shadow-sm' },
+                      { icon: UserPlus, label: `${pendingConnectionCount} requests`, cls: 'text-cyan-600 bg-cyan-500/10 border-2 border-cyan-500/30 shadow-sm' },
                       { icon: Star, label: `${user?.skillexScore ?? 0} pts`, cls: 'text-amber-400 bg-amber-500/15 border-2 border-amber-500/40 shadow-glow-sm' },
                       { icon: CheckCircle, label: `${user?.sessionsCompleted ?? 0} done`, cls: 'text-emerald-400 bg-emerald-500/15 border-2 border-emerald-500/40 shadow-sm' },
                     ].map(({ icon: IC, label, cls }) => (
@@ -764,6 +804,82 @@ export default function DashboardPage() {
           {/* Right column */}
           <div className="space-y-6 lg:col-span-1">
             <div className="sticky top-[88px] space-y-6">
+
+              {/* Incoming Connections */}
+              <ScrollReveal animation="fade-left" delay={0.35}>
+                <SectionHeading
+                  action={<Badge variant="secondary" className="rounded-full">{pendingConnectionCount}</Badge>}
+                >
+                  Incoming Connections
+                </SectionHeading>
+                <Card className="glass-subtle border-2 border-border shadow-lg">
+                  <CardContent className="p-4">
+                    {connectionsLoading ? (
+                      <div className="space-y-3">
+                        {[0, 1].map((idx) => (
+                          <div key={idx} className="flex items-center gap-3">
+                            <Skeleton className="h-9 w-9 rounded-full" />
+                            <div className="flex-1 space-y-1.5">
+                              <Skeleton className="h-3.5 w-24" />
+                              <Skeleton className="h-3 w-40" />
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    ) : pendingIncomingConnections.length === 0 ? (
+                      <div className="rounded-xl border-2 border-dashed border-border bg-muted/20 p-4 text-center">
+                        <p className="text-sm font-medium">No pending requests</p>
+                        <p className="mt-1 text-xs text-muted-foreground">New connection requests will appear here.</p>
+                      </div>
+                    ) : (
+                      <div className="space-y-3">
+                        {pendingIncomingConnections.slice(0, 3).map((connection) => {
+                          const partner = connection.requester.id === currentUserId
+                            ? connection.receiver
+                            : connection.requester;
+
+                          return (
+                            <div key={connection.id} className="rounded-xl border border-border/60 bg-background/70 p-3">
+                              <div className="flex items-center gap-3">
+                                <Avatar className="h-9 w-9 ring-2 ring-border">
+                                  <AvatarImage src={partner.avatar ?? undefined} />
+                                  <AvatarFallback className="text-xs font-bold">{partner.name.charAt(0)}</AvatarFallback>
+                                </Avatar>
+                                <div className="min-w-0 flex-1">
+                                  <p className="truncate text-sm font-semibold">{partner.name}</p>
+                                  <p className="truncate text-xs text-muted-foreground">@{partner.username ?? 'user'}</p>
+                                </div>
+                              </div>
+                              {connection.message && (
+                                <p className="mt-2 line-clamp-2 text-xs text-muted-foreground">"{connection.message}"</p>
+                              )}
+                              <div className="mt-3 grid grid-cols-2 gap-2">
+                                <Button
+                                  size="sm"
+                                  variant="outline"
+                                  className="rounded-lg text-xs border-destructive/30 text-destructive hover:bg-destructive/10"
+                                  onClick={() => handleConnectionUpdate(connection, 'declined')}
+                                  disabled={connectionBusy[connection.id]}
+                                >
+                                  Decline
+                                </Button>
+                                <Button
+                                  size="sm"
+                                  className="rounded-lg text-xs"
+                                  onClick={() => handleConnectionUpdate(connection, 'accepted')}
+                                  disabled={connectionBusy[connection.id]}
+                                >
+                                  {connectionBusy[connection.id] ? 'Accepting...' : 'Accept'}
+                                </Button>
+                              </div>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    )}
+                  </CardContent>
+                </Card>
+              </ScrollReveal>
 
               {/* Your Skills */}
               <ScrollReveal animation="fade-left" delay={0.4}>

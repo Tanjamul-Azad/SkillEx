@@ -2,10 +2,12 @@ package com.skillex.service.impl;
 
 import com.skillex.dto.common.PagedResponse;
 import com.skillex.dto.community.*;
+import com.skillex.dto.skill.SkillSearchResultDto;
 import com.skillex.model.*;
 import com.skillex.repository.*;
 import com.skillex.service.CommunityService;
 import com.skillex.service.DtoMapper;
+import com.skillex.service.SkillService;
 import com.skillex.service.reputation.ReputationUpdateEvent;
 import jakarta.persistence.EntityNotFoundException;
 import lombok.RequiredArgsConstructor;
@@ -30,6 +32,7 @@ public class CommunityServiceImpl implements CommunityService {
     private final SkillCircleRepository skillCircleRepository;
     private final UserRepository userRepository;
     private final SkillRepository skillRepository;
+    private final SkillService skillService;
     private final DtoMapper mapper;
     private final ApplicationEventPublisher eventPublisher;
 
@@ -119,6 +122,27 @@ public class CommunityServiceImpl implements CommunityService {
     public PagedResponse<CommunityDtos.PostDto> getPosts(int page, int size) {
         var pageable = PageRequest.of(page, size, Sort.by("createdAt").descending());
         return PagedResponse.of(postRepository.findAll(pageable).map(mapper::toPost));
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public PagedResponse<CommunityDtos.PostDto> searchPostsByIntent(String intent, int page, int size) {
+        var pageable = PageRequest.of(page, size, Sort.by("createdAt").descending());
+
+        if (intent == null || intent.isBlank()) {
+            return PagedResponse.of(postRepository.findAll(pageable).map(mapper::toPost));
+        }
+
+        List<String> skillIds = skillService.searchByIntent(intent).stream()
+            .map(SkillSearchResultDto::skillId)
+            .limit(8)
+            .collect(Collectors.toList());
+
+        var pageResult = skillIds.isEmpty()
+            ? postRepository.findByContentContainingIgnoreCaseOrderByCreatedAtDesc(intent, pageable)
+            : postRepository.findBySkill_IdInOrContentContainingIgnoreCaseOrderByCreatedAtDesc(skillIds, intent, pageable);
+
+        return PagedResponse.of(pageResult.map(mapper::toPost));
     }
 
     @Override

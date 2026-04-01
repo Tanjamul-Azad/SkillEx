@@ -32,6 +32,7 @@ import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/comp
 import {
   LayoutDashboard, Zap, Users, User, Settings, LogOut,
   ChevronLeft, ChevronRight, X, MessageSquare,
+  UserPlus,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { dashboardNav } from '@/config/navigation.config';
@@ -44,6 +45,7 @@ const ICON_MAP: Record<string, LucideIcon> = {
   Zap,
   Users,
   User,
+  UserPlus,
   Settings,
   MessageSquare,
 };

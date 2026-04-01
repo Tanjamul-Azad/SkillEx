@@ -44,9 +44,6 @@ public class SkillCatalogGovernanceService {
     @Value("${app.catalog.pipeline.auto-promote-min-occurrences:3}")
     private int autoPromoteMinOccurrences;
 
-    @Value("${app.catalog.pipeline.auto-promote-min-confidence:70}")
-    private int autoPromoteMinConfidence;
-
     @Value("${app.catalog.pipeline.pending-list-default-limit:50}")
     private int pendingListDefaultLimit;
 
@@ -68,7 +65,7 @@ public class SkillCatalogGovernanceService {
                 "Zap",
                 PendingSkill.Status.AUTO_PROMOTED,
                 userId,
-                "Auto-promoted by confidence/occurrence policy"
+                "Auto-promoted by distinct user suggestion threshold"
             );
             return new AddSkillResult("ADDED", "Skill auto-promoted and added to catalog.", promoted.getId(), pending.getId());
         }

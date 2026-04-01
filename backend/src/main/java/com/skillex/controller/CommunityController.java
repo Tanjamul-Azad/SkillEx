@@ -90,6 +90,15 @@ public class CommunityController {
         return ResponseEntity.ok(ApiResponse.ok(communityService.getPosts(page, size)));
     }
 
+    @GetMapping("/posts/search")
+    public ResponseEntity<ApiResponse<PagedResponse<CommunityDtos.PostDto>>> searchPostsByIntent(
+        @RequestParam("intent") String intent,
+        @RequestParam(defaultValue = "0") int page,
+        @RequestParam(defaultValue = "20") int size
+    ) {
+        return ResponseEntity.ok(ApiResponse.ok(communityService.searchPostsByIntent(intent, page, size)));
+    }
+
     @PostMapping("/posts")
     public ResponseEntity<ApiResponse<CommunityDtos.PostDto>> createPost(
         Authentication auth,

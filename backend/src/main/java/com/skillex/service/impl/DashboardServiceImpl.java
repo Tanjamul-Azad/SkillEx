@@ -1,6 +1,7 @@
 package com.skillex.service.impl;
 
 import com.skillex.dto.dashboard.DashboardStatsDto;
+import com.skillex.model.Connection;
 import com.skillex.model.Exchange;
 import com.skillex.model.Session;
 import com.skillex.model.Skill;
@@ -23,6 +24,7 @@ public class DashboardServiceImpl implements DashboardService {
 
     private final UserRepository userRepository;
     private final ExchangeRepository exchangeRepository;
+    private final ConnectionRepository connectionRepository;
     private final SessionRepository sessionRepository;
 
     @Override
@@ -35,6 +37,8 @@ public class DashboardServiceImpl implements DashboardService {
             .countByRequesterIdOrReceiverIdAndStatus(userId, userId, Exchange.ExchangeStatus.PENDING);
         long activeExchanges  = exchangeRepository
             .countByRequesterIdOrReceiverIdAndStatus(userId, userId, Exchange.ExchangeStatus.ACCEPTED);
+        long pendingConnections = connectionRepository
+            .countByReceiverIdAndStatus(userId, Connection.ConnectionStatus.PENDING);
         long sessionsCompleted = sessionRepository
             .countByUserIdAndStatus(userId, Session.SessionStatus.COMPLETED);
 
@@ -61,6 +65,7 @@ public class DashboardServiceImpl implements DashboardService {
             user.getRating() != null ? user.getRating() : java.math.BigDecimal.ZERO,
             pendingExchanges,
             activeExchanges,
+            pendingConnections,
             recentActivity
         );
     }

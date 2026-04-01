@@ -13,6 +13,7 @@ const LandingPage = React.lazy(() => import('./features/marketing/pages/LandingP
 const AuthPage = React.lazy(() => import('./features/auth/pages/LoginPage'));
 const DashboardPage = React.lazy(() => import('./features/dashboard/pages/DashboardPage'));
 const MatchPage = React.lazy(() => import('./features/match/pages/MatchPage'));
+const ConnectionsPage = React.lazy(() => import('./features/connections/pages/ConnectionsPage'));
 const CommunityPage = React.lazy(() => import('./features/community/pages/CommunityPage'));
 const ProfilePage = React.lazy(() => import('./features/profile/pages/ProfilePage'));
 const SettingsPage = React.lazy(() => import('./features/settings/pages/SettingsPage'));
@@ -32,6 +33,7 @@ const preloadCurrentRoute = () => {
   else if (path === '/login') import('./features/auth/pages/LoginPage');
   else if (path === '/dashboard') import('./features/dashboard/pages/DashboardPage');
   else if (path === '/match') import('./features/match/pages/MatchPage');
+  else if (path === '/connections') import('./features/connections/pages/ConnectionsPage');
   else if (path === '/community') import('./features/community/pages/CommunityPage');
   else if (path.startsWith('/profile/')) import('./features/profile/pages/ProfilePage');
   else if (path === '/settings') import('./features/settings/pages/SettingsPage');
@@ -121,6 +123,7 @@ export default function App() {
                     <Route path="/login" element={<AuthPage />} />
                     <Route path="/dashboard" element={<DashboardPage />} />
                     <Route path="/match" element={<MatchPage />} />
+                    <Route path="/connections" element={<ConnectionsPage />} />
                     <Route path="/community" element={<CommunityPage />} />
                     <Route path="/profile/:userId" element={<ProfilePage />} />
                     <Route path="/settings" element={<SettingsPage />} />

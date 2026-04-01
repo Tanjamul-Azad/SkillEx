@@ -42,6 +42,7 @@ import { SkillService } from '@/services/skillService';
 import { UserService } from '@/services/userService';
 import type { Story, Post, Event, SkillCircle, Discussion, User } from '@/types';
 import DashboardLayout from '@/components/layout/DashboardLayout';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 
 const tabs = [
   { id: 'feed', label: 'Feed', icon: Rss },
@@ -458,8 +459,9 @@ const PostCard = React.memo(({ post }: { post: Post }) => {
 PostCard.displayName = 'PostCard';
 
 
-const FeedTab = () => {
+const FeedTab = ({ intentFilter }: { intentFilter?: string }) => {
   const { user } = useAuth();
+  const navigate = useNavigate();
   const [localPosts, setLocalPosts] = useState<Post[]>([]);
   const [stories, setStories] = useState<Story[]>([]);
   const [trendingSkills, setTrendingSkills] = useState<{ id: string; name: string }[]>([]);
@@ -467,14 +469,19 @@ const FeedTab = () => {
   const [followedUsers, setFollowedUsers] = useState<Set<string>>(new Set());
 
   useEffect(() => {
-    CommunityService.getPosts().then((r) => setLocalPosts(r.content ?? [])).catch(() => {});
+    const hasIntent = Boolean(intentFilter && intentFilter.trim().length >= 2);
+    const postsPromise = hasIntent
+      ? CommunityService.searchPosts(intentFilter!.trim(), 0, 30)
+      : CommunityService.getPosts();
+
+    postsPromise.then((r) => setLocalPosts(r.content ?? [])).catch(() => {});
     CommunityService.getStories().then(setStories).catch(() => {});
     SkillService.getAll().then((s) => setTrendingSkills(Array.isArray(s) ? s.slice(0, 5) : [])).catch(() => {});
     UserService.getAll(1, 10).then((r) => {
       const list = (r as { content?: User[]; data?: User[] }).content ?? (r as { data?: User[] }).data ?? [];
       setSuggestions(list.slice(0, 3));
     }).catch(() => {});
-  }, []);
+  }, [intentFilter]);
 
   const handleNewPost = (post: Post) => {
     setLocalPosts((prev) => [post, ...prev]);
@@ -483,6 +490,24 @@ const FeedTab = () => {
   return (
     <div className="grid grid-cols-1 xl:grid-cols-4 gap-8">
       <div className="col-span-1 xl:col-span-3 space-y-6">
+        {intentFilter && intentFilter.trim().length >= 2 && (
+          <Card>
+            <CardContent className="flex items-center justify-between gap-3 p-4">
+              <div>
+                <p className="text-sm font-semibold">Filtered by skill intent</p>
+                <p className="text-xs text-muted-foreground">Showing feed posts related to: "{intentFilter}"</p>
+              </div>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => navigate('/community?tab=feed', { replace: true })}
+              >
+                Clear Filter
+              </Button>
+            </CardContent>
+          </Card>
+        )}
+
         {/* Stories */}
         <Card>
           <CardContent className="p-4">
@@ -824,7 +849,17 @@ const DiscussionsTab = () => {
 // --- MAIN PAGE COMPONENT ---
 
 export default function CommunityPage() {
-  const [activeTab, setActiveTab] = useState(tabs[0].id);
+  const [searchParams] = useSearchParams();
+  const defaultTab = searchParams.get('tab');
+  const [activeTab, setActiveTab] = useState(defaultTab && tabs.some((tab) => tab.id === defaultTab) ? defaultTab : tabs[0].id);
+  const intentFilter = searchParams.get('intent') ?? undefined;
+
+  useEffect(() => {
+    const tab = searchParams.get('tab');
+    if (tab && tabs.some((item) => item.id === tab)) {
+      setActiveTab(tab);
+    }
+  }, [searchParams]);
 
   return (
     <DashboardLayout>
@@ -871,7 +906,7 @@ export default function CommunityPage() {
               transition={{ duration: 0.2 }}
               className="mt-6"
             >
-              {activeTab === 'feed' && <FeedTab />}
+              {activeTab === 'feed' && <FeedTab intentFilter={intentFilter} />}
               {activeTab === 'events' && <EventsTab />}
               {activeTab === 'circles' && <SkillCirclesTab />}
               {activeTab === 'discussions' && <DiscussionsTab />}

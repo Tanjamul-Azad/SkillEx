@@ -12,6 +12,7 @@ export interface DashboardStats {
   rating: number;
   pendingExchanges: number;
   activeExchanges: number;
+  pendingConnections: number;
   recentActivity: ActivityItem[];
 }
 

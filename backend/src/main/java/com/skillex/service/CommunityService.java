@@ -31,6 +31,8 @@ public interface CommunityService {
 
     PagedResponse<CommunityDtos.PostDto> getPosts(int page, int size);
 
+    PagedResponse<CommunityDtos.PostDto> searchPostsByIntent(String intent, int page, int size);
+
     CommunityDtos.PostDto createPost(String authorId, CreatePostRequest req);
 
     CommunityDtos.PostDto likePost(String userId, String postId);

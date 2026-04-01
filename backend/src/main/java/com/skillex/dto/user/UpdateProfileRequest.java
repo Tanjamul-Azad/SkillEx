@@ -9,10 +9,13 @@ import jakarta.validation.constraints.Size;
  */
 public record UpdateProfileRequest(
     @Size(min = 2, max = 100) String name,
+    @Size(min = 3, max = 50) String username,
     @Email @Size(max = 255)   String email,
     @Size(max = 200)          String university,
+    @Size(max = 120)          String location,
     @Size(max = 500)          String bio,
     @Size(max = 500)          String teachIntentText,
     @Size(max = 500)          String learnIntentText,
+    Boolean                   connectionsPublic,
     String                    avatar  // TEXT column — stores compressed base64 data-URL
 ) {}

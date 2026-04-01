@@ -87,14 +87,15 @@ public class UserController {
         return ResponseEntity.ok(ApiResponse.ok("Skill removed."));
     }
 
-    /** GET /api/users?query=&page=0&size=20 — search users */
-    @GetMapping
-    public ResponseEntity<ApiResponse<PagedResponse<UserSummaryDto>>> searchUsers(
-        @RequestParam(required = false) String query,
+    /** GET /api/users/search?q=&page=0&size=20 — global people search */
+    @GetMapping("/search")
+    public ResponseEntity<ApiResponse<PagedResponse<UserSearchResultDto>>> searchUsers(
+        Authentication auth,
+        @RequestParam(required = false, name = "q") String query,
         @RequestParam(defaultValue = "0") int page,
         @RequestParam(defaultValue = "20") int size
     ) {
-        return ResponseEntity.ok(ApiResponse.ok(userService.searchUsers(query, page, size)));
+        return ResponseEntity.ok(ApiResponse.ok(userService.searchUsers(userId(auth), query, page, size)));
     }
 
     /** DELETE /api/users/me — delete own account */

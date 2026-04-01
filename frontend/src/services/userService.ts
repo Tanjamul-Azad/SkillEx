@@ -1,15 +1,46 @@
 import { User } from '@/types';
 import { api } from './api';
 
+export interface UserSearchResult {
+  id: string;
+  displayName: string;
+  username: string;
+  avatar: string | null;
+  university: string | null;
+  reputationScore: number;
+  rating: number;
+  sessionsCompleted: number;
+  matchPercent: number;
+  isOnline: boolean;
+  topSkillsOffered: string[];
+  topSkillsWanted: string[];
+}
+
 export const UserService = {
-  /** GET /api/users?query=&page=0&size=20  (page is 0-based on backend) */
+  /** GET /api/users/search?q=&page=0&size=20  (page is 0-based on backend) */
   getAll: async (page = 1, size = 10, search?: string) => {
+    const result = await UserService.searchPeople(search ?? '', page, size);
+    // Kept for backward compatibility with legacy places that only consume id/name/avatar/university.
+    return {
+      content: result.content.map((person) => ({
+        id: person.id,
+        name: person.displayName,
+        username: person.username,
+        avatar: person.avatar ?? '',
+        university: person.university ?? '',
+      })) as unknown as User[],
+      totalElements: result.totalElements,
+    };
+  },
+
+  /** GET /api/users/search?q=&page=0&size=20 — rich people search cards */
+  searchPeople: async (query = '', page = 1, size = 10) => {
     const params = new URLSearchParams({
-      page: (page - 1).toString(), // frontend is 1-based, backend is 0-based
+      page: (page - 1).toString(),
       size: size.toString(),
     });
-    if (search) params.append('query', search);
-    return api.get<{ content: User[]; totalElements: number }>(`/users?${params.toString()}`);
+    if (query.trim()) params.append('q', query.trim());
+    return api.get<{ content: UserSearchResult[]; totalElements: number }>(`/users/search?${params.toString()}`);
   },
 
   getById: async (id: string) => {

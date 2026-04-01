@@ -64,6 +64,26 @@ public class ExchangeController {
             exchangeService.updateStatus(id, userId(auth), req)));
     }
 
+    /** PUT /api/exchanges/{id}/accept */
+    @PutMapping("/{id}/accept")
+    public ResponseEntity<ApiResponse<ExchangeDto>> accept(
+        Authentication auth,
+        @PathVariable String id
+    ) {
+        return ResponseEntity.ok(ApiResponse.ok(
+            exchangeService.updateStatus(id, userId(auth), new UpdateExchangeRequest("ACCEPTED"))));
+    }
+
+    /** PUT /api/exchanges/{id}/reject */
+    @PutMapping("/{id}/reject")
+    public ResponseEntity<ApiResponse<ExchangeDto>> reject(
+        Authentication auth,
+        @PathVariable String id
+    ) {
+        return ResponseEntity.ok(ApiResponse.ok(
+            exchangeService.updateStatus(id, userId(auth), new UpdateExchangeRequest("DECLINED"))));
+    }
+
     /** DELETE /api/exchanges/{id} — cancel (soft-delete via status) */
     @DeleteMapping("/{id}")
     public ResponseEntity<ApiResponse<String>> cancel(

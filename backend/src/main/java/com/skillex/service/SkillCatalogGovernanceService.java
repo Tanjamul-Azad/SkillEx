@@ -5,13 +5,17 @@ import com.skillex.dto.skill.RejectPendingSkillRequest;
 import com.skillex.dto.user.AddSkillRequest;
 import com.skillex.dto.user.AddSkillResult;
 import com.skillex.model.PendingSkill;
+import com.skillex.model.PendingSkillSuggestion;
 import com.skillex.model.Skill;
 import com.skillex.model.SkillCatalogAudit;
 import com.skillex.repository.PendingSkillRepository;
+import com.skillex.repository.PendingSkillSuggestionRepository;
 import com.skillex.repository.SkillCatalogAuditRepository;
 import com.skillex.repository.SkillRepository;
+import com.skillex.service.embedding.SkillEmbeddingSyncService;
 import jakarta.persistence.EntityNotFoundException;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.stereotype.Service;
@@ -24,12 +28,15 @@ import java.util.Optional;
 
 @Service
 @RequiredArgsConstructor
+@Slf4j
 @SuppressWarnings("null")
 public class SkillCatalogGovernanceService {
 
     private final PendingSkillRepository pendingSkillRepository;
+    private final PendingSkillSuggestionRepository pendingSkillSuggestionRepository;
     private final SkillCatalogAuditRepository skillCatalogAuditRepository;
     private final SkillRepository skillRepository;
+    private final SkillEmbeddingSyncService skillEmbeddingSyncService;
 
     @Value("${app.catalog.pipeline.auto-promote-enabled:true}")
     private boolean autoPromoteEnabled;
@@ -51,6 +58,8 @@ public class SkillCatalogGovernanceService {
         PendingSkill pending = pendingSkillRepository.findByNormalizedName(normalizedName)
             .map(existing -> updatePending(existing, req, userId))
             .orElseGet(() -> createPending(displayName, normalizedName, req, userId));
+
+        recordSuggestionIfNeeded(pending.getId(), userId);
 
         if (autoPromoteEnabled && pending.getStatus() == PendingSkill.Status.PENDING && shouldAutoPromote(pending)) {
             Skill promoted = promoteToCatalog(pending,
@@ -112,6 +121,49 @@ public class SkillCatalogGovernanceService {
         return pending;
     }
 
+    @Transactional
+    public void deletePending(String pendingId, String adminUserId) {
+        PendingSkill pending = pendingSkillRepository.findById(pendingId)
+            .orElseThrow(() -> new EntityNotFoundException("Pending skill not found: " + pendingId));
+
+        audit(SkillCatalogAudit.Action.REJECTED, pending.getId(), pending.getPromotedSkillId(), adminUserId,
+            "Deleted from pending queue by admin");
+        pendingSkillRepository.delete(pending);
+    }
+
+    @Transactional
+    public int autoPromoteEligiblePendingSkills() {
+        if (!autoPromoteEnabled) {
+            return 0;
+        }
+
+        List<PendingSkill> pendingSkills = pendingSkillRepository.findByStatus(PendingSkill.Status.PENDING);
+        int promoted = 0;
+
+        for (PendingSkill pending : pendingSkills) {
+            if (!shouldAutoPromote(pending)) {
+                continue;
+            }
+
+            String actorUserId = pending.getRequestedByUserId();
+            promoteToCatalog(
+                pending,
+                pending.getCategory(),
+                pending.getDescription(),
+                "Zap",
+                PendingSkill.Status.AUTO_PROMOTED,
+                actorUserId,
+                "Auto-promoted by distinct user suggestion threshold"
+            );
+            promoted++;
+        }
+
+        if (promoted > 0) {
+            log.info("[SkillGovernance] Auto-promoted {} pending skills.", promoted);
+        }
+        return promoted;
+    }
+
     private PendingSkill updatePending(PendingSkill pending, AddSkillRequest req, String userId) {
         pending.setSeenCount(pending.getSeenCount() + 1);
         if (req.matchConfidence() != null) {
@@ -160,13 +212,11 @@ public class SkillCatalogGovernanceService {
     }
 
     private boolean shouldAutoPromote(PendingSkill pending) {
-        if (pending.getSeenCount() < autoPromoteMinOccurrences) {
+        long distinctUserCount = pendingSkillSuggestionRepository.countByPendingSkillId(pending.getId());
+        if (distinctUserCount < autoPromoteMinOccurrences) {
             return false;
         }
-        double avgConfidence = pending.getSeenCount() <= 0
-            ? 0.0
-            : pending.getConfidenceSum() / pending.getSeenCount();
-        return avgConfidence >= autoPromoteMinConfidence;
+        return true;
     }
 
     private Skill promoteToCatalog(PendingSkill pending,
@@ -199,8 +249,22 @@ public class SkillCatalogGovernanceService {
             ? SkillCatalogAudit.Action.AUTO_PROMOTED
             : SkillCatalogAudit.Action.APPROVED;
         audit(action, pending.getId(), skill.getId(), actorUserId, reviewNote);
+        skillEmbeddingSyncService.refreshSkillEmbeddingAsync(skill.getId());
 
         return skill;
+    }
+
+    private void recordSuggestionIfNeeded(String pendingSkillId, String userId) {
+        if (userId == null || userId.isBlank()) {
+            return;
+        }
+        if (pendingSkillSuggestionRepository.existsByPendingSkillIdAndUserId(pendingSkillId, userId)) {
+            return;
+        }
+        pendingSkillSuggestionRepository.save(PendingSkillSuggestion.builder()
+            .pendingSkillId(pendingSkillId)
+            .userId(userId)
+            .build());
     }
 
     private void audit(SkillCatalogAudit.Action action,

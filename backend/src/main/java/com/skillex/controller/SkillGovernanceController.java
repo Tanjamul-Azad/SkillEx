@@ -50,6 +50,21 @@ public class SkillGovernanceController {
         ));
     }
 
+    @PutMapping("/{pendingId}/approve")
+    public ResponseEntity<ApiResponse<Skill>> approvePut(
+        Authentication auth,
+        @PathVariable String pendingId,
+        @Valid @RequestBody(required = false) ApprovePendingSkillRequest req
+    ) {
+        ensureAdmin(auth);
+        ApprovePendingSkillRequest body = req == null
+            ? new ApprovePendingSkillRequest(null, null, null, null)
+            : req;
+        return ResponseEntity.ok(ApiResponse.ok(
+            governanceService.approve(pendingId, userId(auth), body)
+        ));
+    }
+
     @PostMapping("/{pendingId}/reject")
     public ResponseEntity<ApiResponse<PendingSkill>> reject(
         Authentication auth,
@@ -63,6 +78,16 @@ public class SkillGovernanceController {
         return ResponseEntity.ok(ApiResponse.ok(
             governanceService.reject(pendingId, userId(auth), body)
         ));
+    }
+
+    @DeleteMapping("/{pendingId}")
+    public ResponseEntity<ApiResponse<String>> deletePending(
+        Authentication auth,
+        @PathVariable String pendingId
+    ) {
+        ensureAdmin(auth);
+        governanceService.deletePending(pendingId, userId(auth));
+        return ResponseEntity.ok(ApiResponse.ok("Pending skill removed."));
     }
 
     private void ensureAdmin(Authentication auth) {

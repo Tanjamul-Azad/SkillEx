@@ -2,6 +2,12 @@
 
 Monorepo containing the React frontend, Spring Boot backend, and shared database resources.
 
+## Full Project Documentation
+
+For a complete technical walkthrough of architecture, modules, APIs, data model, runtime configuration, and development workflow, see:
+
+- [docs/PROJECT_OVERVIEW.md](docs/PROJECT_OVERVIEW.md)
+
 ## Monorepo Structure
 
 ```

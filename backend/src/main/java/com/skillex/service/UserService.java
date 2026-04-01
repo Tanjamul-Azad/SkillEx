@@ -7,6 +7,8 @@ public interface UserService {
 
     UserProfileDto getProfile(String userId);
 
+    UserSkillsDto getSkills(String userId);
+
     UserProfileDto updateProfile(String userId, UpdateProfileRequest req);
 
     void changePassword(String userId, ChangePasswordRequest req);

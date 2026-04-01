@@ -17,4 +17,6 @@ public interface PendingSkillRepository extends JpaRepository<PendingSkill, Stri
 
     @Query("SELECT p FROM PendingSkill p WHERE (:status IS NULL OR p.status = :status) ORDER BY p.lastSeenAt DESC")
     List<PendingSkill> findByStatusOrderByLastSeen(@Param("status") PendingSkill.Status status, Pageable pageable);
+
+    List<PendingSkill> findByStatus(PendingSkill.Status status);
 }

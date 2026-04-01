@@ -23,7 +23,7 @@ import java.time.Duration;
 @Component
 @Slf4j
 @RequiredArgsConstructor
-public class GeminiApiTextEmbeddingProvider implements TextEmbeddingProvider {
+public class GeminiApiTextEmbeddingProvider extends AbstractEmbeddingProvider {
 
     private final ObjectMapper objectMapper;
 
@@ -56,27 +56,26 @@ public class GeminiApiTextEmbeddingProvider implements TextEmbeddingProvider {
     }
 
     @Override
-    public double[] embed(String text) {
+    protected double[] computeEmbedding(String text) {
         if (!isConfigured()) {
             throw new IllegalStateException("Gemini embedding API key is not configured.");
         }
 
         try {
-            String endpoint = "https://generativelanguage.googleapis.com/v1beta/models/"
-                + model + ":embedContent";
+            String endpoint = "https://generativelanguage.googleapis.com/v1beta/models/embedding-001:embedContent?key="
+                + apiKey;
 
             var payloadNode = objectMapper.createObjectNode();
+            payloadNode.put("model", "models/embedding-001");
             payloadNode.set("content", objectMapper.createObjectNode()
                 .set("parts", objectMapper.createArrayNode()
                     .add(objectMapper.createObjectNode().put("text", text == null ? "" : text))));
-            payloadNode.put("taskType", "SEMANTIC_SIMILARITY");
             String payload = payloadNode.toString();
 
             HttpRequest request = HttpRequest.newBuilder()
                 .uri(URI.create(endpoint))
                 .timeout(Duration.ofMillis(Math.max(1000, timeoutMs)))
                 .header("Content-Type", "application/json")
-                .header("x-goog-api-key", apiKey)
                 .POST(HttpRequest.BodyPublishers.ofString(payload, StandardCharsets.UTF_8))
                 .build();
 
@@ -100,26 +99,13 @@ public class GeminiApiTextEmbeddingProvider implements TextEmbeddingProvider {
                 vector[i] = values.get(i).asDouble();
             }
 
-            normalize(vector);
-            return vector;
+            return normalize(vector);
         } catch (IllegalStateException ex) {
             log.debug("[Embedding] Gemini API embed exception", ex);
             throw ex;
         } catch (Exception ex) {
             log.debug("[Embedding] Gemini API embed exception", ex);
             throw new IllegalStateException("Gemini embedding failed.", ex);
-        }
-    }
-
-    private void normalize(double[] vector) {
-        double norm = 0.0;
-        for (double v : vector) {
-            norm += v * v;
-        }
-        norm = Math.sqrt(norm);
-        if (norm == 0.0) return;
-        for (int i = 0; i < vector.length; i++) {
-            vector[i] /= norm;
         }
     }
 }

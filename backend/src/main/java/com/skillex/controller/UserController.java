@@ -42,6 +42,21 @@ public class UserController {
         return ResponseEntity.ok(ApiResponse.ok(userService.updateProfile(userId(auth), req)));
     }
 
+    /** PUT /api/users/me — update own profile (alias of PATCH) */
+    @PutMapping("/me")
+    public ResponseEntity<ApiResponse<UserProfileDto>> updateProfilePut(
+        Authentication auth,
+        @Valid @RequestBody UpdateProfileRequest req
+    ) {
+        return ResponseEntity.ok(ApiResponse.ok(userService.updateProfile(userId(auth), req)));
+    }
+
+    /** GET /api/users/{id}/skills */
+    @GetMapping("/{id}/skills")
+    public ResponseEntity<ApiResponse<UserSkillsDto>> getUserSkills(@PathVariable String id) {
+        return ResponseEntity.ok(ApiResponse.ok(userService.getSkills(id)));
+    }
+
     /** POST /api/users/me/change-password */
     @PostMapping("/me/change-password")
     public ResponseEntity<ApiResponse<String>> changePassword(

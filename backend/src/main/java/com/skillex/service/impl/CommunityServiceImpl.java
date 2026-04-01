@@ -169,6 +169,28 @@ public class CommunityServiceImpl implements CommunityService {
 
     @Override
     @Transactional
+    public CommunityDtos.SkillCircleDto createSkillCircle(String creatorId, CreateSkillCircleRequest req) {
+        User creator = findUser(creatorId);
+        SkillCircle circle = new SkillCircle();
+        circle.setName(req.name());
+        if (req.icon() != null && !req.icon().isBlank()) {
+            circle.setIcon(req.icon());
+        }
+        circle.setActivity(SkillCircle.ActivityLevel.ACTIVE);
+        circle.getMembers().add(creator);
+        circle.setMemberCount(1);
+
+        if (req.skillIds() != null && !req.skillIds().isEmpty()) {
+            List<Skill> skills = skillRepository.findAllById(req.skillIds());
+            circle.setSkills(skills);
+        }
+
+        SkillCircle saved = skillCircleRepository.save(circle);
+        return mapper.toSkillCircle(saved);
+    }
+
+    @Override
+    @Transactional
     public CommunityDtos.SkillCircleDto joinSkillCircle(String userId, String circleId) {
         User user  = findUser(userId);
         SkillCircle circle = skillCircleRepository.findById(circleId)

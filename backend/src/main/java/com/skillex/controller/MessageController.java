@@ -4,6 +4,7 @@ import com.skillex.dto.common.ApiResponse;
 import com.skillex.dto.common.PagedResponse;
 import com.skillex.dto.message.ConversationDto;
 import com.skillex.dto.message.MessageDto;
+import com.skillex.dto.message.SendMessageHttpRequest;
 import com.skillex.dto.message.SendMessageRequest;
 import com.skillex.service.MessageService;
 import lombok.RequiredArgsConstructor;
@@ -66,6 +67,29 @@ public class MessageController {
     ) {
         messageService.markRead(userId(auth), peerId);
         return ResponseEntity.ok(ApiResponse.ok("Messages marked as read."));
+    }
+
+    /**
+     * POST /api/messages/{peerId}
+     * Sends a direct message over REST and also pushes to WebSocket queues.
+     */
+    @PostMapping("/{peerId}")
+    public ResponseEntity<ApiResponse<MessageDto>> sendViaHttp(
+        Authentication auth,
+        @PathVariable String peerId,
+        @RequestBody SendMessageHttpRequest req
+    ) {
+        String senderId = userId(auth);
+        MessageDto saved = messageService.sendMessage(
+            senderId,
+            peerId,
+            req.content(),
+            req.type(),
+            req.imageUrl()
+        );
+        messagingTemplate.convertAndSendToUser(peerId, "/queue/messages", saved);
+        messagingTemplate.convertAndSendToUser(senderId, "/queue/messages", saved);
+        return ResponseEntity.ok(ApiResponse.ok(saved));
     }
 
     // ── WebSocket ─────────────────────────────────────────────────────────────

@@ -1,6 +1,7 @@
 package com.skillex.service;
 
 import com.skillex.dto.user.MatchUserDto;
+import com.skillex.dto.user.MatchCompatibilityDto;
 import com.skillex.service.match.graph.ExchangeChain;
 import com.skillex.service.match.graph.ExchangeCycle;
 import com.skillex.service.match.graph.ScoredCycle;
@@ -16,6 +17,8 @@ import java.util.List;
 public interface MatchService {
 
     List<MatchUserDto> findMatches(String userId, int limit);
+
+    MatchCompatibilityDto getCompatibility(String userId, String targetUserId);
 
     /**
      * Find circular exchange chains involving {@code userId} (Phase 4).

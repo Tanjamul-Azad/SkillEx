@@ -13,5 +13,15 @@ public interface TextEmbeddingProvider {
 
     int dimensions();
 
-    double[] embed(String text);
+    /**
+     * Returns a normalized dense vector for input text.
+     */
+    double[] getEmbedding(String text);
+
+    /**
+     * Backward compatible alias for older call sites.
+     */
+    default double[] embed(String text) {
+        return getEmbedding(text);
+    }
 }

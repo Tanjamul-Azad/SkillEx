@@ -44,7 +44,7 @@ public class SecurityConfig {
             .cors(cors -> cors.configurationSource(corsConfigurationSource()))
             .sessionManagement(s -> s.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
             .authorizeHttpRequests(auth -> auth
-                .requestMatchers(HttpMethod.POST, "/api/auth/login", "/api/auth/register").permitAll()
+                .requestMatchers(HttpMethod.POST, "/api/auth/login", "/api/auth/register", "/api/auth/refresh").permitAll()
                 .requestMatchers(HttpMethod.POST, "/api/skills/interpret").permitAll()
                 .requestMatchers("/api/auth/google/**").permitAll()
                 // WebSocket handshake endpoints (SockJS negotiation)
@@ -61,6 +61,8 @@ public class SecurityConfig {
                     "/api/community/posts",
                     "/api/community/posts/**",
                     "/api/community/stories",
+                    "/api/community/circles",
+                    "/api/community/circles/**",
                     "/api/community/skill-circles",
                     "/api/community/skill-circles/**"
                 ).permitAll()

@@ -7,11 +7,10 @@ frontend/.env.local
 frontend/.env.*.local
 
 ##──── Backend build output ─────────────────────────
-backend/target/
-backend/*.jar
 backend/build/
+backend/bin/
 backend/.gradle/
-backend/.gradle-bootstrap/
+backend/*.jar
 
 ##──── Environment / secrets ────────────────────────
 .env.local

@@ -1,36 +1,17 @@
 {
     "java.compile.nullAnalysis.mode": "automatic",
+    "java.configuration.updateBuildConfiguration": "automatic",
     "java.server.launchMode": "Standard",
     "java.jdt.ls.java.home": "C:\\Users\\User\\.jdk\\jdk-21.0.8",
     "java.import.gradle.java.home": "C:\\Users\\User\\.jdk\\jdk-21.0.8",
-    "java.configuration.updateBuildConfiguration": "automatic",
-    "java.configuration.runtimes": [
-        {
-            "name": "JavaSE-21",
-            "path": "C:\\Users\\User\\.jdk\\jdk-21.0.8",
-            "default": true
-        }
-    ],
     "java.import.gradle.enabled": true,
     "java.import.gradle.wrapper.enabled": true,
     "java.gradle.buildServer.enabled": "off",
+    "java.gradle.buildServer.openBuildOutput": "neverOpen",
+    "gradle.autoDetect": "off",
+    "gradle.projectOpenBehaviour": "Open",
     "java.import.maven.enabled": false,
     "java.project.importOnFirstTimeStartup": "automatic",
     "java.autobuild.enabled": true,
-    "java.errors.incompleteClasspath.severity": "ignore",
-    "java.import.exclusions": [
-        "**/node_modules/**",
-        "**/frontend/dist/**",
-        "**/backend/build/**",
-        "**/backend/target/**",
-        "**/backend/uploads/**"
-    ],
-    "java.project.resourceFilters": [
-        "node_modules",
-        ".git",
-        ".gradle",
-        "build",
-        "target",
-        "uploads"
-    ]
+    "java.errors.incompleteClasspath.severity": "ignore"
 }

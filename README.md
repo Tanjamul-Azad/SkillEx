@@ -128,13 +128,13 @@ npm run dev          # starts at http://localhost:3000
 
 ### Backend
 ```bash
-# Prerequisites: Java 21, MySQL 8.0
+# Prerequisites: Java 21 and MySQL 8.0
 
 mysql -u root -p -e "CREATE DATABASE skillex;"
 
 cd backend
 # Edit src/main/resources/application.properties with your DB credentials
-gradlew bootRun       # starts at http://localhost:8080
+./gradlew bootRun    # starts at http://localhost:8080
 ```
 
 Flyway automatically applies `V1__initial_schema.sql` on first run.

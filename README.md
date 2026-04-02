@@ -33,7 +33,8 @@ SkiilEX/
 │   ├── src/main/resources/
 │   │   ├── application.properties
 │   │   └── db/migration/  ← Flyway SQL (V1__, V2__, ...)
-│   └── pom.xml
+│   ├── build.gradle
+│   └── settings.gradle
 │
 ├── database/              ← shared DB resources
 │   ├── migrations/        ← source-of-truth SQL (copy to backend)
@@ -127,13 +128,13 @@ npm run dev          # starts at http://localhost:3000
 
 ### Backend
 ```bash
-# Prerequisites: Java 21, Maven 3.9, MySQL 8.0
+# Prerequisites: Java 21 and MySQL 8.0
 
 mysql -u root -p -e "CREATE DATABASE skillex;"
 
 cd backend
 # Edit src/main/resources/application.properties with your DB credentials
-mvn spring-boot:run   # starts at http://localhost:8080
+./gradlew bootRun    # starts at http://localhost:8080
 ```
 
 Flyway automatically applies `V1__initial_schema.sql` on first run.

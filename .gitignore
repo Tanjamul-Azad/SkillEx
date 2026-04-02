@@ -7,11 +7,10 @@ frontend/.env.local
 frontend/.env.*.local
 
 ##──── Backend build output ─────────────────────────
-backend/target/
+backend/build/
+backend/bin/
+backend/.gradle/
 backend/*.jar
-
-##──── Bundled Maven (use local install instead) ────
-backend/apache-maven-3.9.6/
 
 ##──── Environment / secrets ────────────────────────
 .env.local

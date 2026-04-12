@@ -1,10 +1,13 @@
--- Track distinct user suggestions per pending skill for governance auto-promotion.
+-- ============================================================
+-- SkillEX V14 — Pending Skill Suggestions
+-- Creates a join table for users suggesting/supporting pending skills.
+-- ============================================================
 
 CREATE TABLE IF NOT EXISTS pending_skill_suggestions (
-  id               VARCHAR(36) NOT NULL DEFAULT (UUID()),
-  pending_skill_id VARCHAR(36) NOT NULL,
-  user_id          VARCHAR(36) NOT NULL,
-  created_at       DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  id               VARCHAR(36)   NOT NULL DEFAULT (UUID()),
+  pending_skill_id VARCHAR(36)   NOT NULL,
+  user_id          VARCHAR(36)   NOT NULL,
+  created_at       DATETIME      NOT NULL DEFAULT CURRENT_TIMESTAMP,
   PRIMARY KEY (id),
   UNIQUE KEY uq_pending_skill_user (pending_skill_id, user_id),
   KEY idx_pending_skill_suggestions_pending (pending_skill_id),

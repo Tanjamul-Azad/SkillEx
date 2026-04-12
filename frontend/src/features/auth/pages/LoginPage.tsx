@@ -732,22 +732,24 @@ function RegisterForm({ setFormType }: { setFormType: (type: 'login') => void })
                   </Button>
                   <Button type="submit" variant="gradient" className="flex-[2] h-11 shadow-lg shadow-primary/20" disabled={isLoading}>
                     {isLoading ? 'Creating...' : 'Create Account'}
-
-                                  <button
-                                    type="button"
-                                    className="w-full text-center text-xs text-muted-foreground hover:text-foreground transition-colors pt-1 pb-2"
-                                    onClick={async () => {
-                                      const isValid = await form.trigger(['terms']);
-                                      if (!isValid) return;
-                                      form.setValue('skillToTeach', undefined);
-                                      form.setValue('skillToLearn', undefined);
-                                      form.setValue('level', undefined);
-                                      form.handleSubmit(onSubmit)();
-                                    }}
-                                  >
-                                    Skip for now — I'll add skills later
-                                  </button>
                   </Button>
+                </div>
+                {/* Skip link — rendered outside the submit Button to avoid invalid nested buttons */}
+                <div className="pt-1">
+                  <button
+                    type="button"
+                    className="w-full text-center text-xs text-muted-foreground hover:text-foreground transition-colors py-1.5"
+                    onClick={async () => {
+                      const isValid = await form.trigger(['terms']);
+                      if (!isValid) return;
+                      form.setValue('skillToTeach', undefined);
+                      form.setValue('skillToLearn', undefined);
+                      form.setValue('level', undefined);
+                      form.handleSubmit(onSubmit)();
+                    }}
+                  >
+                    Skip for now — I&apos;ll add skills later
+                  </button>
                 </div>
               </motion.div>
             )}

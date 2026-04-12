@@ -340,10 +340,10 @@ export function AppSidebar() {
         aria-label="Primary navigation"
         className={cn(
           'fixed inset-y-0 left-0 z-40 hidden flex-col',
-          'border-r border-border/50 bg-background/95 backdrop-blur-xl',
+          'border-r border-border/60 bg-sidebar/95 backdrop-blur-xl',
           'lg:flex',
           // Subtle inner shadow to separate from content
-          'shadow-[1px_0_0_0_hsl(var(--border)/0.4)]'
+          'shadow-[1px_0_0_0_hsl(var(--border)/0.5)]'
         )}
         style={{ width: collapsed ? SIDEBAR_W_COLLAPSED : SIDEBAR_W_EXPANDED }}
       >
@@ -411,7 +411,7 @@ export function MobileSidebar() {
               aria-label="Primary navigation"
               className={cn(
                 'fixed inset-y-0 left-0 z-50 flex flex-col',
-                'border-r border-border/50 bg-background shadow-2xl',
+                'border-r border-border/60 bg-sidebar shadow-2xl',
                 'lg:hidden'
               )}
               style={{ width: SIDEBAR_W_EXPANDED }}

@@ -42,8 +42,7 @@ if ([string]::IsNullOrWhiteSpace($apiKey)) {
 
 if ($provider -eq "api" -and -not [string]::IsNullOrWhiteSpace($apiKey)) {
     Write-Host "[run-backend] Embedding mode: Gemini API (real semantic embeddings)" -ForegroundColor Cyan
-}
-else {
+} else {
     Write-Host "[run-backend] Embedding mode: local hash fallback" -ForegroundColor DarkYellow
 }
 
@@ -61,11 +60,9 @@ $gradleExecutable = $null
 
 if (Test-Path ".\gradlew.bat") {
     $gradleExecutable = ".\gradlew.bat"
-}
-elseif (Test-Path ".\gradlew") {
+} elseif (Test-Path ".\gradlew") {
     $gradleExecutable = ".\gradlew"
-}
-else {
+} else {
     $gradleCommand = Get-Command gradle.bat -ErrorAction SilentlyContinue
     if (-not $gradleCommand) {
         $gradleCommand = Get-Command gradle -ErrorAction SilentlyContinue

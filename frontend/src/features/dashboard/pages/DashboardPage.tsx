@@ -24,7 +24,6 @@ import {
   Zap,
   Inbox,
   Sparkles,
-  UserPlus,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -38,6 +37,8 @@ import { cn } from '@/lib/utils';
 import DashboardLayout from '@/components/layout/DashboardLayout';
 import { ScrollReveal, ScrollRevealGroup } from '@/components/ui/ScrollReveal';
 import { ConfirmDialog } from '@/components/ui/ConfirmDialog';
+import { MouseTrackCard } from '@/components/ui/MouseTrackCard';
+import { useDocumentTitle } from '@/hooks/useDocumentTitle';
 import {
   Dialog,
   DialogContent,
@@ -73,14 +74,14 @@ interface StatCardProps {
 const StatCard = React.memo(({ icon: Icon, title, value, trend, trendLabel, colorKey, index }: StatCardProps) => {
   const { ref } = useCounter(value, { duration: 2 });
   const isPositive = trend.startsWith('+');
-  const c = (STAT_COLORS as any)[colorKey] ?? DEFAULT_COLORS;
+  const c = STAT_COLORS[colorKey as keyof typeof STAT_COLORS] ?? DEFAULT_COLORS;
   return (
     <motion.div
       variants={{ hidden: { opacity: 0, y: 28 }, visible: { opacity: 1, y: 0 } }}
       transition={{ delay: index * 0.07, type: 'spring', stiffness: 130, damping: 22 }}
-      whileHover={{ y: -4, transition: { type: 'spring', stiffness: 320, damping: 24 } }}
       className="h-full"
     >
+      <MouseTrackCard className="h-full rounded-2xl" intensity={5} glare glareMax={0.10}>
       <Card className={cn(
         'group relative h-full overflow-hidden ease-snappy',
         'glass-subtle card-hover',
@@ -134,6 +135,7 @@ const StatCard = React.memo(({ icon: Icon, title, value, trend, trendLabel, colo
           </div>
         </CardContent>
       </Card>
+      </MouseTrackCard>
     </motion.div>
   );
 });
@@ -251,7 +253,7 @@ function ExchangeCard({ exchange, currentUserId }: { exchange: Exchange; current
             )}
           </div>
         </CardContent>
-      </Card >
+      </Card>
       <ConfirmDialog
         open={declineConfirmOpen}
         onOpenChange={setDeclineConfirmOpen}
@@ -378,7 +380,7 @@ function ExchangeCard({ exchange, currentUserId }: { exchange: Exchange; current
 /* ── Empty / Skeleton states ─────────────────────────────────────────── */
 function EmptyExchanges() {
   return (
-      <Card className="relative overflow-hidden border-dashed border-2 border-border bg-background/70 dark:bg-background/60 shadow-lg group">
+  <Card className="group relative overflow-hidden border border-dashed border-border bg-background/70 shadow-card dark:bg-background/60">
         {/* Decorative background blob */}
         <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-64 h-64 bg-primary/5 rounded-full blur-[60px] pointer-events-none transition-transform duration-1000 group-hover:scale-150" />
         <div className="absolute top-0 right-0 w-32 h-32 bg-secondary/5 rounded-full blur-[40px] pointer-events-none" />
@@ -461,7 +463,7 @@ function activityFromExchange(exchange: Exchange, currentUserId: string) {
 
 
 /* ── Onboarding Progress ────────────────────────────────────────────────── */
-function OnboardingProgress({ user, exchanges }: { user: any; exchanges: Exchange[] }) {
+function OnboardingProgress({ user, exchanges }: { user: { skillsOffered?: unknown[]; skillsWanted?: unknown[] } | null; exchanges: Exchange[] }) {
   const hasSkills = (user?.skillsOffered?.length ?? 0) > 0 || (user?.skillsWanted?.length ?? 0) > 0;
   const hasMatch = exchanges.length > 0;
   const hasSession = exchanges.some(e => e.status?.toLowerCase() === 'accepted' && e.sessionDate);
@@ -477,8 +479,8 @@ function OnboardingProgress({ user, exchanges }: { user: any; exchanges: Exchang
 
   return (
     <ScrollReveal animation="zoom-in" delay={0.2} duration={0.6}>
-      <Card className="overflow-hidden glass-subtle border-2 border-primary/30 bg-primary/10 shadow-lg">
-        <CardContent className="p-5 md:p-6">
+      <Card className="overflow-hidden glass-subtle border border-primary/30 bg-primary/10 shadow-card">
+        <CardContent className="p-4 md:p-5">
           <div className="flex flex-col gap-4 md:flex-row md:items-center justify-between">
             <div>
               <h3 className="font-headline font-bold text-lg text-primary">Let's get you set up!</h3>
@@ -496,9 +498,9 @@ function OnboardingProgress({ user, exchanges }: { user: any; exchanges: Exchang
             </div>
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-3 mt-6">
+          <div className="mt-5 grid grid-cols-1 gap-3 md:grid-cols-3">
             {steps.map((step, i) => (
-              <Link key={i} to={step.link} className={cn("block relative p-4 rounded-xl border-2 transition-all duration-300", step.done ? "bg-background/50 border-border opacity-60" : "bg-card border-primary/30 hover:border-primary hover:shadow-md shadow-sm")}>
+              <Link key={i} to={step.link} className={cn("block relative p-4 rounded-xl border transition-all duration-300", step.done ? "bg-background/50 border-border opacity-60" : "bg-card border-primary/30 hover:border-primary hover:shadow-md shadow-sm")}>
                 <div className="flex items-start gap-3">
                   <div className="shrink-0 mt-0.5">
                     {step.done ? <CheckCircle className="w-5 h-5 text-emerald-500" /> : <div className="w-5 h-5 rounded-full border-2 border-primary" />}
@@ -520,7 +522,7 @@ function OnboardingProgress({ user, exchanges }: { user: any; exchanges: Exchang
 /* ── Section heading ─────────────────────────────────────────────────── */
 function SectionHeading({ children, action }: { children: React.ReactNode; action?: React.ReactNode }) {
   return (
-    <div className="flex items-center justify-between mb-5">
+    <div className="mb-4 flex items-center justify-between">
       <h2 className="font-headline text-xl font-bold tracking-tight">{children}</h2>
       {action}
     </div>
@@ -529,6 +531,7 @@ function SectionHeading({ children, action }: { children: React.ReactNode; actio
 
 /* ── Main page ───────────────────────────────────────────────────────── */
 export default function DashboardPage() {
+  useDocumentTitle('Dashboard');
   const { user } = useAuth();
   const { toast } = useToast();
   const { exchanges, loading } = useExchanges();
@@ -591,12 +594,6 @@ export default function DashboardPage() {
   };
   const greeting = getGreeting();
 
-  const containerVariants = { hidden: { opacity: 0 }, visible: { opacity: 1, transition: { staggerChildren: 0.07 } } };
-  const itemVariants = {
-    hidden: { opacity: 0, y: 18 },
-    visible: { opacity: 1, y: 0, transition: { type: 'spring', stiffness: 120, damping: 22 } },
-  };
-
   const stats: StatCardProps[] = [
     { icon: BookOpen, title: 'Skills Offered', value: user?.skillsOffered?.length ?? 0, trend: '+0', trendLabel: 'total', colorKey: 'primary', index: 0 },
     { icon: Users, title: 'Active Exchanges', value: serverStats?.activeExchanges ?? activeExchanges.length, trend: '+0', trendLabel: 'ongoing', colorKey: 'secondary', index: 1 },
@@ -606,14 +603,14 @@ export default function DashboardPage() {
 
   return (
     <DashboardLayout>
-      <div className="container mx-auto px-4 py-6 md:px-8 md:py-8 space-y-8">
+      <div className="mx-auto w-full max-w-7xl space-y-5 px-4 py-5 md:space-y-6 md:px-6 md:py-6 lg:px-8 lg:py-7">
 
         {/* ══ Hero Banner ══════════════════════════════════════════════ */}
         <ScrollReveal animation="fade-down" delay={0.1} duration={0.8}>
-          <div className="relative overflow-hidden rounded-3xl glass-strong p-6 md:p-8 border-2 border-border shadow-xl">
+          <div className="relative overflow-hidden rounded-2xl border border-border/70 glass-strong px-5 py-5 shadow-lg md:px-7 md:py-6">
             {/* Dynamic Background Image Sequence */}
             <motion.div
-              className="absolute inset-0 z-0 pointer-events-none opacity-[0.03] dark:opacity-20 mix-blend-overlay"
+              className="pointer-events-none absolute inset-0 z-0 opacity-[0.03] mix-blend-overlay dark:opacity-[0.15]"
               animate={{ scale: [1.02, 1.05, 1.02], rotate: [0, 0.5, 0], x: [0, -5, 0] }}
               transition={{ duration: 30, repeat: Infinity, ease: 'linear' }}
             >
@@ -624,20 +621,20 @@ export default function DashboardPage() {
             <div className="pointer-events-none absolute inset-0 bg-gradient-to-r from-primary/10 via-background/60 to-secondary/10 dark:from-primary/20 dark:via-background/80 dark:to-accent/10 z-0" />
             <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(ellipse_100%_100%_at_100%_0%,hsl(var(--secondary)/0.15),transparent)] z-0" />
             {/* Ambient blobs */}
-            <div className="pointer-events-none absolute -top-12 -left-12 h-44 w-44 rounded-full bg-primary/20 blur-[80px]" />
-            <div className="pointer-events-none absolute -bottom-12 -right-8 h-52 w-52 rounded-full bg-primary/15 blur-[80px]" />
+            <div className="pointer-events-none absolute -left-10 -top-10 h-36 w-36 rounded-full bg-primary/20 blur-[72px]" />
+            <div className="pointer-events-none absolute -bottom-10 -right-6 h-44 w-44 rounded-full bg-primary/15 blur-[72px]" />
             {/* Decorative dots pattern top-right */}
             <div className="pointer-events-none absolute right-6 top-6 opacity-[0.07]"
               style={{ backgroundImage: 'radial-gradient(hsl(var(--primary)) 1px,transparent 1px)', backgroundSize: '12px 12px', width: 96, height: 72 }} />
 
-            <div className="relative z-10 flex flex-col gap-5 md:flex-row md:items-center md:justify-between">
+            <div className="relative z-10 flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
               <div className="flex items-center gap-5">
                 {/* Avatar with pulse ring */}
                 <div className="relative hidden sm:block shrink-0">
                   <div className="absolute inset-[-4px] rounded-full bg-gradient-to-br from-primary via-primary/50 to-transparent opacity-70 animate-breathe" />
-                  <Avatar className="relative h-16 w-16 ring-4 ring-card/80">
+                  <Avatar className="relative h-14 w-14 ring-4 ring-card/80">
                     <AvatarImage src={user?.avatar} alt={user?.name} />
-                    <AvatarFallback className="text-xl font-black">{user?.name?.charAt(0)}</AvatarFallback>
+                    <AvatarFallback className="text-lg font-black">{user?.name?.charAt(0)}</AvatarFallback>
                   </Avatar>
                   <motion.span
                     className="absolute bottom-0.5 right-0.5 h-4 w-4 rounded-full border-2 border-background bg-primary shadow-glow-sm"
@@ -647,7 +644,7 @@ export default function DashboardPage() {
                 </div>
 
                 <div>
-                  <h1 className="font-headline text-3xl font-extrabold tracking-tight md:text-4xl text-foreground">
+                  <h1 className="font-headline text-2xl font-extrabold tracking-tight text-foreground md:text-3xl lg:text-[2.15rem]">
                     {greeting.text},{' '}
                     <span className="text-transparent bg-clip-text bg-gradient-to-r from-primary to-[hsl(185_100%_35%)]">
                       {user?.name?.split(' ')[0]}
@@ -659,26 +656,11 @@ export default function DashboardPage() {
                       transition={{ duration: 2.5, repeat: Infinity, repeatDelay: 4 }}
                     >{greeting.icon}</motion.span>
                   </h1>
-                  <p className="mt-1 text-sm text-muted-foreground">Here&apos;s your SkillEx summary for today.</p>
-
-                  {/* Mini stat pills */}
-                  <div className="mt-4 flex flex-wrap gap-2.5">
-                    {[
-                      { icon: BookOpen, label: `${user?.skillsOffered?.length ?? 0} skills`, cls: 'text-primary bg-primary/15 border-2 border-primary/40 shadow-sm' },
-                      { icon: Users, label: `${activeExchanges.length} active`, cls: 'text-primary bg-primary/15 border-2 border-primary/40 shadow-sm' },
-                      { icon: UserPlus, label: `${pendingConnectionCount} requests`, cls: 'text-cyan-600 bg-cyan-500/10 border-2 border-cyan-500/30 shadow-sm' },
-                      { icon: Star, label: `${user?.skillexScore ?? 0} pts`, cls: 'text-amber-400 bg-amber-500/15 border-2 border-amber-500/40 shadow-glow-sm' },
-                      { icon: CheckCircle, label: `${user?.sessionsCompleted ?? 0} done`, cls: 'text-emerald-400 bg-emerald-500/15 border-2 border-emerald-500/40 shadow-sm' },
-                    ].map(({ icon: IC, label, cls }) => (
-                      <span key={label} className={cn('flex items-center gap-1.5 rounded-full px-2.5 py-1 text-[11px] font-semibold', cls)}>
-                        <IC className="h-3 w-3" />{label}
-                      </span>
-                    ))}
-                  </div>
+                  <p className="mt-1.5 max-w-[44ch] text-sm text-muted-foreground">Here&apos;s your SkillEx summary for today. Review your exchanges, schedule the next session, and keep your progress moving.</p>
                 </div>
               </div>
 
-              <div className="flex flex-wrap items-center gap-2.5 shrink-0">
+              <div className="flex shrink-0 flex-wrap items-center gap-2">
                 <Button asChild variant="outline" size="sm" className="rounded-xl">
                   <Link to="/match"><Search className="mr-2 h-3.5 w-3.5" />Find a Match</Link>
                 </Button>
@@ -697,7 +679,7 @@ export default function DashboardPage() {
 
         {/* ══ Stat Cards ═══════════════════════════════════════════════ */}
         <ScrollRevealGroup
-          className="grid grid-cols-2 gap-4 lg:grid-cols-4"
+          className="grid grid-cols-2 gap-3 md:grid-cols-4 md:gap-4"
           animation="jitter-scale"
           staggerChildren={0.1}
           delay={0.15}
@@ -706,10 +688,10 @@ export default function DashboardPage() {
         </ScrollRevealGroup>
 
         {/* ══ Main grid ════════════════════════════════════════════════ */}
-        <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
+        <div className="grid grid-cols-1 gap-5 xl:grid-cols-[minmax(0,1.65fr)_minmax(340px,1fr)] xl:gap-6">
 
           {/* Left column */}
-          <div className="space-y-6 lg:col-span-2">
+          <div className="space-y-5 md:space-y-6">
 
             {/* Active Exchanges */}
             <ScrollReveal animation="fade-up" delay={0.2}>
@@ -725,7 +707,7 @@ export default function DashboardPage() {
               ) : activeExchanges.length === 0 ? (
                 <EmptyExchanges />
               ) : (
-                <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+                <div className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:gap-5">
                   {activeExchanges.slice(0, 4).map(ex => (
                     <ExchangeCard key={ex.id} exchange={ex} currentUserId={currentUserId} />
                   ))}
@@ -736,7 +718,7 @@ export default function DashboardPage() {
             {/* Upcoming Sessions */}
             <ScrollReveal animation="fade-up" delay={0.3}>
               <SectionHeading>Upcoming Sessions</SectionHeading>
-              <Card className="border-2 shadow-lg">
+              <Card className="glass-subtle border border-border/70 shadow-card">
                 <CardContent className="p-5">
                   {loading ? (
                     <div className="space-y-4">
@@ -802,8 +784,8 @@ export default function DashboardPage() {
           </div>
 
           {/* Right column */}
-          <div className="space-y-6 lg:col-span-1">
-            <div className="sticky top-[88px] space-y-6">
+          <div className="space-y-5 md:space-y-6">
+            <div className="space-y-5 md:space-y-6 xl:sticky xl:top-[76px]">
 
               {/* Incoming Connections */}
               <ScrollReveal animation="fade-left" delay={0.35}>
@@ -812,8 +794,8 @@ export default function DashboardPage() {
                 >
                   Incoming Connections
                 </SectionHeading>
-                <Card className="glass-subtle border-2 border-border shadow-lg">
-                  <CardContent className="p-4">
+                <Card className="glass-subtle border border-border/70 shadow-card">
+                  <CardContent className="p-5">
                     {connectionsLoading ? (
                       <div className="space-y-3">
                         {[0, 1].map((idx) => (
@@ -827,7 +809,7 @@ export default function DashboardPage() {
                         ))}
                       </div>
                     ) : pendingIncomingConnections.length === 0 ? (
-                      <div className="rounded-xl border-2 border-dashed border-border bg-muted/20 p-4 text-center">
+                      <div className="rounded-xl border border-dashed border-border bg-muted/20 p-4 text-center">
                         <p className="text-sm font-medium">No pending requests</p>
                         <p className="mt-1 text-xs text-muted-foreground">New connection requests will appear here.</p>
                       </div>
@@ -884,11 +866,11 @@ export default function DashboardPage() {
               {/* Your Skills */}
               <ScrollReveal animation="fade-left" delay={0.4}>
                 <SectionHeading>Your Skills</SectionHeading>
-                <Card className="overflow-hidden glass-subtle border-2 border-border shadow-lg">
+                <Card className="overflow-hidden glass-subtle border border-border/70 shadow-card">
                   {/* Teaching section */}
-                  <div className="border-b-2 border-border p-5">
+                  <div className="border-b border-border p-5">
                     <p className="flex items-center gap-2 text-sm font-bold mb-3">
-                      <span className="flex h-6 w-6 items-center justify-center rounded-lg bg-primary/15 border-2 border-primary/30 shadow-sm">
+                      <span className="flex h-6 w-6 items-center justify-center rounded-lg border border-primary/30 bg-primary/15 shadow-sm">
                         <Zap className="h-3.5 w-3.5 text-primary" />
                       </span>
                       Teaching
@@ -896,7 +878,7 @@ export default function DashboardPage() {
                     {!user ? (
                       <div className="flex flex-wrap gap-1.5">{[0, 1, 2].map(i => <Skeleton key={i} className="h-6 w-16 rounded-full" />)}</div>
                     ) : (user.skillsOffered ?? []).length === 0 ? (
-                        <div className="flex flex-col items-center justify-center p-4 rounded-xl border-2 border-dashed border-border bg-muted/20 text-center shadow-sm">
+                        <div className="flex flex-col items-center justify-center p-4 rounded-xl border border-dashed border-border bg-muted/20 text-center shadow-sm">
                           <p className="text-xs text-muted-foreground mb-2">No skills added yet.</p>
                           <Button asChild size="sm" variant="outline" className="h-7 text-[11px] rounded-lg">
                             <Link to={`/profile/${user?.id}`} className="text-primary hover:text-primary">Add skills to teach</Link>
@@ -905,12 +887,12 @@ export default function DashboardPage() {
                     ) : (
                       <div className="flex flex-wrap gap-2">
                         {(user.skillsOffered ?? []).slice(0, 5).map((skill: Skill) => (
-                          <div key={skill.id} className="inline-flex items-center rounded-full bg-primary/15 border-2 border-primary/40 px-2.5 py-1 text-xs font-semibold text-primary shadow-sm">
+                          <div key={skill.id} className="inline-flex items-center rounded-full border border-primary/40 bg-primary/15 px-2.5 py-1 text-xs font-semibold text-primary shadow-sm">
                             {skill.name}
                           </div>
                         ))}
                         {(user.skillsOffered ?? []).length > 5 && (
-                          <div className="inline-flex items-center rounded-full bg-muted/50 border-2 border-border px-2.5 py-1 text-xs font-semibold text-muted-foreground">
+                          <div className="inline-flex items-center rounded-full border border-border bg-muted/50 px-2.5 py-1 text-xs font-semibold text-muted-foreground">
                             +{(user.skillsOffered ?? []).length - 5} more
                           </div>
                         )}
@@ -920,7 +902,7 @@ export default function DashboardPage() {
                   {/* Learning section */}
                   <div className="p-5">
                     <p className="flex items-center gap-2 text-sm font-bold mb-3">
-                      <span className="flex h-6 w-6 items-center justify-center rounded-lg bg-primary/15 border-2 border-primary/30 shadow-sm">
+                      <span className="flex h-6 w-6 items-center justify-center rounded-lg border border-primary/30 bg-primary/15 shadow-sm">
                         <BookOpen className="h-3.5 w-3.5 text-primary" />
                       </span>
                       Learning
@@ -928,18 +910,18 @@ export default function DashboardPage() {
                     {!user ? (
                       <div className="flex flex-wrap gap-1.5">{[0, 1, 2].map(i => <Skeleton key={i} className="h-6 w-16 rounded-full" />)}</div>
                     ) : (user.skillsWanted ?? []).length === 0 ? (
-                        <div className="flex flex-col items-center justify-center p-4 rounded-xl border-2 border-dashed border-border bg-muted/20 text-center shadow-sm">
+                        <div className="flex flex-col items-center justify-center p-4 rounded-xl border border-dashed border-border bg-muted/20 text-center shadow-sm">
                           <p className="text-xs text-muted-foreground">You haven't listed what you want to learn.</p>
                         </div>
                     ) : (
                       <div className="flex flex-wrap gap-2">
                         {(user.skillsWanted ?? []).slice(0, 5).map((skill: Skill) => (
-                          <div key={skill.id} className="inline-flex items-center rounded-full bg-primary/10 border-2 border-primary/30 px-2.5 py-1 text-xs font-semibold text-primary shadow-sm">
+                          <div key={skill.id} className="inline-flex items-center rounded-full border border-primary/30 bg-primary/10 px-2.5 py-1 text-xs font-semibold text-primary shadow-sm">
                             {skill.name}
                           </div>
                         ))}
                         {(user.skillsWanted ?? []).length > 5 && (
-                          <div className="inline-flex items-center rounded-full bg-muted/50 border-2 border-border px-2.5 py-1 text-xs font-semibold text-muted-foreground">
+                          <div className="inline-flex items-center rounded-full border border-border bg-muted/50 px-2.5 py-1 text-xs font-semibold text-muted-foreground">
                             +{(user.skillsWanted ?? []).length - 5} more
                           </div>
                         )}
@@ -964,13 +946,13 @@ export default function DashboardPage() {
                   </span>
                 </SectionHeading>
 
-                <Card className="glass-subtle border-2 border-border shadow-lg">
+                <Card className="glass-subtle border border-border/70 shadow-card">
                   <CardContent className="p-5">
                     <div className="space-y-4">
                       {activityItems.length > 0 ? (
                         activityItems.map((item, i) => (
                           item ? (
-                            <div key={i} className="group relative flex items-start gap-3 rounded-xl p-2.5 transition-all hover:bg-muted/70 hover:shadow-sm dark:hover:bg-white/5 cursor-default border-2 border-transparent hover:border-border/60">
+                            <div key={i} className="group relative flex cursor-default items-start gap-3 rounded-xl border border-transparent p-2.5 transition-all hover:border-border/60 hover:bg-muted/70 hover:shadow-sm dark:hover:bg-white/5">
                               <div className="relative flex h-9 w-9 shrink-0 items-center justify-center rounded-xl overflow-hidden ring-2 ring-border shadow-sm">
                                 {item.avatar ? (
                                   <img src={item.avatar} alt={item.name} className="h-full w-full object-cover transition-transform duration-500 group-hover:scale-110" />
@@ -994,7 +976,7 @@ export default function DashboardPage() {
                           ) : null
                         ))
                       ) : (
-                        <div className="text-center py-10 flex flex-col items-center justify-center relative overflow-hidden rounded-xl border-2 border-dashed border-border bg-muted/30 shadow-sm">
+                        <div className="relative flex flex-col items-center justify-center overflow-hidden rounded-xl border border-dashed border-border bg-muted/30 py-10 text-center shadow-sm">
                           <motion.div
                             animate={{ scale: [1, 1.05, 1], opacity: [0.7, 1, 0.7] }}
                             transition={{ duration: 3, repeat: Infinity }}

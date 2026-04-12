@@ -230,52 +230,62 @@ export default function GlobalSearch({ className }: { className?: string }) {
   };
 
   return (
-    <div ref={rootRef} className={cn('relative w-full max-w-[560px]', className)}>
-      <div className="relative overflow-hidden rounded-2xl border border-border/50 bg-background/70 backdrop-blur-xl shadow-sm">
-        <div className="flex items-center gap-2 px-2 pt-2">
-          <div className="inline-flex rounded-xl border border-border/60 bg-muted/40 p-1">
+    <div ref={rootRef} className={cn('relative w-full max-w-[680px]', className)}>
+      <div className="surface-base relative overflow-hidden rounded-2xl px-2 py-1.5 theme-transition focus-within:border-primary/45 focus-within:shadow-glow-sm">
+        <div className="flex items-center gap-2">
+          <div className="inline-flex shrink-0 items-center rounded-lg border border-border/60 bg-muted/40 p-0.5">
             <button
               type="button"
               onClick={() => setMode('people')}
               className={cn(
-                'inline-flex items-center gap-1.5 rounded-lg px-2.5 py-1.5 text-xs font-semibold transition-colors',
-                mode === 'people' ? 'bg-background text-foreground shadow-sm' : 'text-muted-foreground hover:text-foreground'
+                'inline-flex h-7 items-center gap-1.5 rounded-md px-2 text-[11px] font-semibold transition-colors',
+                mode === 'people'
+                  ? 'bg-background text-foreground shadow-sm'
+                  : 'text-muted-foreground hover:text-foreground'
               )}
             >
               <Users className="h-3.5 w-3.5" />
-              People
+              <span className="hidden lg:inline">People</span>
             </button>
             <button
               type="button"
               onClick={() => setMode('skills')}
               className={cn(
-                'inline-flex items-center gap-1.5 rounded-lg px-2.5 py-1.5 text-xs font-semibold transition-colors',
-                mode === 'skills' ? 'bg-background text-foreground shadow-sm' : 'text-muted-foreground hover:text-foreground'
+                'inline-flex h-7 items-center gap-1.5 rounded-md px-2 text-[11px] font-semibold transition-colors',
+                mode === 'skills'
+                  ? 'bg-background text-foreground shadow-sm'
+                  : 'text-muted-foreground hover:text-foreground'
               )}
             >
               <Sparkles className="h-3.5 w-3.5" />
-              Skills
+              <span className="hidden lg:inline">Skills</span>
             </button>
           </div>
-          <span className="text-[11px] text-muted-foreground">2+ chars, live results</span>
-        </div>
 
-        <div className="relative p-2">
-          <Search className="pointer-events-none absolute left-5 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-          <Input
-            value={query}
-            onChange={(event) => {
-              setQuery(event.target.value);
-              if (!open) setOpen(true);
-            }}
-            onFocus={() => {
-              if (debouncedQuery.length >= MIN_QUERY_LENGTH || query.length >= MIN_QUERY_LENGTH) {
-                setOpen(true);
-              }
-            }}
-            placeholder={mode === 'people' ? 'Search @username or name...' : 'Search skills and intent...'}
-            className="h-11 rounded-xl border-border/60 bg-background/80 pl-10 pr-4 text-sm"
-          />
+          <div className="relative min-w-0 flex-1">
+            <Search className="pointer-events-none absolute left-2.5 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+            <Input
+              value={query}
+              onChange={(event) => {
+                setQuery(event.target.value);
+                if (!open) setOpen(true);
+              }}
+              onFocus={() => {
+                if (debouncedQuery.length >= MIN_QUERY_LENGTH || query.length >= MIN_QUERY_LENGTH) {
+                  setOpen(true);
+                }
+              }}
+              placeholder={mode === 'people' ? 'Search @username or name...' : 'Search skills and intent...'}
+              className="h-8 border-0 bg-transparent pl-8 pr-16 text-sm shadow-none focus:border-0 focus-visible:ring-0 focus-visible:ring-offset-0"
+            />
+            <div className="pointer-events-none absolute right-2.5 top-1/2 -translate-y-1/2 flex items-center gap-2 text-[10px] text-muted-foreground">
+              {loading && debouncedQuery.length >= MIN_QUERY_LENGTH ? (
+                <Loader2 className="h-3.5 w-3.5 animate-spin text-primary" />
+              ) : (
+                <span className="hidden md:inline">2+ chars</span>
+              )}
+            </div>
+          </div>
         </div>
       </div>
 
@@ -286,7 +296,7 @@ export default function GlobalSearch({ className }: { className?: string }) {
             animate={{ opacity: 1, y: 0, scale: 1 }}
             exit={{ opacity: 0, y: 6, scale: 0.98 }}
             transition={{ duration: 0.16 }}
-            className="absolute left-0 right-0 top-[calc(100%+10px)] z-50 rounded-2xl border border-border/60 bg-background/95 p-3 shadow-2xl backdrop-blur-2xl"
+            className="surface-elevated absolute left-0 right-0 top-[calc(100%+8px)] z-50 max-h-[min(70vh,640px)] overflow-y-auto rounded-2xl p-3 shadow-2xl"
           >
             <div className="mb-2 flex items-center justify-between px-1">
               <p className="text-xs font-semibold text-muted-foreground">

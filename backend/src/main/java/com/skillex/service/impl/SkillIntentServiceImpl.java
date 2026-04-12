@@ -102,7 +102,7 @@ public class SkillIntentServiceImpl implements SkillIntentService {
             .filter(s -> s.confidence() >= (int)(MIN_SCORE * 100))
             .sorted(Comparator.comparingInt(SkillIntentSuggestionDto::confidence).reversed())
             .limit(MAX_SUGGESTIONS)
-            .collect(Collectors.toList());
+            .collect(Collectors.toCollection(ArrayList::new));
 
         // If nothing passed the threshold, surface the single best anyway so UI isn't empty
         if (ranked.isEmpty()) {

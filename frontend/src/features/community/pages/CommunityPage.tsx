@@ -1,5 +1,6 @@
 
 import React, { useState, useEffect } from 'react';
+import { useDocumentTitle } from '@/hooks/useDocumentTitle';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
   Rss,
@@ -849,6 +850,7 @@ const DiscussionsTab = () => {
 // --- MAIN PAGE COMPONENT ---
 
 export default function CommunityPage() {
+  useDocumentTitle('Community');
   const [searchParams] = useSearchParams();
   const defaultTab = searchParams.get('tab');
   const [activeTab, setActiveTab] = useState(defaultTab && tabs.some((tab) => tab.id === defaultTab) ? defaultTab : tabs[0].id);

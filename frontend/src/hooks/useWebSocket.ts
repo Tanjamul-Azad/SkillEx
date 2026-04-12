@@ -17,7 +17,14 @@ import { useEffect, useRef, useCallback, useState } from 'react';
 import { Client, type IMessage, type StompSubscription } from '@stomp/stompjs';
 import SockJS from 'sockjs-client';
 
-const WS_URL = `${import.meta.env.VITE_API_URL?.replace('/api', '') || 'http://localhost:8080'}/ws`;
+// Derive WebSocket base from VITE_API_URL (strip /api suffix) or fall back to
+// the current page origin — this works in every deployment without hardcoding.
+const _apiBase = import.meta.env.VITE_API_URL
+  ? import.meta.env.VITE_API_URL.replace(/\/api\/?$/, '')
+  : typeof window !== 'undefined'
+    ? window.location.origin
+    : '';
+const WS_URL = `${_apiBase}/ws`;
 
 export interface WebSocketHook {
   connected: boolean;

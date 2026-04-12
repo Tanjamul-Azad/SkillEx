@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
+import { useDocumentTitle } from '@/hooks/useDocumentTitle';
 import { useParams, useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
@@ -239,6 +240,7 @@ function MessageBubble({
 
 /* ── Main Page ──────────────────────────────────────────────────────── */
 export default function MessagesPage() {
+  useDocumentTitle('Messages');
   const { userId: paramUserId } = useParams<{ userId?: string }>();
   const { user } = useAuth();
   const { toast } = useToast();

@@ -20,7 +20,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import {
   Sun, Moon, LogOut, User as UserIcon, Settings,
   LayoutDashboard, Bell, ChevronDown, CheckCheck,
-  ArrowLeftRight, Star, Calendar, MessageSquare, Menu, UserPlus,
+  ArrowLeftRight, Star, Calendar, MessageSquare, Menu, UserPlus, Command,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { NotificationService } from '@/services/notificationService';
@@ -130,12 +130,12 @@ export default function Header({
       role="banner"
     >
       {/* Glassmorphism surface */}
-      <div className="absolute inset-0 bg-background/40 backdrop-blur-2xl border-b border-border/40 shadow-sm transition-all" />
+      <div className="theme-transition absolute inset-0 border-b border-border/40 bg-background/40 shadow-sm backdrop-blur-2xl" />
       {/* Top shimmer line */}
       <div className="absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-primary/40 to-transparent" />
       {/* Bottom separator */}
       <div className="absolute inset-x-0 bottom-0 h-px bg-gradient-to-r from-transparent via-border/80 to-transparent" />
-      <div className="relative flex h-full items-center gap-3 px-4 sm:px-6">
+      <div className="relative flex h-full items-center gap-2.5 px-3 sm:px-5 lg:gap-4 lg:px-6">
         <LogoWrapper />
 
         {/* Mobile hamburger — Rule 2 (shortcut), Rule 8 (reduce load) */}
@@ -150,11 +150,20 @@ export default function Header({
         </Button>
 
         {/* Page title — Rule 1 (state visibility) */}
-        <div className="flex min-w-0 flex-1 items-center gap-3">
-          <h1 className={cn('truncate text-base font-semibold font-headline', user ? 'hidden lg:block lg:max-w-[180px]' : '')}>{pageTitle}</h1>
+        <div className="flex min-w-0 flex-1 items-center gap-2.5 lg:gap-4">
+          <h1 className={cn('truncate text-sm font-semibold font-headline sm:text-base', user ? 'hidden lg:block lg:max-w-[140px] xl:max-w-[180px]' : '')}>{pageTitle}</h1>
           {user && (
-            <div className="min-w-0 flex-1">
-              <GlobalSearch />
+            <div className="relative min-w-0 flex-1">
+              <GlobalSearch className="w-full lg:max-w-[700px]" />
+              {/* Cmd+K hint badge — desktop only */}
+              <div
+                className="pointer-events-none absolute right-2.5 top-1/2 -translate-y-1/2 hidden xl:flex items-center gap-0.5"
+                aria-hidden="true"
+              >
+                <kbd className="inline-flex h-5 items-center gap-0.5 rounded border border-border/50 bg-muted/60 px-1.5 text-[10px] font-mono text-muted-foreground/60">
+                  <Command className="h-2.5 w-2.5" />K
+                </kbd>
+              </div>
             </div>
           )}
         </div>
@@ -342,6 +351,7 @@ export default function Header({
         variant="destructive"
         onConfirm={logout}
       />
+
     </header>
   );
 }

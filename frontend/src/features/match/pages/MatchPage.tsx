@@ -1,5 +1,6 @@
 
 import React, { useState, useMemo, FC, useCallback, useEffect } from 'react';
+import { useDocumentTitle } from '@/hooks/useDocumentTitle';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useAuth } from '@/hooks/useAuth';
 import { useMatchUsers, type MatchUser } from '@/hooks/useMatchUsers';
@@ -790,6 +791,7 @@ const MARKETPLACE_PAGE_SIZE = 16;
 const MARKETPLACE_PAGE_SIZE_OPTIONS = [16, 24, 36, 48] as const;
 
 export default function MatchPage() {
+  useDocumentTitle('Find a Match');
   const { user } = useAuth();
   const [view, setView] = useState<'grid' | 'list'>('grid');
   const [activeTab, setActiveTab] = useState<'direct' | 'chain' | 'marketplace'>('direct');

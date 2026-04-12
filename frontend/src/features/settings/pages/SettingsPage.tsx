@@ -1,5 +1,6 @@
 
 import React, { useState, useRef, useCallback, useEffect, useMemo } from 'react';
+import { useDocumentTitle } from '@/hooks/useDocumentTitle';
 import { useSearchParams } from 'react-router-dom';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
@@ -93,6 +94,7 @@ const item = {
 };
 
 export default function SettingsPage() {
+  useDocumentTitle('Settings');
   const { user, logout, refreshUser } = useAuth();
   const { toast } = useToast();
   const [searchParams] = useSearchParams();
@@ -1241,8 +1243,11 @@ export default function SettingsPage() {
 
                   const upRes = await UserService.uploadFile(file);
 
-                  // Update user profile with new avatar URL
-                  const newAvatarUrl = 'http://localhost:8080' + upRes.url;
+                  // Build the avatar URL relative to the API base — no hardcoded host.
+                  const apiBase = import.meta.env.VITE_API_URL
+                    ? import.meta.env.VITE_API_URL.replace(/\/api\/?$/, '')
+                    : window.location.origin;
+                  const newAvatarUrl = upRes.url.startsWith('http') ? upRes.url : `${apiBase}${upRes.url}`;
                   await api.patch('/users/me', { avatar: newAvatarUrl });
                   setLocalAvatar(newAvatarUrl);
                   await refreshUser();

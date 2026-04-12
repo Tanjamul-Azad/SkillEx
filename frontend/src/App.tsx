@@ -7,6 +7,8 @@ import { ToastStateProvider } from '@/context/ToastContext';
 import { ToastProvider as RadixToastProvider } from '@/components/ui/toast';
 import { Toaster } from '@/components/ui/toaster';
 import Logo from '@/components/ui/Logo';
+import { CommandPalette, useCommandPalette } from '@/components/ui/CommandPalette';
+import { ErrorBoundary } from '@/components/ui/ErrorBoundary';
 
 // Code-split page imports
 const LandingPage = React.lazy(() => import('./features/marketing/pages/LandingPage'));
@@ -101,6 +103,42 @@ function SplashScreen({ onDone }: { onDone: () => void }) {
   );
 }
 
+/* ── App shell — wires global command palette ──────────────────── */
+function AppShell() {
+  const { open, close } = useCommandPalette();
+
+  return (
+    <ErrorBoundary>
+      <Suspense fallback={<PageLoader />}>
+        <Routes>
+          <Route path="/" element={<LandingPage />} />
+          <Route path="/login" element={<AuthPage />} />
+          <Route path="/dashboard" element={<DashboardPage />} />
+          <Route path="/match" element={<MatchPage />} />
+          <Route path="/connections" element={<ConnectionsPage />} />
+          <Route path="/community" element={<CommunityPage />} />
+          <Route path="/profile/:userId" element={<ProfilePage />} />
+          <Route path="/settings" element={<SettingsPage />} />
+          <Route path="/messages" element={<MessagesPage />} />
+          <Route path="/messages/:userId" element={<MessagesPage />} />
+          <Route path="/onboarding" element={<OnboardingPage />} />
+          <Route path="/about" element={<AboutPage />} />
+          <Route path="/careers" element={<CareersPage />} />
+          <Route path="/terms" element={<TermsPage />} />
+          <Route path="/privacy" element={<PrivacyPage />} />
+          <Route path="/trust" element={<TrustPage />} />
+          <Route path="*" element={<NotFoundPage />} />
+        </Routes>
+      </Suspense>
+
+      {/* Global command palette — Cmd+K / Ctrl+K */}
+      <CommandPalette open={open} onClose={close} />
+
+      <Toaster />
+    </ErrorBoundary>
+  );
+}
+
 export default function App() {
   const [splashDone, setSplashDone] = useState(false);
 
@@ -116,31 +154,7 @@ export default function App() {
                 )}
               </AnimatePresence>
 
-              {splashDone && (
-                <Suspense fallback={<PageLoader />}>
-                  <Routes>
-                    <Route path="/" element={<LandingPage />} />
-                    <Route path="/login" element={<AuthPage />} />
-                    <Route path="/dashboard" element={<DashboardPage />} />
-                    <Route path="/match" element={<MatchPage />} />
-                    <Route path="/connections" element={<ConnectionsPage />} />
-                    <Route path="/community" element={<CommunityPage />} />
-                    <Route path="/profile/:userId" element={<ProfilePage />} />
-                    <Route path="/settings" element={<SettingsPage />} />
-                    <Route path="/messages" element={<MessagesPage />} />
-                    <Route path="/messages/:userId" element={<MessagesPage />} />
-                    <Route path="/onboarding" element={<OnboardingPage />} />
-                    <Route path="/about" element={<AboutPage />} />
-                    <Route path="/careers" element={<CareersPage />} />
-                    <Route path="/terms" element={<TermsPage />} />
-                    <Route path="/privacy" element={<PrivacyPage />} />
-                    <Route path="/trust" element={<TrustPage />} />
-                    <Route path="*" element={<NotFoundPage />} />
-                  </Routes>
-                </Suspense>
-              )}
-
-              <Toaster />
+              {splashDone && <AppShell />}
             </RadixToastProvider>
           </ToastStateProvider>
         </AuthProvider>

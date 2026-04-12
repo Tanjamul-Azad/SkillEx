@@ -1,4 +1,5 @@
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useState } from 'react';
+import { useDocumentTitle } from '@/hooks/useDocumentTitle';
 import { useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { Users, Send, Inbox, MessageSquare, UserCheck, Clock } from 'lucide-react';
@@ -22,6 +23,7 @@ const TAB_CONFIG: Record<ConnectionTab, { status?: string; direction: 'all' | 's
 };
 
 export default function ConnectionsPage() {
+  useDocumentTitle('Connections');
   const navigate = useNavigate();
   const { user } = useAuth();
   const { toast } = useToast();
@@ -31,7 +33,7 @@ export default function ConnectionsPage() {
   const [loading, setLoading] = useState(true);
   const [actionBusy, setActionBusy] = useState<Record<string, boolean>>({});
 
-  const fetchConnections = async (tab: ConnectionTab) => {
+  const fetchConnections = useCallback(async (tab: ConnectionTab) => {
     const cfg = TAB_CONFIG[tab];
     setLoading(true);
     try {
@@ -44,11 +46,11 @@ export default function ConnectionsPage() {
     } finally {
       setLoading(false);
     }
-  };
+  }, [toast]);
 
   useEffect(() => {
     fetchConnections(activeTab);
-  }, [activeTab]);
+  }, [activeTab, fetchConnections]);
 
   const getPartner = (connection: Connection) => {
     if (!user) return connection.requester;

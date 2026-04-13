@@ -62,11 +62,15 @@ public class GeminiApiTextEmbeddingProvider extends AbstractEmbeddingProvider {
         }
 
         try {
-            String endpoint = "https://generativelanguage.googleapis.com/v1beta/models/embedding-001:embedContent?key="
-                + apiKey;
+            // Ensure the model name has the required "models/" prefix
+            String fullModelName = model.startsWith("models/") ? model : "models/" + model;
+            
+            // Use v1 for stability in production-like environments
+            String endpoint = "https://generativelanguage.googleapis.com/v1/"
+                + fullModelName + ":embedContent?key=" + apiKey;
 
             var payloadNode = objectMapper.createObjectNode();
-            payloadNode.put("model", "models/embedding-001");
+            payloadNode.put("model", fullModelName);
             payloadNode.set("content", objectMapper.createObjectNode()
                 .set("parts", objectMapper.createArrayNode()
                     .add(objectMapper.createObjectNode().put("text", text == null ? "" : text))));

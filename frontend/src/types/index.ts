@@ -4,7 +4,13 @@ export type { SkillLevel };
 
 export type MatchStatus = 'pending' | 'active' | 'completed' | 'cancelled';
 export type SessionStatus = 'scheduled' | 'completed' | 'cancelled';
-export type NotificationType = 'MATCH_REQUEST' | 'SESSION_SCHEDULED' | 'REVIEW_LEFT' | 'SYSTEM_UPDATE';
+export type NotificationType =
+  | 'MATCH_REQUEST'
+  | 'CONNECTION_REQUEST'
+  | 'CONNECTION_ACCEPTED'
+  | 'SESSION_SCHEDULED'
+  | 'REVIEW_LEFT'
+  | 'SYSTEM_UPDATE';
 
 export interface Skill {
   id: string;
@@ -18,9 +24,11 @@ export interface Skill {
 export interface User {
   id: string;
   name: string;
+  username?: string;
   email: string;
   avatar: string;
   university: string;
+  location?: string;
   bio: string;
   teachIntentText?: string;
   learnIntentText?: string;
@@ -31,6 +39,7 @@ export interface User {
   sessionsCompleted: number;
   rating: number;
   isOnline: boolean;
+  connectionsPublic?: boolean;
   joinedAt: string;
 }
 

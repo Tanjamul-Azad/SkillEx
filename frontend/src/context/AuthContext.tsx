@@ -3,6 +3,7 @@ import React, { createContext, useState, useEffect, useCallback, useMemo } from 
 import { useNavigate } from 'react-router-dom';
 import type { User } from '@/types';
 import { AuthService } from '@/services/authService';
+import { registerOn401Handler, clearOn401Handler } from '@/services/http/ApiClient';
 
 interface AuthContextType {
   user: User | null;
@@ -28,6 +29,15 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       .then((profile) => setUser(profile))
       .finally(() => setIsLoading(false));
   }, []);
+
+  // Register global 401 handler — clears session when token expires
+  useEffect(() => {
+    registerOn401Handler(() => {
+      setUser(null);
+      navigate('/login');
+    });
+    return () => clearOn401Handler();
+  }, [navigate]);
 
   const login = useCallback(async (
     email: string, password: string

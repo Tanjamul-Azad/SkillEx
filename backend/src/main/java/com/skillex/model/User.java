@@ -37,6 +37,9 @@ public class User {
     @Column(nullable = false, length = 100)
     private String name;
 
+    @Column(nullable = false, unique = true, length = 50)
+    private String username;
+
     @Column(nullable = false, unique = true, length = 255)
     private String email;
 
@@ -46,6 +49,9 @@ public class User {
 
     @Column(length = 200)
     private String university;
+
+    @Column(length = 120)
+    private String location;
 
     // DB column is `avatar` (not avatar_url)
     @Column(name = "avatar", length = 500)
@@ -86,6 +92,10 @@ public class User {
     @Column(name = "is_online", nullable = false)
     @Builder.Default
     private Boolean isOnline = false;
+
+    @Column(name = "connections_public", nullable = false)
+    @Builder.Default
+    private Boolean connectionsPublic = true;
 
     // DB column is `joined_at` (not created_at)
     @CreationTimestamp

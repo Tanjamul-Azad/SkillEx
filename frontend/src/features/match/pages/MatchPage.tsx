@@ -1,5 +1,6 @@
 
 import React, { useState, useMemo, FC, useCallback, useEffect } from 'react';
+import { useDocumentTitle } from '@/hooks/useDocumentTitle';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useAuth } from '@/hooks/useAuth';
 import { useMatchUsers, type MatchUser } from '@/hooks/useMatchUsers';
@@ -104,121 +105,135 @@ const FilterSidebar: FC<{
     (filters.compatibility[0] > 50 ? 1 : 0) +
     (filters.rating > 0 ? 1 : 0);
 
+  const PillToggle: FC<{ label: string; active: boolean; onClick: () => void }> = ({ label, active, onClick }) => (
+    <motion.button
+      whileTap={{ scale: 0.95 }}
+      onClick={onClick}
+      className={cn(
+        'px-4 py-2 rounded-full text-sm font-medium transition-all duration-300 ease-snappy',
+        active
+          ? 'bg-primary/20 text-primary border border-primary/50 shadow-sm'
+          : 'bg-muted/40 text-muted-foreground border border-border hover:border-primary/30 hover:bg-muted/60'
+      )}
+    >
+      {label}
+    </motion.button>
+  );
+
   const content = (
-    <div className="flex h-full flex-col">
-      <div className="flex-grow space-y-4 overflow-y-auto p-4">
-        <Accordion type="multiple" defaultValue={['category', 'level', 'compatibility']} className="w-full">
-          <AccordionItem value="category">
-            <AccordionTrigger>Category</AccordionTrigger>
-            <AccordionContent className="space-y-2">
-              {categories.map((category) => (
-                <div key={category.id} className="flex items-center space-x-2">
-                  <Checkbox
-                    id={category.id}
-                    checked={filters.categories.includes(category.id)}
-                    onCheckedChange={(checked) => {
-                      setFilters({
-                        ...filters,
-                        categories: checked
-                          ? [...filters.categories, category.id]
-                          : filters.categories.filter((c) => c !== category.id),
-                      });
-                    }}
-                  />
-                  <label htmlFor={category.id} className="text-sm font-medium leading-none">
-                    {category.name}
-                  </label>
-                </div>
-              ))}
-            </AccordionContent>
-          </AccordionItem>
-          <AccordionItem value="level">
-            <AccordionTrigger>Level</AccordionTrigger>
-            <AccordionContent>
-              <div className="flex flex-wrap gap-2">
-                {['beginner', 'moderate', 'expert'].map((level) => (
-                  <Button
-                    key={level}
-                    variant={filters.levels.includes(level) ? 'default' : 'outline'}
-                    size="sm"
-                    className="capitalize"
-                    onClick={() => {
-                      setFilters({
-                        ...filters,
-                        levels: filters.levels.includes(level)
-                          ? filters.levels.filter((l) => l !== level)
-                          : [...filters.levels, level],
-                      });
-                    }}
-                  >
-                    {level}
-                  </Button>
-                ))}
-              </div>
-            </AccordionContent>
-          </AccordionItem>
-          <AccordionItem value="sessionType">
-            <AccordionTrigger>Session Type</AccordionTrigger>
-            <AccordionContent>
-              <div className="flex flex-wrap gap-2">
-                {['Online', 'In-person', 'Both'].map((type) => (
-                  <Button
-                    key={type}
-                    variant={filters.sessionType === type ? 'default' : 'outline'}
-                    size="sm"
-                    onClick={() => setFilters({ ...filters, sessionType: type })}
-                  >
-                    {type}
-                  </Button>
-                ))}
-              </div>
-            </AccordionContent>
-          </AccordionItem>
-          <AccordionItem value="compatibility">
-            <AccordionTrigger>Min Compatibility</AccordionTrigger>
-            <AccordionContent className="pt-4">
-              <Slider
-                value={filters.compatibility}
-                onValueChange={(value) => setFilters({ ...filters, compatibility: value })}
-                max={100}
-                min={50}
-                step={1}
-              />
-              <div className="mt-2 text-center text-sm font-medium">
-                {filters.compatibility[0]}%
-              </div>
-            </AccordionContent>
-          </AccordionItem>
-          <AccordionItem value="rating">
-            <AccordionTrigger>Minimum Rating</AccordionTrigger>
-            <AccordionContent>
-              <div className="flex justify-around">
-                {[3, 4, 4.5].map((r) => (
-                  <Button
-                    key={r}
-                    variant={filters.rating === r ? 'default' : 'ghost'}
-                    onClick={() => setFilters({ ...filters, rating: filters.rating === r ? 0 : r })}
-                  >
-                    <div className="flex items-center">
-                      {r} <Star className="ml-1 h-4 w-4 fill-yellow-400 text-yellow-400" />+
-                    </div>
-                  </Button>
-                ))}
-              </div>
-            </AccordionContent>
-          </AccordionItem>
-        </Accordion>
+    <div className="flex h-full flex-col gap-6 overflow-y-auto p-6">
+      {/* Categories */}
+      <div className="space-y-3">
+        <h3 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Categories</h3>
+        <div className="flex flex-wrap gap-2">
+          {categories.map((category) => (
+            <PillToggle
+              key={category.id}
+              label={category.name}
+              active={filters.categories.includes(category.id)}
+              onClick={() => {
+                setFilters({
+                  ...filters,
+                  categories: filters.categories.includes(category.id)
+                    ? filters.categories.filter((c) => c !== category.id)
+                    : [...filters.categories, category.id],
+                });
+              }}
+            />
+          ))}
+        </div>
       </div>
-      <div className="border-t border-white/10 dark:border-white/5 p-4">
-        <Button variant="gradient" className="w-full" onClick={onApply}>
-          Apply Filters {activeFilterCount > 0 && `(${activeFilterCount})`}
-        </Button>
+
+      {/* Levels */}
+      <div className="space-y-3">
+        <h3 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Level</h3>
+        <div className="flex flex-wrap gap-2">
+          {['beginner', 'moderate', 'expert'].map((level) => (
+            <PillToggle
+              key={level}
+              label={level.charAt(0).toUpperCase() + level.slice(1)}
+              active={filters.levels.includes(level)}
+              onClick={() => {
+                setFilters({
+                  ...filters,
+                  levels: filters.levels.includes(level)
+                    ? filters.levels.filter((l) => l !== level)
+                    : [...filters.levels, level],
+                });
+              }}
+            />
+          ))}
+        </div>
       </div>
+
+      {/* Session Type */}
+      <div className="space-y-3">
+        <h3 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Session Type</h3>
+        <div className="flex flex-wrap gap-2">
+          {['Online', 'In-person', 'Both'].map((type) => (
+            <PillToggle
+              key={type}
+              label={type}
+              active={filters.sessionType === type}
+              onClick={() => setFilters({ ...filters, sessionType: type })}
+            />
+          ))}
+        </div>
+      </div>
+
+      {/* Minimum Compatibility */}
+      <div className="space-y-4 rounded-2xl bg-muted/20 border border-border/60 p-4">
+        <div className="flex items-center justify-between">
+          <h3 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Min Match</h3>
+          <span className="text-lg font-bold text-primary">{filters.compatibility[0]}%</span>
+        </div>
+        <Slider
+          value={filters.compatibility}
+          onValueChange={(value) => setFilters({ ...filters, compatibility: value })}
+          max={100}
+          min={50}
+          step={1}
+          className="w-full"
+        />
+      </div>
+
+      {/* Minimum Rating */}
+      <div className="space-y-3">
+        <h3 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Minimum Rating</h3>
+        <div className="flex gap-2">
+          {[3, 4, 4.5].map((r) => (
+            <motion.button
+              key={r}
+              whileTap={{ scale: 0.95 }}
+              onClick={() => setFilters({ ...filters, rating: filters.rating === r ? 0 : r })}
+              className={cn(
+                'flex items-center justify-center gap-1.5 px-3 py-2 rounded-full text-sm font-medium transition-all duration-300 ease-snappy flex-1',
+                filters.rating === r
+                  ? 'bg-warning/20 text-warning border border-warning/50'
+                  : 'bg-muted/40 text-muted-foreground border border-border hover:border-warning/30 hover:bg-muted/60'
+              )}
+            >
+              <span>{r}</span>
+              <Star className="h-3.5 w-3.5 fill-current" />
+            </motion.button>
+          ))}
+        </div>
+      </div>
+
+      {/* Reset button */}
+      <motion.button
+        whileTap={{ scale: 0.95 }}
+        onClick={() => setFilters(defaultFilters)}
+        className="mt-2 px-4 py-2 w-full rounded-full text-xs font-medium text-muted-foreground border border-border hover:border-primary/30 bg-muted/20 hover:bg-muted/40 transition-all duration-300 ease-snappy"
+      >
+        Reset Filters
+      </motion.button>
     </div>
   );
+
   return (
     <>
-      <aside className="hidden w-80 shrink-0 border-r border-white/10 bg-background/50 md:block">
+      <aside className="hidden w-80 shrink-0 border-r border-border/60 bg-card/40 md:block">
         {content}
       </aside>
 
@@ -234,11 +249,15 @@ const FilterSidebar: FC<{
               <SlidersHorizontal />
             </Button>
           </SheetTrigger>
-          <SheetContent side="left" className="w-full max-w-sm p-0">
-            <SheetHeader className="border-b p-4">
+          <SheetContent side="left" className="w-full max-w-sm p-0 bg-background/95 backdrop-blur-xl">
+            <SheetHeader className="border-b border-border/60 p-4">
               <SheetTitle className="flex items-center justify-between">
                 Filters
-                <Button variant="link" className="p-0" onClick={() => setFilters(defaultFilters)}>
+                <Button 
+                  variant="link" 
+                  className="p-0 text-xs text-muted-foreground hover:text-foreground" 
+                  onClick={() => setFilters(defaultFilters)}
+                >
                   Reset
                 </Button>
               </SheetTitle>
@@ -261,69 +280,104 @@ const AIBestMatchCard: FC<{ match: MatchUser; currentUser: User | null }> = Reac
       <motion.div
         initial={{ opacity: 0, y: 8 }}
         animate={{ opacity: 1, y: 0 }}
-        className="mb-6 rounded-2xl border border-primary/20 bg-gradient-to-br from-primary/10 via-background to-background p-5 shadow-lg"
+        className="group relative mb-6 overflow-hidden rounded-2xl border border-primary/30 shadow-lg hover:shadow-[0_12px_40px_-12px_hsl(var(--primary)/0.35)] transition-all duration-500"
       >
-        <div className="mb-4 flex items-center justify-between gap-3">
-          <Badge className="gap-1.5 bg-primary/15 text-primary hover:bg-primary/20">
-            <Sparkles className="h-3.5 w-3.5" />
-            AI Best Match
-          </Badge>
-          <CompatibilityMeter score={score} />
+        {/* Dynamic Cover Image */}
+        <div className="absolute inset-0 z-0">
+          <div className="absolute inset-0 bg-gradient-to-r from-primary/50 to-secondary/50 mix-blend-overlay opacity-50 z-10" />
+          <img src="https://images.unsplash.com/photo-1550751827-4bd374c3f58b?q=80&w=1200&auto=format&fit=crop" alt="Cover" className="h-full w-full object-cover opacity-30 mix-blend-luminosity grayscale group-hover:grayscale-0 transition-all duration-700 group-hover:scale-105 group-hover:opacity-60" />
+          <div className="absolute inset-0 bg-gradient-to-t from-background via-background/95 to-background/40 z-10" />
+          <div className="absolute inset-0 bg-gradient-to-r from-background via-background/80 to-transparent z-10" />
         </div>
 
-        <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
-          <div className="md:col-span-1">
+        <div className="relative z-20 p-6 md:p-8">
+          <div className="mb-6 flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
+            <div className="flex items-center gap-4">
+              <Badge className="gap-1.5 bg-primary/20 text-primary border border-primary/30 hover:bg-primary/30 px-3 py-1 shadow-glow-sm">
+                <Sparkles className="h-4 w-4" />
+                <span className="font-semibold tracking-wide">AI Best Match</span>
+              </Badge>
+            </div>
             <div className="flex items-center gap-3">
-              <Avatar className="h-14 w-14 ring-2 ring-primary/30">
-                <AvatarImage src={match.avatar ?? undefined} />
-                <AvatarFallback>{match.name.charAt(0)}</AvatarFallback>
-              </Avatar>
-              <div>
-                <h3 className="font-headline text-lg font-bold">{match.name}</h3>
-                <p className="text-sm text-muted-foreground">{match.university}</p>
-                <div className="mt-1 flex items-center gap-3 text-xs text-muted-foreground">
-                  <span className="flex items-center gap-1">
-                    <Star className="h-3 w-3 fill-yellow-400 text-yellow-400" />
-                    {typeof match.rating === 'number' ? match.rating.toFixed(1) : '0.0'}
-                  </span>
-                  <span className="flex items-center gap-1">
-                    <Users className="h-3 w-3" />
-                    {match.sessionsCompleted} sessions
-                  </span>
-                </div>
-              </div>
+              <span className="text-sm font-semibold uppercase tracking-wider text-muted-foreground">Compatibility</span>
+              <MatchScoreRing score={score} size={56} className="drop-shadow-md" />
             </div>
           </div>
 
-          <div className="space-y-4 md:col-span-2">
-            <div>
-              <h4 className="text-sm font-semibold text-muted-foreground">Compatibility Breakdown</h4>
-              <div className="mt-2 space-y-2">
-                <div className="flex items-center gap-2"><div className="w-28 text-xs">Skill Similarity</div><Progress value={match.semanticSimilarity} className="h-2 flex-1" /><span className="text-xs font-medium">{match.semanticSimilarity}%</span></div>
-                <div className="flex items-center gap-2"><div className="w-28 text-xs">Overall Match</div><Progress value={score} className="h-2 flex-1" /><span className="text-xs font-medium">{score}%</span></div>
-                <div className="flex items-center gap-2"><div className="w-28 text-xs">Rating</div><Progress value={Math.round((match.rating / 5) * 100)} className="h-2 flex-1" /><span className="text-xs font-medium">{match.rating.toFixed(1)}</span></div>
-              </div>
-            </div>
-            {match.matchReasons.length > 0 && (
-              <div>
-                <h4 className="text-sm font-semibold text-muted-foreground">Why this match</h4>
-                <div className="mt-2 flex flex-wrap gap-2">
-                  {match.matchReasons.slice(0, 4).map((reason: string) => (
-                    <Badge key={reason} variant="secondary" className="max-w-full whitespace-normal px-3 py-1 text-xs leading-relaxed">
-                      {reason}
-                    </Badge>
-                  ))}
+          <div className="grid grid-cols-1 gap-8 md:grid-cols-12 md:items-center">
+            <div className="md:col-span-4">
+              <div className="flex items-center gap-4 rounded-xl border border-white/10 bg-background/50 p-4 backdrop-blur-md shadow-sm">
+                <Avatar className="h-16 w-16 ring-4 ring-primary/20 shadow-xl bg-card">
+                  <AvatarImage src={match.avatar ?? undefined} className="object-cover" />
+                  <AvatarFallback className="font-bold text-lg bg-muted text-foreground">{match.name.charAt(0)}</AvatarFallback>
+                </Avatar>
+                <div>
+                  <h3 className="font-headline text-xl font-extrabold drop-shadow-sm">{match.name}</h3>
+                  <p className="text-sm font-medium text-muted-foreground">{match.university}</p>
+                  <div className="mt-1.5 flex items-center gap-3 text-xs font-semibold text-muted-foreground">
+                    <span className="flex items-center gap-1">
+                      <Star className="h-3.5 w-3.5 fill-warning text-warning" />
+                      {typeof match.rating === 'number' ? match.rating.toFixed(1) : '–'}
+                    </span>
+                    <span className="flex items-center gap-1">
+                      <Users className="h-3.5 w-3.5 text-primary" />
+                      {match.sessionsCompleted} sessions
+                    </span>
+                  </div>
                 </div>
               </div>
-            )}
-            <SkillGraphCard
-              offeredSkills={match.wantsToLearnFromYou ?? []}
-              wantedSkills={match.teachesYou ?? []}
-              userName={myName.split(' ')[0]}
-            />
-            <div className="flex gap-2">
-              <Button variant="gradient" className="w-full" onClick={() => setRequestOpen(true)}>Request Exchange</Button>
-              <Button variant="outline" className="w-full glass-subtle text-foreground hover:bg-white/10" asChild><Link to={`/profile/${match.id}`}>View Profile</Link></Button>
+            </div>
+
+            <div className="space-y-5 md:col-span-8">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="rounded-xl border border-white/10 bg-background/50 p-4 backdrop-blur-md shadow-sm">
+                  <h4 className="text-xs font-bold uppercase tracking-wider text-muted-foreground mb-3">Match Metrics</h4>
+                  <div className="space-y-3">
+                    <div className="flex items-center justify-between gap-3">
+                      <span className="text-xs font-medium w-24 shrink-0">Skill Similarity</span>
+                      <Progress value={match.semanticSimilarity} className="h-2 flex-1" />
+                      <span className="text-xs font-bold w-9 text-right">{match.semanticSimilarity}%</span>
+                    </div>
+                    <div className="flex items-center justify-between gap-3">
+                      <span className="text-xs font-medium w-24 shrink-0">Rating</span>
+                      <Progress value={Math.round((match.rating / 5) * 100)} className="h-2 flex-1" />
+                      <span className="text-xs font-bold w-9 text-right">{match.rating.toFixed(1)}</span>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="rounded-xl border border-white/10 bg-background/50 p-4 backdrop-blur-md shadow-sm flex flex-col justify-center">
+                  <SkillGraphCard
+                    offeredSkills={match.wantsToLearnFromYou ?? []}
+                    wantedSkills={match.teachesYou ?? []}
+                    userName={myName.split(' ')[0]}
+                  />
+                </div>
+              </div>
+
+              {match.matchReasons.length > 0 && (
+                <div>
+                  <h4 className="text-xs font-bold uppercase tracking-wider text-muted-foreground mb-2 flex items-center gap-2">
+                    <Zap className="h-3 w-3 text-primary" /> Why this match?
+                  </h4>
+                  <div className="flex flex-wrap gap-2">
+                    {match.matchReasons.slice(0, 4).map((reason: string) => (
+                      <Badge key={reason} variant="secondary" className="px-3 py-1 font-medium bg-primary/10 text-primary border-primary/20">
+                        {reason}
+                      </Badge>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              <div className="flex gap-3 pt-2">
+                <Button variant="gradient" className="flex-1 md:flex-none md:w-48 shadow-lg shadow-primary/25 hover:shadow-primary/40 font-bold" onClick={() => setRequestOpen(true)}>
+                  Request Exchange
+                </Button>
+                <Button variant="outline" className="flex-1 md:flex-none glass-subtle border-white/20 hover:bg-white/10" asChild>
+                  <Link to={`/profile/${match.id}`}>View Profile</Link>
+                </Button>
+              </div>
             </div>
           </div>
         </div>
@@ -345,7 +399,7 @@ const MatchCard: FC<{ match: MatchUser }> = React.memo(({ match }) => {
       <Card className="group relative h-full overflow-hidden transition-all duration-400 ease-snappy hover:-translate-y-1.5 hover:border-primary/40 hover:shadow-[0_12px_40px_-12px_hsl(var(--primary)/0.25),0_4px_12px_hsl(220_20%_40%/0.1)]">
         {/* Animated sheen line */}
         <div className="absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-white/40 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500 z-20" />
-        
+
         {/* Dynamic Cover Image */}
         <div className="absolute inset-x-0 top-0 h-20 overflow-hidden z-0">
           <div className="absolute inset-0 bg-gradient-to-r from-primary/40 to-secondary/40 mix-blend-overlay opacity-60 z-10" />
@@ -364,8 +418,8 @@ const MatchCard: FC<{ match: MatchUser }> = React.memo(({ match }) => {
               <h3 className="font-headline text-base font-bold drop-shadow-sm">{match.name}</h3>
               <p className="text-sm text-muted-foreground">{match.university}</p>
               {match.isOnline && (
-                <span className="flex items-center gap-1 text-xs font-medium text-secondary">
-                  <span className="h-1.5 w-1.5 rounded-full bg-secondary inline-block" />
+                <span className="flex items-center gap-1 text-xs font-medium text-emerald-600 dark:text-emerald-400">
+                  <span className="h-1.5 w-1.5 rounded-full bg-emerald-500 inline-block" />
                   Online
                 </span>
               )}
@@ -386,7 +440,7 @@ const MatchCard: FC<{ match: MatchUser }> = React.memo(({ match }) => {
             )}
           </div>
           <div className="mt-3 flex flex-wrap items-center gap-x-4 gap-y-1 text-xs text-muted-foreground">
-            <div className="flex items-center gap-1"><Star className="h-3 w-3 text-accent fill-accent" /> {typeof match.rating === 'number' ? match.rating.toFixed(1) : '–'}</div>
+            <div className="flex items-center gap-1"><Star className="h-3 w-3 fill-warning text-warning" /> {typeof match.rating === 'number' ? match.rating.toFixed(1) : '–'}</div>
             <div className="flex items-center gap-1"><Users className="h-3 w-3" /> {match.sessionsCompleted} sessions</div>
             <div className="flex items-center gap-1"><Zap className="h-3 w-3 text-primary" /> {match.skillexScore}</div>
             <div className="flex items-center gap-1"><Sparkles className="h-3 w-3 text-primary" /> {match.semanticSimilarity}% similarity</div>
@@ -461,12 +515,13 @@ const MOCK_CHAINS: SkillChain[] = [
 ];
 
 const categoryColorMap: Record<string, string> = {
-  Tech: 'bg-blue-500/15 text-blue-400 border-blue-500/30',
-  Design: 'bg-purple-500/15 text-purple-400 border-purple-500/30',
-  Language: 'bg-green-500/15 text-green-400 border-green-500/30',
-  Creative: 'bg-orange-500/15 text-orange-400 border-orange-500/30',
-  Business: 'bg-yellow-500/15 text-yellow-400 border-yellow-500/30',
-  Communication: 'bg-pink-500/15 text-pink-400 border-pink-500/30',
+  Tech: 'bg-primary/10 text-primary border-primary/25',
+  Design: 'bg-violet-500/10 text-violet-500 border-violet-500/25 dark:text-violet-400',
+  Language: 'bg-emerald-500/10 text-emerald-700 border-emerald-500/25 dark:text-emerald-400',
+  Creative: 'bg-sky-500/10 text-sky-700 border-sky-500/25 dark:text-sky-400',
+  Business: 'bg-slate-500/10 text-slate-600 border-slate-500/20 dark:text-slate-400',
+  Communication: 'bg-indigo-500/10 text-indigo-600 border-indigo-500/25 dark:text-indigo-400',
+  Lifestyle: 'bg-teal-500/10 text-teal-700 border-teal-500/25 dark:text-teal-400',
 };
 
 const SkillChainCard: FC<{ chain: SkillChain }> = React.memo(({ chain }) => {
@@ -539,10 +594,10 @@ const SkillChainsTab = () => {
   const [joinDialogOpen, setJoinDialogOpen] = useState(false);
   const [joinTargetUser, setJoinTargetUser] = useState<User | null>(null);
 
-  const perfectSwaps   = cycles.filter(c => c.cycle.hops.length === 2);
-  const multiChains    = cycles.filter(c => c.cycle.hops.length >  2);
+  const perfectSwaps = cycles.filter(c => c.cycle.hops.length === 2);
+  const multiChains = cycles.filter(c => c.cycle.hops.length > 2);
   const totalParticipants = new Set(cycles.flatMap(c => c.cycle.userIds)).size;
-  const myChainCount   = cycles.filter(c => user?.id && c.cycle.userIds.includes(user.id)).length;
+  const myChainCount = cycles.filter(c => user?.id && c.cycle.userIds.includes(user.id)).length;
 
   const openJoinDialog = useCallback((cycle: ExchangeCycleData, explicitTargetId?: string) => {
     if (!user) return;
@@ -790,6 +845,7 @@ const MARKETPLACE_PAGE_SIZE = 16;
 const MARKETPLACE_PAGE_SIZE_OPTIONS = [16, 24, 36, 48] as const;
 
 export default function MatchPage() {
+  useDocumentTitle('Find a Match');
   const { user } = useAuth();
   const [view, setView] = useState<'grid' | 'list'>('grid');
   const [activeTab, setActiveTab] = useState<'direct' | 'chain' | 'marketplace'>('direct');

@@ -14,6 +14,7 @@ public record DashboardStatsDto(
     BigDecimal rating,
     long pendingExchanges,
     long activeExchanges,
+    long pendingConnections,
     List<ActivityItem> recentActivity
 ) {
     public record ActivityItem(

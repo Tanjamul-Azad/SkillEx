@@ -2,10 +2,13 @@
 import React, { useState } from 'react';
 import { useAuth } from '@/hooks/useAuth';
 import { useExchanges } from '@/hooks/useExchanges';
+import { useConnections } from '@/hooks/useConnections';
 import { exchangeService } from '@/services/exchangeService';
+import { connectionService } from '@/services/connectionService';
 import { DashboardService } from '@/services/dashboardService';
 import type { Exchange } from '@/services/exchangeService';
-import { motion } from 'framer-motion';
+import type { Connection } from '@/services/connectionService';
+import { motion, AnimatePresence } from 'framer-motion';
 import {
   ArrowRight,
   BookOpen,
@@ -21,12 +24,22 @@ import {
   Zap,
   Inbox,
   Sparkles,
+  Award,
+  Activity,
+  ChevronRight,
+  BarChart3,
+  Circle,
+  ArrowUpRight,
+  Play,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
+import { Progress } from '@/components/ui/progress';
+import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
+import { Separator } from '@/components/ui/separator';
 import { Link, useNavigate } from 'react-router-dom';
 import { useCounter } from '@/hooks/useCounter';
 import { useToast } from '@/hooks/use-toast';
@@ -34,6 +47,11 @@ import { cn } from '@/lib/utils';
 import DashboardLayout from '@/components/layout/DashboardLayout';
 import { ScrollReveal, ScrollRevealGroup } from '@/components/ui/ScrollReveal';
 import { ConfirmDialog } from '@/components/ui/ConfirmDialog';
+import { useDocumentTitle } from '@/hooks/useDocumentTitle';
+import { ActivityChart } from '@/features/dashboard/components/ActivityChart';
+import { SessionCarousel } from '@/features/dashboard/components/SessionCarousel';
+import { TaskProgressWidget } from '@/features/dashboard/components/TaskProgressWidget';
+import { BoostBanner } from '@/features/dashboard/components/BoostBanner';
 import {
   Dialog,
   DialogContent,
@@ -47,86 +65,74 @@ import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
 import type { Skill } from '@/types';
 
-/* ── Consistent color palette for stat cards (Glassmorphism) ────────── */
-const STAT_COLORS = {
-  primary: { text: 'text-primary', bg: 'bg-primary/5 dark:bg-primary/10', border: 'border-primary/30 hover:border-primary/60', ring: 'shadow-[0_0_0_1px_hsl(var(--primary)/0.2)]', stroke: 'stroke-primary' },
-  secondary: { text: 'text-primary', bg: 'bg-primary/5 dark:bg-primary/10', border: 'border-primary/30 hover:border-primary/60', ring: 'shadow-[0_0_0_1px_hsl(var(--primary)/0.2)]', stroke: 'stroke-primary' },
-  green: { text: 'text-emerald-400', bg: 'bg-emerald-500/5 dark:bg-emerald-500/10', border: 'border-emerald-500/30 hover:border-emerald-500/60', ring: 'shadow-[0_0_0_1px_hsl(152_69%_31%/0.2)]', stroke: 'stroke-emerald-400' },
-  accent: { text: 'text-amber-400', bg: 'bg-amber-500/5 dark:bg-amber-500/10', border: 'border-amber-500/30 hover:border-amber-500/60', ring: 'shadow-[0_0_0_1px_hsl(38_92%_50%/0.2)]', stroke: 'stroke-amber-400' },
-} as const;
-const DEFAULT_COLORS = STAT_COLORS.primary;
+/* ─────────────────────────────────────────────────────────────
+   SHNEIDERMAN DESIGN PRINCIPLES APPLIED:
+   1. Consistency   — Same card treatment, same spacing, same color token usage
+   2. Shortcuts     — Action buttons always reachable, tab navigation
+   3. Feedback      — Status badges, counters, loading states, toasts
+   4. Closure       — Dialogs confirm completion, booking shows ✓ state
+   5. Error prevent — Confirm dialogs before destructive actions
+   6. Reversal      — Decline has a "Keep it" option
+   7. Locus control — User decides exchanges, sessions — nothing dumps on them
+   8. Memory load   — Current state always visible (status badges, progress)
+───────────────────────────────────────────────────────────── */
 
+/* ─── Shared type for stat cards ─────────────────────────────── */
 interface StatCardProps {
   icon: React.FC<{ className?: string }>;
   title: string;
   value: number;
-  trend: string;
-  trendLabel: string;
-  colorKey: keyof typeof STAT_COLORS;
+  footnote: string;
   index: number;
 }
 
-const StatCard = React.memo(({ icon: Icon, title, value, trend, trendLabel, colorKey, index }: StatCardProps) => {
-  const { ref } = useCounter(value, { duration: 2 });
-  const isPositive = trend.startsWith('+');
-  const c = (STAT_COLORS as any)[colorKey] ?? DEFAULT_COLORS;
+/* ─── Consistent stat card ────────────────────────────────────── */
+const StatCard = React.memo(({ icon: Icon, title, value, footnote, index }: StatCardProps) => {
+  const { ref } = useCounter(value, { duration: 1.6 });
+
   return (
     <motion.div
-      variants={{ hidden: { opacity: 0, y: 28 }, visible: { opacity: 1, y: 0 } }}
-      transition={{ delay: index * 0.07, type: 'spring', stiffness: 130, damping: 22 }}
-      whileHover={{ y: -4, transition: { type: 'spring', stiffness: 320, damping: 24 } }}
-      className="h-full"
+      variants={{
+        hidden: { opacity: 0, y: 16 },
+        visible: { opacity: 1, y: 0 },
+      }}
+      transition={{ delay: index * 0.07, type: 'spring', stiffness: 220, damping: 22 }}
     >
-      <Card className={cn(
-        'group relative h-full overflow-hidden ease-snappy',
-        'glass-subtle card-hover',
-        'border-2 shadow-lg hover:shadow-xl',
-        c.border,
-      )}>
-        {/* Subtle top inner highlight replacing flat gradient */}
-        <div className={cn('absolute inset-x-0 top-0 h-1 mix-blend-overlay opacity-70 bg-gradient-to-r from-transparent via-primary to-transparent')} />
-
-        {/* Sophisticated background radial glow on hover */}
-        <div className={cn('pointer-events-none absolute -right-6 -top-6 h-32 w-32 rounded-full blur-3xl opacity-0 group-hover:opacity-100 transition-opacity duration-700', c.bg)} />
+      <Card className="group relative h-full overflow-hidden border-border/60 bg-card transition-all duration-300 hover:border-border hover:shadow-md dark:border-white/[0.07] dark:hover:border-white/[0.12]">
+        {/* Consistent left-edge accent — always primary color */}
+        <div className="absolute left-0 top-0 bottom-0 w-[3px] rounded-r-full bg-primary opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
 
         <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2 pt-5 px-5">
-          <CardTitle className="text-[11px] font-bold uppercase tracking-widest text-muted-foreground/70">
+          <CardTitle className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
             {title}
           </CardTitle>
-          {/* Icon box — consistent size, shape, and tint */}
-          <div className={cn(
-            'flex h-9 w-9 shrink-0 items-center justify-center rounded-xl glass-subtle shadow-sm',
-            c.border
-          )}>
-            <Icon className={cn('h-[18px] w-[18px]', c.text)} />
+          <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-primary/8 dark:bg-primary/12 transition-colors duration-300 group-hover:bg-primary/15 dark:group-hover:bg-primary/20">
+            <Icon className="h-4 w-4 text-primary" />
           </div>
         </CardHeader>
 
-        <CardContent className="px-5 pb-5 pt-0 relative">
-          <div className="font-headline text-[2.2rem] font-black leading-none tabular-nums tracking-tight" ref={ref} />
+        <CardContent className="px-5 pb-5 pt-0">
+          <div
+            ref={ref}
+            className="font-headline text-3xl font-bold tabular-nums tracking-tight text-foreground"
+          />
+          <p className="mt-1.5 text-xs text-muted-foreground">{footnote}</p>
 
-          <div className="mt-3 flex items-end justify-between">
-            <p className="text-xs text-muted-foreground/80">
-              <span className={cn('mr-1 font-semibold', isPositive ? 'text-emerald-400' : 'text-muted-foreground')}>
-                {trend}
-              </span>
-              {trendLabel}
-            </p>
-            {/* Minimalist sparkline */}
-            <div className="h-6 w-16 opacity-60">
-              <svg viewBox="0 0 100 24" className="h-full w-full overflow-visible" preserveAspectRatio="none">
-                <motion.path
-                  d={isPositive ? "M0,20 Q20,18 35,10 T70,12 T100,2" : "M0,12 L100,12"}
-                  fill="none"
-                  className={c.stroke}
-                  strokeWidth="2.5"
-                  strokeLinecap="round"
-                  initial={{ pathLength: 0, opacity: 0 }}
-                  animate={{ pathLength: 1, opacity: 1 }}
-                  transition={{ duration: 1.5, delay: 0.2 + (index * 0.1), ease: "easeOut" }}
-                />
-              </svg>
-            </div>
+          {/* Animated sparkline */}
+          <div className="mt-4 h-7 w-full opacity-30 group-hover:opacity-60 transition-opacity duration-300">
+            <svg viewBox="0 0 120 28" className="h-full w-full" preserveAspectRatio="none">
+              <motion.path
+                d="M0,24 Q20,20 35,13 T70,10 T100,6 T120,2"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="2"
+                strokeLinecap="round"
+                className="text-primary"
+                initial={{ pathLength: 0 }}
+                animate={{ pathLength: 1 }}
+                transition={{ duration: 1.8, delay: 0.2 + index * 0.12, ease: 'easeOut' }}
+              />
+            </svg>
           </div>
         </CardContent>
       </Card>
@@ -135,7 +141,17 @@ const StatCard = React.memo(({ icon: Icon, title, value, trend, trendLabel, colo
 });
 StatCard.displayName = 'StatCard';
 
-/* ── Exchange Card ───────────────────────────────────────────────────── */
+/* ─── Status badge config ─────────────────────────────────────── */
+type ExchangeStatus = 'accepted' | 'pending' | 'completed' | 'declined';
+
+const STATUS: Record<ExchangeStatus, { label: string; variant: 'default' | 'secondary' | 'outline'; dot: string }> = {
+  accepted: { label: 'Active',    variant: 'default',    dot: 'bg-emerald-500' },
+  pending:  { label: 'Pending',   variant: 'secondary',  dot: 'bg-amber-500'   },
+  completed:{ label: 'Completed', variant: 'outline',    dot: 'bg-primary'     },
+  declined: { label: 'Declined',  variant: 'outline',    dot: 'bg-muted-foreground' },
+};
+
+/* ─── Exchange card ───────────────────────────────────────────── */
 function ExchangeCard({ exchange, currentUserId }: { exchange: Exchange; currentUserId: string }) {
   const isRequester = exchange.requester.id === currentUserId;
   const partner = isRequester ? exchange.receiver : exchange.requester;
@@ -143,8 +159,9 @@ function ExchangeCard({ exchange, currentUserId }: { exchange: Exchange; current
   const theirSkill = isRequester ? exchange.wantedSkill : exchange.offeredSkill;
   const { toast } = useToast();
   const navigate = useNavigate();
-  // Normalize to lowercase so comparisons work regardless of backend casing
-  const [localStatus, setLocalStatus] = React.useState(exchange.status?.toLowerCase() ?? 'pending');
+  const [localStatus, setLocalStatus] = React.useState<ExchangeStatus>(
+    (exchange.status?.toLowerCase() as ExchangeStatus) ?? 'pending'
+  );
   const [dismissed, setDismissed] = React.useState(false);
   const [declineConfirmOpen, setDeclineConfirmOpen] = React.useState(false);
   const [scheduleOpen, setScheduleOpen] = React.useState(false);
@@ -155,104 +172,143 @@ function ExchangeCard({ exchange, currentUserId }: { exchange: Exchange; current
 
   if (dismissed) return null;
 
+  const cfg = STATUS[localStatus] ?? STATUS.pending;
+
   return (
     <motion.div
-      whileHover={{ y: -4, transition: { type: 'spring', stiffness: 300 } }}
-      className="h-full"
+      variants={{ hidden: { opacity: 0, y: 12 }, visible: { opacity: 1, y: 0 } }}
+      whileHover={{ y: -2, transition: { type: 'spring', stiffness: 400, damping: 28 } }}
     >
-      <Card className="group h-full overflow-hidden ease-snappy glass-subtle card-hover border-2 shadow-lg hover:shadow-xl hover:border-primary/40 transition-all duration-300">
-        {/* Animated sheen line */}
-        <div className="absolute inset-x-0 top-0 h-1 bg-gradient-to-r from-transparent via-primary/60 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
+      <Card className="group h-full border-border/60 bg-card transition-all duration-300 hover:border-border hover:shadow-md dark:border-white/[0.07] dark:hover:border-white/[0.13]">
         <CardContent className="p-5">
           {/* Partner row */}
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-3">
-              <Avatar className="h-10 w-10 ring-2 ring-border group-hover:ring-primary/50 transition-all shadow-sm">
-                <AvatarImage src={partner.avatar ?? undefined} />
-                <AvatarFallback className="text-sm font-bold">{partner.name.charAt(0)}</AvatarFallback>
-              </Avatar>
-              <div>
-                <p className="font-bold text-sm leading-tight">{partner.name}</p>
-                <p className="text-[11px] text-muted-foreground mt-0.5">{partner.university ?? 'University'}</p>
+          <div className="flex items-center justify-between gap-3">
+            <div className="flex items-center gap-3 min-w-0">
+              <div className="relative shrink-0">
+                <Avatar className="h-10 w-10 ring-1 ring-border group-hover:ring-primary/25 transition-all duration-300">
+                  <AvatarImage src={partner.avatar ?? undefined} />
+                  <AvatarFallback className="bg-muted text-sm font-semibold">
+                    {partner.name.charAt(0)}
+                  </AvatarFallback>
+                </Avatar>
+                <span className={cn(
+                  'absolute -bottom-0.5 -right-0.5 h-2.5 w-2.5 rounded-full border-2 border-card',
+                  cfg.dot
+                )} />
+              </div>
+              <div className="min-w-0">
+                <p className="truncate text-sm font-semibold text-foreground leading-tight">
+                  {partner.name}
+                </p>
+                <p className="truncate text-xs text-muted-foreground mt-0.5">
+                  {partner.university ?? 'University'}
+                </p>
               </div>
             </div>
-            <Badge
-              variant={localStatus === 'accepted' ? 'default' : 'secondary'}
-              className="text-[10px] capitalize rounded-full px-2.5 py-0.5"
-            >
-              {localStatus}
+            <Badge variant={cfg.variant} className="shrink-0 text-[10px] font-semibold capitalize rounded-full px-2 py-0.5">
+              {cfg.label}
             </Badge>
           </div>
 
           {/* Skill swap */}
-          <div className="mt-4 space-y-2">
+          <div className="mt-4 space-y-1.5">
             {mySkill && (
-              <div className="flex items-center gap-2 rounded-xl bg-primary/10 border-2 border-primary/30 px-3 py-2 shadow-sm">
-                <span className="h-2 w-2 rounded-full bg-primary shrink-0 shadow-glow-sm" />
-                <span className="text-[11px] font-semibold text-primary">You teach</span>
-                <span className="ml-auto text-[11px] font-bold text-foreground truncate">{mySkill.name}</span>
+              <div className="flex items-center gap-2 rounded-lg bg-muted/40 border border-border/50 px-3 py-2">
+                <Zap className="h-3.5 w-3.5 text-primary shrink-0" />
+                <span className="text-xs text-muted-foreground">You teach</span>
+                <span className="ml-auto text-xs font-semibold text-foreground truncate max-w-[100px]">
+                  {mySkill.name}
+                </span>
               </div>
             )}
             {theirSkill && (
-              <div className="flex items-center gap-2 rounded-xl bg-secondary/10 border-2 border-secondary/30 px-3 py-2 shadow-sm">
-                <span className="h-2 w-2 rounded-full bg-secondary shrink-0 shadow-glow-sm" />
-                <span className="text-[11px] font-semibold text-secondary">{partner.name.split(' ')[0]} teaches</span>
-                <span className="ml-auto text-[11px] font-bold text-foreground truncate">{theirSkill.name}</span>
+              <div className="flex items-center gap-2 rounded-lg bg-muted/40 border border-border/50 px-3 py-2">
+                <BookOpen className="h-3.5 w-3.5 text-secondary shrink-0" />
+                <span className="text-xs text-muted-foreground">
+                  {partner.name.split(' ')[0]} teaches
+                </span>
+                <span className="ml-auto text-xs font-semibold text-foreground truncate max-w-[100px]">
+                  {theirSkill.name}
+                </span>
               </div>
             )}
           </div>
 
           {exchange.sessionDate && (
-            <div className="mt-3 flex items-center gap-1.5 text-[11px] text-muted-foreground">
+            <div className="mt-3 flex items-center gap-1.5 text-xs text-muted-foreground">
               <Clock className="h-3 w-3 shrink-0" />
               {new Date(exchange.sessionDate).toLocaleDateString('en-US', {
-                weekday: 'short', month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit',
+                weekday: 'short', month: 'short', day: 'numeric',
+                hour: 'numeric', minute: '2-digit',
               })}
             </div>
           )}
 
+          {/* Actions */}
           <div className="mt-4 grid grid-cols-2 gap-2">
             {localStatus === 'pending' && exchange.receiver.id === currentUserId ? (
               <>
-                <Button variant="outline" size="sm" className="rounded-xl text-xs border-destructive/20 text-destructive hover:bg-destructive/10" onClick={() => setDeclineConfirmOpen(true)}>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="rounded-lg text-xs border-destructive/20 text-destructive hover:bg-destructive/8 hover:border-destructive/30"
+                  onClick={() => setDeclineConfirmOpen(true)}
+                >
                   Decline
                 </Button>
-                <Button size="sm" className="rounded-xl text-xs font-bold bg-emerald-500 hover:bg-emerald-600 text-white" onClick={async () => {
-                  try {
-                    await exchangeService.updateStatus(exchange.id, 'accepted');
-                    setLocalStatus('accepted');
-                    toast({ title: 'Request accepted!', description: `You are now matched with ${partner.name.split(' ')[0]}.`, variant: 'success' });
-                  } catch {
-                    toast({ title: 'Failed to accept', description: 'Please try again.', variant: 'destructive' });
-                  }
-                }}>
+                <Button
+                  size="sm"
+                  className="rounded-lg text-xs font-semibold bg-primary hover:bg-primary/90"
+                  onClick={async () => {
+                    try {
+                      await exchangeService.updateStatus(exchange.id, 'accepted');
+                      setLocalStatus('accepted');
+                      toast({ title: 'Request accepted', description: `Now matched with ${partner.name.split(' ')[0]}.`, variant: 'success' });
+                    } catch {
+                      toast({ title: 'Failed to accept', variant: 'destructive' });
+                    }
+                  }}
+                >
                   Accept
                 </Button>
               </>
             ) : localStatus === 'pending' ? (
-              <>
-                <Button variant="outline" size="sm" className="rounded-xl text-xs col-span-2 text-muted-foreground" disabled>
-                  Waiting for response...
-                </Button>
-              </>
+              <Button variant="outline" size="sm" className="col-span-2 rounded-lg text-xs text-muted-foreground" disabled>
+                Awaiting response
+              </Button>
             ) : (
               <>
-                <Button variant="outline" size="sm" className="rounded-xl text-xs" onClick={() => { navigate('/community'); toast({ title: 'Opening Community', description: 'Use Community to chat with your exchange partner.' }); }}>
-                  <MessageSquare className="mr-1.5 h-3.5 w-3.5" />Message
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="rounded-lg text-xs"
+                  onClick={() => {
+                    navigate('/community');
+                    toast({ title: 'Opening Community' });
+                  }}
+                >
+                  <MessageSquare className="mr-1.5 h-3.5 w-3.5" />
+                  Message
                 </Button>
-                <Button size="sm" className="rounded-xl text-xs font-bold" onClick={() => setScheduleOpen(true)}>
-                  <Video className="mr-1.5 h-3.5 w-3.5" />Schedule
+                <Button
+                  size="sm"
+                  className="rounded-lg text-xs font-semibold"
+                  onClick={() => setScheduleOpen(true)}
+                >
+                  <Video className="mr-1.5 h-3.5 w-3.5" />
+                  Schedule
                 </Button>
               </>
             )}
           </div>
         </CardContent>
-      </Card >
+      </Card>
+
       <ConfirmDialog
         open={declineConfirmOpen}
         onOpenChange={setDeclineConfirmOpen}
         title={`Decline ${partner.name.split(' ')[0]}'s request?`}
-        description="They won't be notified, but they'll no longer see their request as pending."
+        description="This action can't be undone. They won't receive a notification."
         confirmLabel="Decline"
         cancelLabel="Keep it"
         variant="destructive"
@@ -267,38 +323,41 @@ function ExchangeCard({ exchange, currentUserId }: { exchange: Exchange; current
         }}
       />
 
-      {/* ── Schedule Session Dialog ── */}
-      <Dialog open={scheduleOpen} onOpenChange={(o) => { setScheduleOpen(o); if (!o) { setScheduleDate(''); setScheduleTime(''); setSessionNotes(''); setScheduledConfirmed(false); } }}>
+      {/* Schedule dialog */}
+      <Dialog
+        open={scheduleOpen}
+        onOpenChange={(o) => {
+          setScheduleOpen(o);
+          if (!o) { setScheduleDate(''); setScheduleTime(''); setSessionNotes(''); setScheduledConfirmed(false); }
+        }}
+      >
         <DialogContent className="sm:max-w-md">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2 font-headline">
               <CalendarDays className="h-5 w-5 text-primary" />
-              {scheduledConfirmed ? 'Session Scheduled!' : 'Schedule a Session'}
+              {scheduledConfirmed ? 'Session Confirmed' : 'Schedule a Session'}
             </DialogTitle>
             <DialogDescription>
               {scheduledConfirmed
-                ? `Your session with ${partner?.name?.split(' ')[0]} is confirmed.`
-                : `Pick a date and time to meet with ${partner?.name?.split(' ')[0]}.`}
+                ? `Your session with ${partner?.name?.split(' ')[0]} is set.`
+                : `Choose a time to meet with ${partner?.name?.split(' ')[0]}.`}
             </DialogDescription>
           </DialogHeader>
 
           {scheduledConfirmed ? (
             <div className="py-6 flex flex-col items-center gap-4 text-center">
               <motion.div
-                initial={{ scale: 0 }}
-                animate={{ scale: 1 }}
-                transition={{ type: 'spring', stiffness: 300, damping: 20 }}
-                className="h-16 w-16 rounded-full bg-green-500/15 flex items-center justify-center"
+                initial={{ scale: 0.7, opacity: 0 }}
+                animate={{ scale: 1, opacity: 1 }}
+                transition={{ type: 'spring', stiffness: 300, damping: 22 }}
+                className="flex h-14 w-14 items-center justify-center rounded-full bg-primary/10 border border-primary/20"
               >
-                <CheckCircle className="h-8 w-8 text-green-500" />
+                <CheckCircle className="h-7 w-7 text-primary" />
               </motion.div>
               <div>
-                <p className="text-lg font-bold">{scheduleDate} at {scheduleTime}</p>
+                <p className="text-base font-semibold">{scheduleDate} at {scheduleTime}</p>
                 {sessionNotes && <p className="text-sm text-muted-foreground mt-1">"{sessionNotes}"</p>}
               </div>
-              <p className="text-sm text-muted-foreground">
-                You'll both receive a reminder before the session.
-              </p>
               <Button className="w-full" onClick={() => setScheduleOpen(false)}>Done</Button>
             </div>
           ) : (
@@ -307,113 +366,80 @@ function ExchangeCard({ exchange, currentUserId }: { exchange: Exchange; current
                 <div className="grid grid-cols-2 gap-3">
                   <div className="space-y-1.5">
                     <Label htmlFor="session-date">Date</Label>
-                    <Input
-                      id="session-date"
-                      type="date"
-                      value={scheduleDate}
+                    <Input id="session-date" type="date" value={scheduleDate}
                       min={new Date().toISOString().split('T')[0]}
-                      onChange={e => setScheduleDate(e.target.value)}
-                      className="rounded-xl"
-                    />
+                      onChange={e => setScheduleDate(e.target.value)} className="rounded-xl" />
                   </div>
                   <div className="space-y-1.5">
                     <Label htmlFor="session-time">Time</Label>
-                    <Input
-                      id="session-time"
-                      type="time"
-                      value={scheduleTime}
-                      onChange={e => setScheduleTime(e.target.value)}
-                      className="rounded-xl"
-                    />
+                    <Input id="session-time" type="time" value={scheduleTime}
+                      onChange={e => setScheduleTime(e.target.value)} className="rounded-xl" />
                   </div>
                 </div>
                 <div className="space-y-1.5">
-                  <Label htmlFor="session-notes">Notes <span className="text-muted-foreground">(optional)</span></Label>
-                  <Textarea
-                    id="session-notes"
-                    placeholder="Topics to cover, meeting link, etc."
-                    value={sessionNotes}
-                    onChange={e => setSessionNotes(e.target.value)}
-                    rows={2}
-                    className="rounded-xl resize-none text-sm"
-                  />
+                  <Label htmlFor="session-notes">
+                    Notes <span className="text-muted-foreground text-xs">(optional)</span>
+                  </Label>
+                  <Textarea id="session-notes" placeholder="What to cover, meeting link…"
+                    value={sessionNotes} onChange={e => setSessionNotes(e.target.value)}
+                    rows={2} className="rounded-xl resize-none text-sm" />
                 </div>
-                <div className="rounded-xl p-3 bg-muted/50 border-2 border-border/60 flex items-start gap-2.5 shadow-sm">
+                <div className="flex items-center gap-3 rounded-xl border border-border bg-muted/30 p-3">
                   <Avatar className="h-8 w-8 shrink-0">
                     <AvatarImage src={partner?.avatar ?? undefined} />
-                    <AvatarFallback className="text-xs">{partner?.name?.charAt(0)}</AvatarFallback>
+                    <AvatarFallback className="text-xs font-semibold">{partner?.name?.charAt(0)}</AvatarFallback>
                   </Avatar>
                   <div>
                     <p className="text-sm font-medium">{partner?.name}</p>
                     <p className="text-xs text-muted-foreground">
-                      {mySkill && theirSkill
-                        ? `You teach ${mySkill.name} · They teach ${theirSkill.name}`
-                        : 'Skill exchange partner'}
+                      {mySkill && theirSkill ? `${mySkill.name} ↔ ${theirSkill.name}` : 'Skill exchange'}
                     </p>
                   </div>
                 </div>
               </div>
               <DialogFooter>
                 <Button variant="outline" onClick={() => setScheduleOpen(false)}>Cancel</Button>
-                <Button
-                  disabled={!scheduleDate || !scheduleTime}
-                  onClick={() => setScheduledConfirmed(true)}
-                >
-                  <CalendarDays className="mr-2 h-4 w-4" /> Confirm Session
+                <Button disabled={!scheduleDate || !scheduleTime} onClick={() => setScheduledConfirmed(true)}>
+                  <CalendarDays className="mr-2 h-4 w-4" /> Confirm
                 </Button>
               </DialogFooter>
             </>
           )}
         </DialogContent>
       </Dialog>
-
-    </motion.div >
+    </motion.div>
   );
 }
 
-/* ── Empty / Skeleton states ─────────────────────────────────────────── */
+/* ─── Empty Exchanges ─────────────────────────────────────────── */
 function EmptyExchanges() {
   return (
-      <Card className="relative overflow-hidden border-dashed border-2 border-border bg-background/70 dark:bg-background/60 shadow-lg group">
-        {/* Decorative background blob */}
-        <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-64 h-64 bg-primary/5 rounded-full blur-[60px] pointer-events-none transition-transform duration-1000 group-hover:scale-150" />
-        <div className="absolute top-0 right-0 w-32 h-32 bg-secondary/5 rounded-full blur-[40px] pointer-events-none" />
-        
-        <CardContent className="relative z-10 flex flex-col items-center justify-center py-16 text-center">
-          <motion.div
-            animate={{ y: [0, -10, 0], rotate: [0, -5, 5, 0] }}
-            transition={{ duration: 5, repeat: Infinity, ease: "easeInOut" }}
-            className="mb-6 flex h-20 w-20 items-center justify-center rounded-3xl bg-gradient-to-br from-primary/20 to-primary/5 shadow-glow-sm relative ring-1 ring-primary/20 backdrop-blur-md"
-          >
-            <div className="absolute inset-0 rounded-3xl bg-primary/20 blur-xl animate-pulse" style={{ animationDuration: '3s' }} />
-            <Inbox className="h-10 w-10 text-primary relative z-10" />
-            <motion.div 
-              initial={{ scale: 0, opacity: 0 }}
-              animate={{ scale: 1, opacity: 1 }}
-              transition={{ delay: 0.5, type: 'spring' }}
-              className="absolute -top-2 -right-2 h-6 w-6 bg-secondary rounded-full flex items-center justify-center border-2 border-background shadow-lg"
-            >
-              <Zap className="h-3 w-3 text-secondary-foreground" />
-            </motion.div>
-          </motion.div>
-          <h3 className="font-bold text-lg text-foreground tracking-tight">No active exchanges yet</h3>
-          <p className="mt-2 text-sm text-muted-foreground max-w-[28ch] leading-relaxed">
-            Your knowledge journey begins here. Find a match, send a request, and start teaching!
-          </p>
-          <Button asChild className="mt-8 rounded-xl font-semibold shadow-glow-sm hover:shadow-glow transition-all duration-300" size="default">
-            <Link to="/match">
-              <Search className="mr-2 h-4 w-4" />
-              Explore Marketplace
-            </Link>
-          </Button>
-        </CardContent>
+    <Card className="border-dashed border-border/60 bg-muted/20">
+      <CardContent className="flex flex-col items-center justify-center py-14 text-center">
+        <motion.div
+          animate={{ y: [0, -6, 0] }}
+          transition={{ duration: 3.5, repeat: Infinity, ease: 'easeInOut' }}
+          className="mb-5 flex h-14 w-14 items-center justify-center rounded-2xl border border-border bg-muted/50"
+        >
+          <Inbox className="h-7 w-7 text-muted-foreground/60" />
+        </motion.div>
+        <h3 className="text-sm font-semibold text-foreground">No active exchanges</h3>
+        <p className="mt-2 text-xs text-muted-foreground max-w-[30ch] leading-relaxed">
+          Find a skill partner, send a request, and start your first exchange.
+        </p>
+        <Button asChild className="mt-6 rounded-lg" size="sm">
+          <Link to="/match">
+            <Search className="mr-2 h-4 w-4" /> Browse Marketplace
+          </Link>
+        </Button>
+      </CardContent>
     </Card>
   );
 }
 
 function ExchangeSkeleton() {
   return (
-    <Card>
+    <Card className="border-border/50">
       <CardContent className="p-5 space-y-4">
         <div className="flex items-center gap-3">
           <Skeleton className="h-10 w-10 rounded-full" />
@@ -423,89 +449,96 @@ function ExchangeSkeleton() {
           </div>
           <Skeleton className="h-5 w-14 rounded-full" />
         </div>
-        <Skeleton className="h-8 w-full rounded-xl" />
-        <Skeleton className="h-8 w-full rounded-xl" />
+        <Skeleton className="h-9 w-full rounded-lg" />
+        <Skeleton className="h-9 w-full rounded-lg" />
         <div className="grid grid-cols-2 gap-2">
-          <Skeleton className="h-8 rounded-xl" />
-          <Skeleton className="h-8 rounded-xl" />
+          <Skeleton className="h-8 rounded-lg" />
+          <Skeleton className="h-8 rounded-lg" />
         </div>
       </CardContent>
     </Card>
   );
 }
 
+/* ─── Activity mapping ────────────────────────────────────────── */
 function activityFromExchange(exchange: Exchange, currentUserId: string) {
   const partner = exchange.requester.id === currentUserId ? exchange.receiver : exchange.requester;
   const ms = Date.now() - new Date(exchange.createdAt).getTime();
   const mins = Math.round(ms / 60000);
-  const timeLabel = mins < 60 ? `${mins}m ago` : mins < 1440 ? `${Math.round(mins / 60)}h ago` : `${Math.round(mins / 1440)}d ago`;
-  const status = exchange.status?.toLowerCase();
+  const time = mins < 60 ? `${mins}m ago` : mins < 1440 ? `${Math.round(mins / 60)}h ago` : `${Math.round(mins / 1440)}d ago`;
+  const s = exchange.status?.toLowerCase();
 
-  switch (status) {
+  switch (s) {
     case 'accepted':
-      return { avatar: partner.avatar, name: partner.name, icon: CheckCircle, color: 'text-emerald-500', bg: 'bg-emerald-500/10 text-emerald-500 border-emerald-500/20', text: <><span className="font-bold text-foreground">{partner.name.split(' ')[0]}</span> accepted your request.</>, time: timeLabel };
+      return { avatar: partner.avatar, name: partner.name, Icon: CheckCircle, iconCls: 'text-emerald-500', bg: 'bg-emerald-500/10', text: <><span className="font-semibold text-foreground">{partner.name.split(' ')[0]}</span> accepted your request.</>, time };
     case 'pending':
       return exchange.requester.id === currentUserId
-        ? { avatar: partner.avatar, name: partner.name, icon: Clock, color: 'text-primary', bg: 'bg-primary/10 text-primary border-primary/20', text: <>Waiting for <span className="font-bold text-foreground">{partner.name.split(' ')[0]}</span>.</>, time: timeLabel }
-        : { avatar: partner.avatar, name: partner.name, icon: Users, color: 'text-primary', bg: 'bg-primary/10 text-primary border-primary/20', text: <><span className="font-bold text-foreground">{partner.name.split(' ')[0]}</span> sent a request.</>, time: timeLabel };
+        ? { avatar: partner.avatar, name: partner.name, Icon: Clock, iconCls: 'text-amber-500', bg: 'bg-amber-500/10', text: <>Awaiting <span className="font-semibold text-foreground">{partner.name.split(' ')[0]}</span>.</>, time }
+        : { avatar: partner.avatar, name: partner.name, Icon: Users, iconCls: 'text-primary', bg: 'bg-primary/10', text: <><span className="font-semibold text-foreground">{partner.name.split(' ')[0]}</span> sent you a request.</>, time };
     case 'completed':
-      return { avatar: partner.avatar, name: partner.name, icon: Star, color: 'text-amber-500', bg: 'bg-amber-500/10 text-amber-500 border-amber-500/20', text: <>Session with <span className="font-bold text-foreground">{partner.name.split(' ')[0]}</span> completed!</>, time: timeLabel };
+      return { avatar: partner.avatar, name: partner.name, Icon: Star, iconCls: 'text-amber-500', bg: 'bg-amber-500/10', text: <>Session with <span className="font-semibold text-foreground">{partner.name.split(' ')[0]}</span> completed.</>, time };
     default:
       return null;
   }
 }
 
-
-/* ── Onboarding Progress ────────────────────────────────────────────────── */
-function OnboardingProgress({ user, exchanges }: { user: any; exchanges: Exchange[] }) {
+/* ─── Onboarding strip (compact, horizontal) ─────────────────── */
+function OnboardingProgress({
+  user,
+  exchanges,
+}: {
+  user: { skillsOffered?: unknown[]; skillsWanted?: unknown[] } | null;
+  exchanges: Exchange[];
+}) {
   const hasSkills = (user?.skillsOffered?.length ?? 0) > 0 || (user?.skillsWanted?.length ?? 0) > 0;
   const hasMatch = exchanges.length > 0;
-  const hasSession = exchanges.some(e => e.status?.toLowerCase() === 'accepted' && e.sessionDate);
+  const hasSession = exchanges.some(
+    e => e.status?.toLowerCase() === 'accepted' && e.sessionDate
+  );
 
   const steps = [
-    { title: "Add your skills", desc: "List what you can teach and what you want to learn.", done: hasSkills, link: '/settings?tab=skills' },
-    { title: "Find a match", desc: "Send an exchange request to a fellow student.", done: hasMatch, link: '/match' },
-    { title: "Schedule a session", desc: "Set a time to meet up and exchange knowledge.", done: hasSession, link: '/match' }
+    { title: 'Add skills', done: hasSkills, link: '/settings?tab=skills', Icon: Zap },
+    { title: 'Find a match', done: hasMatch, link: '/match', Icon: Search },
+    { title: 'Schedule session', done: hasSession, link: '/match', Icon: CalendarDays },
   ];
 
   const completed = steps.filter(s => s.done).length;
-  if (completed === steps.length) return null; // hide entirely if done
+  if (completed === steps.length) return null;
+
+  const pct = Math.round((completed / steps.length) * 100);
 
   return (
-    <ScrollReveal animation="zoom-in" delay={0.2} duration={0.6}>
-      <Card className="overflow-hidden glass-subtle border-2 border-primary/30 bg-primary/10 shadow-lg">
-        <CardContent className="p-5 md:p-6">
-          <div className="flex flex-col gap-4 md:flex-row md:items-center justify-between">
-            <div>
-              <h3 className="font-headline font-bold text-lg text-primary">Let's get you set up!</h3>
-              <p className="text-sm text-muted-foreground mt-1">Complete these steps to start your first skill exchange.</p>
-            </div>
-            <div className="flex items-center gap-3">
-              <div className="text-right">
-                <p className="text-xs font-bold text-primary">{Math.round((completed / steps.length) * 100)}% Complete</p>
-                <p className="text-[10px] text-muted-foreground">{completed} of {steps.length} steps</p>
+    <ScrollReveal animation="fade-up" delay={0.1}>
+      <Card className="border-border/60 bg-card dark:border-white/[0.07]">
+        <CardContent className="p-4">
+          <div className="flex flex-col gap-4 sm:flex-row sm:items-center">
+            <div className="flex-1 min-w-0">
+              <div className="flex items-center justify-between mb-1.5">
+                <h3 className="text-sm font-semibold text-foreground">Getting started</h3>
+                <span className="text-xs font-semibold text-primary">{pct}%</span>
               </div>
-              <svg className="w-12 h-12 transform -rotate-90">
-                <circle cx="24" cy="24" r="20" stroke="currentColor" strokeWidth="4" fill="none" className="text-primary/10" />
-                <circle cx="24" cy="24" r="20" stroke="currentColor" strokeWidth="4" fill="none" className="text-primary transition-all duration-1000 ease-out" strokeDasharray="125.6" strokeDashoffset={125.6 - (125.6 * completed / steps.length)} />
-              </svg>
+              <Progress value={pct} className="h-1.5" />
             </div>
-          </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-3 mt-6">
-            {steps.map((step, i) => (
-              <Link key={i} to={step.link} className={cn("block relative p-4 rounded-xl border-2 transition-all duration-300", step.done ? "bg-background/50 border-border opacity-60" : "bg-card border-primary/30 hover:border-primary hover:shadow-md shadow-sm")}>
-                <div className="flex items-start gap-3">
-                  <div className="shrink-0 mt-0.5">
-                    {step.done ? <CheckCircle className="w-5 h-5 text-emerald-500" /> : <div className="w-5 h-5 rounded-full border-2 border-primary" />}
-                  </div>
-                  <div>
-                    <h4 className={cn("font-bold text-sm", step.done ? "line-through text-muted-foreground" : "text-foreground")}>{step.title}</h4>
-                    <p className="text-[11px] text-muted-foreground mt-1 leading-snug">{step.desc}</p>
-                  </div>
-                </div>
-              </Link>
-            ))}
+            <div className="flex items-center gap-2 flex-wrap">
+              {steps.map((step, i) => (
+                <Link
+                  key={i}
+                  to={step.link}
+                  className={cn(
+                    'flex items-center gap-1.5 rounded-lg border px-2.5 py-1.5 text-xs font-medium transition-all duration-200',
+                    step.done
+                      ? 'border-emerald-500/20 bg-emerald-500/8 text-emerald-700 dark:text-emerald-400 cursor-default pointer-events-none'
+                      : 'border-border bg-muted/40 text-muted-foreground hover:border-primary/30 hover:text-primary hover:bg-primary/5'
+                  )}
+                >
+                  {step.done
+                    ? <CheckCircle className="h-3.5 w-3.5 text-emerald-500" />
+                    : <step.Icon className="h-3.5 w-3.5" />}
+                  {step.title}
+                </Link>
+              ))}
+            </div>
           </div>
         </CardContent>
       </Card>
@@ -513,390 +546,868 @@ function OnboardingProgress({ user, exchanges }: { user: any; exchanges: Exchang
   );
 }
 
-/* ── Section heading ─────────────────────────────────────────────────── */
-function SectionHeading({ children, action }: { children: React.ReactNode; action?: React.ReactNode }) {
+/* ─── Section heading (consistent typography) ────────────────── */
+function SectionHeading({
+  icon: Icon,
+  children,
+  action,
+}: {
+  icon?: React.FC<{ className?: string }>;
+  children: React.ReactNode;
+  action?: React.ReactNode;
+}) {
   return (
-    <div className="flex items-center justify-between mb-5">
-      <h2 className="font-headline text-xl font-bold tracking-tight">{children}</h2>
+    <div className="mb-4 flex items-center justify-between">
+      <h2 className="flex items-center gap-2 font-headline text-base font-semibold tracking-tight text-foreground">
+        {Icon && <Icon className="h-4 w-4 text-muted-foreground" />}
+        {children}
+      </h2>
       {action}
     </div>
   );
 }
 
-/* ── Main page ───────────────────────────────────────────────────────── */
+/* ─── Rank widget ─────────────────────────────────────────────── */
+function RankWidget({ score }: { score: number }) {
+  const ranks = [
+    { label: 'Explorer',  min: 0,   pct: '#64748b' },
+    { label: 'Learner',   min: 50,  pct: '#10b981' },
+    { label: 'Mentor',    min: 150, pct: '#3b82f6' },
+    { label: 'Expert',    min: 300, pct: '#8b5cf6' },
+    { label: 'Master',    min: 500, pct: 'hsl(var(--primary))' },
+  ];
+  const rankIdx = [...ranks].reverse().findIndex(r => score >= r.min);
+  const current = [...ranks].reverse()[rankIdx] ?? ranks[0];
+  const next    = ranks[ranks.indexOf(current) + 1];
+  const pct = next
+    ? Math.min(((score - current.min) / (next.min - current.min)) * 100, 100)
+    : 100;
+
+  return (
+    <Card className="border-border/60 bg-card dark:border-white/[0.07]">
+      <CardContent className="p-5">
+        <div className="flex items-center justify-between mb-4">
+          <div className="flex items-center gap-2">
+            <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-primary/10">
+              <Award className="h-4 w-4 text-primary" />
+            </div>
+            <div>
+              <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Rank</p>
+              <p className="text-sm font-bold text-foreground">{current.label}</p>
+            </div>
+          </div>
+          <div className="text-right">
+            <p className="text-xs text-muted-foreground">Score</p>
+            <p className="font-headline text-xl font-bold text-foreground tabular-nums">{score}</p>
+          </div>
+        </div>
+
+        {next && (
+          <div>
+            <div className="flex items-center justify-between mb-1.5">
+              <p className="text-xs text-muted-foreground">
+                {next.min - score} pts to <span className="font-semibold">{next.label}</span>
+              </p>
+              <p className="text-xs font-semibold text-primary">{Math.round(pct)}%</p>
+            </div>
+            <div className="relative h-1.5 w-full overflow-hidden rounded-full bg-muted">
+              <motion.div
+                className="h-full rounded-full bg-primary"
+                initial={{ width: '0%' }}
+                animate={{ width: `${pct}%` }}
+                transition={{ duration: 1.2, delay: 0.4, ease: 'easeOut' }}
+              />
+            </div>
+          </div>
+        )}
+      </CardContent>
+    </Card>
+  );
+}
+
+/* ─── Sidebar: Connections tab ────────────────────────────────── */
+function ConnectionsTab({
+  connections,
+  loading,
+  busy,
+  onUpdate,
+  currentUserId,
+}: {
+  connections: Connection[];
+  loading: boolean;
+  busy: Record<string, boolean>;
+  onUpdate: (c: Connection, s: 'accepted' | 'declined') => Promise<void>;
+  currentUserId: string;
+}) {
+  if (loading) {
+    return (
+      <div className="space-y-3 p-4">
+        {[0, 1].map(i => (
+          <div key={i} className="flex items-center gap-3">
+            <Skeleton className="h-9 w-9 rounded-full" />
+            <div className="flex-1 space-y-2">
+              <Skeleton className="h-3.5 w-24" />
+              <Skeleton className="h-3 w-36" />
+            </div>
+          </div>
+        ))}
+      </div>
+    );
+  }
+
+  if (connections.length === 0) {
+    return (
+      <div className="flex flex-col items-center justify-center py-10 text-center p-4">
+        <Users className="h-8 w-8 text-muted-foreground/40 mb-3" />
+        <p className="text-sm font-semibold text-foreground">No pending requests</p>
+        <p className="mt-1 text-xs text-muted-foreground">
+          Connection requests will appear here.
+        </p>
+      </div>
+    );
+  }
+
+  return (
+    <div className="space-y-2 p-4">
+      {connections.slice(0, 4).map((conn, i) => {
+        const partner = conn.requester.id === currentUserId ? conn.receiver : conn.requester;
+        return (
+          <motion.div
+            key={conn.id}
+            initial={{ opacity: 0, y: 8 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: i * 0.05 }}
+            className="rounded-xl border border-border/50 bg-muted/20 p-3 hover:bg-muted/40 transition-colors duration-200"
+          >
+            <div className="flex items-center gap-3">
+              <Avatar className="h-9 w-9 shrink-0">
+                <AvatarImage src={partner.avatar ?? undefined} />
+                <AvatarFallback className="text-xs font-semibold bg-muted">
+                  {partner.name.charAt(0)}
+                </AvatarFallback>
+              </Avatar>
+              <div className="min-w-0 flex-1">
+                <p className="truncate text-sm font-semibold text-foreground">{partner.name}</p>
+                <p className="truncate text-xs text-muted-foreground">@{partner.username ?? 'user'}</p>
+              </div>
+            </div>
+            {conn.message && (
+              <p className="mt-2 text-xs text-muted-foreground line-clamp-2 italic">
+                "{conn.message}"
+              </p>
+            )}
+            <div className="mt-3 grid grid-cols-2 gap-2">
+              <Button
+                size="sm"
+                variant="outline"
+                className="rounded-lg text-xs border-destructive/20 text-destructive hover:bg-destructive/8"
+                onClick={() => onUpdate(conn, 'declined')}
+                disabled={busy[conn.id]}
+              >
+                Decline
+              </Button>
+              <Button
+                size="sm"
+                className="rounded-lg text-xs"
+                onClick={() => onUpdate(conn, 'accepted')}
+                disabled={busy[conn.id]}
+              >
+                {busy[conn.id] ? 'Accepting…' : 'Accept'}
+              </Button>
+            </div>
+          </motion.div>
+        );
+      })}
+    </div>
+  );
+}
+
+/* ─── Sidebar: Skills tab ─────────────────────────────────────── */
+function SkillsTab({
+  user,
+}: {
+  user: { skillsOffered?: Skill[]; skillsWanted?: Skill[]; id?: string } | null;
+}) {
+  const offered = user?.skillsOffered ?? [];
+  const wanted  = user?.skillsWanted  ?? [];
+
+  return (
+    <div className="space-y-5 p-4">
+      {/* Teaching */}
+      <div>
+        <div className="mb-2.5 flex items-center gap-2">
+          <Zap className="h-3.5 w-3.5 text-primary" />
+          <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Teaching</p>
+          <Badge variant="secondary" className="ml-auto text-[10px] rounded-full">{offered.length}</Badge>
+        </div>
+        {!user ? (
+          <div className="flex flex-wrap gap-1.5">
+            {[0, 1, 2].map(i => <Skeleton key={i} className="h-6 w-16 rounded-full" />)}
+          </div>
+        ) : offered.length === 0 ? (
+          <div className="rounded-lg border border-dashed border-border bg-muted/20 px-3 py-2 text-center">
+            <p className="text-xs text-muted-foreground">No skills added yet.</p>
+            <Button asChild size="sm" variant="link" className="h-auto p-0 text-xs text-primary mt-1">
+              <Link to={`/profile/${user?.id}`}>Add skills to teach →</Link>
+            </Button>
+          </div>
+        ) : (
+          <div className="flex flex-wrap gap-1.5">
+            {offered.slice(0, 6).map((skill, i) => (
+              <motion.span
+                key={skill.id}
+                initial={{ opacity: 0, scale: 0.8 }}
+                animate={{ opacity: 1, scale: 1 }}
+                transition={{ delay: i * 0.04 }}
+                className="inline-flex items-center rounded-full border border-primary/25 bg-primary/10 px-2.5 py-0.5 text-xs font-medium text-primary dark:text-primary"
+              >
+                {skill.name}
+              </motion.span>
+            ))}
+            {offered.length > 6 && (
+              <span className="inline-flex items-center rounded-full border border-border bg-muted/50 px-2.5 py-0.5 text-xs text-muted-foreground">
+                +{offered.length - 6}
+              </span>
+            )}
+          </div>
+        )}
+      </div>
+
+      <Separator />
+
+      {/* Learning */}
+      <div>
+        <div className="mb-2.5 flex items-center gap-2">
+          <BookOpen className="h-3.5 w-3.5 text-secondary" />
+          <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Learning</p>
+          <Badge variant="secondary" className="ml-auto text-[10px] rounded-full">{wanted.length}</Badge>
+        </div>
+        {!user ? (
+          <div className="flex flex-wrap gap-1.5">
+            {[0, 1, 2].map(i => <Skeleton key={i} className="h-6 w-16 rounded-full" />)}
+          </div>
+        ) : wanted.length === 0 ? (
+          <div className="rounded-lg border border-dashed border-border bg-muted/20 px-3 py-2 text-center">
+            <p className="text-xs text-muted-foreground">No learning goals added yet.</p>
+          </div>
+        ) : (
+          <div className="flex flex-wrap gap-1.5">
+            {wanted.slice(0, 6).map((skill, i) => (
+              <motion.span
+                key={skill.id}
+                initial={{ opacity: 0, scale: 0.8 }}
+                animate={{ opacity: 1, scale: 1 }}
+                transition={{ delay: i * 0.04 }}
+                className="inline-flex items-center rounded-full border border-secondary/25 bg-secondary/10 px-2.5 py-0.5 text-xs font-medium text-secondary dark:text-secondary"
+              >
+                {skill.name}
+              </motion.span>
+            ))}
+            {wanted.length > 6 && (
+              <span className="inline-flex items-center rounded-full border border-border bg-muted/50 px-2.5 py-0.5 text-xs text-muted-foreground">
+                +{wanted.length - 6}
+              </span>
+            )}
+          </div>
+        )}
+      </div>
+
+      <Button asChild variant="outline" size="sm" className="w-full rounded-lg text-xs mt-1">
+        <Link to={`/profile/${user?.id}`}>
+          Manage Skills <ArrowRight className="ml-1.5 h-3.5 w-3.5" />
+        </Link>
+      </Button>
+    </div>
+  );
+}
+
+/* ─── Sidebar: Activity tab ───────────────────────────────────── */
+function ActivityTab({ items }: { items: ReturnType<typeof activityFromExchange>[] }) {
+  if (items.length === 0) {
+    return (
+      <div className="flex flex-col items-center justify-center py-10 text-center p-4">
+        <motion.div
+          animate={{ scale: [1, 1.06, 1] }}
+          transition={{ duration: 3, repeat: Infinity }}
+          className="mb-3 flex h-10 w-10 items-center justify-center rounded-xl bg-muted border border-border"
+        >
+          <Activity className="h-5 w-5 text-muted-foreground/60" />
+        </motion.div>
+        <p className="text-sm font-semibold text-foreground">No recent activity</p>
+        <p className="mt-1 text-xs text-muted-foreground max-w-[24ch]">
+          Activity from exchanges will appear here.
+        </p>
+      </div>
+    );
+  }
+
+  return (
+    <div className="divide-y divide-border/40 p-1">
+      {items.map((item, i) =>
+        item ? (
+          <motion.div
+            key={i}
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            transition={{ delay: i * 0.06 }}
+            className="group flex items-start gap-3 rounded-lg px-3 py-3 transition-colors hover:bg-muted/40"
+          >
+            <div className="relative shrink-0">
+              <div className="flex h-8 w-8 items-center justify-center overflow-hidden rounded-full ring-1 ring-border">
+                {item.avatar
+                  ? <img src={item.avatar} alt={item.name} className="h-full w-full object-cover" />
+                  : <span className="text-xs font-semibold">{item.name?.charAt(0)}</span>}
+              </div>
+              <div className={cn(
+                'absolute -bottom-0.5 -right-0.5 flex h-4 w-4 items-center justify-center rounded-full border-2 border-card',
+                item.bg
+              )}>
+                <item.Icon className={cn('h-2.5 w-2.5', item.iconCls)} />
+              </div>
+            </div>
+            <div className="min-w-0 flex-1">
+              <p className="text-xs text-muted-foreground leading-relaxed">{item.text}</p>
+              <p className="mt-0.5 text-[10px] text-muted-foreground/60">{item.time}</p>
+            </div>
+          </motion.div>
+        ) : null
+      )}
+    </div>
+  );
+}
+
+/* ─── Upcoming Sessions ───────────────────────────────────────── */
+function UpcomingSessionsSection({
+  sessions,
+  loading,
+  currentUserId,
+}: {
+  sessions: Exchange[];
+  loading: boolean;
+  currentUserId: string;
+}) {
+  if (loading) {
+    return (
+      <div className="space-y-3">
+        {[0, 1].map(i => (
+          <div key={i} className="flex items-center gap-3 rounded-xl border border-border/50 p-3">
+            <Skeleton className="h-9 w-9 rounded-full" />
+            <div className="flex-1 space-y-2">
+              <Skeleton className="h-3.5 w-40" />
+              <Skeleton className="h-3 w-28" />
+            </div>
+          </div>
+        ))}
+      </div>
+    );
+  }
+
+  if (sessions.length === 0) {
+    return (
+      <div className="flex flex-col items-center py-8 text-center">
+        <Clock className="h-8 w-8 text-muted-foreground/40 mb-3" />
+        <p className="text-sm font-semibold">No upcoming sessions</p>
+        <p className="text-xs text-muted-foreground mt-1 max-w-[26ch]">
+          Accept an exchange and schedule your first session.
+        </p>
+      </div>
+    );
+  }
+
+  return (
+    <div className="relative space-y-3">
+      {/* Timeline line */}
+      <div className="absolute left-[17px] top-5 bottom-5 w-px bg-gradient-to-b from-border via-border/40 to-transparent" />
+
+      {sessions.slice(0, 3).map((exchange, i) => {
+        const partner = exchange.requester.id === currentUserId
+          ? exchange.receiver
+          : exchange.requester;
+        const skill = exchange.offeredSkill ?? exchange.wantedSkill;
+        const isNext = i === 0;
+
+        return (
+          <motion.div
+            key={exchange.id}
+            initial={{ opacity: 0, x: -8 }}
+            animate={{ opacity: 1, x: 0 }}
+            transition={{ delay: i * 0.08 }}
+            className="relative flex items-center gap-3"
+          >
+            {/* Timeline dot */}
+            <div className={cn(
+              'relative z-10 h-[18px] w-[18px] shrink-0 rounded-full border-2 border-card shadow-sm',
+              isNext ? 'bg-primary' : 'bg-border'
+            )}>
+              {isNext && (
+                <span className="absolute inset-0 rounded-full bg-primary animate-ping opacity-50" />
+              )}
+            </div>
+
+            {/* Card */}
+            <div className={cn(
+              'flex flex-1 items-center gap-3 rounded-xl border px-3 py-2.5 transition-all duration-200',
+              isNext
+                ? 'border-primary/20 bg-primary/5 dark:bg-primary/8'
+                : 'border-border/50 bg-muted/20 hover:bg-muted/40'
+            )}>
+              <Avatar className="h-8 w-8 shrink-0">
+                <AvatarImage src={partner.avatar ?? undefined} />
+                <AvatarFallback className="text-xs font-semibold">{partner.name.charAt(0)}</AvatarFallback>
+              </Avatar>
+              <div className="min-w-0 flex-1">
+                <p className="text-sm font-semibold truncate">
+                  {skill?.name ?? 'Skill Exchange'}
+                  <span className="font-normal text-muted-foreground"> with </span>
+                  {partner.name.split(' ')[0]}
+                </p>
+                <p className="text-xs text-muted-foreground mt-0.5">
+                  {exchange.sessionDate
+                    ? new Date(exchange.sessionDate).toLocaleDateString('en-US', {
+                        weekday: 'short', month: 'short', day: 'numeric',
+                        hour: 'numeric', minute: '2-digit',
+                      })
+                    : 'Date TBD'}
+                </p>
+              </div>
+              {isNext && (
+                <Button size="sm" className="shrink-0 rounded-lg text-xs h-7 px-2.5">
+                  <Play className="h-3 w-3 mr-1" /> Join
+                </Button>
+              )}
+            </div>
+          </motion.div>
+        );
+      })}
+    </div>
+  );
+}
+
+/* ─────────────────────────────────────────────────────────────
+   MAIN PAGE
+───────────────────────────────────────────────────────────── */
 export default function DashboardPage() {
+  useDocumentTitle('Dashboard — SkillEx');
+
   const { user } = useAuth();
+  const { toast } = useToast();
   const { exchanges, loading } = useExchanges();
-  const [serverStats, setServerStats] = React.useState<{ sessionsCompleted?: number; skillexScore?: number; activeExchanges?: number } | null>(null);
+  const {
+    connections: pendingIncomingConnections,
+    loading: connectionsLoading,
+    refetch: refetchConnections,
+  } = useConnections({ status: 'pending', direction: 'received' });
+  const [connectionBusy, setConnectionBusy] = useState<Record<string, boolean>>({});
+  const [serverStats, setServerStats] = React.useState<{
+    sessionsCompleted?: number;
+    skillexScore?: number;
+    activeExchanges?: number;
+    pendingConnections?: number;
+  } | null>(null);
 
   React.useEffect(() => {
     DashboardService.getStats()
-      .then((s) => setServerStats({
+      .then(s => setServerStats({
         sessionsCompleted: s.sessionsCompleted,
         skillexScore: s.skillexScore,
         activeExchanges: (s.activeExchanges ?? 0) + (s.pendingExchanges ?? 0),
+        pendingConnections: s.pendingConnections,
       }))
-      .catch(() => {}); // silently fall back to client-side values
+      .catch(() => {});
   }, []);
 
   const currentUserId = user?.id ?? '';
-  const activeExchanges = exchanges.filter(e => { const s = e.status?.toLowerCase(); return s === 'pending' || s === 'accepted'; });
-  const upcomingSessions = exchanges.filter(e => e.status?.toLowerCase() === 'accepted' && e.sessionDate);
-  const activityItems = exchanges.slice(0, 5).map(e => activityFromExchange(e, currentUserId)).filter(Boolean);
+  const activeExchanges = exchanges.filter(e => {
+    const s = e.status?.toLowerCase();
+    return s === 'pending' || s === 'accepted';
+  });
+  const upcomingSessions = exchanges.filter(
+    e => e.status?.toLowerCase() === 'accepted' && e.sessionDate
+  );
+  const activityItems = exchanges
+    .slice(0, 6)
+    .map(e => activityFromExchange(e, currentUserId))
+    .filter(Boolean);
+
+  const pendingConnectionCount = connectionsLoading
+    ? (serverStats?.pendingConnections ?? 0)
+    : pendingIncomingConnections.length;
+
+  const handleConnectionUpdate = async (
+    connection: Connection,
+    status: 'accepted' | 'declined'
+  ) => {
+    const partner = connection.requester.id === currentUserId
+      ? connection.receiver
+      : connection.requester;
+    setConnectionBusy(prev => ({ ...prev, [connection.id]: true }));
+    try {
+      await connectionService.updateStatus(connection.id, status);
+      await refetchConnections();
+      toast({
+        title: status === 'accepted' ? 'Connection accepted' : 'Connection declined',
+        description: `${partner.name.split(' ')[0]} ${status === 'accepted' ? 'added to your network' : 'request declined'}.`,
+        variant: status === 'accepted' ? 'success' : 'destructive',
+      });
+    } catch (error) {
+      const msg = error instanceof Error ? error.message : 'Could not update connection.';
+      toast({ title: 'Update failed', description: msg, variant: 'destructive' });
+    } finally {
+      setConnectionBusy(prev => ({ ...prev, [connection.id]: false }));
+    }
+  };
 
   const getGreeting = () => {
     const h = new Date().getHours();
-    if (h < 12) return { text: 'Good morning', icon: '🌅' };
-    if (h < 18) return { text: 'Good afternoon', icon: '☀️' };
-    return { text: 'Good evening', icon: '🌙' };
-  };
-  const greeting = getGreeting();
-
-  const containerVariants = { hidden: { opacity: 0 }, visible: { opacity: 1, transition: { staggerChildren: 0.07 } } };
-  const itemVariants = {
-    hidden: { opacity: 0, y: 18 },
-    visible: { opacity: 1, y: 0, transition: { type: 'spring', stiffness: 120, damping: 22 } },
+    if (h < 12) return 'Good morning';
+    if (h < 18) return 'Good afternoon';
+    return 'Good evening';
   };
 
-  const stats: StatCardProps[] = [
-    { icon: BookOpen, title: 'Skills Offered', value: user?.skillsOffered?.length ?? 0, trend: '+0', trendLabel: 'total', colorKey: 'primary', index: 0 },
-    { icon: Users, title: 'Active Exchanges', value: serverStats?.activeExchanges ?? activeExchanges.length, trend: '+0', trendLabel: 'ongoing', colorKey: 'secondary', index: 1 },
-    { icon: CheckCircle, title: 'Sessions Completed', value: serverStats?.sessionsCompleted ?? user?.sessionsCompleted ?? 0, trend: '+0', trendLabel: 'all time', colorKey: 'green', index: 2 },
-    { icon: Star, title: 'SkillEx Score', value: serverStats?.skillexScore ?? user?.skillexScore ?? 0, trend: '+0', trendLabel: 'total', colorKey: 'accent', index: 3 },
+  const skillexScore = serverStats?.skillexScore ?? user?.skillexScore ?? 0;
+
+  const statCards: StatCardProps[] = [
+    {
+      icon: BookOpen,
+      title: 'Skills Offered',
+      value: user?.skillsOffered?.length ?? 0,
+      footnote: 'skills you can teach',
+      index: 0,
+    },
+    {
+      icon: Users,
+      title: 'Active Exchanges',
+      value: serverStats?.activeExchanges ?? activeExchanges.length,
+      footnote: 'ongoing exchanges',
+      index: 1,
+    },
+    {
+      icon: CheckCircle,
+      title: 'Sessions Done',
+      value: serverStats?.sessionsCompleted ?? user?.sessionsCompleted ?? 0,
+      footnote: 'completed sessions',
+      index: 2,
+    },
+    {
+      icon: Star,
+      title: 'SkillEx Score',
+      value: skillexScore,
+      footnote: 'your reputation score',
+      index: 3,
+    },
   ];
 
   return (
     <DashboardLayout>
-      <div className="container mx-auto px-4 py-6 md:px-8 md:py-8 space-y-8">
+      <div className="mx-auto w-full max-w-7xl space-y-6 px-4 py-6 md:px-6 lg:px-8">
 
-        {/* ══ Hero Banner ══════════════════════════════════════════════ */}
-        <ScrollReveal animation="fade-down" delay={0.1} duration={0.8}>
-          <div className="relative overflow-hidden rounded-3xl glass-strong p-6 md:p-8 border-2 border-border shadow-xl">
-            {/* Dynamic Background Image Sequence */}
-            <motion.div
-              className="absolute inset-0 z-0 pointer-events-none opacity-[0.03] dark:opacity-20 mix-blend-overlay"
-              animate={{ scale: [1.02, 1.05, 1.02], rotate: [0, 0.5, 0], x: [0, -5, 0] }}
-              transition={{ duration: 30, repeat: Infinity, ease: 'linear' }}
-            >
-              <img src="https://images.unsplash.com/photo-1550745165-9bc0b252726f?q=80&w=2000&auto=format&fit=crop" className="w-full h-full object-cover grayscale brightness-110 contrast-125 blur-sm" alt="Dashboard Abstract" />
-            </motion.div>
+        {/* ══ HERO ═══════════════════════════════════════════════════════ */}
+        <ScrollReveal animation="fade-down" delay={0.05} duration={0.6}>
+          {/* Consistent muted-teal gradient — not cartoonish, not rainbow */}
+          <div className="relative overflow-hidden rounded-2xl border border-border/60 bg-card dark:border-white/[0.07]">
+            {/* Subtle background: one direction, one tone — no orbs */}
+            <div className="absolute inset-0 bg-gradient-to-br from-primary/6 via-transparent to-transparent dark:from-primary/10 dark:to-transparent pointer-events-none" />
+            <div className="absolute inset-0 dot-grid opacity-[0.025] dark:opacity-[0.04] pointer-events-none" />
 
-            {/* Gradient mesh inside banner */}
-            <div className="pointer-events-none absolute inset-0 bg-gradient-to-r from-primary/10 via-background/60 to-secondary/10 dark:from-primary/20 dark:via-background/80 dark:to-accent/10 z-0" />
-            <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(ellipse_100%_100%_at_100%_0%,hsl(var(--secondary)/0.15),transparent)] z-0" />
-            {/* Ambient blobs */}
-            <div className="pointer-events-none absolute -top-12 -left-12 h-44 w-44 rounded-full bg-primary/20 blur-[80px]" />
-            <div className="pointer-events-none absolute -bottom-12 -right-8 h-52 w-52 rounded-full bg-primary/15 blur-[80px]" />
-            {/* Decorative dots pattern top-right */}
-            <div className="pointer-events-none absolute right-6 top-6 opacity-[0.07]"
-              style={{ backgroundImage: 'radial-gradient(hsl(var(--primary)) 1px,transparent 1px)', backgroundSize: '12px 12px', width: 96, height: 72 }} />
-
-            <div className="relative z-10 flex flex-col gap-5 md:flex-row md:items-center md:justify-between">
+            <div className="relative z-10 flex flex-col gap-5 p-6 md:flex-row md:items-center md:justify-between lg:p-8">
+              {/* Left — identity */}
               <div className="flex items-center gap-5">
-                {/* Avatar with pulse ring */}
                 <div className="relative hidden sm:block shrink-0">
-                  <div className="absolute inset-[-4px] rounded-full bg-gradient-to-br from-primary via-primary/50 to-transparent opacity-70 animate-breathe" />
-                  <Avatar className="relative h-16 w-16 ring-4 ring-card/80">
+                  <Avatar className="h-14 w-14 ring-2 ring-border shadow-sm">
                     <AvatarImage src={user?.avatar} alt={user?.name} />
-                    <AvatarFallback className="text-xl font-black">{user?.name?.charAt(0)}</AvatarFallback>
+                    <AvatarFallback className="text-lg font-bold bg-muted">
+                      {user?.name?.charAt(0)}
+                    </AvatarFallback>
                   </Avatar>
-                  <motion.span
-                    className="absolute bottom-0.5 right-0.5 h-4 w-4 rounded-full border-2 border-background bg-primary shadow-glow-sm"
-                    initial={{ scale: 0 }} animate={{ scale: 1 }}
-                    transition={{ delay: 0.5, type: 'spring', stiffness: 400 }}
-                  />
+                  {user?.isOnline && (
+                    <span className="absolute bottom-0.5 right-0.5 h-3.5 w-3.5 rounded-full bg-emerald-500 border-2 border-card shadow-sm" />
+                  )}
                 </div>
-
                 <div>
-                  <h1 className="font-headline text-3xl font-extrabold tracking-tight md:text-4xl text-foreground">
-                    {greeting.text},{' '}
-                    <span className="text-transparent bg-clip-text bg-gradient-to-r from-primary to-[hsl(185_100%_35%)]">
-                      {user?.name?.split(' ')[0]}
-                    </span>
-                    {' '}
-                    <motion.span
-                      className="inline-block origin-[70%_70%]"
-                      animate={{ rotate: [0, -14, 14, -8, 8, -4, 4, 0] }}
-                      transition={{ duration: 2.5, repeat: Infinity, repeatDelay: 4 }}
-                    >{greeting.icon}</motion.span>
-                  </h1>
-                  <p className="mt-1 text-sm text-muted-foreground">Here&apos;s your SkillEx summary for today.</p>
-
-                  {/* Mini stat pills */}
-                  <div className="mt-4 flex flex-wrap gap-2.5">
-                    {[
-                      { icon: BookOpen, label: `${user?.skillsOffered?.length ?? 0} skills`, cls: 'text-primary bg-primary/15 border-2 border-primary/40 shadow-sm' },
-                      { icon: Users, label: `${activeExchanges.length} active`, cls: 'text-primary bg-primary/15 border-2 border-primary/40 shadow-sm' },
-                      { icon: Star, label: `${user?.skillexScore ?? 0} pts`, cls: 'text-amber-400 bg-amber-500/15 border-2 border-amber-500/40 shadow-glow-sm' },
-                      { icon: CheckCircle, label: `${user?.sessionsCompleted ?? 0} done`, cls: 'text-emerald-400 bg-emerald-500/15 border-2 border-emerald-500/40 shadow-sm' },
-                    ].map(({ icon: IC, label, cls }) => (
-                      <span key={label} className={cn('flex items-center gap-1.5 rounded-full px-2.5 py-1 text-[11px] font-semibold', cls)}>
-                        <IC className="h-3 w-3" />{label}
-                      </span>
-                    ))}
-                  </div>
+                  <motion.p
+                    initial={{ opacity: 0, y: -6 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ delay: 0.1 }}
+                    className="text-xs font-semibold uppercase tracking-widest text-muted-foreground mb-1"
+                  >
+                    {getGreeting()}
+                  </motion.p>
+                  <motion.h1
+                    initial={{ opacity: 0, y: 6 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ delay: 0.16, type: 'spring', stiffness: 200 }}
+                    className="font-headline text-2xl font-bold tracking-tight text-foreground md:text-3xl"
+                  >
+                    {user?.name?.split(' ')[0] ?? 'Learner'}
+                  </motion.h1>
+                  <motion.p
+                    initial={{ opacity: 0 }}
+                    animate={{ opacity: 1 }}
+                    transition={{ delay: 0.26 }}
+                    className="mt-1 text-sm text-muted-foreground max-w-[42ch]"
+                  >
+                    {user?.university
+                      ? `${user.university} · Member since ${new Date(user.joinedAt ?? Date.now()).getFullYear()}`
+                      : 'Skill exchange platform · Track your learning journey'}
+                  </motion.p>
                 </div>
               </div>
 
-              <div className="flex flex-wrap items-center gap-2.5 shrink-0">
-                <Button asChild variant="outline" size="sm" className="rounded-xl">
-                  <Link to="/match"><Search className="mr-2 h-3.5 w-3.5" />Find a Match</Link>
+              {/* Right — primary actions (Rule 2: enable shortcuts) */}
+              <motion.div
+                initial={{ opacity: 0, x: 12 }}
+                animate={{ opacity: 1, x: 0 }}
+                transition={{ delay: 0.2 }}
+                className="flex flex-wrap gap-2.5 shrink-0"
+              >
+                <Button asChild size="sm" className="rounded-lg">
+                  <Link to="/match">
+                    <Search className="mr-2 h-4 w-4" />
+                    Find a Match
+                  </Link>
                 </Button>
-                <Button asChild size="sm" className="rounded-xl font-bold">
-                  <Link to={user?.id ? `/profile/${user.id}` : '/settings'}><TrendingUp className="mr-2 h-3.5 w-3.5" />My Progress</Link>
+                <Button asChild variant="outline" size="sm" className="rounded-lg">
+                  <Link to={user?.id ? `/profile/${user.id}` : '/settings'}>
+                    <BarChart3 className="mr-2 h-4 w-4" />
+                    My Profile
+                  </Link>
                 </Button>
-              </div>
+                <Button asChild variant="ghost" size="sm" className="rounded-lg">
+                  <Link to="/community">
+                    <MessageSquare className="mr-2 h-4 w-4" />
+                    Community
+                  </Link>
+                </Button>
+              </motion.div>
             </div>
           </div>
         </ScrollReveal>
 
-        {/* ══ Onboarding Checklist ═══════════════════════════════════════ */}
+        {/* ══ ONBOARDING ══════════════════════════════════════════════════ */}
         {!loading && user && (
           <OnboardingProgress user={user} exchanges={exchanges} />
         )}
 
-        {/* ══ Stat Cards ═══════════════════════════════════════════════ */}
-        <ScrollRevealGroup
-          className="grid grid-cols-2 gap-4 lg:grid-cols-4"
-          animation="jitter-scale"
-          staggerChildren={0.1}
-          delay={0.15}
-        >
-          {stats.map((stat) => <StatCard key={stat.title} {...stat} />)}
-        </ScrollRevealGroup>
+        {/* ══ INTERACTIVE DASHBOARD SECTION (MODERN LAYOUT) ══════════════ */}
+        <div className="space-y-6">
+          
+          {/* Top Row: Important Stats & Boost Banner */}
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-5 xl:gap-6">
+            <div className="col-span-1 lg:col-span-2 grid grid-cols-1 sm:grid-cols-2 gap-5 xl:gap-6">
+              <ScrollReveal animation="fade-up" delay={0.1}>
+                {statCards[1] && <StatCard key="active-exchanges" {...statCards[1]} index={0} />}
+              </ScrollReveal>
+              <ScrollReveal animation="fade-up" delay={0.15}>
+                {statCards[3] && <StatCard key="skillex-score" {...statCards[3]} index={1} />}
+              </ScrollReveal>
+            </div>
+            
+            <div className="col-span-1 border-none shadow-none h-full">
+              <ScrollReveal animation="fade-left" delay={0.2}>
+                <BoostBanner />
+              </ScrollReveal>
+            </div>
+          </div>
 
-        {/* ══ Main grid ════════════════════════════════════════════════ */}
-        <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
+          {/* Middle Row: Performance Chart & Task Progress */}
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-5 xl:gap-6 items-stretch">
+            <div className="col-span-1 lg:col-span-2 min-h-[300px]">
+              <ScrollReveal animation="fade-right" delay={0.1}>
+                <ActivityChart 
+                  data={[
+                    { name: 'Aug', hours: 40, amt: 2400 },
+                    { name: 'Sep', hours: 30, amt: 2210 },
+                    { name: 'Oct', hours: 60, amt: 2290 },
+                    { name: 'Nov', hours: 48, amt: 2000 },
+                    { name: 'Dec', hours: 80, amt: 2181 },
+                    { name: 'Jan', hours: 75, amt: 2500 },
+                    { name: 'Feb', hours: 100, amt: 2100 },
+                    { name: 'Mar', hours: 85, amt: 2100 },
+                  ]} 
+                  trend={12} 
+                />
+              </ScrollReveal>
+            </div>
+            
+            <div className="col-span-1 w-full h-full">
+              <ScrollReveal animation="fade-left" delay={0.15}>
+                <TaskProgressWidget />
+              </ScrollReveal>
+            </div>
+          </div>
 
-          {/* Left column */}
-          <div className="space-y-6 lg:col-span-2">
+          {/* Bottom Row: Carousel */}
+          <ScrollReveal animation="fade-up" delay={0.2}>
+            <Card className="border-border/60 bg-transparent shadow-none dark:border-transparent mt-4 mb-2">
+              <SessionCarousel exchanges={exchanges} currentUserId={currentUserId} />
+            </Card>
+          </ScrollReveal>
+
+        </div>
+
+        {/* ══ SECONDARY GRID: ACTIVE EXCHANGES & CONNECTIONS ════════════ */}
+        <div className="grid grid-cols-1 gap-5 xl:grid-cols-[minmax(0,1.6fr)_380px] xl:gap-6 mt-8 pt-8 border-t border-border/40">
+
+          {/* ── LEFT COLUMN ─────────────────────────────────────────────── */}
+          <div className="space-y-6">
 
             {/* Active Exchanges */}
-            <ScrollReveal animation="fade-up" delay={0.2}>
-              <SectionHeading action={
-                <Button variant="link" size="sm" asChild className="text-xs">
-                  <Link to="/match">Find More <ArrowRight className="ml-1 h-3.5 w-3.5" /></Link>
-                </Button>
-              }>
+            <ScrollReveal animation="fade-up" delay={0.12}>
+              <SectionHeading
+                icon={Zap}
+                action={
+                  <Button asChild variant="link" size="sm" className="h-auto p-0 text-xs text-primary">
+                    <Link to="/match">
+                      Find more <ArrowRight className="ml-1 h-3 w-3" />
+                    </Link>
+                  </Button>
+                }
+              >
                 Active Exchanges
               </SectionHeading>
-              {loading ? (
-                <div className="grid grid-cols-1 gap-4 md:grid-cols-2"><ExchangeSkeleton /><ExchangeSkeleton /></div>
-              ) : activeExchanges.length === 0 ? (
-                <EmptyExchanges />
-              ) : (
-                <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
-                  {activeExchanges.slice(0, 4).map(ex => (
-                    <ExchangeCard key={ex.id} exchange={ex} currentUserId={currentUserId} />
-                  ))}
-                </div>
-              )}
+
+              <motion.div
+                variants={{ hidden: {}, visible: { transition: { staggerChildren: 0.07 } } }}
+                initial="hidden"
+                animate="visible"
+              >
+                {loading ? (
+                  <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+                    <ExchangeSkeleton />
+                    <ExchangeSkeleton />
+                  </div>
+                ) : activeExchanges.length === 0 ? (
+                  <EmptyExchanges />
+                ) : (
+                  <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+                    {activeExchanges.slice(0, 4).map(ex => (
+                      <ExchangeCard key={ex.id} exchange={ex} currentUserId={currentUserId} />
+                    ))}
+                  </div>
+                )}
+              </motion.div>
             </ScrollReveal>
 
             {/* Upcoming Sessions */}
-            <ScrollReveal animation="fade-up" delay={0.3}>
-              <SectionHeading>Upcoming Sessions</SectionHeading>
-              <Card className="border-2 shadow-lg">
+            <ScrollReveal animation="fade-up" delay={0.18}>
+              <SectionHeading icon={CalendarDays}>Upcoming Sessions</SectionHeading>
+              <Card className="border-border/60 bg-card dark:border-white/[0.07]">
                 <CardContent className="p-5">
-                  {loading ? (
-                    <div className="space-y-4">
-                      {[0, 1, 2].map(i => (
-                        <div key={i} className="flex items-center gap-4">
-                          <Skeleton className="h-10 w-10 rounded-full" />
-                          <div className="space-y-2 flex-1"><Skeleton className="h-4 w-40" /><Skeleton className="h-3 w-28" /></div>
-                        </div>
-                      ))}
-                    </div>
-                  ) : upcomingSessions.length === 0 ? (
-                    <div className="flex flex-col items-center justify-center py-10 text-center">
-                      <div className="mb-3 flex h-12 w-12 items-center justify-center rounded-2xl bg-muted border-2 border-border shadow-sm">
-                        <Clock className="h-5 w-5 text-muted-foreground/50" />
-                      </div>
-                      <p className="font-semibold text-sm">No sessions scheduled</p>
-                      <p className="text-xs text-muted-foreground mt-1 max-w-[22ch]">Accept an exchange and schedule your first session!</p>
-                      <Button asChild size="sm" variant="outline" className="mt-4 rounded-xl">
-                        <Link to="/match">Find Matches</Link>
-                      </Button>
-                    </div>
-                  ) : (
-                    <div className="relative space-y-5">
-                      <div className="absolute left-[18px] top-4 bottom-4 w-px bg-gradient-to-b from-primary/40 via-border to-transparent" />
-                      {upcomingSessions.slice(0, 3).map((exchange, i) => {
-                        const partner = exchange.requester.id === currentUserId ? exchange.receiver : exchange.requester;
-                        const skill = exchange.offeredSkill ?? exchange.wantedSkill;
-                        return (
-                          <div key={exchange.id} className="relative flex items-center gap-4">
-                            <div className={cn(
-                              'absolute left-0 h-[18px] w-[18px] rounded-full border-2 border-background flex items-center justify-center shrink-0',
-                              i === 0 ? 'bg-amber-400/20 border-amber-500/30' : 'bg-primary/20 border-primary/30'
-                            )}>
-                              <span className="h-1.5 w-1.5 rounded-full bg-white" />
-                            </div>
-                            <div className="pl-8 flex items-center gap-3 flex-1 min-w-0">
-                              <Avatar className="h-9 w-9 shrink-0">
-                                <AvatarImage src={partner.avatar ?? undefined} />
-                                <AvatarFallback className="text-xs font-bold">{partner.name.charAt(0)}</AvatarFallback>
-                              </Avatar>
-                              <div className="min-w-0 flex-1">
-                                <p className="font-semibold text-sm truncate">{skill?.name ?? 'Skill Exchange'} <span className="font-normal text-muted-foreground">with</span> {partner.name.split(' ')[0]}</p>
-                                <p className="text-xs text-muted-foreground mt-0.5">
-                                  {exchange.sessionDate
-                                    ? new Date(exchange.sessionDate).toLocaleDateString('en-US', { weekday: 'long', hour: 'numeric', minute: 'numeric' })
-                                    : 'Date TBD'}
-                                </p>
-                              </div>
-                            </div>
-                            {i === 0 && (
-                              <Button size="sm" className="rounded-xl text-xs font-bold shrink-0">
-                                Join Now
-                              </Button>
-                            )}
-                          </div>
-                        );
-                      })}
-                    </div>
-                  )}
+                  <UpcomingSessionsSection
+                    sessions={upcomingSessions}
+                    loading={loading}
+                    currentUserId={currentUserId}
+                  />
                 </CardContent>
               </Card>
             </ScrollReveal>
+
+            {/* Rank widget — below sessions in left col */}
+            <ScrollReveal animation="fade-up" delay={0.22}>
+              <RankWidget score={skillexScore} />
+            </ScrollReveal>
           </div>
 
-          {/* Right column */}
-          <div className="space-y-6 lg:col-span-1">
-            <div className="sticky top-[88px] space-y-6">
+          {/* ── RIGHT COLUMN ────────────────────────────────────────────── */}
+          <div>
+            <div className="xl:sticky xl:top-[76px] space-y-5">
+              <ScrollReveal animation="fade-left" delay={0.15}>
+                {/* Section header outside the card */}
+                <div className="mb-4 flex items-center justify-between">
+                  <h2 className="flex items-center gap-2 font-headline text-base font-semibold text-foreground">
+                    <Users className="h-4 w-4 text-muted-foreground" />
+                    Your Network
+                  </h2>
+                  {pendingConnectionCount > 0 && (
+                    <Badge className="text-[10px] rounded-full">
+                      {pendingConnectionCount} pending
+                    </Badge>
+                  )}
+                </div>
 
-              {/* Your Skills */}
-              <ScrollReveal animation="fade-left" delay={0.4}>
-                <SectionHeading>Your Skills</SectionHeading>
-                <Card className="overflow-hidden glass-subtle border-2 border-border shadow-lg">
-                  {/* Teaching section */}
-                  <div className="border-b-2 border-border p-5">
-                    <p className="flex items-center gap-2 text-sm font-bold mb-3">
-                      <span className="flex h-6 w-6 items-center justify-center rounded-lg bg-primary/15 border-2 border-primary/30 shadow-sm">
-                        <Zap className="h-3.5 w-3.5 text-primary" />
-                      </span>
-                      Teaching
-                    </p>
-                    {!user ? (
-                      <div className="flex flex-wrap gap-1.5">{[0, 1, 2].map(i => <Skeleton key={i} className="h-6 w-16 rounded-full" />)}</div>
-                    ) : (user.skillsOffered ?? []).length === 0 ? (
-                        <div className="flex flex-col items-center justify-center p-4 rounded-xl border-2 border-dashed border-border bg-muted/20 text-center shadow-sm">
-                          <p className="text-xs text-muted-foreground mb-2">No skills added yet.</p>
-                          <Button asChild size="sm" variant="outline" className="h-7 text-[11px] rounded-lg">
-                            <Link to={`/profile/${user?.id}`} className="text-primary hover:text-primary">Add skills to teach</Link>
-                          </Button>
-                        </div>
-                    ) : (
-                      <div className="flex flex-wrap gap-2">
-                        {(user.skillsOffered ?? []).slice(0, 5).map((skill: Skill) => (
-                          <div key={skill.id} className="inline-flex items-center rounded-full bg-primary/15 border-2 border-primary/40 px-2.5 py-1 text-xs font-semibold text-primary shadow-sm">
-                            {skill.name}
-                          </div>
-                        ))}
-                        {(user.skillsOffered ?? []).length > 5 && (
-                          <div className="inline-flex items-center rounded-full bg-muted/50 border-2 border-border px-2.5 py-1 text-xs font-semibold text-muted-foreground">
-                            +{(user.skillsOffered ?? []).length - 5} more
-                          </div>
-                        )}
-                      </div>
-                    )}
-                  </div>
-                  {/* Learning section */}
-                  <div className="p-5">
-                    <p className="flex items-center gap-2 text-sm font-bold mb-3">
-                      <span className="flex h-6 w-6 items-center justify-center rounded-lg bg-primary/15 border-2 border-primary/30 shadow-sm">
-                        <BookOpen className="h-3.5 w-3.5 text-primary" />
-                      </span>
-                      Learning
-                    </p>
-                    {!user ? (
-                      <div className="flex flex-wrap gap-1.5">{[0, 1, 2].map(i => <Skeleton key={i} className="h-6 w-16 rounded-full" />)}</div>
-                    ) : (user.skillsWanted ?? []).length === 0 ? (
-                        <div className="flex flex-col items-center justify-center p-4 rounded-xl border-2 border-dashed border-border bg-muted/20 text-center shadow-sm">
-                          <p className="text-xs text-muted-foreground">You haven't listed what you want to learn.</p>
-                        </div>
-                    ) : (
-                      <div className="flex flex-wrap gap-2">
-                        {(user.skillsWanted ?? []).slice(0, 5).map((skill: Skill) => (
-                          <div key={skill.id} className="inline-flex items-center rounded-full bg-primary/10 border-2 border-primary/30 px-2.5 py-1 text-xs font-semibold text-primary shadow-sm">
-                            {skill.name}
-                          </div>
-                        ))}
-                        {(user.skillsWanted ?? []).length > 5 && (
-                          <div className="inline-flex items-center rounded-full bg-muted/50 border-2 border-border px-2.5 py-1 text-xs font-semibold text-muted-foreground">
-                            +{(user.skillsWanted ?? []).length - 5} more
-                          </div>
-                        )}
-                      </div>
-                    )}
-                    <Button asChild variant="outline" size="sm" className="mt-5 w-full rounded-xl text-xs border-border bg-background shadow-none hover:bg-muted">
-                      <Link to={`/profile/${user?.id}`}>Edit Skills <ArrowRight className="ml-1.5 h-3.5 w-3.5" /></Link>
-                    </Button>
-                  </div>
+                {/* ShadCN Tabs — consistent horizontal nav */}
+                <Card className="overflow-hidden border-border/60 bg-card dark:border-white/[0.07]">
+                  <Tabs defaultValue="connections">
+                    <div className="border-b border-border/60 px-1 pt-1">
+                      <TabsList className="w-full bg-transparent h-10 p-0 gap-0">
+                        <TabsTrigger
+                          value="connections"
+                          className="flex-1 rounded-none border-b-2 border-transparent text-xs font-semibold data-[state=active]:border-primary data-[state=active]:text-primary data-[state=active]:bg-transparent data-[state=active]:shadow-none pb-2"
+                        >
+                          Connections
+                          {pendingConnectionCount > 0 && (
+                            <span className="ml-1.5 flex h-4 min-w-4 items-center justify-center rounded-full bg-primary px-1 text-[9px] font-bold text-primary-foreground">
+                              {pendingConnectionCount}
+                            </span>
+                          )}
+                        </TabsTrigger>
+                        <TabsTrigger
+                          value="skills"
+                          className="flex-1 rounded-none border-b-2 border-transparent text-xs font-semibold data-[state=active]:border-primary data-[state=active]:text-primary data-[state=active]:bg-transparent data-[state=active]:shadow-none pb-2"
+                        >
+                          Skills
+                        </TabsTrigger>
+                        <TabsTrigger
+                          value="activity"
+                          className="flex-1 rounded-none border-b-2 border-transparent text-xs font-semibold data-[state=active]:border-primary data-[state=active]:text-primary data-[state=active]:bg-transparent data-[state=active]:shadow-none pb-2"
+                        >
+                          Activity
+                        </TabsTrigger>
+                      </TabsList>
+                    </div>
+
+                    <TabsContent value="connections" className="mt-0 focus-visible:outline-none">
+                      <ConnectionsTab
+                        connections={pendingIncomingConnections}
+                        loading={connectionsLoading}
+                        busy={connectionBusy}
+                        onUpdate={handleConnectionUpdate}
+                        currentUserId={currentUserId}
+                      />
+                    </TabsContent>
+
+                    <TabsContent value="skills" className="mt-0 focus-visible:outline-none">
+                      <SkillsTab user={user} />
+                    </TabsContent>
+
+                    <TabsContent value="activity" className="mt-0 focus-visible:outline-none">
+                      <ActivityTab items={activityItems} />
+                    </TabsContent>
+                  </Tabs>
                 </Card>
               </ScrollReveal>
 
-              {/* Live Network Activity Feed */}
-              <ScrollReveal animation="fade-left" delay={0.5}>
-                <SectionHeading>
-                  <span className="flex items-center gap-2">
-                    Live Network
-                    <span className="relative flex h-2 w-2">
-                      <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
-                      <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-500"></span>
-                    </span>
-                  </span>
-                </SectionHeading>
-
-                <Card className="glass-subtle border-2 border-border shadow-lg">
-                  <CardContent className="p-5">
-                    <div className="space-y-4">
-                      {activityItems.length > 0 ? (
-                        activityItems.map((item, i) => (
-                          item ? (
-                            <div key={i} className="group relative flex items-start gap-3 rounded-xl p-2.5 transition-all hover:bg-muted/70 hover:shadow-sm dark:hover:bg-white/5 cursor-default border-2 border-transparent hover:border-border/60">
-                              <div className="relative flex h-9 w-9 shrink-0 items-center justify-center rounded-xl overflow-hidden ring-2 ring-border shadow-sm">
-                                {item.avatar ? (
-                                  <img src={item.avatar} alt={item.name} className="h-full w-full object-cover transition-transform duration-500 group-hover:scale-110" />
-                                ) : (
-                                  <div className={cn('flex h-full w-full flex-col items-center justify-center bg-background', item.bg)}>
-                                    <span className="text-xs font-bold text-primary">{item.name?.charAt(0)}</span>
-                                  </div>
-                                )}
-                                {/* Tiny bottom-right badge for status */}
-                                <div className={cn('absolute -bottom-0.5 -right-0.5 flex h-4 w-4 shrink-0 items-center justify-center rounded-full border-[1.5px] border-background bg-background', item.bg)}>
-                                  {item.icon && <item.icon className="h-2.5 w-2.5 drop-shadow-md" />}
-                                </div>
-                              </div>
-                              <div className="flex-1 min-w-0 flex flex-col justify-center pt-0.5">
-                                <p className="text-xs text-muted-foreground leading-relaxed">
-                                  {item.text}
-                                </p>
-                                <p className="mt-0.5 text-[10px] text-muted-foreground/60">{item.time}</p>
-                              </div>
-                            </div>
-                          ) : null
-                        ))
-                      ) : (
-                        <div className="text-center py-10 flex flex-col items-center justify-center relative overflow-hidden rounded-xl border-2 border-dashed border-border bg-muted/30 shadow-sm">
-                          <motion.div
-                            animate={{ scale: [1, 1.05, 1], opacity: [0.7, 1, 0.7] }}
-                            transition={{ duration: 3, repeat: Infinity }}
-                            className="w-12 h-12 rounded-full bg-primary/10 flex items-center justify-center mb-3"
-                          >
-                            <Sparkles className="h-5 w-5 text-primary" />
-                          </motion.div>
-                          <p className="font-semibold text-sm">Quiet Network</p>
-                          <p className="text-xs text-muted-foreground mt-1 max-w-[20ch]">
-                            No recent activity yet. When users match and learn, it will appear here.
-                          </p>
-                        </div>
-                      )}
-                    </div>
+              {/* Quick navigation shortcuts (Rule 2: shortcuts) */}
+              <ScrollReveal animation="fade-left" delay={0.22}>
+                <Card className="border-border/60 bg-card dark:border-white/[0.07]">
+                  <CardContent className="p-4">
+                    <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground mb-3">
+                      Navigate
+                    </p>
+                    <nav className="space-y-1">
+                      {[
+                        { to: '/match',       Icon: Search,      label: 'Skill Marketplace',   desc: 'Find skill partners' },
+                        { to: '/connections', Icon: Users,       label: 'My Connections',      desc: 'Manage your network' },
+                        { to: '/community',   Icon: MessageSquare, label: 'Community',          desc: 'Discussions & posts' },
+                        { to: '/settings',    Icon: TrendingUp,  label: 'Settings & Profile',  desc: 'Update your skills' },
+                      ].map(item => (
+                        <Link
+                          key={item.to}
+                          to={item.to}
+                          className="group flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm transition-colors duration-150 hover:bg-muted/50"
+                        >
+                          <item.Icon className="h-4 w-4 text-muted-foreground group-hover:text-primary transition-colors duration-150 shrink-0" />
+                          <div className="min-w-0 flex-1">
+                            <p className="text-sm font-medium text-foreground truncate">{item.label}</p>
+                            <p className="text-xs text-muted-foreground truncate">{item.desc}</p>
+                          </div>
+                          <ChevronRight className="h-3.5 w-3.5 text-muted-foreground/40 group-hover:text-primary/60 transition-colors duration-150 shrink-0" />
+                        </Link>
+                      ))}
+                    </nav>
                   </CardContent>
                 </Card>
               </ScrollReveal>
-
             </div>
           </div>
         </div>

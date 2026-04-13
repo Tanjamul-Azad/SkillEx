@@ -23,6 +23,9 @@ export const CommunityService = {
   getPosts: (page = 0, size = 20): Promise<PagedResponse<Post>> =>
     api.get<PagedResponse<Post>>(`/community/posts?page=${page}&size=${size}`),
 
+  searchPosts: (intent: string, page = 0, size = 20): Promise<PagedResponse<Post>> =>
+    api.get<PagedResponse<Post>>(`/community/posts/search?intent=${encodeURIComponent(intent)}&page=${page}&size=${size}`),
+
   /** Stories endpoint returns a plain list (not paged) */
   getStories: (): Promise<Story[]> => api.get<Story[]>('/community/stories'),
 

@@ -13,9 +13,9 @@ const Card = React.forwardRef<
       "relative overflow-hidden rounded-xl bg-card border border-border text-card-foreground shadow-sm",
       // GPU compositing and transitions
       "transform-gpu will-change-transform",
-      "transition-all duration-300 ease-out",
+      "transition-[transform,box-shadow,border-color,background-color] duration-220 ease-expo-out",
       // Hover properties - levitate slightly
-      "hover:-translate-y-1 hover:shadow-md",
+      "hover:-translate-y-0.5 hover:shadow-card-hover",
       "group",
       className
     )}

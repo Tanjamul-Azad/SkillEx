@@ -32,6 +32,7 @@ import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/comp
 import {
   LayoutDashboard, Zap, Users, User, Settings, LogOut,
   ChevronLeft, ChevronRight, X, MessageSquare,
+  UserPlus,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { dashboardNav } from '@/config/navigation.config';
@@ -44,6 +45,7 @@ const ICON_MAP: Record<string, LucideIcon> = {
   Zap,
   Users,
   User,
+  UserPlus,
   Settings,
   MessageSquare,
 };
@@ -80,7 +82,7 @@ function NavItem({
         'transition-all duration-300 ease-out select-none outline-none',
         'focus-visible:ring-2 focus-visible:ring-primary/40 focus-visible:ring-offset-2 ring-offset-background',
         isActive
-          ? 'bg-primary/10 text-primary shadow-[inset_0_0_0_1px_hsl(var(--primary)/0.25)]'
+          ? 'bg-primary/10 text-primary dark:bg-white/5 dark:text-primary shadow-[inset_0_0_0_1px_hsl(var(--primary)/0.25)] dark:shadow-none'
           : 'text-muted-foreground hover:text-foreground',
         collapsed && 'justify-center px-0 py-2.5'
       )}
@@ -163,7 +165,7 @@ function SidebarContent({
           className="group flex items-center gap-2.5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40 rounded-xl"
           aria-label="SkillEx — go to home"
         >
-          <div className="relative flex h-8 w-8 shrink-0 items-center justify-center rounded-xl bg-gradient-to-br from-primary to-secondary shadow-[0_0_12px_hsl(var(--primary)/0.4)] transition-all duration-300 group-hover:shadow-[0_0_20px_hsl(var(--primary)/0.6)] group-hover:scale-105">
+          <div className="relative flex h-8 w-8 shrink-0 items-center justify-center rounded-xl bg-gradient-to-br from-primary to-secondary shadow-sm transition-all duration-300 group-hover:shadow-md group-hover:scale-105">
             <Zap className="h-4 w-4 text-white transition-transform group-hover:-rotate-12 duration-300" aria-hidden="true" />
           </div>
           <AnimatePresence initial={false}>
@@ -338,10 +340,10 @@ export function AppSidebar() {
         aria-label="Primary navigation"
         className={cn(
           'fixed inset-y-0 left-0 z-40 hidden flex-col',
-          'border-r border-border/50 bg-background/95 backdrop-blur-xl',
+          'border-r border-border/60 bg-sidebar/95 backdrop-blur-xl',
           'lg:flex',
           // Subtle inner shadow to separate from content
-          'shadow-[1px_0_0_0_hsl(var(--border)/0.4)]'
+          'shadow-[1px_0_0_0_hsl(var(--border)/0.5)]'
         )}
         style={{ width: collapsed ? SIDEBAR_W_COLLAPSED : SIDEBAR_W_EXPANDED }}
       >
@@ -409,7 +411,7 @@ export function MobileSidebar() {
               aria-label="Primary navigation"
               className={cn(
                 'fixed inset-y-0 left-0 z-50 flex flex-col',
-                'border-r border-border/50 bg-background shadow-2xl',
+                'border-r border-border/60 bg-sidebar shadow-2xl',
                 'lg:hidden'
               )}
               style={{ width: SIDEBAR_W_EXPANDED }}

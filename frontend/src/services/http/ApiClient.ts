@@ -7,7 +7,8 @@
  *  - Single instance (Singleton) ensures one base URL + auth header across the app
  *  - Protected `request<T>()` template method — subclasses can call it or extend it
  *  - `ApiError` encapsulates HTTP error data (error object, not raw code)
- *  - JWT is read lazily from localStorage on every request (stateless from client POV)
+ *  - JWT is read lazily from sessionStorage on every request (stateless from client POV)
+ *  - Global 401 handler: clears the session and redirects to /login on token expiry
  *
  * Spring Boot counterpart: All calls target /api/* which Vite proxies to localhost:8080
  */
@@ -45,6 +46,25 @@ export const TokenStore = {
   set:   (t: string)  => sessionStorage.setItem(TOKEN_KEY, t),
   clear: ()           => sessionStorage.removeItem(TOKEN_KEY),
 } as const;
+
+// ──────────────────────────────────────────────────────────────────────────────
+//  Global 401 handler — redirect to /login on token expiry
+// ──────────────────────────────────────────────────────────────────────────────
+
+let _on401: (() => void) | null = null;
+
+/**
+ * Register a callback that fires when any API call returns 401 (Unauthorized).
+ * The AuthContext calls this on mount so the app navigates to /login and clears
+ * the session state without a hard reload.
+ */
+export function registerOn401Handler(fn: () => void) {
+  _on401 = fn;
+}
+
+export function clearOn401Handler() {
+  _on401 = null;
+}
 
 // ──────────────────────────────────────────────────────────────────────────────
 //  ApiClient – Abstract base HTTP client (Abstraction + Encapsulation)
@@ -106,6 +126,13 @@ export class ApiClient {
 
     if (!response.ok) {
       const errorData = await response.json().catch(() => ({}));
+
+      // Global 401 handler — token expired or invalid
+      if (response.status === 401) {
+        TokenStore.clear();
+        _on401?.();
+      }
+
       throw new ApiError(response.status, response.statusText, errorData);
     }
 

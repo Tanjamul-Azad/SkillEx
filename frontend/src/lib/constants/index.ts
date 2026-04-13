@@ -24,12 +24,12 @@ export const SKILL_LEVEL_COLORS: Record<SkillLevel, string> = {
 
 /** SkillEx score tier thresholds */
 export const SCORE_TIERS = [
-  { min: 0,    max: 199,  label: 'Newcomer',          color: 'text-muted-foreground' },
-  { min: 200,  max: 499,  label: 'Learner',            color: 'text-blue-500' },
-  { min: 500,  max: 799,  label: 'Practitioner',       color: 'text-violet-500' },
-  { min: 800,  max: 1099, label: 'Skilled',            color: 'text-amber-500' },
-  { min: 1100, max: 1499, label: 'Advanced',           color: 'text-orange-500' },
-  { min: 1500, max: Infinity, label: 'Master',         color: 'text-primary' },
+  { min: 0, max: 199, label: 'Newcomer', color: 'text-muted-foreground' },
+  { min: 200, max: 499, label: 'Learner', color: 'text-blue-500' },
+  { min: 500, max: 799, label: 'Practitioner', color: 'text-violet-500' },
+  { min: 800, max: 1099, label: 'Skilled', color: 'text-amber-500' },
+  { min: 1100, max: 1499, label: 'Advanced', color: 'text-orange-500' },
+  { min: 1500, max: Infinity, label: 'Master', color: 'text-primary' },
 ] as const;
 
 /** Maximum skills a user can offer or want */
@@ -41,8 +41,8 @@ export const MAX_PAGE_SIZE = 50;
 
 /** Match status display labels */
 export const MATCH_STATUS_LABELS = {
-  pending:   'Pending',
-  active:    'Active',
+  pending: 'Pending',
+  active: 'Active',
   completed: 'Completed',
   cancelled: 'Cancelled',
 } as const;

@@ -9,6 +9,7 @@ import java.math.BigDecimal;
 public record UserSummaryDto(
     String id,
     String name,
+    String username,
     String avatar,
     String university,
     String level,

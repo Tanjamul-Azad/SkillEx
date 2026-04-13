@@ -7,7 +7,7 @@ param(
 $root = Split-Path -Parent $MyInvocation.MyCommand.Path
 $backendEnvFile = Join-Path $root "backend\.env"
 
-function Load-BackendEnv {
+function Import-BackendEnv {
     param([string]$filePath)
 
     if (-not (Test-Path $filePath)) {
@@ -40,7 +40,7 @@ function Load-BackendEnv {
     Write-Host "Loaded $loaded backend env variables from $filePath" -ForegroundColor Green
 }
 
-function Validate-EmbeddingEnv {
+function Test-EmbeddingEnv {
     $provider = [System.Environment]::GetEnvironmentVariable("EMBEDDING_PROVIDER", "Process")
     if ([string]::IsNullOrWhiteSpace($provider)) {
         $provider = "local"
@@ -59,7 +59,7 @@ function Validate-EmbeddingEnv {
     }
 }
 
-function Kill-Servers {
+function Stop-Servers {
     Write-Host "Stopping existing servers..." -ForegroundColor Yellow
     Stop-Process -Name "java"  -Force -ErrorAction SilentlyContinue
     Stop-Process -Name "node"  -Force -ErrorAction SilentlyContinue
@@ -67,9 +67,9 @@ function Kill-Servers {
     Write-Host "Stopped." -ForegroundColor Green
 }
 
-if ($Stop) { Kill-Servers; exit 0 }
+if ($Stop) { Stop-Servers; exit 0 }
 
-Kill-Servers
+Stop-Servers
 
 Write-Host ""
 Write-Host "  Starting SkiilEX in this terminal" -ForegroundColor Green
@@ -78,8 +78,8 @@ Write-Host "  Frontend -> http://localhost:3000" -ForegroundColor Magenta
 Write-Host "  Press Ctrl+C to stop both servers" -ForegroundColor Yellow
 Write-Host ""
 
-Load-BackendEnv -filePath $backendEnvFile
-Validate-EmbeddingEnv
+Import-BackendEnv -filePath $backendEnvFile
+Test-EmbeddingEnv
 
 Push-Location $root
 try {

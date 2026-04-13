@@ -19,7 +19,7 @@ This repository is a monorepo with:
 ```text
 SkiilEX/
 |- frontend/                # React 19 + TypeScript + Vite
-|- backend/                 # Spring Boot 3.4 + Java 21 + Maven
+|- backend/                 # Spring Boot 3.4 + Java 21 + Gradle
 |- database/                # Shared DB notes/resources
 |- docs/                    # Project and architecture documentation
 |- scripts/                 # Dev automation scripts
@@ -128,7 +128,7 @@ SkiilEX/
 - Flyway database migrations
 - MySQL 8
 - Redis integration (optional caching layer)
-- Maven build
+- Gradle build
 
 ### 5.2 Layered Design
 - controller: REST endpoints

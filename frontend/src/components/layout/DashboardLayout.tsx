@@ -48,7 +48,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
   return (
     <ProtectedRouteWrapper>
       <SidebarProvider>
-        <div className="fixed inset-0 overflow-hidden bg-background">
+        <div className="fixed inset-0 overflow-hidden bg-background dashboard-theme">
           {/* Skip link for mobile too */}
           <a
             href="#main-content"
@@ -61,12 +61,8 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
             Skip to main content
           </a>
 
-          {/* Ambient background */}
-          <div className="pointer-events-none fixed inset-0 z-0 overflow-hidden" aria-hidden="true">
-            <div className="absolute -top-40 -left-40 h-96 w-96 rounded-full bg-primary/20 dark:bg-primary/10 blur-[100px] animate-blob mix-blend-multiply dark:mix-blend-screen" />
-            <div className="absolute -bottom-40 -right-40 h-[28rem] w-[28rem] rounded-full bg-secondary/20 dark:bg-secondary/10 blur-[120px] animate-blob mix-blend-multiply dark:mix-blend-screen" style={{ animationDelay: '4s' }} />
-            <div className="absolute top-1/3 left-1/3 h-80 w-80 -translate-x-1/2 -translate-y-1/2 rounded-full bg-accent/20 dark:bg-accent/10 blur-[100px] animate-blob mix-blend-multiply dark:mix-blend-screen" style={{ animationDelay: '8s' }} />
-          </div>
+          {/* Ambient background removed for minimalist look */}
+          <div className="pointer-events-none fixed inset-0 z-0 bg-background" aria-hidden="true" />
 
           {/* Desktop sidebar */}
           <AppSidebar />

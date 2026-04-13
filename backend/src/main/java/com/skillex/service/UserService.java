@@ -17,7 +17,7 @@ public interface UserService {
 
     void removeSkill(String userId, String skillId, String type);
 
-    PagedResponse<UserSummaryDto> searchUsers(String query, int page, int size);
+    PagedResponse<UserSearchResultDto> searchUsers(String viewerId, String query, int page, int size);
 
     void deleteAccount(String userId);
 }

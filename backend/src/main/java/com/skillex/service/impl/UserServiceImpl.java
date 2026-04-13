@@ -10,6 +10,7 @@ import com.skillex.repository.*;
 import com.skillex.service.DtoMapper;
 import com.skillex.service.SkillCatalogGovernanceService;
 import com.skillex.service.UserService;
+import com.skillex.service.match.CompatibilityCalculator;
 import jakarta.persistence.EntityNotFoundException;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.PageRequest;
@@ -17,6 +18,9 @@ import org.springframework.data.domain.Sort;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+
+import java.util.List;
+import java.util.Locale;
 
 /**
  * Concrete implementation of UserService.
@@ -39,6 +43,7 @@ public class UserServiceImpl implements UserService {
     private final PasswordEncoder passwordEncoder;
     private final DtoMapper mapper;
     private final SkillCatalogGovernanceService skillCatalogGovernanceService;
+    private final CompatibilityCalculator compatibilityCalculator;
 
     @Override
     @Transactional(readOnly = true)
@@ -59,10 +64,20 @@ public class UserServiceImpl implements UserService {
     public UserProfileDto updateProfile(String userId, UpdateProfileRequest req) {
         User user = findUserById(userId);
         if (req.name()       != null) user.setName(req.name());
+        if (req.username() != null) {
+            String normalizedUsername = normalizeUsername(req.username());
+            if (!normalizedUsername.equalsIgnoreCase(user.getUsername())
+                && userRepository.existsByUsernameIgnoreCase(normalizedUsername)) {
+                throw new IllegalArgumentException("Username is already in use.");
+            }
+            user.setUsername(normalizedUsername);
+        }
         if (req.university() != null) user.setUniversity(req.university());
+        if (req.location()   != null) user.setLocation(req.location());
         if (req.bio()        != null) user.setBio(req.bio());
         if (req.teachIntentText() != null) user.setTeachIntentText(req.teachIntentText().trim());
         if (req.learnIntentText() != null) user.setLearnIntentText(req.learnIntentText().trim());
+        if (req.connectionsPublic() != null) user.setConnectionsPublic(req.connectionsPublic());
         if (req.avatar()     != null) user.setAvatar(req.avatar());
         // email change — check uniqueness first
         if (req.email() != null && !req.email().equals(user.getEmail())) {
@@ -158,13 +173,45 @@ public class UserServiceImpl implements UserService {
 
     @Override
     @Transactional(readOnly = true)
-    public PagedResponse<UserSummaryDto> searchUsers(String query, int page, int size) {
+    public PagedResponse<UserSearchResultDto> searchUsers(String viewerId, String query, int page, int size) {
+        User viewer = findUserById(viewerId);
         var pageable = PageRequest.of(page, size, Sort.by("skillexScore").descending());
-        var results  = (query == null || query.isBlank())
-            ? userRepository.findAll(pageable).map(mapper::toSummary)
-            : userRepository.findByNameContainingIgnoreCaseOrUniversityContainingIgnoreCase(
-                query, query, pageable).map(mapper::toSummary);
-        return PagedResponse.of(results);
+        var results = (query == null || query.isBlank())
+            ? userRepository.findAll(pageable)
+            : userRepository.findByUsernameContainingIgnoreCaseOrNameContainingIgnoreCaseOrUniversityContainingIgnoreCase(
+                query, query, query, pageable);
+
+        List<UserSearchResultDto> content = results.getContent().stream()
+            .filter(candidate -> !candidate.getId().equals(viewerId))
+            .map(candidate -> new UserSearchResultDto(
+                candidate.getId(),
+                candidate.getName(),
+                candidate.getUsername(),
+                candidate.getAvatar(),
+                candidate.getUniversity(),
+                candidate.getSkillexScore(),
+                candidate.getRating(),
+                candidate.getSessionsCompleted(),
+                compatibilityCalculator.calculate(viewer, candidate),
+                Boolean.TRUE.equals(candidate.getIsOnline()),
+                topSkills(candidate.getSkillsOffered()),
+                topSkills(candidate.getSkillsWanted())
+            ))
+            .toList();
+
+        long adjustedTotal = results.getTotalElements();
+        if (results.getContent().stream().anyMatch(candidate -> candidate.getId().equals(viewerId))) {
+            adjustedTotal = Math.max(0, adjustedTotal - 1);
+        }
+
+        return new PagedResponse<>(
+            content,
+            results.getNumber(),
+            results.getSize(),
+            adjustedTotal,
+            results.getTotalPages(),
+            results.isLast()
+        );
     }
 
     @Override
@@ -181,5 +228,29 @@ public class UserServiceImpl implements UserService {
     private User findUserById(String userId) {
         return userRepository.findById(userId)
             .orElseThrow(() -> new EntityNotFoundException("User not found: " + userId));
+    }
+
+    private String normalizeUsername(String rawUsername) {
+        String normalized = rawUsername == null ? "" : rawUsername.trim().toLowerCase(Locale.ROOT);
+        if (normalized.startsWith("@")) {
+            normalized = normalized.substring(1);
+        }
+        normalized = normalized.replaceAll("[^a-z0-9_]", "_");
+        normalized = normalized.replaceAll("_+", "_");
+        if (normalized.length() < 3 || normalized.length() > 50) {
+            throw new IllegalArgumentException("Username must be 3-50 characters and use letters, numbers, or underscores.");
+        }
+        return normalized;
+    }
+
+    private List<String> topSkills(List<Skill> skills) {
+        if (skills == null || skills.isEmpty()) {
+            return List.of();
+        }
+        return skills.stream()
+            .map(Skill::getName)
+            .distinct()
+            .limit(3)
+            .toList();
     }
 }

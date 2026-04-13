@@ -158,28 +158,75 @@ export default function ConnectionsPage() {
                 <p className="mt-1 text-xs text-muted-foreground">{emptyMeta.description}</p>
               </div>
             ) : (
-              <div className="space-y-3">
-                {connections.map((connection) => {
+              <motion.div 
+                className="grid gap-4"
+                initial="hidden"
+                animate="visible"
+                variants={{
+                  visible: { transition: { staggerChildren: 0.1 } },
+                }}
+              >
+                {connections.map((connection, i) => {
                   const partner = getPartner(connection);
                   return (
-                    <div key={connection.id} className="rounded-xl border border-border/60 bg-background p-3 sm:p-4">
-                      <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
-                        <div className="flex items-center gap-3">
-                          <Avatar className="h-10 w-10 ring-2 ring-border">
-                            <AvatarImage src={partner.avatar ?? undefined} alt={partner.name} />
-                            <AvatarFallback>{partner.name.charAt(0)}</AvatarFallback>
-                          </Avatar>
-                          <div>
-                            <p className="text-sm font-semibold leading-tight">{partner.name}</p>
-                            <p className="text-xs text-muted-foreground">@{partner.username ?? 'user'}</p>
+                    <motion.div
+                      key={connection.id}
+                      variants={{
+                        hidden: { opacity: 0, y: 20 },
+                        visible: { opacity: 1, y: 0, transition: { type: 'spring', stiffness: 100 } }
+                      }}
+                      className="group relative overflow-hidden rounded-2xl border border-border/40 bg-card p-4 shadow-sm transition-all duration-300 hover:border-primary/40 hover:shadow-[0_8px_30px_rgb(0,0,0,0.04)] dark:hover:shadow-[0_8px_30px_rgb(255,255,255,0.02)]"
+                    >
+                      <div className="absolute inset-0 bg-gradient-to-r from-primary/5 via-transparent to-transparent opacity-0 transition-opacity duration-500 group-hover:opacity-100" />
+                      
+                      <div className="relative z-10 flex flex-col gap-4 sm:flex-row sm:items-center">
+                        <div className="flex items-center gap-4">
+                          <div className="relative">
+                            <Avatar className="h-14 w-14 ring-2 ring-primary/10 transition-all duration-500 group-hover:ring-primary/40 group-hover:scale-105 shadow-sm">
+                              <AvatarImage src={partner.avatar ?? undefined} alt={partner.name} className="object-cover" />
+                              <AvatarFallback className="bg-muted text-lg font-bold">{partner.name.charAt(0)}</AvatarFallback>
+                            </Avatar>
+                            {/* Online indicator dot for accepted connections (mocked representation) */}
+                            {activeTab === 'accepted' && (
+                              <span className="absolute bottom-0 right-0 h-3.5 w-3.5 rounded-full border-2 border-background bg-secondary shadow-sm" />
+                            )}
+                          </div>
+                          
+                          <div className="flex flex-col flex-1 min-w-0">
+                            <span 
+                              className="text-base font-headline font-bold leading-tight cursor-pointer hover:text-primary transition-colors truncate"
+                              onClick={() => navigate(`/profile/${partner.id}`)}
+                            >
+                              {partner.name}
+                            </span>
+                            <span className="text-xs font-semibold text-muted-foreground">
+                              @{partner.username ?? 'user'}
+                            </span>
+                            {connection.message && activeTab !== 'accepted' && (
+                              <p className="mt-2 text-[13px] text-foreground/80 italic border-l-2 border-primary/20 pl-2 py-0.5 w-full sm:max-w-md line-clamp-2">
+                                "{connection.message}"
+                              </p>
+                            )}
                           </div>
                         </div>
 
-                        <div className="sm:ml-auto flex flex-wrap items-center gap-2">
+                        <div className="sm:ml-auto flex flex-wrap items-center gap-2 mt-2 sm:mt-0">
                           {activeTab === 'accepted' && (
                             <>
-                              <Button size="sm" variant="outline" onClick={() => navigate(`/profile/${partner.id}`)}>View Profile</Button>
-                              <Button size="sm" onClick={() => navigate(`/messages/${partner.id}`)}>
+                              <Button 
+                                size="sm" 
+                                variant="outline" 
+                                className="rounded-xl border-dashed hover:border-solid hover:bg-primary/5 transition-all text-xs"
+                                onClick={() => navigate(`/profile/${partner.id}`)}
+                              >
+                                View Profile
+                              </Button>
+                              <Button 
+                                size="sm" 
+                                variant="gradient"
+                                className="rounded-xl text-xs hover:shadow-glow-sm transition-all"
+                                onClick={() => navigate(`/messages/${partner.id}`)}
+                              >
                                 <MessageSquare className="mr-1.5 h-3.5 w-3.5" />
                                 Message
                               </Button>
@@ -190,7 +237,7 @@ export default function ConnectionsPage() {
                             <Button
                               size="sm"
                               variant="outline"
-                              className="border-destructive/30 text-destructive hover:bg-destructive/10"
+                              className="rounded-xl border-destructive/30 text-destructive hover:bg-destructive/10 transition-colors text-xs"
                               onClick={() => updateConnectionStatus(connection.id, 'cancelled')}
                               disabled={actionBusy[connection.id]}
                             >
@@ -203,7 +250,7 @@ export default function ConnectionsPage() {
                               <Button
                                 size="sm"
                                 variant="outline"
-                                className="border-destructive/30 text-destructive hover:bg-destructive/10"
+                                className="rounded-xl border-destructive/30 text-destructive hover:bg-destructive/10 transition-colors text-xs"
                                 onClick={() => updateConnectionStatus(connection.id, 'declined')}
                                 disabled={actionBusy[connection.id]}
                               >
@@ -211,25 +258,21 @@ export default function ConnectionsPage() {
                               </Button>
                               <Button
                                 size="sm"
+                                variant="gradient"
+                                className="rounded-xl shadow-glow-sm hover:shadow-glow transition-all text-xs border border-primary/20"
                                 onClick={() => updateConnectionStatus(connection.id, 'accepted')}
                                 disabled={actionBusy[connection.id]}
                               >
-                                {actionBusy[connection.id] ? 'Accepting...' : 'Accept'}
+                                {actionBusy[connection.id] ? 'Accepting...' : 'Accept Request'}
                               </Button>
                             </>
                           )}
                         </div>
                       </div>
-
-                      {connection.message && (
-                        <p className="mt-3 rounded-lg bg-muted/50 px-3 py-2 text-xs text-muted-foreground">
-                          "{connection.message}"
-                        </p>
-                      )}
-                    </div>
+                    </motion.div>
                   );
                 })}
-              </div>
+              </motion.div>
             )}
           </CardContent>
         </Card>

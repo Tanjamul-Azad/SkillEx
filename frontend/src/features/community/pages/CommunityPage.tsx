@@ -281,36 +281,37 @@ const PostCard = React.memo(({ post }: { post: Post }) => {
 
   return (
     <>
-      <Card className="group overflow-hidden glass transition-all hover:shadow-glow-sm duration-400 ease-snappy hover:-translate-y-1">
-        <CardContent className="p-5">
+      <Card className="group overflow-hidden rounded-2xl border border-border/40 bg-card transition-all duration-300 hover:shadow-[0_8px_30px_rgb(0,0,0,0.04)] dark:hover:shadow-[0_8px_30px_rgb(255,255,255,0.02)] hover:border-primary/40 relative">
+        <div className="absolute inset-0 bg-gradient-to-r from-primary/5 via-transparent to-transparent opacity-0 transition-opacity duration-500 group-hover:opacity-100 pointer-events-none" />
+        <CardContent className="p-5 sm:p-6 relative z-10">
           <div className="flex items-center gap-3">
-            <Avatar className="ring-2 ring-border group-hover:ring-primary/30 transition-all">
-              <AvatarImage src={post.author.avatar} />
-              <AvatarFallback>{post.author.name.charAt(0)}</AvatarFallback>
+            <Avatar className="h-12 w-12 ring-2 ring-primary/10 transition-all duration-300 group-hover:ring-primary/40 group-hover:scale-105 shadow-sm">
+              <AvatarImage src={post.author.avatar} className="object-cover" />
+              <AvatarFallback className="bg-muted text-lg font-bold">{post.author.name.charAt(0)}</AvatarFallback>
             </Avatar>
-            <div>
-              <p className="font-semibold text-sm">{post.author.name}</p>
-              <p className="text-xs text-muted-foreground">{post.createdAt}</p>
+            <div className="flex flex-col">
+              <p className="font-headline font-bold text-base leading-tight hover:text-primary transition-colors cursor-pointer">{post.author.name}</p>
+              <p className="text-xs font-medium text-muted-foreground mt-0.5">{post.createdAt}</p>
             </div>
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
-                <Button variant="ghost" size="icon" className="ml-auto h-8 w-8 hover:bg-primary/5" aria-label="More options">
+                <Button variant="ghost" size="icon" className="ml-auto h-8 w-8 rounded-full hover:bg-primary/10 hover:text-primary transition-colors" aria-label="More options">
                   <MoreHorizontal className="h-4 w-4" />
                 </Button>
               </DropdownMenuTrigger>
-              <DropdownMenuContent align="end" className="w-40 rounded-xl border-border/50 bg-background/80 backdrop-blur-xl shadow-lg">
+              <DropdownMenuContent align="end" className="w-40 rounded-xl border-border/50 bg-background/80 backdrop-blur-xl shadow-lg p-1">
                 <DropdownMenuItem
                   onClick={() => toast({ title: 'Post reported', description: 'Thanks for helping keep SkillEx safe.' })}
-                  className="gap-2 cursor-pointer text-sm"
+                  className="gap-2 cursor-pointer text-sm font-medium rounded-lg hover:bg-primary/5"
                 >
                   <Flag className="h-3.5 w-3.5 text-muted-foreground" /> Report
                 </DropdownMenuItem>
                 {user?.id === post.author.id && (
                   <>
-                    <DropdownMenuSeparator />
+                    <DropdownMenuSeparator className="bg-border/40 my-1" />
                     <DropdownMenuItem
                       onClick={() => setDeleteConfirmOpen(true)}
-                      className="gap-2 cursor-pointer text-sm text-destructive focus:text-destructive"
+                      className="gap-2 cursor-pointer text-sm font-medium text-destructive focus:bg-destructive/10 focus:text-destructive rounded-lg"
                     >
                       <Trash2 className="h-3.5 w-3.5" /> Delete Post
                     </DropdownMenuItem>
@@ -566,56 +567,106 @@ const EventCard = React.memo(({ event }: { event: Event }) => {
   const [interested, setInterested] = React.useState(false);
   const { toast } = useToast();
   return (
-    <Card className="overflow-hidden h-full flex flex-col transition-all duration-400 ease-snappy hover:shadow-glow-sm hover:-translate-y-2 group">
-      <div className={cn("relative h-40 w-full flex flex-col justify-end p-4 text-white overflow-hidden", event.coverGradient)}>
-        <img src="https://images.unsplash.com/photo-1505373877841-8d25f7d46678?auto=format&fit=crop&w=400&q=80" alt="Event Cover" className="absolute inset-0 h-full w-full object-cover mix-blend-overlay opacity-60 group-hover:scale-110 transition-transform duration-700" />
-        <div className="absolute inset-0 bg-gradient-to-t from-black/90 to-transparent z-10" />
-        <Badge className="relative z-20 w-fit bg-black/40 text-white backdrop-blur-sm border-white/20">UPCOMING</Badge>
-        <h3 className="relative z-20 mt-2 text-xl font-bold text-shadow-lg drop-shadow-md">{event.title}</h3>
+    <Card className="group relative overflow-hidden h-full flex flex-col rounded-2xl border border-border/40 bg-card transition-all duration-300 hover:shadow-[0_8px_30px_rgb(0,0,0,0.04)] dark:hover:shadow-[0_8px_30px_rgb(255,255,255,0.02)] hover:border-primary/40">
+      <div className={cn("relative h-[220px] w-full flex flex-col justify-end p-5 overflow-hidden shrink-0", event.coverGradient)}>
+        <img src="https://images.unsplash.com/photo-1505373877841-8d25f7d46678?auto=format&fit=crop&w=400&q=80" alt="Event Cover" className="absolute inset-0 h-full w-full object-cover mix-blend-overlay opacity-60 transition-transform duration-700 group-hover:scale-110" />
+        <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-black/20 to-transparent z-10" />
+        <div className="relative z-20 flex flex-col gap-2">
+          <Badge className="w-fit bg-white/20 text-white hover:bg-white/30 backdrop-blur-md border-white/20 font-bold tracking-wider text-[10px]">
+            UPCOMING
+          </Badge>
+          <h3 className="font-headline text-2xl font-bold text-white leading-tight drop-shadow-md">{event.title}</h3>
+        </div>
       </div>
-      <CardContent className="p-4 flex-grow flex flex-col">
-        <div className="text-sm space-y-2">
-          <p className="flex items-center gap-2"><Calendar className="h-4 w-4" /> {new Date(event.eventDate).toLocaleDateString('en-US', { weekday: 'long', month: 'short', day: 'numeric' })}</p>
-          <p className="flex items-center gap-2"><MapPin className="h-4 w-4" /> {event.isOnline ? `Online via Zoom` : event.location}</p>
-        </div>
-        <div className="mt-3">
-          <p className="text-xs font-semibold text-muted-foreground">HOST</p>
-          <div className="flex items-center gap-2 mt-1">
-            <Avatar className="h-6 w-6"><AvatarImage src={event.host.avatar} /><AvatarFallback>{event.host.name.charAt(0)}</AvatarFallback></Avatar>
-            <span className="text-sm font-medium">{event.host.name}</span>
+      <CardContent className="p-4 flex flex-col flex-1 relative z-20 bg-card">
+        {/* Compact Details Row */}
+        <div className="flex items-start justify-between gap-2 mb-3">
+          <div className="space-y-1.5 mt-1">
+            <div className="flex items-center gap-2 text-foreground/90 font-medium text-[13px]">
+              <Calendar className="h-3.5 w-3.5 text-primary" />
+              {new Date(event.eventDate).toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric', year: 'numeric' })}
+            </div>
+            <div className="flex items-center gap-2 text-foreground/90 font-medium text-[13px]">
+              <MapPin className="h-3.5 w-3.5 text-secondary" />
+              {event.isOnline ? `Online Event` : event.location}
+            </div>
+          </div>
+          <div className="text-right flex flex-col items-end shrink-0">
+             <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider mb-1">Hosted By</p>
+             <div className="flex items-center gap-1.5 cursor-pointer hover:opacity-80 transition-opacity">
+               <Avatar className="h-6 w-6 ring-1 ring-border shadow-sm">
+                 <AvatarImage src={event.host.avatar} className="object-cover" />
+                 <AvatarFallback className="font-bold text-[9px]">{event.host.name.charAt(0)}</AvatarFallback>
+               </Avatar>
+               <p className="font-semibold text-[13px] leading-tight hover:text-primary transition-colors">{event.host.name.split(' ')[0]}</p>
+             </div>
           </div>
         </div>
-        <div className="mt-3">
-          <p className="text-xs font-semibold text-muted-foreground">SKILLS</p>
-          <div className="flex flex-wrap gap-1 mt-1">
-            {event.skills.map(skill => <Badge key={skill.id} variant="secondary">{skill.name}</Badge>)}
-          </div>
-        </div>
-        <div className="flex-grow" />
-        <div className="mt-4 flex items-center justify-between">
-          <div className="flex items-center -space-x-2">
-            {event.attendees.slice(0, 5).map(att => (
-              <Avatar key={att.id} className="h-8 w-8 border-2 border-background">
-                <AvatarImage src={att.avatar} />
-                <AvatarFallback>{att.name.charAt(0)}</AvatarFallback>
-              </Avatar>
+
+        {/* Compact Target Skills */}
+        <div className="mb-1">
+          <p className="text-[9px] font-bold text-muted-foreground uppercase tracking-wider mb-1 mt-1">Target Skills</p>
+          <div className="flex flex-wrap gap-1">
+            {event.skills.slice(0, 3).map(skill => (
+              <Badge key={skill.id} variant="secondary" className="px-1.5 py-0.5 text-[10px] font-medium bg-muted/60 text-foreground/80 hover:bg-primary/10 transition-colors">
+                {skill.name}
+              </Badge>
             ))}
+            {event.skills.length > 3 && (
+              <Badge variant="secondary" className="px-1.5 py-0.5 text-[10px] font-medium bg-muted/60 text-foreground/80">
+                +{event.skills.length - 3}
+              </Badge>
+            )}
           </div>
-          <p className="text-sm text-muted-foreground">+{event.attendees.length - 5} going</p>
         </div>
-        <div className="mt-4 flex gap-2">
-          <Button variant="outline" className={cn('w-full hover:bg-red-500/10', interested && 'bg-red-500/10 text-red-500 border-red-500/30')} onClick={async () => {
-            const wasInterested = interested;
-            setInterested(!wasInterested);
-            try {
-              await CommunityService.attendEvent(event.id);
-            } catch {
-              setInterested(wasInterested);
-            }
-          }}>
-            <Heart className={cn('mr-2', interested && 'fill-red-500 text-red-500')} /> {interested ? 'Interested ✓' : 'Interested'}
-          </Button>
-          <Button variant="gradient" className="w-full" onClick={() => toast({ title: 'Registration confirmed!', description: `See you at ${event.title}!`, variant: 'success' })}>Register</Button>
+
+        <div className="flex-grow" />
+
+        {/* Going & Buttons row */}
+        <div className="mt-4 pt-3 border-t border-border/40 flex items-center justify-between gap-3">
+          <div className="flex flex-col gap-0.5 shrink-0">
+            <span className="text-[9px] font-bold tracking-widest uppercase text-muted-foreground">Going</span>
+            <div className="flex items-center -space-x-1.5">
+              {event.attendees.slice(0, 3).map(att => (
+                <Avatar key={att.id} className="h-6 w-6 border-2 border-background shadow-sm hover:scale-110 transition-transform relative z-10 z-[1] z-[2] z-[3] z-[4] hover:z-20">
+                  <AvatarImage src={att.avatar} className="object-cover" />
+                  <AvatarFallback className="text-[9px] font-bold">{att.name.charAt(0)}</AvatarFallback>
+                </Avatar>
+              ))}
+              {event.attendees.length > 3 && (
+                <div className="flex h-6 w-6 items-center justify-center rounded-full border-2 border-background bg-secondary text-[9px] font-bold text-secondary-foreground shadow-sm relative z-10">
+                  +{event.attendees.length - 3}
+                </div>
+              )}
+            </div>
+          </div>
+          
+          <div className="flex gap-2 flex-1 justify-end">
+            <Button 
+              variant="outline" 
+              size="sm"
+              className={cn('h-8 rounded-lg border-dashed hover:border-solid hover:bg-red-500/10 hover:text-red-500 transition-all font-semibold text-[11px] px-2.5', interested && 'bg-red-500/10 text-red-500 border-red-500/30 border-solid shadow-sm')} 
+              onClick={async () => {
+                const wasInterested = interested;
+                setInterested(!wasInterested);
+                try {
+                  await CommunityService.attendEvent(event.id);
+                } catch {
+                  setInterested(wasInterested);
+                }
+              }}
+            >
+              <Heart className={cn('mr-1.5 h-3.5 w-3.5 transition-all', interested && 'fill-red-500 text-red-500 scale-110')} /> Interested
+            </Button>
+            <Button 
+              variant="gradient" 
+              size="sm"
+              className="h-8 rounded-lg text-[11px] px-4 hover:shadow-glow-sm transition-all"
+              onClick={() => toast({ title: 'Registration confirmed!', description: `See you at ${event.title}!`, variant: 'success' })}
+            >
+              Register
+            </Button>
+          </div>
         </div>
       </CardContent>
     </Card>
@@ -680,29 +731,80 @@ const CircleCard = React.memo(({ circle }: { circle: SkillCircle }) => {
   const { toast } = useToast();
   return (
     <>
-      <Card className="h-full flex flex-col transition-all duration-400 ease-snappy hover:shadow-glow-sm hover:-translate-y-2 group">
-        <CardContent className="p-6 flex-grow flex flex-col">
+      <Card className="group relative overflow-hidden h-full flex flex-col rounded-2xl border border-border/40 bg-card transition-all duration-300 hover:shadow-[0_8px_30px_rgb(0,0,0,0.04)] dark:hover:shadow-[0_8px_30px_rgb(255,255,255,0.02)] hover:border-primary/40">
+        <div className="absolute inset-0 bg-gradient-to-br from-primary/5 via-transparent to-transparent opacity-0 transition-opacity duration-500 group-hover:opacity-100 pointer-events-none" />
+        <CardContent className="p-6 flex-grow flex flex-col relative z-10">
           <div className="flex justify-between items-start">
-            <div className="p-3 glass-strong rounded-xl text-4xl shadow-[inset_0_0_0_1px_rgba(255,255,255,0.2)] group-hover:scale-110 transition-transform">{circle.icon}</div>
-            <Badge variant={circle.activity === 'VERY_ACTIVE' ? 'secondary' : circle.activity === 'QUIET' ? 'destructive' : 'default'}>{ACTIVITY_LABELS[circle.activity] ?? circle.activity}</Badge>
+            <div className="flex items-center justify-center h-14 w-14 rounded-2xl bg-gradient-to-br from-primary/10 to-secondary/10 border border-primary/20 text-3xl shadow-sm group-hover:scale-110 group-hover:-rotate-3 transition-transform duration-300">
+              {circle.icon}
+            </div>
+            <Badge 
+              variant="secondary"
+              className={cn(
+                'px-2.5 py-1 text-[10px] font-bold uppercase tracking-wider shadow-sm border border-border/50',
+                circle.activity === 'VERY_ACTIVE' ? 'bg-primary/10 text-primary hover:bg-primary/20' : 
+                circle.activity === 'QUIET' ? 'bg-destructive/10 text-destructive hover:bg-destructive/20' : 
+                'bg-muted/60 text-foreground/80 hover:bg-muted/80'
+              )}
+            >
+              {ACTIVITY_LABELS[circle.activity] ?? circle.activity}
+            </Badge>
           </div>
-          <h3 className="mt-4 text-xl font-bold font-headline">{circle.name}</h3>
-          <div className="flex flex-wrap gap-2 mt-2">
-            {circle.skills.map(skill => <Badge key={skill.id} variant="outline">{skill.name}</Badge>)}
+          <h3 className="mt-5 text-xl font-bold font-headline leading-tight hover:text-primary transition-colors cursor-pointer">{circle.name}</h3>
+          <div className="flex flex-wrap gap-1.5 mt-3">
+            {circle.skills.map(skill => (
+              <Badge key={skill.id} variant="outline" className="px-2 py-0.5 text-[10px] font-medium bg-muted/30 border-dashed hover:border-solid hover:bg-primary/5 hover:text-primary transition-all">
+                {skill.name}
+              </Badge>
+            ))}
           </div>
           <div className="flex-grow" />
-          <div className="mt-4 flex items-center justify-between">
-            <div className="flex items-center -space-x-2">
-              {circle.members.slice(0, 5).map(m => <Avatar key={m.id} className="h-8 w-8"><AvatarImage src={m.avatar} /><AvatarFallback>{m.name.charAt(0)}</AvatarFallback></Avatar>)}
+          
+          <div className="mt-5 bg-muted/20 p-3 rounded-xl border border-border/40">
+            <div className="flex items-center justify-between">
+              <div className="flex flex-col gap-0.5">
+                <span className="text-[9px] font-bold tracking-widest uppercase text-muted-foreground">Members</span>
+                <div className="flex items-center -space-x-1.5 mt-0.5">
+                  {circle.members.slice(0, 4).map(m => (
+                    <Avatar key={m.id} className="h-6 w-6 border-2 border-background shadow-sm hover:scale-110 transition-transform relative z-10 z-[1] z-[2] z-[3] z-[4] hover:z-20">
+                      <AvatarImage src={m.avatar} className="object-cover" />
+                      <AvatarFallback className="text-[9px] font-bold">{m.name.charAt(0)}</AvatarFallback>
+                    </Avatar>
+                  ))}
+                  {circle.members.length > 4 && (
+                    <div className="flex h-6 w-6 items-center justify-center rounded-full border-2 border-background bg-secondary text-[9px] font-bold text-secondary-foreground shadow-sm relative z-10">
+                      +{circle.members.length - 4}
+                    </div>
+                  )}
+                </div>
+              </div>
+              <div className="text-right">
+                <span className="text-[9px] font-bold tracking-widest uppercase text-muted-foreground block mb-0.5">Total</span>
+                <p className="text-sm font-headline font-bold text-foreground">{circle.memberCount}</p>
+              </div>
             </div>
-            <p className="text-sm font-medium">{circle.memberCount} members</p>
           </div>
-          <div className="mt-4 text-xs text-muted-foreground">Last session: {circle.lastSession ? new Date(circle.lastSession).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) : 'N/A'}</div>
-          <div className="mt-4 flex gap-2">
-            <Button variant="ghost" className="w-full" onClick={() => toast({ title: circle.name, description: `${circle.memberCount} members · ${ACTIVITY_LABELS[circle.activity] ?? circle.activity}` })}>Preview</Button>
+          
+          <div className="mt-4 flex items-center justify-between">
+            <span className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider flex items-center gap-1.5">
+              <Calendar className="h-3 w-3" />
+              Last session: {circle.lastSession ? new Date(circle.lastSession).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) : 'N/A'}
+            </span>
+          </div>
+
+          <div className="mt-4 flex gap-2.5">
+            <Button 
+              variant="outline" 
+              size="sm"
+              className="flex-1 rounded-xl text-xs border-dashed hover:border-solid hover:bg-primary/5 transition-all"
+              onClick={() => toast({ title: circle.name, description: `${circle.memberCount} members · ${ACTIVITY_LABELS[circle.activity] ?? circle.activity}` })}
+            >
+              Preview
+            </Button>
             <Button
               variant={joined ? 'outline' : 'gradient'}
-              className="w-full"
+              size="sm"
+              className={cn('flex-1 rounded-xl text-xs transition-all', joined ? 'border-primary/30 text-primary hover:bg-primary/5 shadow-sm' : 'hover:shadow-glow-sm')}
               onClick={async () => {
                 if (joined) {
                   setLeaveConfirmOpen(true);
@@ -782,31 +884,69 @@ const DiscussionCard = React.memo(({ discussion: d }: { discussion: Discussion }
   };
 
   return (
-    <Card className={cn("glass transition-all duration-400 hover:shadow-glow-sm hover:-translate-y-1 cursor-pointer", d.isPinned && "border-amber-500/30 bg-amber-500/5 dark:bg-amber-500/10")}>
-      <CardContent className="p-4 flex items-start gap-4">
-        <div className="flex flex-col items-center gap-1 p-2 rounded-md bg-muted/50">
+    <div 
+      className={cn(
+        "group relative overflow-hidden rounded-2xl border bg-card transition-all duration-300 hover:shadow-[0_8px_30px_rgb(0,0,0,0.04)] dark:hover:shadow-[0_8px_30px_rgb(255,255,255,0.02)] cursor-pointer hover:-translate-y-0.5 flex flex-col justify-center",
+        d.isPinned ? "border-amber-500/40 bg-amber-500/5 hover:border-amber-500/60" : "border-border/40 hover:border-primary/40"
+      )}
+    >
+      <div className="absolute inset-0 bg-gradient-to-r from-primary/5 via-transparent to-transparent opacity-0 transition-opacity duration-500 group-hover:opacity-100 pointer-events-none" />
+      <CardContent className="p-5 flex items-start gap-4 sm:gap-5 relative z-10">
+        <div 
+          className={cn(
+            "flex flex-col items-center gap-1.5 p-2.5 rounded-xl border transition-all duration-300 shrink-0 min-w-[56px] shadow-sm hover:scale-105 active:scale-95",
+            upvoted ? "bg-primary/10 border-primary/30 text-primary" : "bg-muted/40 border-border/50 text-muted-foreground hover:border-primary/20 hover:text-primary"
+          )}
+          onClick={(e) => {
+            e.stopPropagation();
+            handleUpvote();
+          }}
+        >
           <ArrowUp
-            className={cn("h-4 w-4 cursor-pointer hover:text-primary transition-colors", upvoted && "text-primary")}
-            onClick={handleUpvote}
+            className={cn("h-5 w-5 transition-transform duration-300", upvoted && "text-primary -translate-y-0.5")}
           />
-          <span className="font-bold text-sm">{localUpvotes}</span>
+          <span className="font-bold text-[13px] leading-none">{localUpvotes}</span>
         </div>
-        <div className="flex-1">
-          <div className="flex items-center gap-2 flex-wrap">
-            {d.isPinned && <Badge variant="outline" className="border-amber-500 text-amber-600 gap-1"><Pin className="h-3 w-3" /> Pinned</Badge>}
-            <Badge variant="secondary">{d.category}</Badge>
+        <div className="flex-1 min-w-0">
+          <div className="flex flex-wrap gap-2 items-center mb-1.5">
+            {d.isPinned && (
+              <Badge variant="outline" className="border-amber-500/50 text-amber-600 dark:text-amber-400 bg-amber-500/10 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider shadow-sm flex items-center gap-1">
+                <Pin className="h-3 w-3" /> Pinned
+              </Badge>
+            )}
+            <Badge variant="secondary" className="px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider bg-muted/60 text-foreground/80 hover:bg-primary/10 transition-colors">
+              {d.category}
+            </Badge>
+            <span className="text-[10px] font-semibold text-muted-foreground ml-auto hidden sm:inline-block">
+              {d.createdAt}
+            </span>
           </div>
-          <h3 className="font-bold font-headline mt-1 hover:underline cursor-pointer">{d.title}</h3>
-          <div className="mt-2 flex items-center gap-4 text-xs text-muted-foreground">
-            <div className="flex items-center gap-1"><Avatar className="h-5 w-5"><AvatarImage src={d.author.avatar} /><AvatarFallback>{d.author.name.charAt(0)}</AvatarFallback></Avatar> {d.author.name}</div>
-            <span>{d.replies} replies</span>
-            <span>{d.views} views</span>
-            <span>{d.createdAt}</span>
+          <h3 className="font-headline font-bold text-base sm:text-lg leading-snug group-hover:text-primary transition-colors pr-2 line-clamp-2">
+            {d.title}
+          </h3>
+          <div className="mt-3 flex items-center flex-wrap gap-x-4 gap-y-2">
+            <div className="flex items-center gap-2 cursor-pointer group-hover/author:opacity-80 transition-opacity">
+              <Avatar className="h-6 w-6 ring-2 ring-border shadow-sm group-hover:ring-primary/20 transition-all">
+                <AvatarImage src={d.author.avatar} className="object-cover" />
+                <AvatarFallback className="font-bold text-[10px]">{d.author.name.charAt(0)}</AvatarFallback>
+              </Avatar>
+              <span className="text-xs font-semibold hover:text-primary transition-colors">{d.author.name}</span>
+            </div>
+            <div className="flex items-center gap-3 text-xs font-medium text-muted-foreground">
+              <div className="flex items-center gap-1.5">
+                <div className="p-1 rounded-md bg-secondary/10 text-secondary"><MessageSquare className="h-3 w-3" /></div>
+                {d.replies} <span className="hidden sm:inline">replies</span>
+              </div>
+              <div className="flex items-center gap-1.5">
+                <span className="h-1 w-1 rounded-full bg-border" />
+                {d.views} <span className="hidden sm:inline">views</span>
+              </div>
+              <span className="sm:hidden ml-auto text-[10px]">{d.createdAt}</span>
+            </div>
           </div>
         </div>
-        <Avatar className="ml-auto hidden sm:block"><AvatarImage src={d.author.avatar} /></Avatar>
       </CardContent>
-    </Card>
+    </div>
   );
 });
 DiscussionCard.displayName = 'DiscussionCard';

@@ -176,13 +176,13 @@ export const ExchangeChainCard: FC<Props> = ({ data, currentUserId, className, o
   // So: fromUser offers that skill; toUser wants it
   const participantInfo = cycle.userIds.map((uid, idx) => {
     const offersHop = cycle.hops.find(h => h.fromUserId === uid);
-    const wantsHop  = cycle.hops.find(h => h.toUserId   === uid);
+    const wantsHop = cycle.hops.find(h => h.toUserId === uid);
     return {
-      id:         uid,
-      name:       cycle.userNames[idx] ?? uid,
-      offers:     offersHop?.primarySkillName,
-      wants:      wantsHop?.primarySkillName,
-      colorIdx:   idx,
+      id: uid,
+      name: cycle.userNames[idx] ?? uid,
+      offers: offersHop?.primarySkillName,
+      wants: wantsHop?.primarySkillName,
+      colorIdx: idx,
     };
   });
 

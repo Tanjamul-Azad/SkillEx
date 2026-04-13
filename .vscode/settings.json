@@ -4,7 +4,8 @@
     "java.import.gradle.java.home": "C:\\Users\\User\\.jdk\\jdk-21.0.8",
     "java.import.gradle.enabled": true,
     "java.import.gradle.wrapper.enabled": true,
-    "java.gradle.buildServer.enabled": "off",
+    "java.gradle.buildServer.enabled": "on",
+    "java.server.launchMode": "Standard",
     "java.import.exclusions": [
         "frontend",
         "node_modules",

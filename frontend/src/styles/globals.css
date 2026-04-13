@@ -4,83 +4,114 @@
 
 @layer base {
   :root {
-    /* ── Core palette ─────────────────────────────────────── */
-    --background: 220 18% 97%;      /* Neutral warm-gray, not blue-washed */
-    --foreground: 224 44% 10%;
+    /* ── Light mode: Clean Deep Sea / Teal / Coral system ── */
+    --background: 220 20% 97%;
+    --foreground: 229 84% 5%;       /* #020617 Deep Sea Navy text */
     --card: 0 0% 100%;
-    --card-foreground: 224 44% 10%;
+    --card-foreground: 229 84% 5%;
     --popover: 0 0% 100%;
-    --popover-foreground: 224 44% 10%;
-    --primary: 172 74% 36%;         /* Clean deep teal */
+    --popover-foreground: 229 84% 5%;
+    --primary: 171 100% 35%;        /* Darker Electric Teal for contrast */
     --primary-foreground: 0 0% 100%;
-    --secondary: 38 95% 48%;        /* Warm amber-gold */
-    --secondary-foreground: 0 0% 100%;
-    --muted: 216 18% 94%;
-    --muted-foreground: 216 14% 47%;
-    --accent: 214 28% 94%;
-    --accent-foreground: 224 44% 10%;
-    --destructive: 0 84% 58%;
+    --secondary: 5 100% 64%;        /* Hyper-Coral */
+    --secondary-foreground: 229 84% 5%;
+    --muted: 220 20% 92%;
+    --muted-foreground: 220 15% 45%;
+    --accent: 5 100% 64%;
+    --accent-foreground: 229 84% 5%;
+    --destructive: 0 84% 60%;
     --destructive-foreground: 0 0% 100%;
-    --border: 214 16% 89%;
-    --input: 214 16% 89%;
-    --ring: 172 80% 32%;
-    --success: 152 69% 31%;
-    --warning: 38 95% 48%;
-    --info: 199 89% 48%;
-    /* Sidebar: slightly deeper than bg for visual separation */
-    --sidebar: 218 22% 95%;
+    --border: 220 20% 88%;
+    --input: 220 20% 88%;
+    --ring: 171 100% 35%;
+    --success: 171 100% 35%;
+    --warning: 52 83% 45%;          /* Darker Soft Butter */
+    --info: 199 90% 46%;
+    --sidebar: 220 20% 94%;
     --surface-1: 0 0% 100%;
-    --surface-2: 216 20% 98%;
-    --surface-3: 214 18% 94%;
+    --surface-2: 220 20% 96%;
+    --surface-3: 220 20% 92%;
     --radius: 1rem;
-    /* ── Glow tokens ──────────────────────────────────────── */
-    --glow-primary: 0 0 14px hsl(172 74% 36% / 0.18);
-    --glow-secondary: 0 0 14px hsl(38 95% 48% / 0.18);
-    --glow-accent: 0 0 14px hsl(214 28% 94% / 0.22);
-    /* ── Elevation shadows (crisp, not heavy) ─────────────── */
-    --shadow-sm: 0 1px 2px hsl(220 30% 10% / 0.06), 0 1px 4px hsl(220 30% 10% / 0.04);
-    --shadow-md: 0 4px 16px hsl(220 30% 10% / 0.08), 0 2px 6px hsl(220 30% 10% / 0.04);
-    --shadow-lg: 0 10px 40px hsl(220 30% 10% / 0.10), 0 4px 12px hsl(220 30% 10% / 0.06);
-    --shadow-xl: 0 20px 60px hsl(220 30% 10% / 0.12), 0 8px 24px hsl(220 30% 10% / 0.08);
+    
+    /* ── Glow tokens ────────────────────── */
+    --glow-primary: 0 0 16px hsl(171 100% 48% / 0.3), 0 0 40px hsl(171 100% 48% / 0.1);
+    --glow-secondary: 0 0 14px hsl(5 100% 69% / 0.25);
+    --glow-accent: 0 0 14px hsl(5 100% 69% / 0.25);
+    --shadow-sm: 0 1px 2px hsl(229 84% 5% / 0.05);
+    --shadow-md: 0 4px 8px -1px hsl(229 84% 5% / 0.08), 0 2px 4px -1px hsl(229 84% 5% / 0.04);
+    --shadow-lg: 0 10px 20px -3px hsl(229 84% 5% / 0.1), 0 4px 8px -2px hsl(229 84% 5% / 0.05);
+    --shadow-xl: 0 20px 40px -5px hsl(229 84% 5% / 0.12), 0 10px 16px -5px hsl(229 84% 5% / 0.06);
   }
 
   .dark {
-    /* ── Deep indigo-navy (inspired by Linear / Vercel) ────── */
-    --background: 232 26% 6%;       /* #090C17 — indigo-tinted deep space */
-    --foreground: 220 100% 97%;     /* #F0F5FF tinted white */
-    --card: 228 24% 10%;            /* #0F1320 raised surface */
-    --card-foreground: 220 100% 97%;
-    --popover: 226 26% 12%;
-    --popover-foreground: 220 100% 97%;
-    --primary: 171 100% 44%;        /* #00E0C0 Electric teal */
-    --primary-foreground: 232 26% 6%;
-    --secondary: 38 90% 50%;        /* #F5A623 Amber-gold */
-    --secondary-foreground: 232 26% 6%;
-    --muted: 228 22% 15%;
-    --muted-foreground: 220 14% 52%;
-    --accent: 38 90% 50%;
-    --accent-foreground: 232 26% 6%;
-    --destructive: 0 62% 50%;
+    /* ── Dribbble Spec: Deep Sea, Electric Teal, Hyper-Coral ── */
+    --background: 229 84% 5%;       /* #020617 Deep Sea Navy */
+    --foreground: 220 100% 96%;     /* Crisp white text */
+    --card: 229 50% 8%;             /* Very dark tinted card */
+    --card-foreground: 220 100% 96%;
+    --popover: 229 50% 8%;
+    --popover-foreground: 220 100% 96%;
+    --primary: 171 100% 48%;        /* #00F5D4 Electric Teal */
+    --primary-foreground: 229 84% 5%; /* #020617 Base */
+    --secondary: 5 100% 69%;        /* #FF6F61 Hyper-Coral */
+    --secondary-foreground: 229 84% 5%;
+    --muted: 229 40% 12%;           /* Subtle navy */
+    --muted-foreground: 220 20% 60%;
+    --accent: 5 100% 69%;           /* Hyper-Coral accent */
+    --accent-foreground: 229 84% 5%;
+    --destructive: 0 84% 60%;
     --destructive-foreground: 0 0% 100%;
-    --border: 226 28% 17%;          /* #1A2236 indigo-tinted lines */
-    --input: 226 28% 17%;
-    --ring: 171 100% 44%;
-    --success: 152 69% 42%;
-    --warning: 38 90% 54%;
-    --info: 199 89% 62%;
-    /* Sidebar: slightly darker than bg for depth */
-    --sidebar: 234 28% 5%;
-    --surface-1: 228 24% 10%;
-    --surface-2: 227 22% 13%;
-    --surface-3: 226 20% 16%;
-    /* Enhanced glows for dark mode */
-    --glow-primary: 0 0 32px hsl(171 100% 44% / 0.42);
-    --glow-secondary: 0 0 28px hsl(38 90% 50% / 0.42);
-    --glow-accent: 0 0 28px hsl(38 90% 50% / 0.52);
-    --shadow-sm: 0 1px 3px hsl(0 0% 0% / 0.38), 0 1px 2px hsl(0 0% 0% / 0.28);
-    --shadow-md: 0 4px 12px hsl(0 0% 0% / 0.38), 0 2px 6px hsl(0 0% 0% / 0.26);
-    --shadow-lg: 0 10px 40px hsl(0 0% 0% / 0.48), 0 4px 12px hsl(0 0% 0% / 0.28);
-    --shadow-xl: 0 20px 60px hsl(0 0% 0% / 0.58), 0 8px 24px hsl(0 0% 0% / 0.38);
+    --border: 229 40% 16%;          /* Low contrast border */
+    --input: 229 40% 16%;
+    --ring: 171 100% 48%;           /* Teal focus ring */
+    --success: 171 100% 48%;        /* Teal success */
+    --warning: 52 83% 78%;          /* #F4E99B Soft Butter */
+    --info: 199 90% 64%;
+    --sidebar: 229 84% 3%;          /* Slightly darker than bg */
+    --surface-1: 229 50% 8%;
+    --surface-2: 229 40% 10%;
+    --surface-3: 229 40% 14%;
+    /* ── Neon Glows ── */
+    --glow-primary: 0 0 20px hsl(171 100% 48% / 0.5), 0 0 60px hsl(171 100% 48% / 0.2), 0 0 100px hsl(171 100% 48% / 0.08);
+    --glow-secondary: 0 0 16px hsl(5 100% 69% / 0.45), 0 0 40px hsl(5 100% 69% / 0.18);
+    --glow-accent: 0 0 16px hsl(5 100% 69% / 0.4), 0 0 40px hsl(5 100% 69% / 0.15);
+    --shadow-sm: 0 1px 2px 0 rgb(0 0 0 / 0.3);
+    --shadow-md: 0 4px 12px -1px rgb(0 0 0 / 0.4), 0 2px 6px -2px rgb(0 0 0 / 0.3);
+    --shadow-lg: 0 12px 24px -3px rgb(0 0 0 / 0.5), 0 4px 8px -4px rgb(0 0 0 / 0.3);
+    --shadow-xl: 0 24px 48px -5px rgb(0 0 0 / 0.6), 0 10px 18px -6px rgb(0 0 0 / 0.4);
+  }
+
+  /* ── Dashboard Light Override: Monochromatic Sage/Forest ── */
+  :root:not(.dark) .dashboard-theme {
+    --background: 160 11% 95%;      
+    --foreground: 171 100% 13%;     
+    --card: 0 0% 100%;
+    --card-foreground: 171 100% 13%;
+    --popover: 0 0% 100%;
+    --popover-foreground: 171 100% 13%;
+    --primary: 171 100% 13%;        
+    --primary-foreground: 0 0% 100%;
+    --secondary: 167 27% 32%;       
+    --secondary-foreground: 0 0% 100%;
+    --muted: 164 11% 82%;           
+    --muted-foreground: 167 18% 40%;
+    --accent: 164 11% 65%;          
+    --accent-foreground: 171 100% 13%;
+    --border: 165 11% 73%;          
+    --input: 164 11% 82%;           
+    --ring: 168 43% 23%;            
+    --success: 168 43% 23%;
+    --sidebar: 160 11% 91%;         
+    --surface-1: 0 0% 100%;
+    --surface-2: 160 11% 95%;
+    --surface-3: 160 11% 91%;
+    --glow-primary: 0 0 16px hsl(171 100% 13% / 0.15), 0 0 40px hsl(171 100% 13% / 0.05);
+    --glow-secondary: 0 0 14px hsl(167 27% 32% / 0.2);
+    --glow-accent: 0 0 14px hsl(164 11% 65% / 0.2);
+    --shadow-sm: 0 1px 2px hsl(171 100% 13% / 0.05);
+    --shadow-md: 0 4px 8px -1px hsl(171 100% 13% / 0.08), 0 2px 4px -1px hsl(171 100% 13% / 0.04);
+    --shadow-lg: 0 10px 20px -3px hsl(171 100% 13% / 0.1), 0 4px 8px -2px hsl(171 100% 13% / 0.05);
+    --shadow-xl: 0 20px 40px -5px hsl(171 100% 13% / 0.12), 0 10px 16px -5px hsl(171 100% 13% / 0.06);
   }
 }
 
@@ -110,20 +141,11 @@
     overflow-x: hidden;
     /* NOTE: do NOT add transform here — it creates a new containing block
        for position:fixed children, breaking the fixed navbar. */
-    /* Light mode — subtle mesh gradient that adds warmth without color */
-    background-image:
-      radial-gradient(ellipse 80% 60% at 0% 0%, hsl(172 74% 36% / 0.06) 0%, transparent 55%),
-      radial-gradient(ellipse 60% 50% at 100% 100%, hsl(38 95% 48% / 0.05) 0%, transparent 55%),
-      radial-gradient(ellipse 50% 40% at 50% 50%, hsl(220 18% 100% / 0.80) 0%, transparent 80%);
   }
 
   .dark body,
   .dark {
-    /* Dark mode — deep indigo mesh with teal and amber accents */
-    background-image:
-      radial-gradient(ellipse 70% 60% at 0% 0%, hsl(250 60% 20% / 0.20) 0%, transparent 55%),
-      radial-gradient(ellipse 60% 50% at 100% 100%, hsl(171 100% 44% / 0.08) 0%, transparent 55%),
-      radial-gradient(ellipse 40% 30% at 60% 40%, hsl(38 90% 50% / 0.04) 0%, transparent 60%);
+    /* Minimalist Dark Mode - Relying on pure elevation and background color */
   }
 
   /* ── Focus ring ── */
@@ -599,12 +621,16 @@
 
   /* Glass morphism variants (Premium frosted glass) */
   .glass {
-    @apply backdrop-blur-2xl bg-background/60 dark:bg-black/40 border border-border/60 dark:border-white/10;
+    background: rgba(255, 255, 255, 0.03); 
+    backdrop-filter: blur(12px); 
+    border: 1px solid rgba(0, 245, 212, 0.15); /* A very thin Teal-tinted border */
     transition:
       background-color 0.24s cubic-bezier(0.16, 1, 0.3, 1),
       border-color 0.24s cubic-bezier(0.16, 1, 0.3, 1),
       box-shadow 0.24s cubic-bezier(0.16, 1, 0.3, 1);
-    box-shadow: 0 4px 30px rgba(0, 0, 0, 0.05);
+  }
+  :root:not(.dark) .dashboard-theme .glass {
+    border: 1px solid rgba(106, 138, 131, 0.25); /* Muted sage border */
   }
 
   .glass-subtle {
@@ -637,13 +663,31 @@
     @apply bg-clip-text text-transparent bg-gradient-to-r from-accent via-orange-400 to-primary;
   }
 
-  /* Gradient backgrounds */
+  /* The 'Dopamine' Gradient (CTA Buttons) */
+  .bg-dopamine {
+    background: linear-gradient(135deg, #00F5D4 0%, #FF6F61 100%);
+    box-shadow: 0px 10px 20px rgba(255, 111, 97, 0.3);
+    color: #020617;
+    font-weight: 700;
+  }
+  :root:not(.dark) .dashboard-theme .bg-dopamine {
+    background: linear-gradient(135deg, #22554B 0%, #6A8A83 100%);
+    box-shadow: 0px 10px 20px rgba(106, 138, 131, 0.3);
+    color: #FFFFFF;
+  }
+
   .gradient-bg {
-    @apply bg-gradient-to-r from-[hsl(168_95%_42%)] to-[hsl(185_100%_30%)];
+    @apply bg-gradient-to-r from-[hsl(171_100%_48%)] to-[hsl(5_100%_69%)];
+  }
+  :root:not(.dark) .dashboard-theme .gradient-bg {
+    @apply bg-gradient-to-r from-[hsl(171_100%_13%)] to-[hsl(167_13%_48%)];
   }
 
   .gradient-bg-warm {
-    @apply bg-gradient-to-br from-accent via-orange-400 to-primary;
+    @apply bg-gradient-to-br from-[hsl(5_100%_69%)] via-orange-400 to-[hsl(171_100%_48%)];
+  }
+  :root:not(.dark) .dashboard-theme .gradient-bg-warm {
+    @apply bg-gradient-to-br from-[hsl(167_27%_32%)] via-[hsl(167_18%_40%)] to-[hsl(171_100%_13%)];
   }
 
   .gradient-surface {
@@ -651,6 +695,26 @@
     background: linear-gradient(135deg, hsl(var(--card)/0.8) 0%, hsl(var(--muted)/0.4) 100%);
     @apply backdrop-blur-3xl border border-white/20 dark:border-white/10;
     box-shadow: 0 4px 30px rgba(0, 0, 0, 0.08);
+  }
+  :root:not(.dark) .dashboard-theme .gradient-surface {
+    @apply dark:border-white/5;
+  }
+
+  /* ── Background Bloom ── */
+  .bg-bloom {
+    position: absolute;
+    width: 500px;
+    height: 500px;
+    border-radius: 50%;
+    background: #00F5D4;
+    opacity: 0.05;
+    filter: blur(150px);
+    z-index: -1;
+    pointer-events: none;
+  }
+  :root:not(.dark) .dashboard-theme .bg-bloom {
+    background: #22554B;
+    opacity: 0.15;
   }
 
   /* Glow effects */
@@ -680,13 +744,23 @@
   }
 
   .card-hover:hover {
-    transform: translateY(-4px) scale(1.005) translateZ(0);
-    box-shadow: 0 12px 28px -14px hsl(var(--primary) / 0.20), 0 4px 12px hsl(220 30% 10% / 0.10);
-    border-color: hsl(var(--primary) / 0.35);
+    transform: translateY(-3px) scale(1.004) translateZ(0);
+    box-shadow:
+      0 8px 24px -8px hsl(var(--primary) / 0.15),
+      0 4px 12px hsl(220 30% 10% / 0.08);
+    border-color: hsl(var(--primary) / 0.25);
   }
 
   .card-hover:active {
     transform: translateY(-1px) scale(0.99) translateZ(0);
+  }
+
+  /* dark mode card hover — consistent with primary only */
+  .dark .card-hover:hover {
+    box-shadow:
+      0 12px 32px -8px hsl(var(--primary) / 0.25),
+      0 4px 12px hsl(0 0% 0% / 0.3);
+    border-color: hsl(var(--primary) / 0.4);
   }
 
   .card-hover-glow {
@@ -902,16 +976,27 @@
     transform: translateX(1px) scale(0.99) translateZ(0);
   }
 
-  /* ── Aurora background ── */
+  /* ── Aurora background (both modes) ── */
   .aurora-bg {
     background: linear-gradient(-45deg,
-        hsl(var(--primary) / 0.18),
-        hsl(var(--secondary) / 0.10),
+        hsl(var(--primary) / 0.20),
+        hsl(200 90% 50% / 0.12),
         hsl(var(--background)),
-        hsl(var(--accent) / 0.08),
-        hsl(var(--primary) / 0.12));
+        hsl(var(--secondary) / 0.12),
+        hsl(var(--primary) / 0.16));
     background-size: 400% 400%;
-    animation: aurora 14s ease infinite;
+    animation: aurora 12s ease infinite;
+  }
+
+  .dark .aurora-bg {
+    background: linear-gradient(-45deg,
+        hsl(var(--primary) / 0.30),
+        hsl(220 90% 60% / 0.18),
+        hsl(var(--background)),
+        hsl(var(--secondary) / 0.20),
+        hsl(var(--primary) / 0.22));
+    background-size: 400% 400%;
+    animation: aurora 12s ease infinite;
   }
 
   /* ── Animated gradient border ── */
@@ -1041,5 +1126,67 @@
     border-radius: 0 2px 2px 0;
     background: currentColor;
     opacity: 0.7;
+  }
+
+  /* ── Mesh gradient helper ── */
+  .mesh-gradient {
+    background-image:
+      radial-gradient(at 15% 25%, hsl(var(--primary) / 0.18) 0px, transparent 55%),
+      radial-gradient(at 85% 75%, hsl(var(--secondary) / 0.14) 0px, transparent 50%),
+      radial-gradient(at 50% 50%, hsl(200 90% 55% / 0.08) 0px, transparent 65%);
+  }
+
+  .dark .mesh-gradient {
+    background-image:
+      radial-gradient(at 15% 25%, hsl(var(--primary) / 0.25) 0px, transparent 55%),
+      radial-gradient(at 85% 75%, hsl(var(--secondary) / 0.20) 0px, transparent 50%),
+      radial-gradient(at 50% 50%, hsl(220 90% 65% / 0.12) 0px, transparent 65%);
+  }
+
+  /* ── Neon card hover (dark mode) ── */
+  .dark .card-neon-hover:hover {
+    border-color: hsl(var(--primary) / 0.6);
+    box-shadow:
+      0 0 0 1px hsl(var(--primary) / 0.25),
+      0 8px 32px hsl(var(--primary) / 0.2),
+      0 0 60px hsl(var(--primary) / 0.08);
+  }
+
+  /* ── Gradient text variants ── */
+  .text-gradient-teal {
+    background: linear-gradient(135deg, hsl(171 100% 44%), hsl(199 90% 52%));
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+  }
+
+  .text-gradient-brand {
+    background: linear-gradient(135deg, hsl(var(--primary)), hsl(200 90% 55%), hsl(var(--secondary)));
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+  }
+
+  /* ── Animated shimmer sweep (for card hover) ── */
+  .shimmer-sweep {
+    position: relative;
+    overflow: hidden;
+  }
+
+  .shimmer-sweep::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(105deg,
+        transparent 30%,
+        hsl(0 0% 100% / 0.08) 50%,
+        transparent 70%);
+    transform: translateX(-100%);
+    transition: transform 0.6s cubic-bezier(0.23, 1, 0.32, 1);
+    pointer-events: none;
+  }
+
+  .shimmer-sweep:hover::after {
+    transform: translateX(100%);
   }
 }

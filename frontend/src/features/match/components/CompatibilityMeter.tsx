@@ -11,9 +11,9 @@ interface Props {
 }
 
 function scoreColor(score: number) {
-  if (score >= 75) return { ring: '#22c55e', label: 'text-green-400', bg: 'bg-green-500/10' };
-  if (score >= 50) return { ring: '#f59e0b', label: 'text-amber-400', bg: 'bg-amber-500/10' };
-  return { ring: '#ef4444', label: 'text-red-400', bg: 'bg-red-500/10' };
+  if (score >= 75) return { ring: '#0ea5e9', label: 'text-sky-400', bg: 'bg-sky-500/10' }; // Strong match — sky blue
+  if (score >= 50) return { ring: '#6366f1', label: 'text-indigo-400', bg: 'bg-indigo-500/10' }; // Good fit — indigo
+  return { ring: '#94a3b8', label: 'text-slate-400', bg: 'bg-slate-500/10' }; // Low match — neutral slate
 }
 
 /**

@@ -10,5 +10,11 @@
   },
   "devDependencies": {
     "concurrently": "^9.0.0"
+  },
+  "dependencies": {
+    "embla-carousel-react": "^8.6.0",
+    "framer-motion": "^12.38.0",
+    "lucide-react": "^1.8.0",
+    "recharts": "^3.8.1"
   }
 }

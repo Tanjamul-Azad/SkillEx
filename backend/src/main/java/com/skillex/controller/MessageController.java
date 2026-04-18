@@ -25,6 +25,7 @@ import java.util.List;
 @RestController
 @RequestMapping("/api/messages")
 @RequiredArgsConstructor
+@SuppressWarnings("null")
 public class MessageController {
 
     private final MessageService          messageService;

@@ -13,6 +13,7 @@ import com.skillex.service.UserService;
 import com.skillex.service.match.CompatibilityCalculator;
 import jakarta.persistence.EntityNotFoundException;
 import lombok.RequiredArgsConstructor;
+import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Sort;
 import org.springframework.security.crypto.password.PasswordEncoder;
@@ -175,8 +176,8 @@ public class UserServiceImpl implements UserService {
     @Transactional(readOnly = true)
     public PagedResponse<UserSearchResultDto> searchUsers(String viewerId, String query, int page, int size) {
         User viewer = findUserById(viewerId);
-        var pageable = PageRequest.of(page, size, Sort.by("skillexScore").descending());
-        var results = (query == null || query.isBlank())
+        PageRequest pageable = PageRequest.of(page, size, Sort.by("skillexScore").descending());
+        Page<User> results = (query == null || query.isBlank())
             ? userRepository.findAll(pageable)
             : userRepository.findByUsernameContainingIgnoreCaseOrNameContainingIgnoreCaseOrUniversityContainingIgnoreCase(
                 query, query, query, pageable);

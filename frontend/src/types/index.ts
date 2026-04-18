@@ -87,6 +87,7 @@ export interface Review {
   skill: Skill;
   rating: number;
   comment: string;
+  tags?: string[];
   createdAt: string;
 }
 

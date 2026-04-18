@@ -68,7 +68,7 @@ const PAGE_TITLES: Record<string, string> = {
 };
 
 export default function Header({
-  sidebarWidth = 0,
+  sidebarWidth: _sidebarWidth = 0,
   headerHeight = 64,
 }: {
   sidebarWidth?: number;

@@ -2,11 +2,10 @@
 'use client';
 
 import React from 'react';
-import type { SkillChain, User } from '@/types';
+import type { SkillChain } from '@/types';
 import { UserAvatar } from '@/components/ui/UserAvatar';
 import { cn } from '@/lib/utils';
 import { motion } from 'framer-motion';
-import { ArrowRight } from 'lucide-react';
 
 interface ChainVisualizationProps {
   chain: SkillChain;

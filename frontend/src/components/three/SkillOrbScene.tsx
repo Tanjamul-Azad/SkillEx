@@ -21,10 +21,11 @@ const RING_DATA = [
 
 /* -- Wireframe orb: line-art globe + geodesic inner --------------- */
 function WireframeOrb() {
-  const group = useRef<THREE.Group>(null!);
+  const group = useRef<THREE.Group | null>(null);
   const elapsed = useRef(0);
 
   useFrame((_, delta) => {
+    if (!group.current) return;
     elapsed.current += delta;
     const t = elapsed.current;
     group.current.rotation.y = t * 0.06;
@@ -66,10 +67,11 @@ function WireframeOrb() {
 
 /* -- 3-ring orbital system with anchored nodes -------------------- */
 function OrbitalRing({ radius, rotation, color, speed, nodes }: typeof RING_DATA[0]) {
-  const orbitGroup = useRef<THREE.Group>(null!);
+  const orbitGroup = useRef<THREE.Group | null>(null);
 
   const elapsed = useRef(0);
   useFrame((_, delta) => {
+    if (!orbitGroup.current) return;
     elapsed.current += delta;
     orbitGroup.current.rotation.z = elapsed.current * speed;
   });
@@ -138,7 +140,7 @@ function SkillLabel({ label }: { label: string }) {
 
 /* -- Mouse parallax wrapper --------------------------------------- */
 function ParallaxGroup({ children }: { children: React.ReactNode }) {
-  const group = useRef<THREE.Group>(null!);
+  const group = useRef<THREE.Group | null>(null);
   const mouse = useRef({ x: 0, y: 0 });
 
   useEffect(() => {
@@ -152,6 +154,7 @@ function ParallaxGroup({ children }: { children: React.ReactNode }) {
 
   const elapsed = useRef(0);
   useFrame((_, delta) => {
+    if (!group.current) return;
     elapsed.current += delta;
     const t = elapsed.current;
 

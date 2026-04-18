@@ -10,10 +10,9 @@ interface Props {
   compact?: boolean;
 }
 
-function scoreColor(score: number) {
-  if (score >= 75) return { ring: '#0ea5e9', label: 'text-sky-400', bg: 'bg-sky-500/10' }; // Strong match — sky blue
-  if (score >= 50) return { ring: '#6366f1', label: 'text-indigo-400', bg: 'bg-indigo-500/10' }; // Good fit — indigo
-  return { ring: '#94a3b8', label: 'text-slate-400', bg: 'bg-slate-500/10' }; // Low match — neutral slate
+function scoreColor(_score: number) {
+  // Always use the secondary token (Soft Butter) for brand consistency in the compatibility ring
+  return { ring: 'hsl(var(--secondary))', label: 'text-secondary', bg: 'bg-secondary/10' };
 }
 
 /**
@@ -22,10 +21,8 @@ function scoreColor(score: number) {
  * Animated arc gauge showing the AI compatibility score.
  * Uses an SVG arc that grows from 0 to `score`% on mount.
  *
- * Colour bands:
- *  ≥ 75 → green (strong match)
- *  ≥ 50 → amber (possible match)
- *  < 50 → red   (weak match)
+ * Ring color is intentionally tokenized to `--secondary` (Soft Butter)
+ * so it remains brand-consistent in both light and dark modes.
  */
 export const CompatibilityMeter: FC<Props> = ({ score, className, compact = false }) => {
   const colors = scoreColor(score);

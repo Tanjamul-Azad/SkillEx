@@ -8,7 +8,7 @@ import { connectionService } from '@/services/connectionService';
 import { DashboardService } from '@/services/dashboardService';
 import type { Exchange } from '@/services/exchangeService';
 import type { Connection } from '@/services/connectionService';
-import { motion, AnimatePresence } from 'framer-motion';
+import { motion } from 'framer-motion';
 import {
   ArrowRight,
   BookOpen,
@@ -23,13 +23,10 @@ import {
   Video,
   Zap,
   Inbox,
-  Sparkles,
   Award,
   Activity,
   ChevronRight,
   BarChart3,
-  Circle,
-  ArrowUpRight,
   Play,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -45,7 +42,7 @@ import { useCounter } from '@/hooks/useCounter';
 import { useToast } from '@/hooks/use-toast';
 import { cn } from '@/lib/utils';
 import DashboardLayout from '@/components/layout/DashboardLayout';
-import { ScrollReveal, ScrollRevealGroup } from '@/components/ui/ScrollReveal';
+import { ScrollReveal } from '@/components/ui/ScrollReveal';
 import { ConfirmDialog } from '@/components/ui/ConfirmDialog';
 import { useDocumentTitle } from '@/hooks/useDocumentTitle';
 import { ActivityChart } from '@/features/dashboard/components/ActivityChart';
@@ -103,7 +100,7 @@ const StatCard = React.memo(({ icon: Icon, title, value, footnote, index }: Stat
         <div className="absolute left-0 top-0 bottom-0 w-[3px] rounded-r-full bg-primary opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
 
         <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2 pt-5 px-5">
-          <CardTitle className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+          <CardTitle className="text-xs font-semibold uppercase tracking-wider text-[hsl(var(--text-secondary))]">
             {title}
           </CardTitle>
           <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-primary/8 dark:bg-primary/12 transition-colors duration-300 group-hover:bg-primary/15 dark:group-hover:bg-primary/20">
@@ -116,7 +113,7 @@ const StatCard = React.memo(({ icon: Icon, title, value, footnote, index }: Stat
             ref={ref}
             className="font-headline text-3xl font-bold tabular-nums tracking-tight text-foreground"
           />
-          <p className="mt-1.5 text-xs text-muted-foreground">{footnote}</p>
+          <p className="mt-1.5 text-xs text-[hsl(var(--text-secondary))]">{footnote}</p>
 
           {/* Animated sparkline */}
           <div className="mt-4 h-7 w-full opacity-30 group-hover:opacity-60 transition-opacity duration-300">

@@ -27,7 +27,6 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
-import java.util.Locale;
 import java.util.Optional;
 
 /**
@@ -42,6 +41,8 @@ import java.util.Optional;
 @RequiredArgsConstructor
 @SuppressWarnings("null")
 public class AuthServiceImpl implements AuthService {
+
+    private static final int USERNAME_MAX_LEN = 50;
 
     private final UserRepository userRepository;
     private final SkillRepository skillRepository;
@@ -59,9 +60,11 @@ public class AuthServiceImpl implements AuthService {
             throw new IllegalArgumentException("An account with this email already exists.");
         }
 
+        String username = generateUniqueUsername(req.name(), req.email());
+
         User user = User.builder()
             .name(req.name())
-            .username(generateUniqueUsername(req.name(), req.email()))
+            .username(username)
             .email(req.email())
             .passwordHash(passwordEncoder.encode(req.password()))
             .university(req.university())
@@ -205,6 +208,63 @@ public class AuthServiceImpl implements AuthService {
         return normalized.isBlank() ? null : normalized;
     }
 
+    private String generateUniqueUsername(String name, String email) {
+        String base = normalizeUsernameSeed(name, email);
+        String candidate = base;
+        int suffix = 1;
+
+        while (userRepository.existsByUsername(candidate)) {
+            String suffixText = "_" + suffix;
+            int maxBaseLen = USERNAME_MAX_LEN - suffixText.length();
+            String trimmedBase = base.length() > maxBaseLen
+                ? base.substring(0, maxBaseLen)
+                : base;
+            candidate = trimmedBase + suffixText;
+            suffix++;
+        }
+
+        return candidate;
+    }
+
+    private String normalizeUsernameSeed(String name, String email) {
+        String seed = firstNonBlank(name, emailLocalPart(email), "user");
+        String normalized = seed.toLowerCase()
+            .replaceAll("[^a-z0-9._-]", "_")
+            .replaceAll("_+", "_")
+            .replaceAll("^[._-]+", "")
+            .replaceAll("[._-]+$", "");
+
+        if (normalized.isBlank()) {
+            normalized = "user";
+        }
+
+        if (normalized.length() > USERNAME_MAX_LEN) {
+            normalized = normalized.substring(0, USERNAME_MAX_LEN);
+        }
+
+        return normalized;
+    }
+
+    private String emailLocalPart(String email) {
+        if (email == null || email.isBlank()) {
+            return "";
+        }
+        int at = email.indexOf('@');
+        if (at <= 0) {
+            return email;
+        }
+        return email.substring(0, at);
+    }
+
+    private String firstNonBlank(String... values) {
+        for (String value : values) {
+            if (value != null && !value.isBlank()) {
+                return value;
+            }
+        }
+        return "";
+    }
+
     private String firstCatalogSkillId(SkillIntentInterpretResultDto side) {
         SkillIntentSuggestionDto primary = side.primary();
         if (primary != null && primary.skillId() != null && !primary.skillId().isBlank()) {
@@ -230,34 +290,5 @@ public class AuthServiceImpl implements AuthService {
         } catch (IllegalArgumentException e) {
             return UserSkillOffered.SkillProficiency.BEGINNER;
         }
-    }
-
-    private String generateUniqueUsername(String name, String email) {
-        String base = toUsernameSeed(name);
-        if (base.isBlank()) {
-            base = toUsernameSeed(email == null ? "" : email.split("@")[0]);
-        }
-        if (base.isBlank()) {
-            base = "user";
-        }
-
-        String candidate = base;
-        int suffix = 1;
-        while (userRepository.existsByUsernameIgnoreCase(candidate)) {
-            candidate = base + "_" + suffix;
-            suffix++;
-        }
-        return candidate;
-    }
-
-    private String toUsernameSeed(String raw) {
-        String normalized = raw == null ? "" : raw.trim().toLowerCase(Locale.ROOT);
-        normalized = normalized.replaceAll("[^a-z0-9_]", "_");
-        normalized = normalized.replaceAll("_+", "_");
-        normalized = normalized.replaceAll("^_+|_+$", "");
-        if (normalized.length() > 30) {
-            normalized = normalized.substring(0, 30);
-        }
-        return normalized;
     }
 }

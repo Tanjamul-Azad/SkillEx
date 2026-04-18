@@ -100,6 +100,55 @@ function mapConversationDto(dto: ConversationDto): Conversation {
   };
 }
 
+function messageTime(msg: Message): number {
+  return msg.timestamp.getTime();
+}
+
+function conversationTime(conv: Conversation): number {
+  return conv.lastMessageTime?.getTime() ?? 0;
+}
+
+function dedupeMessages(messages: Message[]): Message[] {
+  const byId = new Map<string, Message>();
+  messages.forEach((m) => byId.set(m.id, m));
+  return Array.from(byId.values()).sort((a, b) => messageTime(a) - messageTime(b));
+}
+
+function mergeConversations(a: Conversation, b: Conversation): Conversation {
+  const newer = conversationTime(a) >= conversationTime(b) ? a : b;
+  const older = newer === a ? b : a;
+
+  return {
+    ...older,
+    ...newer,
+    user: {
+      id: newer.user.id || older.user.id,
+      name: newer.user.name || older.user.name,
+      avatar: newer.user.avatar ?? older.user.avatar,
+      online: newer.user.online || older.user.online,
+      lastSeen: newer.user.lastSeen ?? older.user.lastSeen,
+    },
+    lastMessage: newer.lastMessage || older.lastMessage,
+    lastMessageTime: conversationTime(newer) >= conversationTime(older)
+      ? newer.lastMessageTime
+      : older.lastMessageTime,
+    unreadCount: Math.max(newer.unreadCount, older.unreadCount),
+    pinned: Boolean(newer.pinned || older.pinned),
+    messages: dedupeMessages([...older.messages, ...newer.messages]),
+  };
+}
+
+function dedupeConversations(conversations: Conversation[]): Conversation[] {
+  const byId = new Map<string, Conversation>();
+
+  conversations.forEach((conv) => {
+    const existing = byId.get(conv.id);
+    byId.set(conv.id, existing ? mergeConversations(existing, conv) : conv);
+  });
+
+  return Array.from(byId.values()).sort((a, b) => conversationTime(b) - conversationTime(a));
+}
+
 /* ── Helpers ─────────────────────────────────────────────────────────── */
 function formatMessageTime(d: Date): string {
   const now = new Date();
@@ -272,7 +321,7 @@ export default function MessagesPage() {
     setLoading(true);
     MessageService.getConversations()
       .then((dtos) => {
-        const convs = dtos.map(mapConversationDto);
+        const convs = dedupeConversations(dtos.map(mapConversationDto));
         setConversations(convs);
         if (paramUserId) {
           const found = convs.find(c => c.user.id === paramUserId);
@@ -291,7 +340,7 @@ export default function MessagesPage() {
                   pinned: false,
                   messages: [],
                 };
-                setConversations(prev => [stub, ...prev]);
+                setConversations(prev => dedupeConversations([stub, ...prev]));
                 setActiveConvId(peer.id);
               })
               .catch(() => setActiveConvId(convs[0]?.id ?? null));
@@ -313,7 +362,9 @@ export default function MessagesPage() {
       .then(({ content }) => {
         const msgs = content.map(dto => mapMessageDto(dto, user.id));
         setConversations(prev =>
-          prev.map(c => c.id === activeConvId ? { ...c, messages: msgs, unreadCount: 0 } : c)
+          dedupeConversations(
+            prev.map(c => c.id === activeConvId ? { ...c, messages: msgs, unreadCount: 0 } : c)
+          )
         );
       })
       .catch(() => toast({ title: 'Could not load messages', variant: 'destructive' }))
@@ -337,11 +388,11 @@ export default function MessagesPage() {
         if (idx < 0) {
           // Unknown peer — will be picked up on next conversations refresh
           MessageService.getConversations()
-            .then(dtos => setConversations(dtos.map(mapConversationDto)))
+            .then(dtos => setConversations(dedupeConversations(dtos.map(mapConversationDto))))
             .catch(() => {});
           return prev;
         }
-        return prev.map(c => {
+        const updated = prev.map(c => {
           if (c.id !== peerId) return c;
           if (c.messages.some(m => m.id === incoming.id)) return c; // dedup
           const newMsg = mapMessageDto(incoming, user.id);
@@ -353,6 +404,7 @@ export default function MessagesPage() {
             unreadCount: isActive ? 0 : c.unreadCount + 1,
           };
         });
+        return dedupeConversations(updated);
       });
     });
     return () => unsub?.();
@@ -385,10 +437,12 @@ export default function MessagesPage() {
       type: 'text',
     };
     setConversations(prev =>
-      prev.map(c =>
-        c.id === activeConvId
-          ? { ...c, messages: [...c.messages, tempMsg], lastMessage: text, lastMessageTime: new Date() }
-          : c
+      dedupeConversations(
+        prev.map(c =>
+          c.id === activeConvId
+            ? { ...c, messages: [...c.messages, tempMsg], lastMessage: text, lastMessageTime: new Date() }
+            : c
+        )
       )
     );
 

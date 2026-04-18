@@ -21,7 +21,6 @@ export function SearchBar({
   className,
 }: SearchBarProps) {
   const [query, setQuery] = useState('');
-  const [isFocused, setIsFocused] = useState(false);
   const inputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
@@ -58,8 +57,6 @@ export function SearchBar({
         ref={inputRef}
         value={query}
         onChange={handleQueryChange}
-        onFocus={() => setIsFocused(true)}
-        onBlur={() => setIsFocused(false)}
         placeholder={placeholder}
         className="pl-10 text-base"
       />

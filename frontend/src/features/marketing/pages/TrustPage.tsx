@@ -9,7 +9,6 @@ import {
   BadgeCheck,
   Gavel,
   Flag,
-  Users,
   HeartHandshake,
   Eye,
   Ban,

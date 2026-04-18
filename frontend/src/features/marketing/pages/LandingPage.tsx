@@ -1,10 +1,7 @@
 
 import React, { useRef, lazy, Suspense, useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
-import {
-  motion,
-  AnimatePresence,
-} from 'framer-motion';
+import { motion } from 'framer-motion';
 import {
   Zap, Code, Film, Music, Figma, Camera, Mic, Database, ArrowRight,
   Pencil, Bot, RefreshCw, Star, Quote, Users, Sparkles, TrendingUp,
@@ -408,7 +405,7 @@ const ComparisonSection = () => {
 // Left column: stacked on the far-left edge
 // Right column: stacked on the far-right edge
 // None are near the center content area (max-w-5xl)
-const floatingSkillsData = [
+const _floatingSkillsData = [
   // ── Left column ──────────────────────────────────────────
   { name: 'Guitar', icon: Music, image: 'https://images.unsplash.com/photo-1510915361894-db8b60106cb1?auto=format&fit=crop&w=150&q=80', side: 'left', top: '12%', delay: 0, duration: 3.8 },
   { name: 'Photography', icon: Camera, image: 'https://images.unsplash.com/photo-1516245834210-c4c14271569b?auto=format&fit=crop&w=150&q=80', side: 'left', top: '32%', delay: 0.6, duration: 4.2 },
@@ -423,7 +420,7 @@ const floatingSkillsData = [
 
 /* Bubble component with continuous floating animation */
 const FloatingBubble = React.memo(({ skill }: {
-  skill: typeof floatingSkillsData[0];
+  skill: typeof _floatingSkillsData[0];
 }) => {
   const posStyle: React.CSSProperties = {
     top: skill.top,
@@ -463,11 +460,11 @@ FloatingBubble.displayName = 'FloatingBubble';
 
 const HeroSection = () => {
   /* Word-level stagger variants */
-  const wordContainer = {
+  const _wordContainer = {
     hidden: {},
     visible: { transition: { staggerChildren: 0.12, delayChildren: 0.6 } },
   };
-  const wordItem = {
+  const _wordItem = {
     hidden: { opacity: 0, y: 48, rotateX: -20 },
     visible: {
       opacity: 1, y: 0, rotateX: 0,
@@ -475,7 +472,7 @@ const HeroSection = () => {
     },
   };
   /* Second line starts after first line is done */
-  const line2Container = {
+  const _line2Container = {
     hidden: {},
     visible: { transition: { staggerChildren: 0.14, delayChildren: 1.05 } },
   };

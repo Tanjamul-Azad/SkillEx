@@ -471,9 +471,10 @@ const FeedTab = ({ intentFilter }: { intentFilter?: string }) => {
   const [followedUsers, setFollowedUsers] = useState<Set<string>>(new Set());
 
   useEffect(() => {
-    const hasIntent = Boolean(intentFilter && intentFilter.trim().length >= 2);
+    const normalizedIntentFilter = intentFilter?.trim() ?? '';
+    const hasIntent = normalizedIntentFilter.length >= 2;
     const postsPromise = hasIntent
-      ? CommunityService.searchPosts(intentFilter!.trim(), 0, 30)
+      ? CommunityService.searchPosts(normalizedIntentFilter, 0, 30)
       : CommunityService.getPosts();
 
     postsPromise.then((r) => setLocalPosts(r.content ?? [])).catch(() => {});
@@ -552,7 +553,24 @@ const FeedTab = ({ intentFilter }: { intentFilter?: string }) => {
                     <p className="font-semibold text-sm">{u.name}</p>
                     <p className="text-xs text-muted-foreground">{u.university}</p>
                   </div>
-                  <Button size="sm" variant={followedUsers.has(u.id) ? 'default' : 'outline'} className="ml-auto" onClick={() => setFollowedUsers(prev => { const next = new Set(prev); next.has(u.id) ? next.delete(u.id) : next.add(u.id); return next; })}>{followedUsers.has(u.id) ? 'Following' : 'Follow'}</Button>
+                  <Button
+                    size="sm"
+                    variant={followedUsers.has(u.id) ? 'default' : 'outline'}
+                    className="ml-auto"
+                    onClick={() =>
+                      setFollowedUsers(prev => {
+                        const next = new Set(prev);
+                        if (next.has(u.id)) {
+                          next.delete(u.id);
+                        } else {
+                          next.add(u.id);
+                        }
+                        return next;
+                      })
+                    }
+                  >
+                    {followedUsers.has(u.id) ? 'Following' : 'Follow'}
+                  </Button>
                 </div>
               ))}
           </CardContent>

@@ -16,20 +16,12 @@ public interface UserRepository extends JpaRepository<User, String> {
 
     Optional<User> findByEmail(String email);
 
-    Optional<User> findByUsernameIgnoreCase(String username);
-
     boolean existsByEmail(String email);
 
-    boolean existsByUsernameIgnoreCase(String username);
+    boolean existsByUsername(String username);
 
     Page<User> findByNameContainingIgnoreCaseOrUniversityContainingIgnoreCase(
         String name, String university, Pageable pageable);
-
-    Page<User> findByUsernameContainingIgnoreCaseOrNameContainingIgnoreCaseOrUniversityContainingIgnoreCase(
-        String username,
-        String name,
-        String university,
-        Pageable pageable);
 
     /**
      * Finds users who <b>offer</b> any skill in the given set.

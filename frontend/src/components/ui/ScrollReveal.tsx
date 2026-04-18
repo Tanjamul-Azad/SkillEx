@@ -99,7 +99,7 @@ export const ScrollReveal: React.FC<ScrollRevealProps> = ({
 
 export const ScrollRevealGroup: React.FC<ScrollRevealProps> = ({
   children,
-  animation = 'fade-up',
+  animation: _animation = 'fade-up',
   delay = 0,
   className,
   once = true,

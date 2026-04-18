@@ -29,6 +29,8 @@ import java.util.List;
 @SuppressWarnings("null")
 public class DataSeeder {
 
+    private static final int USERNAME_MAX_LEN = 50;
+
     private final UserRepository             userRepository;
     private final SkillRepository            skillRepository;
     private final UserSkillOfferedRepository offeredRepo;
@@ -193,8 +195,10 @@ public class DataSeeder {
                           String university, User.UserRole role, User.UserLevel level,
                           int score, int sessions, BigDecimal rating,
                           boolean online, String bio) {
+        String username = uniqueUsernameFor(email, name);
         return userRepository.save(User.builder()
             .name(name)
+            .username(username)
             .email(email)
             .passwordHash(passwordHash)
             .university(university)
@@ -206,6 +210,63 @@ public class DataSeeder {
             .isOnline(online)
             .bio(bio)
             .build());
+    }
+
+    private String uniqueUsernameFor(String email, String name) {
+        String base = normalizeUsernameSeed(name, email);
+        String candidate = base;
+        int suffix = 1;
+
+        while (userRepository.existsByUsername(candidate)) {
+            String suffixText = "_" + suffix;
+            int maxBaseLen = USERNAME_MAX_LEN - suffixText.length();
+            String trimmedBase = base.length() > maxBaseLen
+                ? base.substring(0, maxBaseLen)
+                : base;
+            candidate = trimmedBase + suffixText;
+            suffix++;
+        }
+
+        return candidate;
+    }
+
+    private String normalizeUsernameSeed(String name, String email) {
+        String seed = firstNonBlank(name, emailLocalPart(email), "user");
+        String normalized = seed.toLowerCase()
+            .replaceAll("[^a-z0-9._-]", "_")
+            .replaceAll("_+", "_")
+            .replaceAll("^[._-]+", "")
+            .replaceAll("[._-]+$", "");
+
+        if (normalized.isBlank()) {
+            normalized = "user";
+        }
+
+        if (normalized.length() > USERNAME_MAX_LEN) {
+            normalized = normalized.substring(0, USERNAME_MAX_LEN);
+        }
+
+        return normalized;
+    }
+
+    private String emailLocalPart(String email) {
+        if (email == null || email.isBlank()) {
+            return "";
+        }
+        int at = email.indexOf('@');
+        if (at <= 0) {
+            return email;
+        }
+        return email.substring(0, at);
+    }
+
+    private String firstNonBlank(String... values) {
+        for (String value : values) {
+            if (value != null && !value.isBlank()) {
+                return value;
+            }
+        }
+        return "";
     }
 
     /** Convenience: set one offered skill and one wanted skill at once */

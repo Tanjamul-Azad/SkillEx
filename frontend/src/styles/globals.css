@@ -7,25 +7,31 @@
     /* ── Light mode: Clean Deep Sea / Teal / Coral system ── */
     --background: 220 20% 97%;
     --foreground: 229 84% 5%;       /* #020617 Deep Sea Navy text */
+    --text-primary: 229 84% 5%;
+    --text-secondary: 220 15% 38%;
+    --text-tertiary: 220 12% 55%;
+    --interactive-hover: 158 72% 22% / 0.07;
+    --interactive-active: 158 72% 22% / 0.14;
+    --interactive-focus: 158 72% 22% / 0.20;
     --card: 0 0% 100%;
     --card-foreground: 229 84% 5%;
     --popover: 0 0% 100%;
     --popover-foreground: 229 84% 5%;
-    --primary: 171 100% 35%;        /* Darker Electric Teal for contrast */
+    --primary: 158 72% 22%;         /* Deep Signature Green */
     --primary-foreground: 0 0% 100%;
-    --secondary: 5 100% 64%;        /* Hyper-Coral */
+    --secondary: 43 96% 42%;        /* Amber / Gold for contrast */
     --secondary-foreground: 229 84% 5%;
     --muted: 220 20% 92%;
-    --muted-foreground: 220 15% 45%;
+    --muted-foreground: 220 15% 38%;
     --accent: 5 100% 64%;
     --accent-foreground: 229 84% 5%;
     --destructive: 0 84% 60%;
     --destructive-foreground: 0 0% 100%;
     --border: 220 20% 88%;
     --input: 220 20% 88%;
-    --ring: 171 100% 35%;
-    --success: 171 100% 35%;
-    --warning: 52 83% 45%;          /* Darker Soft Butter */
+    --ring: 158 72% 22%;
+    --success: 158 72% 28%;
+    --warning: 43 96% 38%;          /* Darker Soft Butter */
     --info: 199 90% 46%;
     --sidebar: 220 20% 94%;
     --surface-1: 0 0% 100%;
@@ -34,8 +40,8 @@
     --radius: 1rem;
     
     /* ── Glow tokens ────────────────────── */
-    --glow-primary: 0 0 16px hsl(171 100% 48% / 0.3), 0 0 40px hsl(171 100% 48% / 0.1);
-    --glow-secondary: 0 0 14px hsl(5 100% 69% / 0.25);
+    --glow-primary: 0 0 16px hsl(var(--primary) / 0.3), 0 0 40px hsl(var(--primary) / 0.1);
+    --glow-secondary: 0 0 12px hsl(var(--secondary) / 0.16);
     --glow-accent: 0 0 14px hsl(5 100% 69% / 0.25);
     --shadow-sm: 0 1px 2px hsl(229 84% 5% / 0.05);
     --shadow-md: 0 4px 8px -1px hsl(229 84% 5% / 0.08), 0 2px 4px -1px hsl(229 84% 5% / 0.04);
@@ -47,13 +53,24 @@
     /* ── Dribbble Spec: Deep Sea, Electric Teal, Hyper-Coral ── */
     --background: 229 84% 5%;       /* #020617 Deep Sea Navy */
     --foreground: 220 100% 96%;     /* Crisp white text */
+    --text-primary: 220 100% 96%;
+    --text-secondary: 220 20% 62%;
+    --text-tertiary: 220 15% 42%;
+    --interactive-hover: 171 100% 48% / 0.08;
+    --interactive-active: 171 100% 48% / 0.16;
+    --interactive-focus: 171 100% 48% / 0.24;
+    --surface-base: 229 84% 5%;
+    --surface-raised: 229 45% 9%;
+    --surface-elevated: 229 40% 12%;
+    --surface-overlay: 229 35% 16%;
+    --surface-border-subtle: 229 30% 18%;
     --card: 229 50% 8%;             /* Very dark tinted card */
     --card-foreground: 220 100% 96%;
     --popover: 229 50% 8%;
     --popover-foreground: 220 100% 96%;
     --primary: 171 100% 48%;        /* #00F5D4 Electric Teal */
     --primary-foreground: 229 84% 5%; /* #020617 Base */
-    --secondary: 5 100% 69%;        /* #FF6F61 Hyper-Coral */
+    --secondary: 43 100% 58%;
     --secondary-foreground: 229 84% 5%;
     --muted: 229 40% 12%;           /* Subtle navy */
     --muted-foreground: 220 20% 60%;
@@ -64,8 +81,8 @@
     --border: 229 40% 16%;          /* Low contrast border */
     --input: 229 40% 16%;
     --ring: 171 100% 48%;           /* Teal focus ring */
-    --success: 171 100% 48%;        /* Teal success */
-    --warning: 52 83% 78%;          /* #F4E99B Soft Butter */
+    --success: 158 72% 45%;        /* Teal success */
+    --warning: 43 96% 68%;          /* #F4E99B Soft Butter */
     --info: 199 90% 64%;
     --sidebar: 229 84% 3%;          /* Slightly darker than bg */
     --surface-1: 229 50% 8%;
@@ -73,7 +90,7 @@
     --surface-3: 229 40% 14%;
     /* ── Neon Glows ── */
     --glow-primary: 0 0 20px hsl(171 100% 48% / 0.5), 0 0 60px hsl(171 100% 48% / 0.2), 0 0 100px hsl(171 100% 48% / 0.08);
-    --glow-secondary: 0 0 16px hsl(5 100% 69% / 0.45), 0 0 40px hsl(5 100% 69% / 0.18);
+    --glow-secondary: 0 0 24px hsl(var(--secondary) / 0.35);
     --glow-accent: 0 0 16px hsl(5 100% 69% / 0.4), 0 0 40px hsl(5 100% 69% / 0.15);
     --shadow-sm: 0 1px 2px 0 rgb(0 0 0 / 0.3);
     --shadow-md: 0 4px 12px -1px rgb(0 0 0 / 0.4), 0 2px 6px -2px rgb(0 0 0 / 0.3);
@@ -89,25 +106,25 @@
     --card-foreground: 171 100% 13%;
     --popover: 0 0% 100%;
     --popover-foreground: 171 100% 13%;
-    --primary: 171 100% 13%;        
+    --primary: 158 72% 22%;        
     --primary-foreground: 0 0% 100%;
-    --secondary: 167 27% 32%;       
-    --secondary-foreground: 0 0% 100%;
+    --secondary: 43 96% 42%;       
+    --secondary-foreground: 229 84% 5%;
     --muted: 164 11% 82%;           
-    --muted-foreground: 167 18% 40%;
-    --accent: 164 11% 65%;          
+    --muted-foreground: 220 15% 35%;
+    --accent: 164 11% 58%;          
     --accent-foreground: 171 100% 13%;
     --border: 165 11% 73%;          
     --input: 164 11% 82%;           
-    --ring: 168 43% 23%;            
-    --success: 168 43% 23%;
+    --ring: 158 72% 22%;            
+    --success: 158 72% 28%;
     --sidebar: 160 11% 91%;         
     --surface-1: 0 0% 100%;
     --surface-2: 160 11% 95%;
     --surface-3: 160 11% 91%;
-    --glow-primary: 0 0 16px hsl(171 100% 13% / 0.15), 0 0 40px hsl(171 100% 13% / 0.05);
-    --glow-secondary: 0 0 14px hsl(167 27% 32% / 0.2);
-    --glow-accent: 0 0 14px hsl(164 11% 65% / 0.2);
+    --glow-primary: 0 0 16px hsl(var(--primary) / 0.15), 0 0 40px hsl(var(--primary) / 0.05);
+    --glow-secondary: 0 0 14px hsl(var(--secondary) / 0.2);
+    --glow-accent: 0 0 14px hsl(var(--accent) / 0.2);
     --shadow-sm: 0 1px 2px hsl(171 100% 13% / 0.05);
     --shadow-md: 0 4px 8px -1px hsl(171 100% 13% / 0.08), 0 2px 4px -1px hsl(171 100% 13% / 0.04);
     --shadow-lg: 0 10px 20px -3px hsl(171 100% 13% / 0.1), 0 4px 8px -2px hsl(171 100% 13% / 0.05);

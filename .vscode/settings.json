@@ -1,20 +1,41 @@
 {
     "java.compile.nullAnalysis.mode": "automatic",
+    "java.configuration.updateBuildConfiguration": "automatic",
+    "java.server.launchMode": "Standard",
     "java.jdt.ls.java.home": "C:\\Users\\User\\.jdk\\jdk-21.0.8",
     "java.import.gradle.java.home": "C:\\Users\\User\\.jdk\\jdk-21.0.8",
     "java.import.gradle.enabled": true,
     "java.import.gradle.wrapper.enabled": true,
     "java.gradle.buildServer.enabled": "on",
-    "java.server.launchMode": "Standard",
+    "java.gradle.buildServer.openBuildOutput": "neverOpen",
+    "gradle.autoDetect": "off",
+    "gradle.projectOpenBehaviour": "Open",
+    "java.import.maven.enabled": false,
+    "java.project.importOnFirstTimeStartup": "automatic",
+    "java.autobuild.enabled": true,
+    "java.errors.incompleteClasspath.severity": "ignore",
     "java.import.exclusions": [
-        "frontend",
-        "node_modules",
-        "**/build",
-        "**/target",
-        "**/.gradle",
-        "**/.git"
+        "**/node_modules/**",
+        "**/.metadata/**",
+        "**/archetype-resources/**",
+        "**/META-INF/maven/**",
+        "**/backend/bin/**",
+        "**/backend/build/**",
+        "**/backend/target/**"
     ],
-    "gradle.nestedProjects": [
-        "backend"
-    ]
+    "files.exclude": {
+        "**/backend/bin": true,
+        "**/backend/build": true,
+        "**/backend/target": true
+    },
+    "files.watcherExclude": {
+        "**/backend/bin/**": true,
+        "**/backend/build/**": true,
+        "**/backend/target/**": true
+    },
+    "search.exclude": {
+        "**/backend/bin/**": true,
+        "**/backend/build/**": true,
+        "**/backend/target/**": true
+    }
 }

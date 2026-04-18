@@ -2,8 +2,8 @@ import React from 'react';
 import { Link } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import {
-  ArrowRight, Users, Target, Lightbulb, Heart,
-  Zap, Globe, BookOpen, Shield,
+  ArrowRight, Target, Lightbulb, Heart,
+  Globe, BookOpen, Shield,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';

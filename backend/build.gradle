@@ -6,7 +6,7 @@ plugins {
 
 group = 'com.skillex'
 version = '0.1.0-SNAPSHOT'
-description = 'Peer skill-exchange platform – Spring Boot REST API'
+description = 'Peer skill-exchange platform - Spring Boot REST API'
 
 java {
     toolchain {

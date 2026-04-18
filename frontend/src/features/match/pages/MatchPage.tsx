@@ -5,7 +5,6 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { useAuth } from '@/hooks/useAuth';
 import { useMatchUsers, type MatchUser } from '@/hooks/useMatchUsers';
 import { useTopCycles } from '@/hooks/useTopCycles';
-import { CompatibilityMeter } from '@/features/match/components/CompatibilityMeter';
 import { SkillGraphCard } from '@/features/match/components/SkillGraphCard';
 import { ExchangeChainCard, type ExchangeCycleData } from '@/features/match/components/ExchangeChainCard';
 import {
@@ -37,13 +36,6 @@ import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
 import { Progress } from '@/components/ui/progress';
 import { Skeleton } from '@/components/ui/skeleton';
-import {
-  Accordion,
-  AccordionContent,
-  AccordionItem,
-  AccordionTrigger,
-} from '@/components/ui/accordion';
-import { Checkbox } from '@/components/ui/checkbox';
 import { Slider } from '@/components/ui/slider';
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from '@/components/ui/sheet';
 import {
@@ -97,8 +89,8 @@ const FilterSidebar: FC<{
   onApply?: () => void;
   mobileSheetOpen: boolean;
   setMobileSheetOpen: (open: boolean) => void;
-}> = React.memo(({ filters, setFilters, onApply, mobileSheetOpen, setMobileSheetOpen }) => {
-  const activeFilterCount =
+}> = React.memo(({ filters, setFilters, onApply: _onApply, mobileSheetOpen, setMobileSheetOpen }) => {
+  const _activeFilterCount =
     filters.categories.length +
     filters.levels.length +
     (filters.sessionType !== 'Both' ? 1 : 0) +
@@ -300,7 +292,7 @@ const AIBestMatchCard: FC<{ match: MatchUser; currentUser: User | null }> = Reac
             </div>
             <div className="flex items-center gap-3">
               <span className="text-sm font-semibold uppercase tracking-wider text-muted-foreground">Compatibility</span>
-              <MatchScoreRing score={score} size={56} className="drop-shadow-md" />
+              <MatchScoreRing score={score} size={56} tone="secondary" className="drop-shadow-md" />
             </div>
           </div>
 
@@ -408,7 +400,7 @@ const MatchCard: FC<{ match: MatchUser }> = React.memo(({ match }) => {
         </div>
 
         <CardContent className="relative z-10 p-5 pt-12">
-          <div className="absolute top-12 right-4"><MatchScoreRing score={match.compatibilityScore} size={48} /></div>
+          <div className="absolute top-12 right-4"><MatchScoreRing score={match.compatibilityScore} size={48} tone="secondary" /></div>
           <div className="flex items-center gap-3 pr-14 relative z-20">
             <Avatar className="h-14 w-14 ring-4 ring-card group-hover:ring-primary/30 transition-all shadow-lg bg-card">
               <AvatarImage src={match.avatar ?? undefined} className="object-cover" />
@@ -477,7 +469,7 @@ MatchCard.displayName = 'MatchCard';
 type ChainParticipant = { id: string; name: string; avatar: string; teaches: string; category: string };
 type SkillChain = { id: string; participants: ChainParticipant[]; totalSkills: number; openSpots: number; joined: boolean };
 
-const MOCK_CHAINS: SkillChain[] = [
+const _MOCK_CHAINS: SkillChain[] = [
   {
     id: 'chain-1',
     participants: [

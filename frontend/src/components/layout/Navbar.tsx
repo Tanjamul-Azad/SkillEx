@@ -5,7 +5,7 @@ import React, { useState, useRef, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useLocation } from 'react-router-dom';
 import { motion, AnimatePresence, useScroll, useMotionValueEvent } from 'framer-motion';
-import { Zap, Sun, Moon, Menu, X as XIcon, ChevronRight, Sparkles, LayoutDashboard, User as UserIcon, LogOut } from 'lucide-react';
+import { Sun, Moon, Menu, X as XIcon, ChevronRight, Sparkles, LayoutDashboard, User as UserIcon, LogOut } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import {

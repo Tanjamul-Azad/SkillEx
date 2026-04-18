@@ -11,6 +11,7 @@ interface MatchScoreRingProps {
   strokeWidth?: number;
   animated?: boolean;
   className?: string;
+  tone?: 'status' | 'secondary';
 }
 
 export function MatchScoreRing({
@@ -19,15 +20,17 @@ export function MatchScoreRing({
   strokeWidth = 4,
   animated = true,
   className,
+  tone = 'status',
 }: MatchScoreRingProps) {
   const circumference = 2 * Math.PI * (size / 2 - strokeWidth);
   const strokeDashoffset = circumference - (score / 100) * circumference;
 
   const color = useMemo(() => {
+    if (tone === 'secondary') return 'text-secondary';
     if (score >= 80) return 'text-green-500';
     if (score >= 60) return 'text-yellow-500';
     return 'text-red-500';
-  }, [score]);
+  }, [tone, score]);
 
   return (
     <div className={cn('relative', className)} style={{ width: size, height: size }}>

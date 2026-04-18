@@ -146,7 +146,6 @@ function LoginForm() {
   const navigate = useNavigate();
   const { toast } = useToast();
   const [isLoading, setIsLoading] = React.useState(false);
-  const [isGoogleLoading, setIsGoogleLoading] = React.useState(false);
   const [showPassword, setShowPassword] = React.useState(false);
   const [isForgotMode, setIsForgotMode] = React.useState(false);
   const [resetSent, setResetSent] = React.useState(false);
@@ -314,9 +313,7 @@ function LoginForm() {
         disabled
         title="Google sign-in is coming soon"
         onClick={async () => {
-          setIsGoogleLoading(true);
-          try { await loginWithGoogle(); }
-          finally { setIsGoogleLoading(false); }
+          await loginWithGoogle();
         }}
       >
         <GoogleIcon className="mr-2 h-4 w-4" />
@@ -329,7 +326,6 @@ function LoginForm() {
 function RegisterForm({ setFormType }: { setFormType: (type: 'login') => void }) {
   const [step, setStep] = React.useState(1);
   const { register } = useAuth();
-  const navigate = useNavigate();
   const { toast } = useToast();
   const [isLoading, setIsLoading] = React.useState(false);
   const [showPassword, setShowPassword] = React.useState(false);

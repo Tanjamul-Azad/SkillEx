@@ -30,8 +30,8 @@ import {
 } from '@/components/ui/dialog';
 import { ConfirmDialog } from '@/components/ui/ConfirmDialog';
 import {
-  User, Mail, Lock, Bell, Shield, Trash2, Camera,
-  CheckCircle2, Eye, EyeOff, Globe, Zap,
+  User, Lock, Bell, Shield, Trash2, Camera,
+  CheckCircle2, Eye, EyeOff, Zap,
 } from 'lucide-react';
 import { BookOpen, Sparkles, X, Plus, Loader2 } from 'lucide-react';
 import { SkillService, type SkillIntentInterpretResponse, type SkillIntentSuggestion } from '@/services/skillService';
@@ -148,7 +148,11 @@ export default function SettingsPage() {
         const canvas = document.createElement('canvas');
         canvas.width = SIZE;
         canvas.height = SIZE;
-        const ctx = canvas.getContext('2d')!;
+        const ctx = canvas.getContext('2d');
+        if (!ctx) {
+          resolve(dataUrl);
+          return;
+        }
 
         // Calculate crop to center square
         const size = Math.min(img.width, img.height);
@@ -188,9 +192,9 @@ export default function SettingsPage() {
     const currentSkillIds = new Set(currentSkills.map((s) => s.id));
     const currentSkillNames = new Set(currentSkills.map((s) => s.name.toLowerCase()));
 
-    const isCatalogSuggestion = Boolean(suggestion.skillId);
+    const catalogSkillId = suggestion.skillId;
 
-    if (isCatalogSuggestion && currentSkillIds.has(suggestion.skillId!)) {
+    if (catalogSkillId && currentSkillIds.has(catalogSkillId)) {
       toast({
         title: 'Already added',
         description: `"${suggestion.skillName}" is already in ${SKILL_TYPE_LABEL[type]}.`,
@@ -198,7 +202,7 @@ export default function SettingsPage() {
       return;
     }
 
-    if (!isCatalogSuggestion && currentSkillNames.has(suggestion.skillName.toLowerCase())) {
+    if (!catalogSkillId && currentSkillNames.has(suggestion.skillName.toLowerCase())) {
       toast({
         title: 'Already added',
         description: `"${suggestion.skillName}" is already in ${SKILL_TYPE_LABEL[type]}.`,
@@ -206,7 +210,7 @@ export default function SettingsPage() {
       return;
     }
 
-    if (!isCatalogSuggestion) {
+    if (!catalogSkillId) {
       toast({
         variant: 'destructive',
         title: 'No catalog match',
@@ -217,7 +221,7 @@ export default function SettingsPage() {
 
     setAddingSkill(true);
     try {
-      await UserService.addSkill(suggestion.skillId!, type, 'MODERATE');
+      await UserService.addSkill(catalogSkillId, type, 'MODERATE');
       await refreshUser();
       toast({
         title: `"${suggestion.skillName}" added!`,
@@ -744,7 +748,10 @@ export default function SettingsPage() {
                               variant="outline"
                               className="h-7 text-xs gap-1 border-primary/30 text-primary hover:bg-primary/10"
                               disabled={addingSkill}
-                              onClick={() => handleAddSkill(interpretation.teach!.primary!, 'offered')}
+                              onClick={() => {
+                                const suggestion = interpretation.teach?.primary;
+                                if (suggestion) handleAddSkill(suggestion, 'offered');
+                              }}
                             >
                               <Plus className="h-3 w-3" /> Add
                             </Button>
@@ -767,7 +774,10 @@ export default function SettingsPage() {
                               variant="outline"
                               className="h-7 text-xs gap-1 border-primary/30 text-primary hover:bg-primary/10"
                               disabled={addingSkill}
-                              onClick={() => handleAddSkill(interpretation.learn!.primary!, 'wanted')}
+                              onClick={() => {
+                                const suggestion = interpretation.learn?.primary;
+                                if (suggestion) handleAddSkill(suggestion, 'wanted');
+                              }}
                             >
                               <Plus className="h-3 w-3" /> Add
                             </Button>

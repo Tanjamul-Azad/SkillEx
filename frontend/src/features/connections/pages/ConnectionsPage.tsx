@@ -166,7 +166,7 @@ export default function ConnectionsPage() {
                   visible: { transition: { staggerChildren: 0.1 } },
                 }}
               >
-                {connections.map((connection, i) => {
+                {connections.map((connection, _i) => {
                   const partner = getPartner(connection);
                   return (
                     <motion.div

@@ -10,7 +10,8 @@ const Card = React.forwardRef<
     ref={ref}
     className={cn(
       // Base - using premium glassmorphism
-      "relative overflow-hidden rounded-xl bg-card border border-border text-card-foreground shadow-sm",
+      "relative overflow-hidden rounded-3xl bg-card border border-white/5 shadow-sm",
+      "shadow-[inset_0_1px_0_0_hsla(0,0%,100%,0.05)]",
       // GPU compositing and transitions
       "transform-gpu will-change-transform",
       "transition-[transform,box-shadow,border-color,background-color] duration-220 ease-expo-out",
@@ -34,7 +35,7 @@ const CardHeader = React.forwardRef<
 >(({ className, ...props }, ref) => (
   <div
     ref={ref}
-    className={cn("flex flex-col space-y-1.5 p-6", className)}
+    className={cn("flex flex-col space-y-1.5 p-5", className)}
     {...props}
   />
 ))
@@ -71,7 +72,7 @@ const CardContent = React.forwardRef<
   HTMLDivElement,
   React.HTMLAttributes<HTMLDivElement>
 >(({ className, ...props }, ref) => (
-  <div ref={ref} className={cn("p-6 pt-0", className)} {...props} />
+  <div ref={ref} className={cn("p-5 pt-0 text-card-foreground", className)} {...props} />
 ))
 CardContent.displayName = "CardContent"
 
@@ -81,7 +82,7 @@ const CardFooter = React.forwardRef<
 >(({ className, ...props }, ref) => (
   <div
     ref={ref}
-    className={cn("flex items-center p-6 pt-0", className)}
+    className={cn("flex items-center p-5 pt-0 text-card-foreground", className)}
     {...props}
   />
 ))

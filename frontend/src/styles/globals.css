@@ -37,7 +37,7 @@
     --surface-1: 0 0% 100%;
     --surface-2: 220 20% 96%;
     --surface-3: 220 20% 92%;
-    --radius: 1rem;
+    --radius: 1.5rem;
     
     /* ── Glow tokens ────────────────────── */
     --glow-primary: 0 0 16px hsl(var(--primary) / 0.3), 0 0 40px hsl(var(--primary) / 0.1);

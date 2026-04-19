@@ -188,42 +188,44 @@ function ConversationItem({
       animate={{ opacity: 1, x: 0 }}
       onClick={onClick}
       className={cn(
-        'w-full flex items-center gap-3 p-3 rounded-xl text-left transition-all duration-150',
+        'w-full flex items-center gap-4 p-4 rounded-[1.5rem] text-left transition-all duration-300',
         active
-          ? 'bg-primary/10 border border-primary/20'
-          : 'hover:bg-muted/60 border border-transparent'
+          ? 'bg-black/40 border border-white/10 shadow-[inset_0_1px_0_0_hsla(0,0%,100%,0.05),0_0_20px_hsl(var(--primary)/0.1)]'
+          : 'bg-black/10 border border-white/5 hover:bg-black/20 hover:border-white/10 shadow-[inset_0_1px_0_0_hsla(0,0%,100%,0.05)]'
       )}
     >
       <div className="relative shrink-0">
-        <Avatar className="h-11 w-11">
-          <AvatarImage src={conv.user.avatar} alt={conv.user.name} />
-          <AvatarFallback className="bg-gradient-to-br from-primary/20 to-secondary/20 text-sm font-bold">
+        <Avatar className="h-12 w-12 border-2 border-white/5 shadow-sm">
+          <AvatarImage src={conv.user.avatar} alt={conv.user.name} className="object-cover" />
+          <AvatarFallback className="bg-gradient-to-br from-primary/20 to-secondary/20 text-sm font-bold text-primary">
             {getInitials(conv.user.name)}
           </AvatarFallback>
         </Avatar>
         {conv.user.online && (
-          <span className="absolute bottom-0 right-0 h-3 w-3 rounded-full bg-green-500 ring-2 ring-background" />
+          <span className="absolute bottom-0 right-0 h-3.5 w-3.5 rounded-full bg-emerald-500 border-2 border-card shadow-[0_0_10px_rgba(16,185,129,0.5)]" />
         )}
       </div>
       <div className="flex-1 min-w-0">
-        <div className="flex items-center justify-between gap-2">
-          <span className={cn('font-semibold text-sm truncate', active && 'text-primary')}>
+        <div className="flex items-center justify-between gap-2 mb-1">
+          <span className={cn('font-headline font-bold text-sm truncate', active ? 'text-primary drop-shadow-[0_0_8px_var(--primary)]' : 'text-foreground')}>
             {conv.user.name}
           </span>
-          <span className="text-xs text-muted-foreground shrink-0">
+          <span className="text-[10px] uppercase tracking-widest font-bold text-muted-foreground shrink-0">
             {formatMessageTime(conv.lastMessageTime)}
           </span>
         </div>
-        <div className="flex items-center justify-between gap-2 mt-0.5">
-          <p className="text-xs text-muted-foreground truncate">{conv.lastMessage}</p>
+        <div className="flex items-center justify-between gap-2">
+          <p className={cn('text-xs truncate font-medium', active ? 'text-foreground/90' : 'text-muted-foreground')}>
+            {conv.lastMessage}
+          </p>
           {conv.unreadCount > 0 && (
-            <Badge className="h-4 min-w-[16px] px-1 text-[10px] shrink-0 bg-primary">
+            <Badge className="h-5 min-w-[20px] px-1.5 text-[10px] font-bold shrink-0 bg-primary text-primary-foreground shadow-[0_0_10px_hsl(var(--primary)/0.3)]">
               {conv.unreadCount}
             </Badge>
           )}
         </div>
       </div>
-      {conv.pinned && <Pin className="h-3 w-3 text-muted-foreground/50 shrink-0" />}
+      {conv.pinned && <Pin className="h-3.5 w-3.5 text-primary/50 shrink-0" />}
     </motion.button>
   );
 }
@@ -244,42 +246,42 @@ function MessageBubble({
       initial={{ opacity: 0, y: 8, scale: 0.96 }}
       animate={{ opacity: 1, y: 0, scale: 1 }}
       transition={{ duration: 0.18 }}
-      className={cn('flex items-end gap-2', isMe ? 'flex-row-reverse' : 'flex-row')}
+      className={cn('flex items-end gap-3', isMe ? 'flex-row-reverse' : 'flex-row')}
     >
       {!isMe && (
-        <div className="w-7 shrink-0">
+        <div className="w-8 shrink-0">
           {showAvatar && (
-            <Avatar className="h-7 w-7">
-              <AvatarFallback className="text-[10px] bg-primary/20 font-bold">
+            <Avatar className="h-8 w-8 border border-white/10 shadow-sm">
+              <AvatarFallback className="text-[10px] bg-secondary/20 text-secondary font-bold">
                 {getInitials(peerName)}
               </AvatarFallback>
             </Avatar>
           )}
         </div>
       )}
-      <div className={cn('max-w-[70%] flex flex-col gap-1', isMe ? 'items-end' : 'items-start')}>
+      <div className={cn('max-w-[75%] flex flex-col gap-1.5', isMe ? 'items-end' : 'items-start')}>
         {msg.type === 'image' && msg.imageUrl ? (
-          <div className="rounded-2xl overflow-hidden max-w-[260px]">
+          <div className="rounded-[1.5rem] overflow-hidden max-w-[280px] border border-white/10 shadow-md">
             <img src={msg.imageUrl} alt="attachment" className="w-full object-cover" />
           </div>
         ) : (
           <div
             className={cn(
-              'px-4 py-2.5 rounded-2xl text-sm leading-relaxed',
+              'px-5 py-3 text-[13px] leading-relaxed backdrop-blur-md shadow-[inset_0_1px_0_0_hsla(0,0%,100%,0.05)] border border-white/5',
               isMe
-                ? 'bg-primary text-primary-foreground rounded-br-md'
-                : 'bg-muted text-foreground rounded-bl-md'
+                ? 'bg-primary/20 text-foreground rounded-[1.5rem] rounded-br-sm border-primary/20'
+                : 'bg-black/40 text-foreground rounded-[1.5rem] rounded-bl-sm'
             )}
           >
             {msg.content}
           </div>
         )}
-        <div className={cn('flex items-center gap-1 px-1', isMe ? 'flex-row-reverse' : 'flex-row')}>
-          <span className="text-[10px] text-muted-foreground">{formatTimestamp(msg.timestamp)}</span>
+        <div className={cn('flex items-center gap-1.5 px-1', isMe ? 'flex-row-reverse' : 'flex-row')}>
+          <span className="text-[9px] uppercase tracking-widest font-bold text-muted-foreground/70">{formatTimestamp(msg.timestamp)}</span>
           {isMe && (
             msg.read
-              ? <CheckCheck className="h-3 w-3 text-primary" />
-              : <Check className="h-3 w-3 text-muted-foreground" />
+              ? <CheckCheck className="h-3.5 w-3.5 text-primary drop-shadow-[0_0_5px_var(--primary)]" />
+              : <Check className="h-3.5 w-3.5 text-muted-foreground/50" />
           )}
         </div>
       </div>
@@ -490,48 +492,48 @@ export default function MessagesPage() {
 
   return (
     <DashboardLayout>
-      <div className="h-[calc(100vh-4rem)] flex flex-col">
-        <div className="flex-1 flex overflow-hidden rounded-2xl border border-border/60 glass-subtle shadow-lg">
+      <div className="h-[calc(100vh-4rem)] flex flex-col p-4 sm:p-6 lg:p-8">
+        <div className="flex-1 flex overflow-hidden rounded-[2rem] border border-white/5 bg-black/20 backdrop-blur-md shadow-[inset_0_1px_0_0_hsla(0,0%,100%,0.05),0_8px_32px_rgba(0,0,0,0.4)]">
 
           {/* ── Sidebar ── */}
           <div className={cn(
-            'w-full md:w-80 xl:w-96 flex-col border-r border-border/60 bg-background/60 backdrop-blur-sm',
+            'w-full md:w-80 xl:w-96 flex-col border-r border-white/5 bg-black/20 backdrop-blur-md',
             mobileShowChat ? 'hidden md:flex' : 'flex'
           )}>
             {/* Header */}
-            <div className="p-4 border-b border-border/60">
-              <div className="flex items-center justify-between mb-3">
-                <h1 className="text-xl font-bold font-headline">Messages</h1>
+            <div className="p-6 border-b border-white/5">
+              <div className="flex items-center justify-between mb-5">
+                <h1 className="text-2xl font-extrabold font-headline text-foreground drop-shadow-sm">Messages</h1>
                 <Button
                   size="icon"
                   variant="ghost"
-                  className="h-8 w-8 rounded-xl"
+                  className="h-10 w-10 rounded-full border border-white/5 bg-white/5 hover:bg-primary/20 hover:border-primary/50 text-foreground hover:text-primary transition-all shadow-[inset_0_1px_0_0_hsla(0,0%,100%,0.05)]"
                   onClick={() => toast({ title: 'New conversation', description: 'Select a user from their profile to start messaging.' })}
                 >
-                  <MessageSquarePlus className="h-4 w-4" />
+                  <MessageSquarePlus className="h-5 w-5" />
                 </Button>
               </div>
               <div className="relative">
-                <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                <Search className="absolute left-4 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                 <Input
                   placeholder="Search conversations..."
                   value={search}
                   onChange={e => setSearch(e.target.value)}
-                  className="pl-9 rounded-xl h-9 text-sm"
+                  className="pl-11 rounded-full h-11 text-[13px] bg-black/40 border-white/10 text-foreground placeholder:text-muted-foreground focus-visible:ring-primary/50 shadow-[inset_0_1px_0_0_hsla(0,0%,100%,0.05)]"
                 />
               </div>
             </div>
 
             {/* Conversation list */}
-            <div className="flex-1 overflow-y-auto p-2 space-y-1">
+            <div className="flex-1 overflow-y-auto p-3 space-y-2 custom-scrollbar">
               {loading ? (
-                <div className="space-y-2 p-2">
+                <div className="space-y-3 p-3">
                   {[1, 2, 3].map(i => (
-                    <div key={i} className="flex items-center gap-3 p-3">
-                      <Skeleton className="h-11 w-11 rounded-full shrink-0" />
+                    <div key={i} className="flex items-center gap-4 p-4 rounded-[1.5rem] bg-black/10 border border-white/5">
+                      <Skeleton className="h-12 w-12 rounded-full shrink-0 bg-white/5" />
                       <div className="flex-1 space-y-2">
-                        <Skeleton className="h-3 w-32" />
-                        <Skeleton className="h-3 w-48" />
+                        <Skeleton className="h-3 w-32 bg-white/5" />
+                        <Skeleton className="h-3 w-48 bg-white/5" />
                       </div>
                     </div>
                   ))}
@@ -539,10 +541,12 @@ export default function MessagesPage() {
               ) : (
                 <AnimatePresence>
                   {filteredConvs.length === 0 ? (
-                    <div className="flex flex-col items-center justify-center py-12 text-center">
-                      <MessageSquarePlus className="h-10 w-10 text-muted-foreground/40 mb-3" />
-                      <p className="text-sm text-muted-foreground">No conversations yet</p>
-                      <p className="text-xs text-muted-foreground/70 mt-1">Exchange matches will appear here</p>
+                    <div className="flex flex-col items-center justify-center h-full py-12 text-center px-6">
+                      <div className="w-20 h-20 rounded-full bg-black/40 border border-white/5 flex items-center justify-center mb-6">
+                        <MessageSquarePlus className="h-8 w-8 text-muted-foreground/40" />
+                      </div>
+                      <p className="text-sm font-bold text-foreground/80 mb-2">No conversations yet</p>
+                      <p className="text-[10px] uppercase font-bold tracking-widest text-muted-foreground/60 text-balance">Exchange matches will appear here</p>
                     </div>
                   ) : (
                     filteredConvs.map(conv => (
@@ -568,72 +572,72 @@ export default function MessagesPage() {
                 animate={{ opacity: 1 }}
                 exit={{ opacity: 0 }}
                 className={cn(
-                  'flex-1 flex flex-col min-w-0',
+                  'flex-1 flex flex-col min-w-0 bg-black/10',
                   !mobileShowChat && 'hidden md:flex'
                 )}
               >
                 {/* Chat header */}
-                <div className="flex items-center gap-3 px-4 py-3 border-b border-border/60 bg-background/60 backdrop-blur-sm">
+                <div className="flex items-center gap-4 px-6 py-4 border-b border-white/5 bg-black/40 backdrop-blur-md shadow-[0_4px_30px_rgba(0,0,0,0.1)]">
                   <Button
                     size="icon"
                     variant="ghost"
-                    className="md:hidden h-8 w-8"
+                    className="md:hidden h-10 w-10 border border-white/5 bg-white/5"
                     onClick={() => setMobileShowChat(false)}
                   >
-                    <ArrowLeft className="h-4 w-4" />
+                    <ArrowLeft className="h-5 w-5" />
                   </Button>
                   <div className="relative">
-                    <Avatar className="h-9 w-9">
-                      <AvatarImage src={activeConv.user.avatar} alt={activeConv.user.name} />
-                      <AvatarFallback className="bg-gradient-to-br from-primary/20 to-secondary/20 text-xs font-bold">
+                    <Avatar className="h-10 w-10 border border-white/10 shadow-sm">
+                      <AvatarImage src={activeConv.user.avatar} alt={activeConv.user.name} className="object-cover" />
+                      <AvatarFallback className="bg-gradient-to-br from-primary/20 to-secondary/20 text-xs font-bold text-primary">
                         {getInitials(activeConv.user.name)}
                       </AvatarFallback>
                     </Avatar>
                     {activeConv.user.online && (
-                      <span className="absolute bottom-0 right-0 h-2.5 w-2.5 rounded-full bg-green-500 ring-2 ring-background" />
+                      <span className="absolute bottom-0 right-0 h-3 w-3 rounded-full bg-emerald-500 border-2 border-card shadow-[0_0_10px_rgba(16,185,129,0.5)]" />
                     )}
                   </div>
-                  <div className="flex-1 min-w-0">
-                    <p className="font-semibold text-sm">{activeConv.user.name}</p>
-                    <p className="text-xs text-muted-foreground">
-                      {activeConv.user.online ? 'Online' : `Last seen ${activeConv.user.lastSeen ?? 'recently'}`}
+                  <div className="flex-1 min-w-0 flex flex-col">
+                    <p className="font-headline font-bold text-base truncate">{activeConv.user.name}</p>
+                    <p className="text-[10px] uppercase tracking-widest font-bold text-muted-foreground">
+                      {activeConv.user.online ? <span className="text-emerald-500">Online</span> : `Last seen ${activeConv.user.lastSeen ?? 'recently'}`}
                     </p>
                   </div>
-                  <div className="flex items-center gap-1">
+                  <div className="flex items-center gap-2">
                     <Button
                       size="icon"
                       variant="ghost"
-                      className="h-8 w-8 rounded-xl"
+                      className="h-10 w-10 rounded-full border border-white/5 bg-white/5 hover:bg-white/10 shadow-[inset_0_1px_0_0_hsla(0,0%,100%,0.05)]"
                       onClick={() => toast({ title: 'Voice call', description: 'Voice calls coming soon.' })}
                     >
-                      <Phone className="h-4 w-4" />
+                      <Phone className="h-4 w-4 text-muted-foreground" />
                     </Button>
                     <Button
                       size="icon"
                       variant="ghost"
-                      className="h-8 w-8 rounded-xl"
+                      className="h-10 w-10 rounded-full border border-white/5 bg-white/5 hover:bg-white/10 shadow-[inset_0_1px_0_0_hsla(0,0%,100%,0.05)]"
                       onClick={() => toast({ title: 'Video call', description: 'Video calls coming soon.' })}
                     >
-                      <Video className="h-4 w-4" />
+                      <Video className="h-4 w-4 text-muted-foreground" />
                     </Button>
                     <DropdownMenu>
                       <DropdownMenuTrigger asChild>
-                        <Button size="icon" variant="ghost" className="h-8 w-8 rounded-xl">
-                          <MoreVertical className="h-4 w-4" />
+                        <Button size="icon" variant="ghost" className="h-10 w-10 rounded-full border border-white/5 bg-white/5 hover:bg-white/10 shadow-[inset_0_1px_0_0_hsla(0,0%,100%,0.05)]">
+                          <MoreVertical className="h-4 w-4 text-muted-foreground" />
                         </Button>
                       </DropdownMenuTrigger>
-                      <DropdownMenuContent align="end">
-                        <DropdownMenuItem onClick={() => navigate(`/profile/${activeConv.user.id}`)}>View profile</DropdownMenuItem>
-                        <DropdownMenuItem onClick={() => navigate('/match')}>Request exchange</DropdownMenuItem>
-                        <DropdownMenuSeparator />
+                      <DropdownMenuContent align="end" className="bg-black/90 backdrop-blur-xl border border-white/10 rounded-2xl shadow-2xl">
+                        <DropdownMenuItem className="focus:bg-white/10 focus:text-foreground text-[11px] uppercase tracking-widest font-bold cursor-pointer" onClick={() => navigate(`/profile/${activeConv.user.id}`)}>View Profile</DropdownMenuItem>
+                        <DropdownMenuItem className="focus:bg-white/10 focus:text-foreground text-[11px] uppercase tracking-widest font-bold cursor-pointer" onClick={() => navigate('/match')}>Request Exchange</DropdownMenuItem>
+                        <DropdownMenuSeparator className="bg-white/10" />
                         <DropdownMenuItem
-                          className="text-destructive"
+                          className="text-destructive focus:bg-destructive/20 focus:text-destructive text-[11px] uppercase tracking-widest font-bold cursor-pointer"
                           onClick={() => {
                             setConversations(prev => prev.filter(c => c.id !== activeConvId));
                             setActiveConvId(conversations.filter(c => c.id !== activeConvId)[0]?.id ?? null);
                           }}
                         >
-                          <Trash2 className="h-3.5 w-3.5 mr-2" /> Delete conversation
+                          <Trash2 className="h-3.5 w-3.5 mr-2" /> Delete Conversation
                         </DropdownMenuItem>
                       </DropdownMenuContent>
                     </DropdownMenu>
@@ -641,29 +645,33 @@ export default function MessagesPage() {
                 </div>
 
                 {/* Messages */}
-                <div className="flex-1 overflow-y-auto px-4 py-4 space-y-4">
+                <div className="flex-1 overflow-y-auto px-4 py-6 space-y-6 custom-scrollbar relative">
+                  {/* Subtle background pattern */}
+                  <div className="absolute inset-0 dot-grid opacity-20 pointer-events-none mix-blend-overlay" />
+                  
                   {historyLoading ? (
-                    <div className="flex items-center justify-center py-8">
-                      <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+                    <div className="flex justify-center py-12">
+                      <Loader2 className="h-8 w-8 animate-spin text-primary" />
                     </div>
                   ) : groupedMessages.length === 0 ? (
-                    <div className="flex flex-col items-center justify-center h-full text-center gap-3 py-16">
-                      <div className="p-4 rounded-full bg-primary/10">
-                        <MessageSquarePlus className="h-8 w-8 text-primary" />
+                    <div className="flex flex-col items-center justify-center h-full text-center gap-4 py-16">
+                      <div className="p-5 rounded-full bg-primary/10 border border-primary/20 shadow-[0_0_30px_hsl(var(--primary)/0.2)]">
+                        <MessageSquarePlus className="h-10 w-10 text-primary" />
                       </div>
-                      <p className="text-sm text-muted-foreground">
-                        Start the conversation with {activeConv.user.name}!
-                      </p>
+                      <div className="space-y-1">
+                        <p className="text-base font-headline font-bold text-foreground">Start the conversation</p>
+                        <p className="text-[10px] uppercase font-bold tracking-widest text-muted-foreground">Send a message to {activeConv.user.name}</p>
+                      </div>
                     </div>
                   ) : (
                     groupedMessages.map((group) => (
-                      <div key={group.date} className="space-y-2">
-                        <div className="flex items-center gap-3 py-1">
-                          <div className="flex-1 h-px bg-border/50" />
-                          <span className="text-[10px] text-muted-foreground px-2">{group.date}</span>
-                          <div className="flex-1 h-px bg-border/50" />
+                      <div key={group.date} className="relative z-10">
+                        <div className="flex justify-center mb-6 mt-4">
+                          <span className="text-[9px] uppercase tracking-[0.2em] font-extrabold text-muted-foreground/60 bg-black/40 px-4 py-1.5 rounded-full border border-white/5 shadow-[inset_0_1px_0_0_hsla(0,0%,100%,0.05)] backdrop-blur-md">
+                            {group.date}
+                          </span>
                         </div>
-                        <div className="space-y-1.5">
+                        <div className="space-y-6">
                           {group.messages.map((msg, idx) => {
                             const isMe = msg.senderId === 'me';
                             const nextMsg = group.messages[idx + 1];
@@ -686,93 +694,105 @@ export default function MessagesPage() {
                 </div>
 
                 {/* Input area */}
-                <div className="px-4 py-3 border-t border-border/60 bg-background/60 backdrop-blur-sm">
-                  <div className="flex items-end gap-2">
+                <div className="p-6 border-t border-white/5 bg-black/40 backdrop-blur-md z-20 shadow-[0_-4px_30px_rgba(0,0,0,0.1)] relative">
+                  {!connected && (
+                    <div className="absolute -top-10 left-1/2 -translate-x-1/2">
+                      <span className="text-[10px] uppercase font-bold tracking-widest text-warning flex items-center gap-2 bg-warning/10 px-4 py-1.5 rounded-full border border-warning/20 shadow-[inset_0_1px_0_0_hsla(0,0%,100%,0.05)]">
+                        <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                        Connecting to chat server...
+                      </span>
+                    </div>
+                  )}
+                  <form
+                    onSubmit={(e) => { e.preventDefault(); handleSend(); }}
+                    className="flex items-end gap-3 bg-black/40 border border-white/10 rounded-[1.5rem] p-2 focus-within:border-primary/50 focus-within:ring-1 focus-within:ring-primary/50 shadow-[inset_0_1px_0_0_hsla(0,0%,100%,0.05)] transition-all"
+                  >
                     <input
-                      ref={fileInputRef}
                       type="file"
                       accept="image/*"
+                      ref={fileInputRef}
                       className="hidden"
                       onChange={handleAttachImage}
                     />
                     <Button
+                      type="button"
                       size="icon"
                       variant="ghost"
-                      className="h-9 w-9 shrink-0 rounded-xl"
+                      className="h-11 w-11 shrink-0 rounded-full hover:bg-white/10 hover:text-foreground text-muted-foreground transition-all border border-transparent shadow-[inset_0_1px_0_0_hsla(0,0%,100%,0)] active:scale-95"
                       onClick={() => fileInputRef.current?.click()}
                     >
-                      <ImageIcon className="h-4 w-4" />
+                      <ImageIcon className="h-5 w-5" />
                     </Button>
-                    <div className="flex-1 relative">
+                    <div className="flex-1 relative flex items-end">
                       <Textarea
-                        placeholder="Type a message..."
                         value={newMessage}
                         onChange={e => setNewMessage(e.target.value)}
                         onKeyDown={handleKeyDown}
+                        placeholder="Type your message..."
+                        className="min-h-[44px] max-h-32 flex-1 resize-none bg-transparent border-0 focus-visible:ring-0 pl-3 pr-12 py-3 text-[14px] custom-scrollbar placeholder:text-muted-foreground/50 text-foreground"
                         rows={1}
-                        className="resize-none rounded-2xl pr-12 min-h-[40px] max-h-[120px] py-2.5 text-sm border-border/60 focus:border-primary/50"
                       />
                       <Popover open={emojiOpen} onOpenChange={setEmojiOpen}>
                         <PopoverTrigger asChild>
-                          <Button
-                            size="icon"
-                            variant="ghost"
-                            className="absolute right-2 bottom-1.5 h-7 w-7 rounded-xl"
-                          >
-                            <Smile className="h-4 w-4 text-muted-foreground" />
+                          <Button type="button" size="icon" variant="ghost" className="h-9 w-9 shrink-0 rounded-full hover:bg-white/10 hover:text-foreground text-muted-foreground transition-all border border-transparent shadow-[inset_0_1px_0_0_hsla(0,0%,100%,0)] active:scale-95 absolute right-1.5 bottom-1">
+                            <Smile className="h-4 w-4" />
                           </Button>
                         </PopoverTrigger>
-                        <PopoverContent side="top" align="end" className="w-72 p-3">
-                          <div className="space-y-2">
+                        <PopoverContent side="top" align="end" className="w-[320px] p-0 bg-black/90 backdrop-blur-xl border border-white/10 rounded-[1.5rem] shadow-[0_10px_40px_rgba(0,0,0,0.5)] mb-2">
+                        <div className="p-4 space-y-4">
                             {([
                               { label: 'Smileys', emojis: ['😀','😂','😍','🥺','😎','🤔','😅','🙌','👍','❤️','🔥','✨','🎉','💯','🚀'] },
                               { label: 'People', emojis: ['👋','🤝','🙏','💪','👀','🫡','🤗','😤','😭','🥹','😏','😬','🫠','🤩','🫶'] },
                               { label: 'Objects', emojis: ['📚','💻','🎯','🏆','⚡','🌟','💡','📝','🎓','🛠️','📱','🎮','🌈','☕','🍀'] },
                             ] as { label: string; emojis: string[] }[]).map(({ label, emojis }) => (
                               <div key={label}>
-                                <p className="text-[10px] font-semibold uppercase text-muted-foreground mb-1">{label}</p>
-                                <div className="flex flex-wrap gap-0.5">
+                                <p className="text-[9px] font-extrabold tracking-widest text-muted-foreground uppercase mb-2">{label}</p>
+                                <div className="flex flex-wrap gap-1">
                                   {emojis.map(e => (
                                     <button
                                       key={e}
                                       type="button"
-                                      className="text-xl p-1 rounded hover:bg-muted transition-colors leading-none"
+                                      className="text-xl p-1.5 rounded-lg hover:bg-white/10 transition-colors leading-none"
                                       onClick={() => { setNewMessage(prev => prev + e); setEmojiOpen(false); }}
-                                    >{e}</button>
+                                    >
+                                      {e}
+                                    </button>
                                   ))}
                                 </div>
                               </div>
                             ))}
-                          </div>
-                        </PopoverContent>
-                      </Popover>
-                    </div>
+                        </div>
+                      </PopoverContent>
+                    </Popover>
+                  </div>
                     <Button
+                      type="submit"
                       size="icon"
                       disabled={!newMessage.trim() || sending || !connected}
-                      onClick={handleSend}
-                      className="h-9 w-9 shrink-0 rounded-xl"
+                      className="h-11 w-11 shrink-0 rounded-full bg-primary/20 text-primary border border-primary/30 hover:bg-primary/30 hover:border-primary/50 disabled:opacity-50 transition-all shadow-[0_0_15px_hsl(var(--primary)/0.2)] active:scale-95"
+                      onClick={(e) => { e.preventDefault(); handleSend(); }}
                     >
-                      <Send className="h-4 w-4" />
+                      {sending ? <Loader2 className="h-5 w-5 animate-spin" /> : <Send className="h-4 w-4 ml-0.5" />}
                     </Button>
-                  </div>
-                  <p className="text-[10px] text-muted-foreground mt-1.5 text-center">
-                    {connected ? 'Press Enter to send · Shift+Enter for new line' : 'Connecting…'}
-                  </p>
+                  </form>
                 </div>
               </motion.div>
             ) : (
-              <div className="flex-1 hidden md:flex flex-col items-center justify-center text-center gap-4">
-                <div className="p-6 rounded-full bg-primary/10">
-                  <MessageSquarePlus className="h-12 w-12 text-primary" />
+              <motion.div
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                exit={{ opacity: 0 }}
+                className="hidden md:flex flex-1 flex-col items-center justify-center text-center p-8 bg-black/10 relative overflow-hidden"
+              >
+                <div className="absolute inset-0 dot-grid opacity-20 pointer-events-none mix-blend-overlay" />
+                <div className="p-6 rounded-full bg-black/40 border border-white/5 shadow-[0_0_40px_rgba(0,0,0,0.3),inset_0_1px_0_0_hsla(0,0%,100%,0.05)] text-primary backdrop-blur-md relative z-10 mb-8 group transition-transform duration-500 hover:scale-105 hover:shadow-[0_0_60px_hsl(var(--primary)/0.15)]">
+                  <MessageSquarePlus className="h-16 w-16 text-primary drop-shadow-[0_0_15px_var(--primary)] transition-transform duration-500 group-hover:scale-110" />
                 </div>
-                <div>
-                  <h2 className="text-xl font-bold font-headline">Your Messages</h2>
-                  <p className="text-muted-foreground text-sm mt-1 max-w-[24ch]">
-                    Select a conversation to start chatting with your exchange partners.
-                  </p>
-                </div>
-              </div>
+                <h2 className="text-3xl font-extrabold font-headline text-foreground relative z-10 mb-3 drop-shadow-md">SkillEx Messages</h2>
+                <p className="text-[12px] uppercase tracking-widest font-bold text-muted-foreground max-w-sm relative z-10 text-balance leading-relaxed">
+                  Select a conversation from the sidebar or start a new chat from a user's profile to discuss your next skill exchange!
+                </p>
+              </motion.div>
             )}
           </AnimatePresence>
         </div>

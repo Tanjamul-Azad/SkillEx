@@ -59,33 +59,37 @@ const step1Schema = z.object({
 type Step1Data = z.infer<typeof step1Schema>;
 
 // ── Sub-components ────────────────────────────────────────────
-const STEPS = ['About You', 'You Can Teach', 'You Want to Learn'];
+const STEPS = ['Identity', 'Outgoing Payload', 'Incoming Query'];
 
 function StepIndicator({ current }: { current: number }) {
   return (
-    <div className="flex items-center justify-center gap-3 mb-10">
+    <div className="flex items-center justify-center gap-3 mb-10 relative z-10 w-full max-w-sm mx-auto">
       {STEPS.map((label, i) => (
         <React.Fragment key={label}>
-          <div className="flex flex-col items-center gap-1.5">
+          <div className="flex flex-col items-center gap-2">
             <motion.div
               animate={{
-                scale: i === current ? 1 : 0.85,
-                backgroundColor: i < current ? 'hsl(var(--primary))' : i === current ? 'hsl(var(--primary))' : 'hsl(var(--muted))',
+                scale: i === current ? 1.1 : 0.9,
+                backgroundColor: i < current ? 'hsl(var(--primary))' : i === current ? 'hsl(var(--primary))' : 'rgba(255,255,255,0.05)',
+                borderColor: i <= current ? 'hsl(var(--primary))' : 'rgba(255,255,255,0.1)'
               }}
               transition={{ type: 'spring', stiffness: 380, damping: 26 }}
-              className="w-9 h-9 rounded-full flex items-center justify-center text-sm font-bold"
+              className={cn(
+                "w-10 h-10 rounded-xl flex items-center justify-center text-sm font-bold border shadow-[inset_0_1px_0_0_hsla(0,0%,100%,0.1)]",
+                i === current ? "shadow-[0_0_20px_hsl(var(--primary)/0.4)]" : ""
+              )}
             >
               {i < current
-                ? <Check className="w-4 h-4 text-primary-foreground" />
-                : <span className={cn('text-xs font-semibold', i === current ? 'text-primary-foreground' : 'text-muted-foreground')}>{i + 1}</span>
+                ? <Check className="w-5 h-5 text-primary-foreground drop-shadow-sm" />
+                : <span className={cn('font-bold text-[10px] tracking-widest', i === current ? 'text-primary-foreground' : 'text-muted-foreground')}>{i + 1}</span>
               }
             </motion.div>
-            <span className={cn('text-xs whitespace-nowrap', i === current ? 'text-foreground font-medium' : 'text-muted-foreground')}>{label}</span>
+            <span className={cn('text-[9px] uppercase font-bold tracking-widest whitespace-nowrap hidden sm:block', i === current ? 'text-white drop-shadow-[0_0_5px_rgba(255,255,255,0.5)]' : 'text-muted-foreground')}>{label}</span>
           </div>
           {i < STEPS.length - 1 && (
             <motion.div
-              className="h-px w-12 mt-[-16px]"
-              animate={{ backgroundColor: i < current ? 'hsl(var(--primary))' : 'hsl(var(--border))' }}
+              className="h-px flex-grow max-w-[40px] mt-[-20px] shadow-[0_0_5px_rgba(0,0,0,0.5)]"
+              animate={{ backgroundColor: i < current ? 'hsl(var(--primary))' : 'rgba(255,255,255,0.1)' }}
             />
           )}
         </React.Fragment>
@@ -111,26 +115,29 @@ function SkillCard({
       whileHover={{ scale: disabled && !selected ? 1 : 1.03 }}
       whileTap={{ scale: 0.96 }}
       className={cn(
-        'relative flex flex-col items-center justify-center gap-2 p-4 rounded-xl border-2 text-sm font-medium transition-all duration-150 cursor-pointer select-none',
+        'relative flex flex-col items-center justify-center gap-3 p-4 rounded-2xl border text-sm font-bold transition-all duration-300 cursor-pointer select-none overflow-hidden group',
         selected
-          ? 'border-primary bg-primary/10 text-primary shadow-md'
+          ? 'border-primary bg-primary/10 text-primary shadow-[0_0_15px_hsl(var(--primary)/0.2)] inset-shadow-sm scale-100'
           : disabled
-            ? 'border-border bg-muted/40 text-muted-foreground opacity-50 cursor-not-allowed'
-            : 'border-border bg-card text-foreground hover:border-primary/50 hover:bg-muted/50',
+            ? 'border-white/5 bg-black/40 text-muted-foreground/30 cursor-not-allowed grayscale'
+            : 'border-white/10 bg-white/5 text-muted-foreground hover:border-primary/50 hover:bg-primary/5 hover:text-white hover:shadow-[0_0_15px_hsl(var(--primary)/0.1)]',
       )}
     >
       {selected && (
         <motion.div
           initial={{ scale: 0 }}
           animate={{ scale: 1 }}
-          className="absolute top-2 right-2 w-5 h-5 rounded-full bg-primary flex items-center justify-center"
+          className="absolute top-2 right-2 w-5 h-5 rounded-full bg-primary flex items-center justify-center shadow-[0_0_8px_hsl(var(--primary)/0.8)] z-10"
         >
-          <Check className="w-3 h-3 text-primary-foreground" />
+          <Check className="w-3 h-3 text-primary-foreground stroke-[3px]" />
         </motion.div>
       )}
-      <Icon className="w-6 h-6" />
-      <span className="text-xs text-center leading-tight">{skill.name}</span>
-      <span className="text-[10px] text-muted-foreground">{skill.category}</span>
+      <Icon className={cn("w-7 h-7 relative z-10 transition-colors duration-300", selected ? "text-primary drop-shadow-[0_0_8px_hsl(var(--primary)/0.8)]" : "group-hover:text-primary")} />
+      <div className="flex flex-col items-center gap-0.5 relative z-10">
+        <span className="text-[11px] uppercase tracking-widest text-center leading-tight whitespace-nowrap truncate w-full px-1">{skill.name}</span>
+        <span className="text-[9px] uppercase tracking-widest opacity-60 text-center">{skill.category}</span>
+      </div>
+      {selected && <div className="absolute inset-0 bg-primary/5 blur-xl block" />}
     </motion.button>
   );
 }
@@ -210,47 +217,51 @@ export default function OnboardingPage() {
   if (isLoading) return null;
 
   return (
-    <div className="min-h-screen bg-background flex items-center justify-center p-4">
-      <div className="w-full max-w-xl">
+    <div className="min-h-screen bg-background relative overflow-hidden flex items-center justify-center p-4">
+      <div className="absolute inset-0 bg-[url('/noise.png')] opacity-[0.03] mix-blend-overlay pointer-events-none z-10" />
+      <div className="w-full max-w-xl relative z-20">
         {/* Logo */}
         <motion.div
           initial={{ opacity: 0, y: -12 }}
           animate={{ opacity: 1, y: 0 }}
-          className="text-center mb-8"
+          className="text-center mb-8 relative"
         >
-          <span className="text-2xl font-black gradient-text font-headline">SkillEX</span>
-          <p className="text-muted-foreground text-sm mt-1">Let's set up your profile — takes 60 seconds.</p>
+          <span className="text-3xl font-extrabold text-transparent bg-clip-text bg-gradient-to-r from-primary via-white to-primary bg-[length:200%_auto] animate-gradient-slow font-headline drop-shadow-[0_0_15px_rgba(255,255,255,0.1)]">SkillEX</span>
+          <p className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground mt-3">Let's set up your profile — takes 60 seconds.</p>
         </motion.div>
 
-        <div className="bg-card border border-border rounded-2xl shadow-xl p-8">
+        <div className="bg-black/40 backdrop-blur-xl border border-white/5 shadow-[inset_0_1px_0_0_hsla(0,0%,100%,0.05)] rounded-[2rem] p-8 md:p-12 relative overflow-hidden">
+          <div className="absolute top-0 right-0 -mr-16 -mt-16 w-32 h-32 rounded-full bg-primary/10 blur-3xl pointer-events-none" />
+          <div className="absolute bottom-0 left-0 -ml-16 -mb-16 w-32 h-32 rounded-full bg-secondary/10 blur-3xl pointer-events-none" />
+          
           <StepIndicator current={step} />
 
           <AnimatePresence mode="wait" custom={dir}>
             {/* ── Step 0: Basic info ── */}
             {step === 0 && (
-              <motion.div key="step0" custom={dir} variants={slideVariants} initial="enter" animate="center" exit="exit" transition={{ duration: 0.22, ease: [0.16, 1, 0.3, 1] }}>
-                <h2 className="text-xl font-bold mb-1">What should we call you?</h2>
-                <p className="text-muted-foreground text-sm mb-6">This will be shown on your public profile.</p>
+              <motion.div key="step0" custom={dir} variants={slideVariants} initial="enter" animate="center" exit="exit" transition={{ duration: 0.3, ease: [0.16, 1, 0.3, 1] }} className="relative z-10 mt-6">
+                <h2 className="text-2xl font-extrabold font-headline mb-1 tracking-tight text-white drop-shadow-sm">What should we call you?</h2>
+                <p className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground mb-8">This is your public designation.</p>
                 <Form {...form}>
-                  <form onSubmit={handleStep1} className="space-y-4">
+                  <form onSubmit={handleStep1} className="space-y-6">
                     <FormField control={form.control} name="name" render={({ field }) => (
                       <FormItem>
                         <FormControl>
-                          <Input {...field} placeholder="Your full name" autoFocus />
+                          <Input {...field} placeholder="Your full name" autoFocus className="h-12 bg-black/50 border-white/10 focus:border-primary focus:ring-primary/20 transition-all rounded-xl text-sm font-medium pl-4" />
                         </FormControl>
-                        <FormMessage />
+                        <FormMessage className="text-[10px] uppercase font-bold tracking-widest" />
                       </FormItem>
                     )} />
                     <FormField control={form.control} name="university" render={({ field }) => (
                       <FormItem>
                         <FormControl>
-                          <Input {...field} placeholder="Your university or institution" />
+                          <Input {...field} placeholder="Your university or institution" className="h-12 bg-black/50 border-white/10 focus:border-primary focus:ring-primary/20 transition-all rounded-xl text-sm font-medium pl-4" />
                         </FormControl>
-                        <FormMessage />
+                        <FormMessage className="text-[10px] uppercase font-bold tracking-widest" />
                       </FormItem>
                     )} />
-                    <Button type="submit" variant="gradient" className="w-full mt-2">
-                      Continue <ArrowRight className="ml-2 w-4 h-4" />
+                    <Button type="submit" className="w-full h-12 rounded-xl text-[10px] font-bold tracking-widest uppercase shadow-[0_0_15px_hsl(var(--primary)/0.3)] bg-primary text-primary-foreground hover:bg-primary/90 transition-all mt-4 border-0">
+                      Continue <ArrowRight className="ml-2 w-4 h-4 drop-shadow-sm" />
                     </Button>
                   </form>
                 </Form>
@@ -259,10 +270,17 @@ export default function OnboardingPage() {
 
             {/* ── Step 1: Skills to teach ── */}
             {step === 1 && (
-              <motion.div key="step1" custom={dir} variants={slideVariants} initial="enter" animate="center" exit="exit" transition={{ duration: 0.22, ease: [0.16, 1, 0.3, 1] }}>
-                <h2 className="text-xl font-bold mb-1">What can you teach?</h2>
-                <p className="text-muted-foreground text-sm mb-6">Pick up to <strong>3 skills</strong> you can share with others.</p>
-                <div className="grid grid-cols-4 gap-2.5 mb-6">
+              <motion.div key="step1" custom={dir} variants={slideVariants} initial="enter" animate="center" exit="exit" transition={{ duration: 0.3, ease: [0.16, 1, 0.3, 1] }} className="relative z-10 mt-6">
+                <div className="flex flex-col sm:flex-row sm:items-end justify-between mb-8 gap-4">
+                  <div>
+                    <h2 className="text-2xl font-extrabold font-headline mb-1 tracking-tight text-white drop-shadow-sm">Outgoing Payload</h2>
+                    <p className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground whitespace-normal leading-relaxed">Pick up to <strong className="text-white drop-shadow-[0_0_5px_rgba(255,255,255,0.8)]">3 modules</strong> to transmit.</p>
+                  </div>
+                  <div className="text-[10px] font-bold uppercase tracking-widest text-primary bg-primary/10 px-3 py-1.5 rounded-full border border-primary/20 shadow-[0_0_10px_hsl(var(--primary)/0.2)]">
+                    {skillsOffered.length}/3 selected
+                  </div>
+                </div>
+                <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3 mb-8 max-h-[40vh] overflow-y-auto px-1 pb-4 custom-scrollbar">
                   {skillCatalog.map((skill) => (
                     <SkillCard
                       key={skill.id}
@@ -273,15 +291,14 @@ export default function OnboardingPage() {
                     />
                   ))}
                 </div>
-                <div className="flex gap-3">
-                  <Button variant="outline" className="flex-1" onClick={() => go(0)}>Back</Button>
+                <div className="flex gap-4">
+                  <Button variant="outline" className="flex-[1] h-12 rounded-xl text-[10px] font-bold uppercase tracking-widest border-white/10 bg-white/5 hover:bg-white/10 hover:border-white/20 transition-all text-muted-foreground hover:text-white shadow-none" onClick={() => go(0)}>Rewind</Button>
                   <Button
-                    variant="gradient"
-                    className="flex-1"
+                    className="flex-[2] h-12 rounded-xl text-[10px] font-bold tracking-widest uppercase shadow-[0_0_15px_hsl(var(--primary)/0.3)] bg-primary text-primary-foreground hover:bg-primary/90 transition-all border-0 disabled:shadow-none disabled:bg-primary/20"
                     disabled={skillsOffered.length === 0}
                     onClick={() => go(2)}
                   >
-                    Continue <ArrowRight className="ml-2 w-4 h-4" />
+                    Proceed to Input <ArrowRight className="ml-2 w-4 h-4 drop-shadow-sm" />
                   </Button>
                 </div>
               </motion.div>
@@ -289,10 +306,17 @@ export default function OnboardingPage() {
 
             {/* ── Step 2: Skills to learn ── */}
             {step === 2 && (
-              <motion.div key="step2" custom={dir} variants={slideVariants} initial="enter" animate="center" exit="exit" transition={{ duration: 0.22, ease: [0.16, 1, 0.3, 1] }}>
-                <h2 className="text-xl font-bold mb-1">What do you want to learn?</h2>
-                <p className="text-muted-foreground text-sm mb-6">Pick up to <strong>3 skills</strong> you're excited to learn.</p>
-                <div className="grid grid-cols-4 gap-2.5 mb-6">
+              <motion.div key="step2" custom={dir} variants={slideVariants} initial="enter" animate="center" exit="exit" transition={{ duration: 0.3, ease: [0.16, 1, 0.3, 1] }} className="relative z-10 mt-6">
+                <div className="flex flex-col sm:flex-row sm:items-end justify-between mb-8 gap-4">
+                  <div>
+                    <h2 className="text-2xl font-extrabold font-headline mb-1 tracking-tight text-white drop-shadow-sm">Incoming Query</h2>
+                    <p className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground whitespace-normal leading-relaxed">Pick up to <strong className="text-white drop-shadow-[0_0_5px_rgba(255,255,255,0.8)]">3 modules</strong> to acquire.</p>
+                  </div>
+                  <div className="text-[10px] font-bold uppercase tracking-widest text-primary bg-primary/10 px-3 py-1.5 rounded-full border border-primary/20 shadow-[0_0_10px_hsl(var(--primary)/0.2)]">
+                    {skillsWanted.length}/3 selected
+                  </div>
+                </div>
+                <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3 mb-8 max-h-[40vh] overflow-y-auto px-1 pb-4 custom-scrollbar">
                   {skillCatalog.map((skill) => (
                     <SkillCard
                       key={skill.id}
@@ -303,15 +327,14 @@ export default function OnboardingPage() {
                     />
                   ))}
                 </div>
-                <div className="flex gap-3">
-                  <Button variant="outline" className="flex-1" onClick={() => go(1)}>Back</Button>
+                <div className="flex gap-4">
+                  <Button variant="outline" className="flex-[1] h-12 rounded-xl text-[10px] font-bold uppercase tracking-widest border-white/10 bg-white/5 hover:bg-white/10 hover:border-white/20 transition-all text-muted-foreground hover:text-white shadow-none" onClick={() => go(1)}>Rewind</Button>
                   <Button
-                    variant="gradient"
-                    className="flex-1"
+                    className="flex-[2] h-12 rounded-xl text-[10px] font-bold tracking-widest uppercase shadow-[0_0_15px_hsl(var(--primary)/0.3)] bg-primary text-primary-foreground hover:bg-primary/90 transition-all border-0 disabled:shadow-none disabled:bg-primary/20"
                     disabled={skillsWanted.length === 0 || saving}
                     onClick={handleFinish}
                   >
-                    {saving ? 'Saving...' : 'Finish Setup'} <Sparkles className="ml-2 w-4 h-4" />
+                    {saving ? 'Compiling...' : 'Finalize Sequence'} <Sparkles className="ml-2 w-4 h-4 drop-shadow-sm" />
                   </Button>
                 </div>
               </motion.div>
@@ -319,17 +342,18 @@ export default function OnboardingPage() {
 
             {/* ── Step 3: Success ── */}
             {step === 3 && (
-              <motion.div key="step3" custom={dir} variants={slideVariants} initial="enter" animate="center" exit="exit" transition={{ duration: 0.22, ease: [0.16, 1, 0.3, 1] }} className="text-center py-6">
+              <motion.div key="step3" custom={dir} variants={slideVariants} initial="enter" animate="center" exit="exit" transition={{ duration: 0.3, ease: [0.16, 1, 0.3, 1] }} className="text-center py-10 relative z-10">
                 <motion.div
                   initial={{ scale: 0 }}
                   animate={{ scale: 1 }}
                   transition={{ type: 'spring', stiffness: 380, damping: 22, delay: 0.1 }}
-                  className="w-20 h-20 rounded-full bg-primary/15 flex items-center justify-center mx-auto mb-5"
+                  className="w-24 h-24 rounded-full bg-primary/20 flex items-center justify-center mx-auto mb-6 shadow-[0_0_30px_hsl(var(--primary)/0.4)] relative"
                 >
-                  <Check className="w-10 h-10 text-primary" />
+                  <div className="absolute inset-0 bg-primary/10 blur-xl rounded-full" />
+                  <Check className="w-12 h-12 text-primary drop-shadow-[0_0_8px_hsl(var(--primary)/0.8)] relative z-10 stroke-[3px]" />
                 </motion.div>
-                <h2 className="text-2xl font-bold mb-2">You're all set!</h2>
-                <p className="text-muted-foreground">Taking you to your dashboard…</p>
+                <h2 className="text-3xl font-extrabold font-headline mb-3 tracking-tight text-white drop-shadow-[0_0_15px_rgba(255,255,255,0.1)]">Sync Complete</h2>
+                <p className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">Routing to Main Hub terminal...</p>
               </motion.div>
             )}
           </AnimatePresence>

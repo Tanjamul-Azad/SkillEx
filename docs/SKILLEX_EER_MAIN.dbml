@@ -1,0 +1,441 @@
+Project SkillEX {
+  database_type: "MySQL"
+  Note: "Lean SkillEX EER for dbdiagram main view. Keeps the live schema plus only the highest-priority roadmap tables for a cleaner landscape diagram."
+}
+
+Table users {
+  id varchar [pk, note: "UUID"]
+  name varchar [not null]
+  username varchar [not null, unique]
+  email varchar [not null, unique]
+  password_hash varchar [not null]
+  avatar varchar
+  avatar_url text
+  university varchar
+  location varchar
+  bio text
+  teach_intent_text text
+  learn_intent_text text
+  skillex_score int [not null, default: 0]
+  level varchar [not null, default: "NEWCOMER"]
+  role varchar [not null, default: "STUDENT"]
+  sessions_completed int [not null, default: 0]
+  rating decimal
+  is_online boolean [not null, default: false]
+  connections_public boolean [not null, default: true]
+  joined_at datetime
+  updated_at datetime
+
+  Note: "Core account, profile, and reputation entity."
+}
+
+Table skills {
+  id varchar [pk, note: "UUID"]
+  name varchar [not null, unique]
+  icon varchar [not null]
+  category varchar [not null]
+  description varchar
+
+  Note: "Master skill catalog."
+}
+
+Table user_skills_offered {
+  user_id varchar [pk]
+  skill_id varchar [pk]
+  level varchar [not null, default: "BEGINNER"]
+
+  Note: "Skills a user can teach. Junction table with proficiency level."
+}
+
+Table user_skills_wanted {
+  user_id varchar [pk]
+  skill_id varchar [pk]
+  level varchar [not null, default: "BEGINNER"]
+
+  Note: "Skills a user wants to learn. Junction table with target proficiency."
+}
+
+Table exchanges {
+  id varchar [pk, note: "UUID"]
+  requester_id varchar [not null]
+  receiver_id varchar [not null]
+  offered_skill_id varchar
+  wanted_skill_id varchar
+  message text
+  status varchar [not null, default: "PENDING"]
+  session_date datetime
+  created_at datetime
+  updated_at datetime
+
+  Note: "Peer skill exchange request lifecycle."
+}
+
+Table sessions {
+  id varchar [pk, note: "UUID"]
+  exchange_id varchar [not null]
+  teacher_id varchar [not null]
+  learner_id varchar [not null]
+  skill_id varchar [not null]
+  scheduled_at datetime [not null]
+  duration_mins int [not null, default: 60]
+  status varchar [not null, default: "SCHEDULED"]
+  meet_link varchar
+  created_at datetime
+  updated_at datetime
+
+  Note: "Scheduled teaching session linked to an exchange."
+}
+
+Table reviews {
+  id varchar [pk, note: "UUID"]
+  session_id varchar [not null]
+  from_user varchar [not null]
+  to_user varchar [not null]
+  skill_id varchar [not null]
+  rating int [not null]
+  comment text
+  created_at datetime
+
+  Note: "Post-session review and rating."
+}
+
+Table events {
+  id varchar [pk, note: "UUID"]
+  title varchar [not null]
+  description text
+  host_id varchar [not null]
+  event_date datetime [not null]
+  location varchar
+  is_online boolean [not null, default: true]
+  cover_gradient varchar
+  created_at datetime
+
+  Note: "Community events hosted by users."
+}
+
+Table event_skills {
+  event_id varchar [pk]
+  skill_id varchar [pk]
+
+  Note: "Many-to-many event to skill tagging."
+}
+
+Table event_attendees {
+  event_id varchar [pk]
+  user_id varchar [pk]
+
+  Note: "Many-to-many event attendance."
+}
+
+Table discussions {
+  id varchar [pk, note: "UUID"]
+  title varchar [not null]
+  content text [not null]
+  author_id varchar [not null]
+  category varchar
+  upvotes int [not null, default: 0]
+  replies int [not null, default: 0]
+  views int [not null, default: 0]
+  is_pinned boolean [not null, default: false]
+  created_at datetime
+
+  Note: "Community discussion board."
+}
+
+Table skill_circles {
+  id varchar [pk, note: "UUID"]
+  name varchar [not null]
+  icon varchar
+  member_count int [not null, default: 0]
+  last_session datetime
+  activity varchar [not null, default: "ACTIVE"]
+  created_at datetime
+
+  Note: "Named groups organized around a skill."
+}
+
+Table skill_circle_members {
+  circle_id varchar [pk]
+  user_id varchar [pk]
+
+  Note: "Many-to-many membership for skill circles."
+}
+
+Table skill_circle_skills {
+  circle_id varchar [pk]
+  skill_id varchar [pk]
+
+  Note: "Many-to-many mapping between circles and skills."
+}
+
+Table posts {
+  id varchar [pk, note: "UUID"]
+  type varchar [not null, default: "SHOWCASE"]
+  author_id varchar [not null]
+  content text [not null]
+  skill_id varchar
+  badge varchar
+  likes int [not null, default: 0]
+  comments int [not null, default: 0]
+  shares int [not null, default: 0]
+  created_at datetime
+
+  Note: "Community feed post."
+}
+
+Table stories {
+  id varchar [pk, note: "UUID"]
+  user_id varchar [not null]
+  is_seen boolean [not null, default: false]
+  created_at datetime
+
+  Note: "24-hour user stories."
+}
+
+Table notifications {
+  id varchar [pk, note: "UUID"]
+  user_id varchar [not null]
+  type varchar [not null]
+  message text [not null]
+  from_user_id varchar
+  is_read boolean [not null, default: false]
+  created_at datetime
+
+  Note: "In-app notifications."
+}
+
+Table messages {
+  id varchar [pk, note: "UUID"]
+  sender_id varchar [not null]
+  receiver_id varchar [not null]
+  content text [not null]
+  type varchar [not null, default: "TEXT"]
+  image_url varchar
+  is_read boolean [not null, default: false]
+  created_at datetime
+
+  Note: "Direct messaging between users."
+}
+
+Table skill_relations {
+  skill_id varchar [pk]
+  related_skill_id varchar [pk]
+  similarity_score decimal [not null]
+
+  Note: "Directional skill similarity graph."
+}
+
+Table skill_embeddings {
+  skill_id varchar [pk]
+  model_name varchar [not null]
+  dimensions int [not null]
+  vector_json longtext [not null]
+  source_text varchar [not null]
+  updated_at datetime
+
+  Note: "Stored embedding vectors for semantic matching."
+}
+
+Table pending_skills {
+  id varchar [pk, note: "UUID"]
+  normalized_name varchar [not null]
+  display_name varchar [not null]
+  category varchar
+  description varchar
+  source_intent text
+  status varchar [not null, default: "PENDING"]
+  seen_count int [not null, default: 1]
+  confidence_sum double [not null, default: 0]
+  first_seen_at datetime
+  last_seen_at datetime
+  requested_by_user_id varchar
+  promoted_skill_id varchar
+  reviewed_by_user_id varchar
+  review_note varchar
+  reviewed_at datetime
+  created_at datetime
+  updated_at datetime
+
+  Note: "Skill governance intake queue for unmodeled or new skills."
+}
+
+Table skill_catalog_audit {
+  id varchar [pk, note: "UUID"]
+  action varchar [not null]
+  pending_skill_id varchar
+  skill_id varchar
+  actor_user_id varchar
+  details varchar
+  created_at datetime
+
+  Note: "Audit trail for skill catalog governance actions."
+}
+
+Table connections {
+  id varchar [pk, note: "UUID"]
+  requester_id varchar [not null]
+  receiver_id varchar [not null]
+  message text
+  status varchar [not null, default: "PENDING"]
+  responded_at datetime
+  created_at datetime
+  updated_at datetime
+
+  Note: "User-to-user connection requests and outcomes."
+}
+
+Table skill_credit_wallets {
+  id varchar [pk, note: "UUID"]
+  user_id varchar [not null, unique]
+  balance int [not null, default: 0]
+  created_at datetime
+  updated_at datetime
+
+  Note: "Planned credit wallet per user."
+}
+
+Table skill_credit_ledger {
+  id varchar [pk, note: "UUID"]
+  wallet_id varchar [not null]
+  delta int [not null]
+  reason varchar [not null]
+  reference_type varchar
+  reference_id varchar
+  created_at datetime
+
+  Note: "Planned immutable credit transaction log."
+}
+
+Table skill_packages {
+  id varchar [pk, note: "UUID"]
+  title varchar [not null]
+  description text
+  credit_cost int [not null]
+  cash_cost decimal
+  is_active boolean [not null, default: true]
+  created_at datetime
+
+  Note: "Planned purchasable skill packages."
+}
+
+Table credit_redemptions {
+  id varchar [pk, note: "UUID"]
+  user_id varchar [not null]
+  package_id varchar [not null]
+  credits_spent int [not null]
+  cash_paid decimal
+  status varchar [not null]
+  created_at datetime
+
+  Note: "Planned redemption records for credits and packages."
+}
+
+Ref: user_skills_offered.user_id > users.id
+Ref: user_skills_offered.skill_id > skills.id
+
+Ref: user_skills_wanted.user_id > users.id
+Ref: user_skills_wanted.skill_id > skills.id
+
+Ref: exchanges.requester_id > users.id
+Ref: exchanges.receiver_id > users.id
+Ref: exchanges.offered_skill_id > skills.id
+Ref: exchanges.wanted_skill_id > skills.id
+
+Ref: sessions.exchange_id > exchanges.id
+Ref: sessions.teacher_id > users.id
+Ref: sessions.learner_id > users.id
+Ref: sessions.skill_id > skills.id
+
+Ref: reviews.session_id > sessions.id
+Ref: reviews.from_user > users.id
+Ref: reviews.to_user > users.id
+Ref: reviews.skill_id > skills.id
+
+Ref: events.host_id > users.id
+Ref: event_skills.event_id > events.id
+Ref: event_skills.skill_id > skills.id
+Ref: event_attendees.event_id > events.id
+Ref: event_attendees.user_id > users.id
+
+Ref: discussions.author_id > users.id
+
+Ref: skill_circle_members.circle_id > skill_circles.id
+Ref: skill_circle_members.user_id > users.id
+
+Ref: skill_circle_skills.circle_id > skill_circles.id
+Ref: skill_circle_skills.skill_id > skills.id
+
+Ref: posts.author_id > users.id
+Ref: posts.skill_id > skills.id
+
+Ref: stories.user_id > users.id
+
+Ref: notifications.user_id > users.id
+Ref: notifications.from_user_id > users.id
+
+Ref: messages.sender_id > users.id
+Ref: messages.receiver_id > users.id
+
+Ref: skill_relations.skill_id > skills.id
+Ref: skill_relations.related_skill_id > skills.id
+
+Ref: skill_embeddings.skill_id > skills.id
+
+Ref: pending_skills.requested_by_user_id > users.id
+Ref: pending_skills.reviewed_by_user_id > users.id
+Ref: pending_skills.promoted_skill_id > skills.id
+
+Ref: skill_catalog_audit.pending_skill_id > pending_skills.id
+Ref: skill_catalog_audit.skill_id > skills.id
+Ref: skill_catalog_audit.actor_user_id > users.id
+
+Ref: connections.requester_id > users.id
+Ref: connections.receiver_id > users.id
+
+Ref: skill_credit_wallets.user_id > users.id
+Ref: skill_credit_ledger.wallet_id > skill_credit_wallets.id
+
+Ref: credit_redemptions.user_id > users.id
+Ref: credit_redemptions.package_id > skill_packages.id
+
+TableGroup "Core Identity & Skills" {
+  users
+  skills
+  user_skills_offered
+  user_skills_wanted
+}
+
+TableGroup "Exchange Flow" {
+  exchanges
+  sessions
+  reviews
+  connections
+  messages
+  notifications
+}
+
+TableGroup "Community" {
+  events
+  event_skills
+  event_attendees
+  discussions
+  skill_circles
+  skill_circle_members
+  skill_circle_skills
+  posts
+  stories
+}
+
+TableGroup "Intelligence & Governance" {
+  skill_relations
+  skill_embeddings
+  pending_skills
+  skill_catalog_audit
+}
+
+TableGroup "Roadmap: Credit Economy" {
+  skill_credit_wallets
+  skill_credit_ledger
+  skill_packages
+  credit_redemptions
+}

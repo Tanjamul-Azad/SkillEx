@@ -11,7 +11,6 @@ import { useToast } from '@/hooks/use-toast';
 import { UserService } from '@/services/userService';
 import { api } from '@/services/api';
 import DashboardLayout from '@/components/layout/DashboardLayout';
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
@@ -492,36 +491,35 @@ export default function SettingsPage() {
 
   return (
     <DashboardLayout>
-      <div className="container mx-auto max-w-5xl px-4 py-8">
-        <motion.div initial={{ opacity: 0, y: -12 }} animate={{ opacity: 1, y: 0 }}>
-          <h1 className="font-headline text-3xl font-extrabold tracking-tight">Settings</h1>
-          <p className="mt-1 text-muted-foreground">Manage your account preferences and profile.</p>
+      <div className="relative z-10 max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-8">
+        <motion.div initial={{ opacity: 0, y: -12 }} animate={{ opacity: 1, y: 0 }} className="mb-8">
+          <h1 className="font-headline text-4xl font-extrabold tracking-tight text-white drop-shadow-md">Settings</h1>
+          <p className="mt-2 text-[11px] uppercase tracking-widest font-bold text-muted-foreground">Manage your account preferences and profile.</p>
         </motion.div>
 
-        <div className="mt-8 flex flex-col gap-8 lg:flex-row">
+        <div className="flex flex-col gap-8 lg:flex-row">
           {/* Sidebar */}
           <motion.aside
             initial={{ opacity: 0, x: -16 }}
             animate={{ opacity: 1, x: 0 }}
             transition={{ delay: 0.1 }}
-            className="w-full shrink-0 lg:w-52"
+            className="w-full shrink-0 lg:w-56"
           >
-            <nav className="flex flex-row gap-1 lg:flex-col">
+            <nav className="flex flex-row overflow-x-auto custom-scrollbar lg:flex-col gap-2 pb-2 lg:pb-0 h-full">
               {sections.map((s) => (
-                <Button
+                <button
                   key={s.id}
-                  variant="ghost"
                   onClick={() => setActive(s.id)}
                   className={cn(
-                    "flex items-center gap-2.5 rounded-xl px-3 py-2.5 text-sm font-medium transition-colors w-full text-left justify-start h-auto",
+                    "flex items-center gap-3 rounded-[1rem] px-4 py-3 text-[12px] uppercase tracking-wider font-bold transition-all w-full text-left justify-start border backdrop-blur-sm whitespace-nowrap lg:whitespace-normal group",
                     active === s.id
-                      ? 'bg-primary/10 text-primary hover:bg-primary/10 hover:text-primary'
-                      : 'text-muted-foreground hover:bg-muted hover:text-foreground'
-                    , s.id === 'danger' && 'mt-auto text-destructive hover:bg-destructive/10 hover:text-destructive')}
+                      ? 'bg-primary/20 text-primary border-primary/30 shadow-[0_0_20px_hsl(var(--primary)/0.15)] origin-left scale-[1.02]'
+                      : 'bg-black/20 text-muted-foreground border-white/5 hover:bg-white/5 hover:text-foreground hover:border-white/10'
+                    , s.id === 'danger' && 'lg:mt-auto text-destructive hover:bg-destructive/10 hover:text-destructive border-transparent hover:border-destructive/30')}
                 >
-                  <s.icon className="h-4 w-4 shrink-0" />
-                  <span className="hidden sm:block">{s.label}</span>
-                </Button>
+                  <s.icon className={cn("h-4 w-4 shrink-0 transition-transform duration-300", active === s.id && 'scale-110 drop-shadow-[0_0_8px_var(--primary)]', active !== s.id && 'group-hover:scale-110')} />
+                  <span className="block">{s.label}</span>
+                </button>
               ))}
             </nav>
           </motion.aside>
@@ -532,98 +530,98 @@ export default function SettingsPage() {
             variants={item}
             initial="hidden"
             animate="visible"
-            className="flex-1 space-y-6"
+            className="flex-1 min-w-0 space-y-6"
           >
             {/* ── PROFILE ── */}
             {active === 'profile' && (
               <>
-                <Card className="border-border/60">
-                  <CardHeader>
-                    <CardTitle className="flex items-center gap-2 text-base">
-                      <User className="h-4 w-4 text-primary" /> Profile Information
-                    </CardTitle>
-                    <CardDescription>Update your public profile details.</CardDescription>
-                  </CardHeader>
-                  <CardContent>
+                <div className="overflow-hidden rounded-[2rem] border border-white/5 bg-black/40 backdrop-blur-xl shadow-[inset_0_1px_0_0_hsla(0,0%,100%,0.05)]">
+                  <div className="p-6 border-b border-white/5 bg-white/5">
+                    <h3 className="text-xl font-extrabold font-headline text-white flex items-center gap-2">
+                      <User className="h-5 w-5 text-primary" /> Profile Information
+                    </h3>
+                    <p className="text-[10px] uppercase font-bold tracking-widest text-muted-foreground mt-1">Update your public profile details.</p>
+                  </div>
+                  <div className="p-6">
                     {/* Avatar */}
-                    <div className="mb-6 flex items-center gap-4">
-                      <div className="relative">
-                        <Avatar className="h-20 w-20 ring-4 ring-primary/20">
-                          <AvatarImage src={localAvatar ?? user?.avatar} alt={user?.name} />
-                          <AvatarFallback className="text-xl font-bold">{user?.name?.charAt(0)}</AvatarFallback>
+                    <div className="mb-8 flex flex-col sm:flex-row items-start sm:items-center gap-6">
+                      <div className="relative group">
+                        <Avatar className="h-24 w-24 ring-4 ring-primary/20 bg-black/50 transition-all duration-500 group-hover:ring-primary/50 shadow-[0_0_30px_hsl(var(--primary)/0.15)] group-hover:shadow-[0_0_40px_hsl(var(--primary)/0.3)]">
+                          <AvatarImage src={localAvatar ?? user?.avatar} alt={user?.name} className="object-cover" />
+                          <AvatarFallback className="text-2xl font-extrabold bg-gradient-to-br from-primary/20 to-secondary/20 text-primary">{user?.name?.charAt(0)}</AvatarFallback>
                         </Avatar>
-                        <Button
-                          size="icon"
+                        <button
+                          type="button"
                           onClick={() => setAvatarDialogOpen(true)}
-                          className="absolute bottom-0 right-0 flex h-7 w-7 items-center justify-center rounded-full bg-primary text-primary-foreground shadow hover:bg-primary/90 transition-colors"
+                          className="absolute bottom-0 right-0 flex h-8 w-8 items-center justify-center rounded-full bg-primary text-primary-foreground shadow-[0_0_15px_hsl(var(--primary)/0.4)] hover:bg-primary/90 transition-transform duration-300 hover:scale-110 border-2 border-background"
                         >
-                          <Camera className="h-3.5 w-3.5" />
-                        </Button>
+                          <Camera className="h-4 w-4" />
+                        </button>
                       </div>
-                      <div className="text-sm">
-                        <p className="font-semibold">{user?.name}</p>
-                        <p className="text-muted-foreground">{user?.email}</p>
-                        <Badge variant="secondary" className="mt-1 capitalize">{user?.level}</Badge>
+                      <div className="text-sm space-y-1">
+                        <p className="text-xl font-extrabold font-headline text-foreground">{user?.name}</p>
+                        <p className="text-[11px] uppercase tracking-widest font-bold text-muted-foreground">{user?.email}</p>
+                        <Badge variant="outline" className="mt-2 bg-primary/10 text-primary border-primary/20 px-3 py-1 shadow-[inset_0_1px_0_0_hsla(0,0%,100%,0.05)] text-[9px] uppercase tracking-[0.2em] font-extrabold">{user?.level}</Badge>
                       </div>
                     </div>
 
                     <Form {...profileForm}>
-                      <form onSubmit={profileForm.handleSubmit(handleProfileSave)} className="space-y-4">
-                        <div className="grid gap-4 sm:grid-cols-2">
+                      <form onSubmit={profileForm.handleSubmit(handleProfileSave)} className="space-y-6">
+                        <div className="grid gap-6 sm:grid-cols-2">
                           <FormField control={profileForm.control} name="name" render={({ field }) => (
                             <FormItem>
-                              <FormLabel>Full Name</FormLabel>
-                              <FormControl><Input {...field} placeholder="Your name" /></FormControl>
+                              <FormLabel className="text-[10px] uppercase font-bold tracking-widest text-muted-foreground">Full Name</FormLabel>
+                              <FormControl><Input {...field} placeholder="Your name" className="appearance-none bg-black/20 border-white/10 text-white placeholder-white/30 focus:ring-primary/50 focus:border-primary/50 rounded-xl" /></FormControl>
                               <FormMessage />
                             </FormItem>
                           )} />
                           <FormField control={profileForm.control} name="email" render={({ field }) => (
                             <FormItem>
-                              <FormLabel>Email</FormLabel>
-                              <FormControl><Input {...field} type="email" placeholder="your@email.com" /></FormControl>
+                              <FormLabel className="text-[10px] uppercase font-bold tracking-widest text-muted-foreground">Email</FormLabel>
+                              <FormControl><Input {...field} type="email" placeholder="your@email.com" className="appearance-none bg-black/20 border-white/10 text-white placeholder-white/30 focus:ring-primary/50 focus:border-primary/50 rounded-xl" /></FormControl>
                               <FormMessage />
                             </FormItem>
                           )} />
                         </div>
                         <FormField control={profileForm.control} name="university" render={({ field }) => (
                           <FormItem>
-                            <FormLabel>University / Institution</FormLabel>
-                            <FormControl><Input {...field} placeholder="e.g. BUET, Dhaka University" /></FormControl>
+                            <FormLabel className="text-[10px] uppercase font-bold tracking-widest text-muted-foreground">University / Institution</FormLabel>
+                            <FormControl><Input {...field} placeholder="e.g. BUET, Dhaka University" className="appearance-none bg-black/20 border-white/10 text-white placeholder-white/30 focus:ring-primary/50 focus:border-primary/50 rounded-xl" /></FormControl>
                             <FormMessage />
                           </FormItem>
                         )} />
                         <FormField control={profileForm.control} name="bio" render={({ field }) => (
                           <FormItem>
-                            <FormLabel>Bio</FormLabel>
+                            <FormLabel className="text-[10px] uppercase font-bold tracking-widest text-muted-foreground">Bio</FormLabel>
                             <FormControl>
                               <Textarea
                                 {...field}
                                 placeholder="Tell others a bit about yourself..."
-                                className="resize-none h-24"
+                                className="appearance-none bg-black/20 border-white/10 text-white placeholder-white/30 focus:ring-primary/50 focus:border-primary/50 resize-none h-24 rounded-xl custom-scrollbar"
                               />
                             </FormControl>
-                            <div className="flex items-center justify-between">
+                            <div className="flex items-center justify-between mt-2">
                               <FormMessage />
-                              <span className={`text-xs ${charCount > 280 ? 'text-destructive' : 'text-muted-foreground'}`}>
+                              <span className={`text-[10px] font-bold tracking-widest ${charCount > 280 ? 'text-destructive' : 'text-white/40'}`}>
                                 {charCount}/300
                               </span>
                             </div>
                           </FormItem>
                         )} />
-                        <div className="grid gap-4 sm:grid-cols-2">
+                        <div className="grid gap-6 sm:grid-cols-2">
                           <FormField control={profileForm.control} name="teachIntentText" render={({ field }) => (
                             <FormItem>
-                              <FormLabel>What You Want To Teach (Intent)</FormLabel>
+                              <FormLabel className="text-[10px] uppercase font-bold tracking-widest text-muted-foreground">What You Want To Teach (Intent)</FormLabel>
                               <FormControl>
                                 <Textarea
                                   {...field}
                                   placeholder="e.g. I can teach crafting with household waste materials"
-                                  className="resize-none h-24"
+                                  className="appearance-none bg-black/20 border-white/10 text-white placeholder-white/30 focus:ring-primary/50 focus:border-primary/50 resize-none h-24 rounded-xl custom-scrollbar"
                                 />
                               </FormControl>
-                              <div className="flex items-center justify-between">
-                                <FormDescription className="text-xs">Used for intent-based smart matching.</FormDescription>
-                                <span className={`text-xs ${teachIntentCount > 470 ? 'text-destructive' : 'text-muted-foreground'}`}>
+                              <div className="flex items-center justify-between mt-2">
+                                <FormDescription className="text-[10px] uppercase font-bold tracking-widest text-white/40 leading-relaxed max-w-[200px]">Used for intent-based smart matching.</FormDescription>
+                                <span className={`text-[10px] font-bold tracking-widest ${teachIntentCount > 470 ? 'text-destructive' : 'text-white/40'}`}>
                                   {teachIntentCount}/500
                                 </span>
                               </div>
@@ -632,17 +630,17 @@ export default function SettingsPage() {
                           )} />
                           <FormField control={profileForm.control} name="learnIntentText" render={({ field }) => (
                             <FormItem>
-                              <FormLabel>What You Want To Learn (Intent)</FormLabel>
+                              <FormLabel className="text-[10px] uppercase font-bold tracking-widest text-muted-foreground">What You Want To Learn (Intent)</FormLabel>
                               <FormControl>
                                 <Textarea
                                   {...field}
                                   placeholder="e.g. I want to learn DIY upcycling craft"
-                                  className="resize-none h-24"
+                                  className="appearance-none bg-black/20 border-white/10 text-white placeholder-white/30 focus:ring-primary/50 focus:border-primary/50 resize-none h-24 rounded-xl custom-scrollbar"
                                 />
                               </FormControl>
-                              <div className="flex items-center justify-between">
-                                <FormDescription className="text-xs">Keep it practical and specific for better matches.</FormDescription>
-                                <span className={`text-xs ${learnIntentCount > 470 ? 'text-destructive' : 'text-muted-foreground'}`}>
+                              <div className="flex items-center justify-between mt-2">
+                                <FormDescription className="text-[10px] uppercase font-bold tracking-widest text-white/40 leading-relaxed max-w-[200px]">Keep it practical and specific for better matches.</FormDescription>
+                                <span className={`text-[10px] font-bold tracking-widest ${learnIntentCount > 470 ? 'text-destructive' : 'text-white/40'}`}>
                                   {learnIntentCount}/500
                                 </span>
                               </div>
@@ -652,39 +650,38 @@ export default function SettingsPage() {
                         </div>
                         <Button
                           type="submit"
-                          variant="gradient"
                           disabled={savingProfile}
-                          className="min-w-[140px]"
+                          className="min-w-[140px] bg-primary text-primary-foreground hover:bg-primary/90 rounded-xl font-bold shadow-[0_0_20px_hsl(var(--primary)/0.2)] hover:shadow-[0_0_30px_hsl(var(--primary)/0.4)] transition-all"
                         >
                           {savingProfile ? 'Saving...' : <><CheckCircle2 className="mr-2 h-4 w-4" />Save Changes</>}
                         </Button>
                       </form>
                     </Form>
-                  </CardContent>
-                </Card>
+                  </div>
+                </div>
 
-                <Card className="border-border/60">
-                  <CardHeader>
-                    <CardTitle className="flex items-center gap-2 text-base">
-                      <Zap className="h-4 w-4 text-accent" /> SkillEx Stats
-                    </CardTitle>
-                  </CardHeader>
-                  <CardContent>
+                <div className="overflow-hidden rounded-[2rem] border border-white/5 bg-black/40 backdrop-blur-xl shadow-[inset_0_1px_0_0_hsla(0,0%,100%,0.05)]">
+                  <div className="p-6 border-b border-white/5 bg-white/5">
+                    <h3 className="text-xl font-extrabold font-headline text-white flex items-center gap-2">
+                      <Zap className="h-5 w-5 text-accent" /> SkillEx Stats
+                    </h3>
+                  </div>
+                  <div className="p-6">
                     <div className="grid grid-cols-2 gap-4 sm:grid-cols-4">
                       {[
                         { label: 'SkillEx Score', value: user?.skillexScore },
-                        { label: 'Sessions Completed', value: user?.sessionsCompleted },
+                        { label: 'Sessions', value: user?.sessionsCompleted },
                         { label: 'Rating', value: `${user?.rating} ★` },
                         { label: 'Skills Offered', value: user?.skillsOffered?.length ?? 0 },
                       ].map(({ label, value }) => (
-                        <div key={label} className="rounded-xl bg-muted/60 border border-border/40 p-4 text-center">
-                          <p className="font-headline text-2xl font-black">{value}</p>
-                          <p className="text-xs text-muted-foreground mt-1">{label}</p>
+                        <div key={label} className="rounded-2xl bg-black/50 border border-white/5 p-4 text-center group hover:bg-white/5 transition-colors">
+                          <p className="font-headline text-3xl font-black text-white group-hover:text-primary transition-colors">{value}</p>
+                          <p className="text-[10px] uppercase font-bold tracking-widest text-muted-foreground mt-2">{label}</p>
                         </div>
                       ))}
                     </div>
-                  </CardContent>
-                </Card>
+                  </div>
+                </div>
               </>
             )}
 
@@ -692,37 +689,37 @@ export default function SettingsPage() {
             {active === 'skills' && (
               <div className="space-y-6">
                 {/* AI Detection Panel */}
-                <Card className="border-primary/20 bg-primary/5">
-                  <CardHeader className="pb-3">
-                    <CardTitle className="flex items-center gap-2 text-base text-primary">
-                      <Sparkles className="h-4 w-4" /> AI Skill Detection
-                    </CardTitle>
-                    <CardDescription>Describe what you can teach and what you want to learn. We'll suggest matching skills.</CardDescription>
-                  </CardHeader>
-                  <CardContent className="space-y-3">
-                    <div className="grid gap-3 sm:grid-cols-2">
-                      <div className="space-y-1.5">
-                        <label className="text-xs font-medium text-muted-foreground">What can you teach?</label>
+                <div className="overflow-hidden rounded-[2rem] border border-primary/20 bg-primary/5 backdrop-blur-xl shadow-[inset_0_1px_0_0_hsla(0,0%,100%,0.05)] relative">
+                  <div className="absolute inset-0 bg-gradient-to-br from-primary/10 to-transparent pointer-events-none" />
+                  <div className="p-6 border-b border-primary/10 relative z-10">
+                    <h3 className="text-xl font-extrabold font-headline text-primary flex items-center gap-2 drop-shadow-[0_0_8px_var(--primary)]">
+                      <Sparkles className="h-5 w-5" /> AI Skill Detection
+                    </h3>
+                    <p className="text-[10px] uppercase font-bold tracking-widest text-primary/70 mt-1">Describe what you can teach and what you want to learn. We'll suggest matching skills.</p>
+                  </div>
+                  <div className="p-6 space-y-4 relative z-10">
+                    <div className="grid gap-4 sm:grid-cols-2">
+                      <div className="space-y-2">
+                        <label className="text-[10px] uppercase font-bold tracking-widest text-primary/70">What can you teach?</label>
                         <textarea
                           value={skillTeachText}
                           onChange={(e) => { setSkillTeachText(e.target.value); setInterpretation(null); }}
                           placeholder="e.g. I can teach React, TypeScript and frontend architecture"
-                          className="w-full resize-none rounded-xl border border-border/60 bg-background px-3 py-2 text-sm placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary/40 min-h-[80px]"
+                          className="w-full resize-none rounded-xl border border-primary/20 bg-black/40 px-4 py-3 text-sm placeholder:text-white/30 text-white focus:outline-none focus:ring-2 focus:ring-primary/50 min-h-[100px] custom-scrollbar appearance-none"
                         />
                       </div>
-                      <div className="space-y-1.5">
-                        <label className="text-xs font-medium text-muted-foreground">What do you want to learn?</label>
+                      <div className="space-y-2">
+                        <label className="text-[10px] uppercase font-bold tracking-widest text-primary/70">What do you want to learn?</label>
                         <textarea
                           value={skillLearnText}
                           onChange={(e) => { setSkillLearnText(e.target.value); setInterpretation(null); }}
                           placeholder="e.g. I want to learn digital marketing and SEO"
-                          className="w-full resize-none rounded-xl border border-border/60 bg-background px-3 py-2 text-sm placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary/40 min-h-[80px]"
+                          className="w-full resize-none rounded-xl border border-primary/20 bg-black/40 px-4 py-3 text-sm placeholder:text-white/30 text-white focus:outline-none focus:ring-2 focus:ring-primary/50 min-h-[100px] custom-scrollbar appearance-none"
                         />
                       </div>
                     </div>
                     <Button
-                      variant="gradient"
-                      className="gap-2"
+                      className="gap-2 bg-primary text-primary-foreground hover:bg-primary/90 rounded-xl font-bold shadow-[0_0_20px_hsl(var(--primary)/0.2)] hover:shadow-[0_0_30px_hsl(var(--primary)/0.4)] transition-all min-w-[160px]"
                       disabled={isInterpreting || (!skillTeachText.trim() && !skillLearnText.trim())}
                       onClick={handleInterpretSkills}
                     >
@@ -730,23 +727,23 @@ export default function SettingsPage() {
                     </Button>
 
                     {interpretation && (
-                      <div className="grid gap-3 sm:grid-cols-2 pt-1">
+                      <div className="grid gap-4 sm:grid-cols-2 pt-2">
                         {interpretation.teach?.primary && (
-                          <div className="flex items-center justify-between rounded-xl border border-primary/20 bg-background/70 px-3 py-2.5">
+                          <div className="flex items-center justify-between rounded-2xl border border-primary/30 bg-primary/10 px-4 py-3 backdrop-blur-md shadow-[inset_0_1px_0_0_hsla(0,0%,100%,0.1)]">
                             <div>
-                              <p className="text-xs text-muted-foreground">Teach suggestion</p>
-                              <p className="font-semibold text-sm">
-                                {interpretation.teach.primary.skillName}{' '}
-                                <span className="text-xs text-muted-foreground">({interpretation.teach.primary.confidence}%)</span>
+                              <p className="text-[10px] uppercase font-bold tracking-widest text-primary/70">Teach suggestion</p>
+                              <p className="font-bold text-white mt-0.5 flex items-center gap-2">
+                                {interpretation.teach.primary.skillName}
+                                <span className="text-[10px] font-bold tracking-widest text-primary">({interpretation.teach.primary.confidence}%)</span>
                                 {interpretation.teach.primary.custom && (
-                                  <span className="ml-1 rounded-full border border-primary/30 bg-primary/10 px-1.5 py-0.5 text-[10px] font-medium text-primary">AI New</span>
+                                  <span className="rounded-full border border-primary bg-primary/20 px-2 py-0.5 text-[9px] uppercase tracking-widest font-black text-primary shadow-[0_0_10px_hsl(var(--primary)/0.3)]">AI New</span>
                                 )}
                               </p>
                             </div>
                             <Button
                               size="sm"
                               variant="outline"
-                              className="h-7 text-xs gap-1 border-primary/30 text-primary hover:bg-primary/10"
+                              className="h-8 rounded-lg text-xs font-bold gap-1 border-primary/30 text-primary hover:bg-primary/20 hover:text-primary shadow-[0_0_10px_hsl(var(--primary)/0.1)]"
                               disabled={addingSkill}
                               onClick={() => {
                                 const suggestion = interpretation.teach?.primary;
@@ -758,21 +755,21 @@ export default function SettingsPage() {
                           </div>
                         )}
                         {interpretation.learn?.primary && (
-                          <div className="flex items-center justify-between rounded-xl border border-primary/20 bg-background/70 px-3 py-2.5">
+                          <div className="flex items-center justify-between rounded-2xl border border-secondary/30 bg-secondary/10 px-4 py-3 backdrop-blur-md shadow-[inset_0_1px_0_0_hsla(0,0%,100%,0.1)]">
                             <div>
-                              <p className="text-xs text-muted-foreground">Learn suggestion</p>
-                              <p className="font-semibold text-sm">
-                                {interpretation.learn.primary.skillName}{' '}
-                                <span className="text-xs text-muted-foreground">({interpretation.learn.primary.confidence}%)</span>
+                              <p className="text-[10px] uppercase font-bold tracking-widest text-secondary/70">Learn suggestion</p>
+                              <p className="font-bold text-white mt-0.5 flex items-center gap-2">
+                                {interpretation.learn.primary.skillName}
+                                <span className="text-[10px] font-bold tracking-widest text-secondary">({interpretation.learn.primary.confidence}%)</span>
                                 {interpretation.learn.primary.custom && (
-                                  <span className="ml-1 rounded-full border border-primary/30 bg-primary/10 px-1.5 py-0.5 text-[10px] font-medium text-primary">AI New</span>
+                                  <span className="rounded-full border border-secondary bg-secondary/20 px-2 py-0.5 text-[9px] uppercase tracking-widest font-black text-secondary shadow-[0_0_10px_hsl(var(--secondary)/0.3)]">AI New</span>
                                 )}
                               </p>
                             </div>
                             <Button
                               size="sm"
                               variant="outline"
-                              className="h-7 text-xs gap-1 border-primary/30 text-primary hover:bg-primary/10"
+                              className="h-8 rounded-lg text-xs font-bold gap-1 border-secondary/30 text-secondary hover:bg-secondary/20 hover:text-secondary shadow-[0_0_10px_hsl(var(--secondary)/0.1)]"
                               disabled={addingSkill}
                               onClick={() => {
                                 const suggestion = interpretation.learn?.primary;
@@ -785,30 +782,33 @@ export default function SettingsPage() {
                         )}
                       </div>
                     )}
-                  </CardContent>
-                </Card>
+                  </div>
+                </div>
 
                 {/* Manual Add Panel */}
-                <Card className="border-border/60">
-                  <CardHeader className="pb-3">
-                    <CardTitle className="flex items-center gap-2 text-base">Manual Add</CardTitle>
-                    <CardDescription>Select multiple skills and add them in one click.</CardDescription>
-                  </CardHeader>
-                  <CardContent className="space-y-4">
-                    <div className="grid gap-3 md:grid-cols-3">
+                <div className="overflow-hidden rounded-[2rem] border border-white/5 bg-black/40 backdrop-blur-xl shadow-[inset_0_1px_0_0_hsla(0,0%,100%,0.05)]">
+                  <div className="p-6 border-b border-white/5 bg-white/5">
+                    <h3 className="text-xl font-extrabold font-headline text-white flex items-center gap-2">
+                      <Plus className="h-5 w-5 text-accent" /> Manual Add
+                    </h3>
+                    <p className="text-[10px] uppercase font-bold tracking-widest text-muted-foreground mt-1">Select multiple skills and add them in one click.</p>
+                  </div>
+                  <div className="p-6 space-y-6">
+                    <div className="grid gap-4 md:grid-cols-3">
                       <div className="md:col-span-2">
                         <Input
                           value={manualQuery}
                           onChange={(e) => setManualQuery(e.target.value)}
                           placeholder="Search by skill name or category..."
+                          className="appearance-none bg-black/20 border-white/10 text-white placeholder-white/30 focus:ring-primary/50 focus:border-primary/50 rounded-xl"
                         />
                       </div>
                       <div>
                         <Select value={manualType} onValueChange={(value: 'offered' | 'wanted') => { setManualType(value); setSelectedSkillIds([]); }}>
-                          <SelectTrigger>
+                          <SelectTrigger className="appearance-none bg-black/20 border-white/10 text-white focus:ring-primary/50 focus:border-primary/50 rounded-xl font-bold">
                             <SelectValue placeholder="Skill type" />
                           </SelectTrigger>
-                          <SelectContent>
+                          <SelectContent className="bg-black/90 border-white/10 backdrop-blur-xl rounded-xl">
                             <SelectItem value="offered">I can teach this</SelectItem>
                             <SelectItem value="wanted">I want to learn this</SelectItem>
                           </SelectContent>
@@ -816,13 +816,13 @@ export default function SettingsPage() {
                       </div>
                     </div>
 
-                    <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                    <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
                       <div className="w-full sm:max-w-[220px]">
                         <Select value={manualLevel} onValueChange={(value: 'BEGINNER' | 'MODERATE' | 'EXPERT') => setManualLevel(value)}>
-                          <SelectTrigger>
+                          <SelectTrigger className="appearance-none bg-black/20 border-white/10 text-white focus:ring-primary/50 focus:border-primary/50 rounded-xl font-bold">
                             <SelectValue placeholder="Skill level" />
                           </SelectTrigger>
-                          <SelectContent>
+                          <SelectContent className="bg-black/90 border-white/10 backdrop-blur-xl rounded-xl">
                             {LEVEL_OPTIONS.map((level) => (
                               <SelectItem key={level} value={level}>{LEVEL_DISPLAY[level]}</SelectItem>
                             ))}
@@ -830,8 +830,7 @@ export default function SettingsPage() {
                         </Select>
                       </div>
                       <Button
-                        variant="gradient"
-                        className="gap-2"
+                        className="gap-2 bg-primary text-primary-foreground hover:bg-primary/90 rounded-xl font-bold shadow-[0_0_20px_hsl(var(--primary)/0.2)] hover:shadow-[0_0_30px_hsl(var(--primary)/0.4)] transition-all"
                         disabled={bulkAdding || selectedSkillIds.length === 0}
                         onClick={handleBulkAddSkills}
                       >
@@ -839,11 +838,11 @@ export default function SettingsPage() {
                       </Button>
                     </div>
 
-                    <div className="rounded-xl border border-border/60 bg-muted/20 p-3">
+                    <div className="rounded-2xl border border-white/5 bg-black/50 p-4 min-h-[100px] shadow-[inset_0_1px_0_0_hsla(0,0%,100%,0.05)]">
                       {catalogLoading ? (
-                        <p className="text-sm text-muted-foreground">Loading skill catalog...</p>
+                        <p className="text-[10px] uppercase font-bold tracking-widest text-muted-foreground flex items-center gap-2"><Loader2 className="h-3 w-3 animate-spin text-primary" /> Loading skill catalog...</p>
                       ) : filteredCatalog.length === 0 ? (
-                        <p className="text-sm text-muted-foreground">No matching skills found for this filter.</p>
+                        <p className="text-[10px] uppercase font-bold tracking-widest text-muted-foreground">No matching skills found for this filter.</p>
                       ) : (
                         <div className="flex flex-wrap gap-2">
                           {filteredCatalog.map((skill) => {
@@ -854,85 +853,83 @@ export default function SettingsPage() {
                                 type="button"
                                 onClick={() => toggleSelectedSkill(skill.id)}
                                 className={cn(
-                                  'rounded-full border px-3 py-1.5 text-xs font-medium transition-colors',
+                                  'rounded-xl border px-3 py-1.5 text-[11px] uppercase tracking-widest font-black transition-all shadow-sm',
                                   selected
-                                    ? 'border-primary bg-primary text-primary-foreground'
-                                    : 'border-border/60 bg-background hover:border-primary/40 hover:bg-primary/5'
+                                    ? 'border-primary bg-primary text-primary-foreground shadow-[0_0_15px_hsl(var(--primary)/0.3)] scale-[1.02]'
+                                    : 'border-white/5 bg-black/40 text-muted-foreground hover:border-white/20 hover:text-white hover:bg-white/5'
                                 )}
                               >
-                                {skill.name} <span className="opacity-70">· {skill.category}</span>
+                                {skill.name} <span className={cn("opacity-50 font-medium ml-1", selected ? "text-primary-foreground" : "text-white/40")}>· {skill.category}</span>
                               </button>
                             );
                           })}
                         </div>
                       )}
                     </div>
-                  </CardContent>
-                </Card>
+                  </div>
+                </div>
 
                 {/* Skills I Teach */}
-                <Card className="border-border/60">
-                  <CardHeader className="pb-3">
-                    <div className="flex items-center justify-between">
-                      <CardTitle className="flex items-center gap-2 text-base">
-                        <BookOpen className="h-4 w-4 text-primary" /> Skills I Teach
-                      </CardTitle>
-                      <span className="text-xs text-muted-foreground">{offeredSkills.length} skill{offeredSkills.length !== 1 ? 's' : ''}</span>
+                <div className="overflow-hidden rounded-[2rem] border border-white/5 bg-black/40 backdrop-blur-xl shadow-[inset_0_1px_0_0_hsla(0,0%,100%,0.05)]">
+                  <div className="p-6 border-b border-white/5 bg-white/5 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                    <div>
+                      <h3 className="text-xl font-extrabold font-headline text-white flex items-center gap-2">
+                        <BookOpen className="h-5 w-5 text-primary" /> Skills I Teach
+                      </h3>
+                      <p className="text-[10px] uppercase font-bold tracking-widest text-muted-foreground mt-1">Manage your teaching skills and adjust levels anytime.</p>
                     </div>
-                    <CardDescription>Manage your teaching skills and adjust levels anytime.</CardDescription>
-                  </CardHeader>
-                  <CardContent>
+                    <span className="bg-primary/20 text-primary border border-primary/20 px-3 py-1 rounded-full text-[10px] uppercase tracking-[0.2em] font-extrabold shadow-[inset_0_1px_0_0_hsla(0,0%,100%,0.05)] whitespace-nowrap">{offeredSkills.length} skill{offeredSkills.length !== 1 ? 's' : ''}</span>
+                  </div>
+                  <div className="p-6">
                     {offeredSkills.length === 0 ? (
-                      <p className="text-sm text-muted-foreground italic">No teaching skills yet. Use AI Detection or Manual Add above.</p>
+                      <p className="text-[10px] py-4 uppercase font-bold tracking-widest text-muted-foreground text-center border-2 border-dashed border-white/5 rounded-2xl">No teaching skills yet. Use AI Detection or Manual Add above.</p>
                     ) : (
-                      <div className="space-y-2">
+                      <div className="grid gap-3 sm:grid-cols-2">
                         {offeredSkills.map((skill) => {
                           const rowKey = `offered:${skill.id}`;
                           const isEditing = editingSkillKey === rowKey;
                           const isSavingEdit = savingEditSkillKey === rowKey;
                           return (
-                            <div key={rowKey} className="rounded-xl border border-border/60 bg-background px-3 py-2">
-                              <div className="flex flex-wrap items-center justify-between gap-2">
-                                <div className="flex items-center gap-2">
-                                  <span className="font-medium text-sm">{skill.name}</span>
-                                  <Badge variant="secondary" className="text-[10px]">{LEVEL_DISPLAY[normalizeLevel(skill.level)]}</Badge>
+                            <div key={rowKey} className="rounded-2xl border border-white/5 bg-black/50 p-4 transition-all hover:bg-white/5 group shadow-[inset_0_1px_0_0_hsla(0,0%,100%,0.05)]">
+                              <div className="flex flex-wrap items-center justify-between gap-3">
+                                <div>
+                                  <span className="font-bold text-white text-base block">{skill.name}</span>
+                                  <Badge variant="outline" className="text-[9px] uppercase tracking-widest font-black mt-1.5 border-white/10 bg-white/5 text-muted-foreground">{LEVEL_DISPLAY[normalizeLevel(skill.level)]}</Badge>
                                 </div>
-                                <div className="flex items-center gap-1">
-                                  <Button size="sm" variant="outline" className="h-7 text-xs" onClick={() => startEditingSkill(skill, 'offered')}>
-                                    Edit Level
+                                <div className="flex items-center gap-2">
+                                  <Button size="sm" variant="ghost" className="h-8 text-[10px] uppercase font-bold tracking-widest hover:bg-white/10 text-muted-foreground hover:text-white px-3 rounded-xl transition-colors" onClick={() => startEditingSkill(skill, 'offered')}>
+                                    Edit
                                   </Button>
                                   <Button
                                     size="icon"
                                     variant="ghost"
-                                    className="h-7 w-7 text-destructive hover:text-destructive"
+                                    className="h-8 w-8 rounded-xl text-destructive/60 hover:text-destructive hover:bg-destructive/10 transition-colors"
                                     disabled={removingSkillId === skill.id}
                                     onClick={() => handleRemoveSkill(skill.id, 'offered')}
                                   >
-                                    {removingSkillId === skill.id ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <X className="h-3.5 w-3.5" />}
+                                    {removingSkillId === skill.id ? <Loader2 className="h-4 w-4 animate-spin text-destructive" /> : <X className="h-4 w-4" />}
                                   </Button>
                                 </div>
                               </div>
 
                               {isEditing && (
-                                <div className="mt-2 flex flex-col gap-2 sm:flex-row sm:items-center">
-                                  <div className="sm:w-[180px]">
-                                    <Select value={editingSkillLevel} onValueChange={(value: 'BEGINNER' | 'MODERATE' | 'EXPERT') => setEditingSkillLevel(value)}>
-                                      <SelectTrigger className="h-8">
-                                        <SelectValue />
-                                      </SelectTrigger>
-                                      <SelectContent>
-                                        {LEVEL_OPTIONS.map((level) => (
-                                          <SelectItem key={level} value={level}>{LEVEL_DISPLAY[level]}</SelectItem>
-                                        ))}
-                                      </SelectContent>
-                                    </Select>
-                                  </div>
-                                  <div className="flex items-center gap-2">
-                                    <Button size="sm" className="h-8" disabled={isSavingEdit} onClick={() => saveEditedSkill(skill, 'offered')}>
-                                      {isSavingEdit ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : 'Save'}
-                                    </Button>
-                                    <Button size="sm" variant="ghost" className="h-8" disabled={isSavingEdit} onClick={() => setEditingSkillKey(null)}>
+                                <div className="mt-4 pt-4 border-t border-white/5 flex flex-col gap-3">
+                                  <Select value={editingSkillLevel} onValueChange={(value: 'BEGINNER' | 'MODERATE' | 'EXPERT') => setEditingSkillLevel(value)}>
+                                    <SelectTrigger className="h-10 appearance-none bg-black/40 border-white/10 text-white rounded-xl focus:ring-primary/50 focus:border-primary/50 font-bold">
+                                      <SelectValue />
+                                    </SelectTrigger>
+                                    <SelectContent className="bg-black/90 border-white/10 backdrop-blur-xl rounded-xl">
+                                      {LEVEL_OPTIONS.map((level) => (
+                                        <SelectItem key={level} value={level}>{LEVEL_DISPLAY[level]}</SelectItem>
+                                      ))}
+                                    </SelectContent>
+                                  </Select>
+                                  <div className="flex items-center justify-end gap-2">
+                                    <Button size="sm" variant="ghost" className="h-8 text-[10px] uppercase font-bold tracking-widest hover:bg-white/5 rounded-lg" disabled={isSavingEdit} onClick={() => setEditingSkillKey(null)}>
                                       Cancel
+                                    </Button>
+                                    <Button size="sm" className="h-8 text-[10px] uppercase font-bold tracking-widest bg-primary text-primary-foreground hover:bg-primary/90 rounded-lg shadow-[0_0_10px_hsl(var(--primary)/0.2)]" disabled={isSavingEdit} onClick={() => saveEditedSkill(skill, 'offered')}>
+                                      {isSavingEdit ? <Loader2 className="h-3 w-3 animate-spin" /> : 'Save Level'}
                                     </Button>
                                   </div>
                                 </div>
@@ -942,72 +939,70 @@ export default function SettingsPage() {
                         })}
                       </div>
                     )}
-                  </CardContent>
-                </Card>
+                  </div>
+                </div>
 
                 {/* Skills I Want to Learn */}
-                <Card className="border-border/60">
-                  <CardHeader className="pb-3">
-                    <div className="flex items-center justify-between">
-                      <CardTitle className="flex items-center gap-2 text-base">
-                        <BookOpen className="h-4 w-4 text-accent" /> Skills I Want to Learn
-                      </CardTitle>
-                      <span className="text-xs text-muted-foreground">{wantedSkills.length} skill{wantedSkills.length !== 1 ? 's' : ''}</span>
+                <div className="overflow-hidden rounded-[2rem] border border-white/5 bg-black/40 backdrop-blur-xl shadow-[inset_0_1px_0_0_hsla(0,0%,100%,0.05)]">
+                  <div className="p-6 border-b border-white/5 bg-white/5 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                    <div>
+                      <h3 className="text-xl font-extrabold font-headline text-white flex items-center gap-2">
+                        <BookOpen className="h-5 w-5 text-accent" /> Skills I Want to Learn
+                      </h3>
+                      <p className="text-[10px] uppercase font-bold tracking-widest text-muted-foreground mt-1">Track your learning goals and tune level preferences.</p>
                     </div>
-                    <CardDescription>Track your learning goals and tune level preferences.</CardDescription>
-                  </CardHeader>
-                  <CardContent>
+                    <span className="bg-secondary/20 text-secondary border border-secondary/20 px-3 py-1 rounded-full text-[10px] uppercase tracking-[0.2em] font-extrabold shadow-[inset_0_1px_0_0_hsla(0,0%,100%,0.05)] whitespace-nowrap">{wantedSkills.length} skill{wantedSkills.length !== 1 ? 's' : ''}</span>
+                  </div>
+                  <div className="p-6">
                     {wantedSkills.length === 0 ? (
-                      <p className="text-sm text-muted-foreground italic">No learning goals yet. Use AI Detection or Manual Add above.</p>
+                      <p className="text-[10px] py-4 uppercase font-bold tracking-widest text-muted-foreground text-center border-2 border-dashed border-white/5 rounded-2xl">No learning goals yet. Use AI Detection or Manual Add above.</p>
                     ) : (
-                      <div className="space-y-2">
+                      <div className="grid gap-3 sm:grid-cols-2">
                         {wantedSkills.map((skill) => {
                           const rowKey = `wanted:${skill.id}`;
                           const isEditing = editingSkillKey === rowKey;
                           const isSavingEdit = savingEditSkillKey === rowKey;
                           return (
-                            <div key={rowKey} className="rounded-xl border border-border/60 bg-background px-3 py-2">
-                              <div className="flex flex-wrap items-center justify-between gap-2">
-                                <div className="flex items-center gap-2">
-                                  <span className="font-medium text-sm">{skill.name}</span>
-                                  <Badge variant="secondary" className="text-[10px]">{LEVEL_DISPLAY[normalizeLevel(skill.level)]}</Badge>
+                            <div key={rowKey} className="rounded-2xl border border-white/5 bg-black/50 p-4 transition-all hover:bg-white/5 group shadow-[inset_0_1px_0_0_hsla(0,0%,100%,0.05)]">
+                              <div className="flex flex-wrap items-center justify-between gap-3">
+                                <div>
+                                  <span className="font-bold text-white text-base block">{skill.name}</span>
+                                  <Badge variant="outline" className="text-[9px] uppercase tracking-widest font-black mt-1.5 border-white/10 bg-white/5 text-muted-foreground">{LEVEL_DISPLAY[normalizeLevel(skill.level)]}</Badge>
                                 </div>
-                                <div className="flex items-center gap-1">
-                                  <Button size="sm" variant="outline" className="h-7 text-xs" onClick={() => startEditingSkill(skill, 'wanted')}>
-                                    Edit Level
+                                <div className="flex items-center gap-2">
+                                  <Button size="sm" variant="ghost" className="h-8 text-[10px] uppercase font-bold tracking-widest hover:bg-white/10 text-muted-foreground hover:text-white px-3 rounded-xl transition-colors" onClick={() => startEditingSkill(skill, 'wanted')}>
+                                    Edit
                                   </Button>
                                   <Button
                                     size="icon"
                                     variant="ghost"
-                                    className="h-7 w-7 text-destructive hover:text-destructive"
+                                    className="h-8 w-8 rounded-xl text-destructive/60 hover:text-destructive hover:bg-destructive/10 transition-colors"
                                     disabled={removingSkillId === skill.id}
                                     onClick={() => handleRemoveSkill(skill.id, 'wanted')}
                                   >
-                                    {removingSkillId === skill.id ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <X className="h-3.5 w-3.5" />}
+                                    {removingSkillId === skill.id ? <Loader2 className="h-4 w-4 animate-spin text-destructive" /> : <X className="h-4 w-4" />}
                                   </Button>
                                 </div>
                               </div>
 
                               {isEditing && (
-                                <div className="mt-2 flex flex-col gap-2 sm:flex-row sm:items-center">
-                                  <div className="sm:w-[180px]">
-                                    <Select value={editingSkillLevel} onValueChange={(value: 'BEGINNER' | 'MODERATE' | 'EXPERT') => setEditingSkillLevel(value)}>
-                                      <SelectTrigger className="h-8">
-                                        <SelectValue />
-                                      </SelectTrigger>
-                                      <SelectContent>
-                                        {LEVEL_OPTIONS.map((level) => (
-                                          <SelectItem key={level} value={level}>{LEVEL_DISPLAY[level]}</SelectItem>
-                                        ))}
-                                      </SelectContent>
-                                    </Select>
-                                  </div>
-                                  <div className="flex items-center gap-2">
-                                    <Button size="sm" className="h-8" disabled={isSavingEdit} onClick={() => saveEditedSkill(skill, 'wanted')}>
-                                      {isSavingEdit ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : 'Save'}
-                                    </Button>
-                                    <Button size="sm" variant="ghost" className="h-8" disabled={isSavingEdit} onClick={() => setEditingSkillKey(null)}>
+                                <div className="mt-4 pt-4 border-t border-white/5 flex flex-col gap-3">
+                                  <Select value={editingSkillLevel} onValueChange={(value: 'BEGINNER' | 'MODERATE' | 'EXPERT') => setEditingSkillLevel(value)}>
+                                    <SelectTrigger className="h-10 appearance-none bg-black/40 border-white/10 text-white rounded-xl focus:ring-primary/50 focus:border-primary/50 font-bold">
+                                      <SelectValue />
+                                    </SelectTrigger>
+                                    <SelectContent className="bg-black/90 border-white/10 backdrop-blur-xl rounded-xl">
+                                      {LEVEL_OPTIONS.map((level) => (
+                                        <SelectItem key={level} value={level}>{LEVEL_DISPLAY[level]}</SelectItem>
+                                      ))}
+                                    </SelectContent>
+                                  </Select>
+                                  <div className="flex items-center justify-end gap-2">
+                                    <Button size="sm" variant="ghost" className="h-8 text-[10px] uppercase font-bold tracking-widest hover:bg-white/5 rounded-lg" disabled={isSavingEdit} onClick={() => setEditingSkillKey(null)}>
                                       Cancel
+                                    </Button>
+                                    <Button size="sm" className="h-8 text-[10px] uppercase font-bold tracking-widest bg-primary text-primary-foreground hover:bg-primary/90 rounded-lg shadow-[0_0_10px_hsl(var(--primary)/0.2)]" disabled={isSavingEdit} onClick={() => saveEditedSkill(skill, 'wanted')}>
+                                      {isSavingEdit ? <Loader2 className="h-3 w-3 animate-spin" /> : 'Save Level'}
                                     </Button>
                                   </div>
                                 </div>
@@ -1017,36 +1012,36 @@ export default function SettingsPage() {
                         })}
                       </div>
                     )}
-                  </CardContent>
-                </Card>
+                  </div>
+                </div>
               </div>
             )}
 
-                          {/* ── SECURITY ── */}
-                          {active === 'security' && (
-              <Card className="border-border/60">
-                <CardHeader>
-                  <CardTitle className="flex items-center gap-2 text-base">
-                    <Lock className="h-4 w-4 text-primary" /> Change Password
-                  </CardTitle>
-                  <CardDescription>Use a strong password that you don't use elsewhere.</CardDescription>
-                </CardHeader>
-                <CardContent>
+            {/* ── SECURITY ── */}
+            {active === 'security' && (
+              <div className="overflow-hidden rounded-[2rem] border border-white/5 bg-black/40 backdrop-blur-xl shadow-[inset_0_1px_0_0_hsla(0,0%,100%,0.05)]">
+                <div className="p-6 border-b border-white/5 bg-white/5">
+                  <h3 className="text-xl font-extrabold font-headline text-white flex items-center gap-2">
+                    <Lock className="h-5 w-5 text-primary" /> Change Password
+                  </h3>
+                  <p className="text-[10px] uppercase font-bold tracking-widest text-muted-foreground mt-1">Use a strong password that you don't use elsewhere.</p>
+                </div>
+                <div className="p-6">
                   <Form {...passwordForm}>
-                    <form onSubmit={passwordForm.handleSubmit(handlePasswordSave)} className="space-y-4 max-w-md">
+                    <form onSubmit={passwordForm.handleSubmit(handlePasswordSave)} className="space-y-6 max-w-md">
                       <FormField control={passwordForm.control} name="current" render={({ field }) => (
                         <FormItem>
-                          <FormLabel>Current Password</FormLabel>
+                          <FormLabel className="text-[10px] uppercase font-bold tracking-widest text-muted-foreground">Current Password</FormLabel>
                           <div className="relative">
                             <FormControl>
-                              <Input {...field} type={showCurrent ? 'text' : 'password'} placeholder="Your current password" className="pr-10" />
+                              <Input {...field} type={showCurrent ? 'text' : 'password'} placeholder="Your current password" className="pr-10 appearance-none bg-black/20 border-white/10 text-white placeholder-white/30 focus:ring-primary/50 focus:border-primary/50 rounded-xl" />
                             </FormControl>
                             <Button
                               variant="ghost"
                               size="icon"
                               type="button"
                               onClick={() => setShowCurrent((v) => !v)}
-                              className="absolute right-2 top-1/2 -translate-y-1/2 h-8 w-8 text-muted-foreground hover:text-foreground hover:bg-primary/10 rounded-lg"
+                              className="absolute right-2 top-1/2 -translate-y-1/2 h-8 w-8 text-muted-foreground hover:text-white hover:bg-white/10 rounded-lg"
                             >
                               {showCurrent ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
                             </Button>
@@ -1056,17 +1051,17 @@ export default function SettingsPage() {
                       )} />
                       <FormField control={passwordForm.control} name="next" render={({ field }) => (
                         <FormItem>
-                          <FormLabel>New Password</FormLabel>
+                          <FormLabel className="text-[10px] uppercase font-bold tracking-widest text-muted-foreground">New Password</FormLabel>
                           <div className="relative">
                             <FormControl>
-                              <Input {...field} type={showNext ? 'text' : 'password'} placeholder="Min. 8 characters" className="pr-10" />
+                              <Input {...field} type={showNext ? 'text' : 'password'} placeholder="Min. 8 characters" className="pr-10 appearance-none bg-black/20 border-white/10 text-white placeholder-white/30 focus:ring-primary/50 focus:border-primary/50 rounded-xl" />
                             </FormControl>
                             <Button
                               variant="ghost"
                               size="icon"
                               type="button"
                               onClick={() => setShowNext((v) => !v)}
-                              className="absolute right-2 top-1/2 -translate-y-1/2 h-8 w-8 text-muted-foreground hover:text-foreground hover:bg-primary/10 rounded-lg"
+                              className="absolute right-2 top-1/2 -translate-y-1/2 h-8 w-8 text-muted-foreground hover:text-white hover:bg-white/10 rounded-lg"
                             >
                               {showNext ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
                             </Button>
@@ -1076,30 +1071,30 @@ export default function SettingsPage() {
                       )} />
                       <FormField control={passwordForm.control} name="confirm" render={({ field }) => (
                         <FormItem>
-                          <FormLabel>Confirm New Password</FormLabel>
-                          <FormControl><Input {...field} type="password" placeholder="Repeat new password" /></FormControl>
+                          <FormLabel className="text-[10px] uppercase font-bold tracking-widest text-muted-foreground">Confirm New Password</FormLabel>
+                          <FormControl><Input {...field} type="password" placeholder="Repeat new password" className="appearance-none bg-black/20 border-white/10 text-white placeholder-white/30 focus:ring-primary/50 focus:border-primary/50 rounded-xl" /></FormControl>
                           <FormMessage />
                         </FormItem>
                       )} />
-                      <Button type="submit" variant="gradient" disabled={savingPassword} className="min-w-[160px]">
+                      <Button type="submit" disabled={savingPassword} className="min-w-[160px] bg-primary text-primary-foreground hover:bg-primary/90 rounded-xl font-bold shadow-[0_0_20px_hsl(var(--primary)/0.2)] hover:shadow-[0_0_30px_hsl(var(--primary)/0.4)] transition-all">
                         {savingPassword ? 'Updating...' : 'Update Password'}
                       </Button>
                     </form>
                   </Form>
-                </CardContent>
-              </Card>
+                </div>
+              </div>
             )}
 
             {/* ── NOTIFICATIONS ── */}
             {active === 'notifications' && (
-              <Card className="border-border/60">
-                <CardHeader>
-                  <CardTitle className="flex items-center gap-2 text-base">
-                    <Bell className="h-4 w-4 text-primary" /> Notification Preferences
-                  </CardTitle>
-                  <CardDescription>Choose what you want to be notified about.</CardDescription>
-                </CardHeader>
-                <CardContent className="space-y-4">
+              <div className="overflow-hidden rounded-[2rem] border border-white/5 bg-black/40 backdrop-blur-xl shadow-[inset_0_1px_0_0_hsla(0,0%,100%,0.05)]">
+                <div className="p-6 border-b border-white/5 bg-white/5">
+                  <h3 className="text-xl font-extrabold font-headline text-white flex items-center gap-2">
+                    <Bell className="h-5 w-5 text-primary" /> Notification Preferences
+                  </h3>
+                  <p className="text-[10px] uppercase font-bold tracking-widest text-muted-foreground mt-1">Choose what you want to be notified about.</p>
+                </div>
+                <div className="p-6 space-y-6">
                   {([
                     { key: 'matchRequests', label: 'Match Requests', desc: 'When someone wants to exchange skills with you.' },
                     { key: 'sessionReminders', label: 'Session Reminders', desc: '30-minute reminders before scheduled sessions.' },
@@ -1107,99 +1102,102 @@ export default function SettingsPage() {
                     { key: 'newsletter', label: 'Product Updates', desc: 'New features and platform announcements.' },
                     { key: 'marketing', label: 'Marketing Emails', desc: 'Tips, community highlights, and special offers.' },
                   ] as { key: keyof typeof notifications; label: string; desc: string }[]).map(({ key, label, desc }) => (
-                    <div key={key} className="flex items-center justify-between gap-4 py-2">
+                    <div key={key} className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 py-3 border-b border-white/5 last:border-0">
                       <div>
-                        <Label className="font-medium">{label}</Label>
-                        <p className="text-sm text-muted-foreground">{desc}</p>
+                        <Label className="font-bold text-white text-sm">{label}</Label>
+                        <p className="text-[10px] uppercase font-bold tracking-widest text-muted-foreground mt-1">{desc}</p>
                       </div>
                       <Switch
                         checked={notifications[key]}
                         onCheckedChange={(v) => setNotifications((n) => ({ ...n, [key]: v }))}
+                        className="data-[state=checked]:bg-primary data-[state=unchecked]:bg-white/10"
                       />
                     </div>
                   ))}
-                  <Separator />
+                  <Separator className="bg-white/10" />
                   <Button
-                    variant="gradient"
+                    className="min-w-[160px] bg-primary text-primary-foreground hover:bg-primary/90 rounded-xl font-bold shadow-[0_0_20px_hsl(var(--primary)/0.2)] hover:shadow-[0_0_30px_hsl(var(--primary)/0.4)] transition-all"
                     onClick={() => toast({ title: 'Preferences saved', variant: 'success' })}
                   >
                     Save Preferences
                   </Button>
-                </CardContent>
-              </Card>
+                </div>
+              </div>
             )}
 
             {/* ── PRIVACY ── */}
             {active === 'privacy' && (
-              <Card className="border-border/60">
-                <CardHeader>
-                  <CardTitle className="flex items-center gap-2 text-base">
-                    <Shield className="h-4 w-4 text-primary" /> Privacy Settings
-                  </CardTitle>
-                  <CardDescription>Control who can see and contact you.</CardDescription>
-                </CardHeader>
-                <CardContent className="space-y-4">
+              <div className="overflow-hidden rounded-[2rem] border border-white/5 bg-black/40 backdrop-blur-xl shadow-[inset_0_1px_0_0_hsla(0,0%,100%,0.05)]">
+                <div className="p-6 border-b border-white/5 bg-white/5">
+                  <h3 className="text-xl font-extrabold font-headline text-white flex items-center gap-2">
+                    <Shield className="h-5 w-5 text-primary" /> Privacy Settings
+                  </h3>
+                  <p className="text-[10px] uppercase font-bold tracking-widest text-muted-foreground mt-1">Control who can see and contact you.</p>
+                </div>
+                <div className="p-6 space-y-6">
                   {([
                     { key: 'publicProfile', label: 'Public Profile', desc: 'Your profile is visible to everyone on SkillEx.' },
                     { key: 'showOnline', label: 'Show Online Status', desc: 'Others can see when you are active.' },
                     { key: 'allowMatchRequests', label: 'Allow Match Requests', desc: 'Let other students send you exchange requests.' },
                   ] as { key: keyof typeof privacy; label: string; desc: string }[]).map(({ key, label, desc }) => (
-                    <div key={key} className="flex items-center justify-between gap-4 py-2">
+                    <div key={key} className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 py-3 border-b border-white/5 last:border-0">
                       <div>
-                        <Label className="font-medium">{label}</Label>
-                        <p className="text-sm text-muted-foreground">{desc}</p>
+                        <Label className="font-bold text-white text-sm">{label}</Label>
+                        <p className="text-[10px] uppercase font-bold tracking-widest text-muted-foreground mt-1">{desc}</p>
                       </div>
                       <Switch
                         checked={privacy[key]}
                         onCheckedChange={(v) => setPrivacy((p) => ({ ...p, [key]: v }))}
+                        className="data-[state=checked]:bg-primary data-[state=unchecked]:bg-white/10"
                       />
                     </div>
                   ))}
-                  <Separator />
+                  <Separator className="bg-white/10" />
                   <Button
-                    variant="gradient"
+                    className="min-w-[160px] bg-primary text-primary-foreground hover:bg-primary/90 rounded-xl font-bold shadow-[0_0_20px_hsl(var(--primary)/0.2)] hover:shadow-[0_0_30px_hsl(var(--primary)/0.4)] transition-all"
                     onClick={() => toast({ title: 'Privacy settings saved', variant: 'success' })}
                   >
                     Save Privacy Settings
                   </Button>
-                </CardContent>
-              </Card>
+                </div>
+              </div>
             )}
 
             {/* ── DANGER ZONE ── */}
             {active === 'danger' && (
-              <Card className="border-destructive/40">
-                <CardHeader>
-                  <CardTitle className="flex items-center gap-2 text-base text-destructive">
-                    <Trash2 className="h-4 w-4" /> Danger Zone
-                  </CardTitle>
-                  <CardDescription>These actions are irreversible. Proceed with caution.</CardDescription>
-                </CardHeader>
-                <CardContent className="space-y-4">
-                  <div className="flex items-center justify-between rounded-xl border border-orange-500/20 bg-orange-500/5 p-4">
+              <div className="overflow-hidden rounded-[2rem] border border-destructive/30 bg-destructive/5 backdrop-blur-xl shadow-[inset_0_1px_0_0_hsla(0,0%,100%,0.05)] relative">
+                <div className="absolute inset-0 bg-gradient-to-br from-destructive/10 to-transparent pointer-events-none" />
+                <div className="p-6 border-b border-destructive/20 bg-destructive/10 relative z-10">
+                  <h3 className="text-xl font-extrabold font-headline text-destructive flex items-center gap-2 drop-shadow-[0_0_8px_var(--destructive)]">
+                    <Trash2 className="h-5 w-5" /> Danger Zone
+                  </h3>
+                  <p className="text-[10px] uppercase font-bold tracking-widest text-destructive/80 mt-1">These actions are irreversible. Proceed with caution.</p>
+                </div>
+                <div className="p-6 space-y-4 relative z-10">
+                  <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 rounded-2xl border border-orange-500/30 bg-orange-500/10 p-5 shadow-[inset_0_1px_0_0_hsla(24,100%,50%,0.1)]">
                     <div>
-                      <p className="font-semibold">Log out of all devices</p>
-                      <p className="text-sm text-muted-foreground">Sign out everywhere and revoke all active sessions.</p>
+                      <p className="font-extrabold text-orange-500 font-headline text-lg drop-shadow-[0_0_8px_rgba(249,115,22,0.5)]">Log out of all devices</p>
+                      <p className="text-[10px] uppercase font-bold tracking-widest text-orange-500/70 mt-1">Sign out everywhere and revoke all active sessions.</p>
                     </div>
-                    <Button variant="outline" className="border-orange-500/30 text-orange-600 hover:bg-orange-500/10" onClick={() => setConfirmLogoutAll(true)}>
-                      Log Out
+                    <Button variant="outline" className="border-orange-500/30 text-orange-500 hover:bg-orange-500/20 hover:text-orange-400 font-bold rounded-xl shadow-[0_0_15px_rgba(249,115,22,0.15)]" onClick={() => setConfirmLogoutAll(true)}>
+                      Log Out Everywhere
                     </Button>
                   </div>
-                  <div className="flex items-center justify-between rounded-xl border border-destructive/20 bg-destructive/5 p-4">
+                  <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 rounded-2xl border border-destructive/40 bg-destructive/20 p-5 shadow-[inset_0_1px_0_0_hsla(0,100%,50%,0.2)]">
                     <div>
-                      <p className="font-semibold">Delete Account</p>
-                      <p className="text-sm text-muted-foreground">Permanently remove your account and all data.</p>
+                      <p className="font-extrabold text-destructive font-headline text-lg drop-shadow-[0_0_8px_rgba(239,68,68,0.5)]">Delete Account</p>
+                      <p className="text-[10px] uppercase font-bold tracking-widest text-destructive/80 mt-1">Permanently remove your account and all data.</p>
                     </div>
                     <Button
                       variant="destructive"
-                      className="rounded-xl"
+                      className="rounded-xl font-bold shadow-[0_0_20px_rgba(239,68,68,0.4)] hover:shadow-[0_0_30px_rgba(239,68,68,0.6)] bg-destructive text-destructive-foreground"
                       onClick={() => setDeleteDialogOpen(true)}
                     >
                       Delete Account
                     </Button>
                   </div>
-                </CardContent>
-              </Card>
+                </div>
+              </div>
             )}
           </motion.div>
         </div>

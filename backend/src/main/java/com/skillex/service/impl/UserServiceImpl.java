@@ -10,7 +10,6 @@ import com.skillex.repository.*;
 import com.skillex.service.DtoMapper;
 import com.skillex.service.SkillCatalogGovernanceService;
 import com.skillex.service.UserService;
-import com.skillex.service.match.CompatibilityCalculator;
 import jakarta.persistence.EntityNotFoundException;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
@@ -20,8 +19,12 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Locale;
+import java.util.Map;
+import java.util.Set;
+import java.util.stream.Collectors;
 
 /**
  * Concrete implementation of UserService.
@@ -44,7 +47,6 @@ public class UserServiceImpl implements UserService {
     private final PasswordEncoder passwordEncoder;
     private final DtoMapper mapper;
     private final SkillCatalogGovernanceService skillCatalogGovernanceService;
-    private final CompatibilityCalculator compatibilityCalculator;
 
     @Override
     @Transactional(readOnly = true)
@@ -176,40 +178,87 @@ public class UserServiceImpl implements UserService {
     @Transactional(readOnly = true)
     public PagedResponse<UserSearchResultDto> searchUsers(String viewerId, String query, int page, int size) {
         User viewer = findUserById(viewerId);
-        PageRequest pageable = PageRequest.of(page, size, Sort.by("skillexScore").descending());
-        Page<User> results = (query == null || query.isBlank())
-            ? userRepository.findAll(pageable)
-            : userRepository.findByUsernameContainingIgnoreCaseOrNameContainingIgnoreCaseOrUniversityContainingIgnoreCase(
-                query, query, query, pageable);
+        Set<String> viewerOffered = skillIdSet(viewer.getSkillsOffered());
+        Set<String> viewerWanted = skillIdSet(viewer.getSkillsWanted());
 
-        List<UserSearchResultDto> content = results.getContent().stream()
-            .filter(candidate -> !candidate.getId().equals(viewerId))
-            .map(candidate -> new UserSearchResultDto(
-                candidate.getId(),
-                candidate.getName(),
-                candidate.getUsername(),
-                candidate.getAvatar(),
-                candidate.getUniversity(),
-                candidate.getSkillexScore(),
-                candidate.getRating(),
-                candidate.getSessionsCompleted(),
-                compatibilityCalculator.calculate(viewer, candidate),
-                Boolean.TRUE.equals(candidate.getIsOnline()),
-                topSkills(candidate.getSkillsOffered()),
-                topSkills(candidate.getSkillsWanted())
-            ))
+        String normalizedQuery = query == null ? null : query.trim();
+        if (normalizedQuery != null && normalizedQuery.isEmpty()) {
+            normalizedQuery = null;
+        }
+
+        PageRequest pageable = PageRequest.of(page, size, Sort.by("skillexScore").descending());
+        Page<UserRepository.UserSearchCardProjection> results =
+            userRepository.searchUserCards(viewerId, normalizedQuery, pageable);
+
+        List<String> candidateIds = results.getContent().stream()
+            .map(UserRepository.UserSearchCardProjection::getId)
             .toList();
 
-        long adjustedTotal = results.getTotalElements();
-        if (results.getContent().stream().anyMatch(candidate -> candidate.getId().equals(viewerId))) {
-            adjustedTotal = Math.max(0, adjustedTotal - 1);
-        }
+        List<UserSkillOffered> offeredRows = candidateIds.isEmpty()
+            ? List.of()
+            : offeredRepo.findByIdUserIdIn(candidateIds);
+        List<UserSkillWanted> wantedRows = candidateIds.isEmpty()
+            ? List.of()
+            : wantedRepo.findByIdUserIdIn(candidateIds);
+
+        Map<String, Set<String>> offeredSkillIdsByUser = offeredRows.stream()
+            .collect(Collectors.groupingBy(
+                row -> row.getId().getUserId(),
+                Collectors.mapping(row -> row.getSkill().getId(), Collectors.toCollection(LinkedHashSet::new))
+            ));
+
+        Map<String, Set<String>> wantedSkillIdsByUser = wantedRows.stream()
+            .collect(Collectors.groupingBy(
+                row -> row.getId().getUserId(),
+                Collectors.mapping(row -> row.getSkill().getId(), Collectors.toCollection(LinkedHashSet::new))
+            ));
+
+        Map<String, List<String>> offeredSkillNamesByUser = offeredRows.stream()
+            .collect(Collectors.groupingBy(
+                row -> row.getId().getUserId(),
+                Collectors.collectingAndThen(
+                    Collectors.mapping(row -> row.getSkill().getName(), Collectors.toCollection(LinkedHashSet::new)),
+                    set -> set.stream().limit(3).toList()
+                )
+            ));
+
+        Map<String, List<String>> wantedSkillNamesByUser = wantedRows.stream()
+            .collect(Collectors.groupingBy(
+                row -> row.getId().getUserId(),
+                Collectors.collectingAndThen(
+                    Collectors.mapping(row -> row.getSkill().getName(), Collectors.toCollection(LinkedHashSet::new)),
+                    set -> set.stream().limit(3).toList()
+                )
+            ));
+
+        List<UserSearchResultDto> content = results.getContent().stream()
+            .map(candidate -> {
+                String candidateId = candidate.getId();
+                Set<String> candidateOffered = offeredSkillIdsByUser.getOrDefault(candidateId, Set.of());
+                Set<String> candidateWanted = wantedSkillIdsByUser.getOrDefault(candidateId, Set.of());
+
+                return new UserSearchResultDto(
+                    candidateId,
+                    candidate.getName(),
+                    candidate.getUsername(),
+                    candidate.getAvatar(),
+                    candidate.getUniversity(),
+                    safeInt(candidate.getSkillexScore()),
+                    candidate.getRating(),
+                    safeInt(candidate.getSessionsCompleted()),
+                    overlapMatchPercent(viewerOffered, viewerWanted, candidateOffered, candidateWanted),
+                    Boolean.TRUE.equals(candidate.getIsOnline()),
+                    offeredSkillNamesByUser.getOrDefault(candidateId, List.of()),
+                    wantedSkillNamesByUser.getOrDefault(candidateId, List.of())
+                );
+            })
+            .toList();
 
         return new PagedResponse<>(
             content,
             results.getNumber(),
             results.getSize(),
-            adjustedTotal,
+            results.getTotalElements(),
             results.getTotalPages(),
             results.isLast()
         );
@@ -244,14 +293,42 @@ public class UserServiceImpl implements UserService {
         return normalized;
     }
 
-    private List<String> topSkills(List<Skill> skills) {
+    private Set<String> skillIdSet(List<Skill> skills) {
         if (skills == null || skills.isEmpty()) {
-            return List.of();
+            return Set.of();
         }
         return skills.stream()
-            .map(Skill::getName)
-            .distinct()
-            .limit(3)
-            .toList();
+            .map(Skill::getId)
+            .collect(Collectors.toCollection(LinkedHashSet::new));
+    }
+
+    private int overlapMatchPercent(
+        Set<String> viewerOffered,
+        Set<String> viewerWanted,
+        Set<String> candidateOffered,
+        Set<String> candidateWanted
+    ) {
+        int teachMatches = intersectCount(viewerWanted, candidateOffered);
+        int learnMatches = intersectCount(viewerOffered, candidateWanted);
+
+        int denominator = Math.max(1, viewerWanted.size() + viewerOffered.size());
+        return Math.min(100, (int) Math.round(((teachMatches + learnMatches) * 100.0) / denominator));
+    }
+
+    private int intersectCount(Set<String> left, Set<String> right) {
+        if (left.isEmpty() || right.isEmpty()) {
+            return 0;
+        }
+        int count = 0;
+        for (String value : left) {
+            if (right.contains(value)) {
+                count++;
+            }
+        }
+        return count;
+    }
+
+    private int safeInt(Integer value) {
+        return value == null ? 0 : value;
     }
 }

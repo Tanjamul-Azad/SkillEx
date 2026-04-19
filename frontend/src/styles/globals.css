@@ -19,11 +19,11 @@
     --popover-foreground: 229 84% 5%;
     --primary: 158 72% 22%;         /* Deep Signature Green */
     --primary-foreground: 0 0% 100%;
-    --secondary: 43 96% 42%;        /* Amber / Gold for contrast */
+    --secondary: 43 96% 48%;        /* Yellowish tone / Gold for contrast */
     --secondary-foreground: 229 84% 5%;
     --muted: 220 20% 92%;
     --muted-foreground: 220 15% 38%;
-    --accent: 5 100% 64%;
+    --accent: 43 96% 48%;           /* Yellowish tone (removed red) */
     --accent-foreground: 229 84% 5%;
     --destructive: 0 84% 60%;
     --destructive-foreground: 0 0% 100%;
@@ -39,10 +39,10 @@
     --surface-3: 220 20% 92%;
     --radius: 1.5rem;
     
-    /* ── Glow tokens ────────────────────── */
+    /* Glow tokens */
     --glow-primary: 0 0 16px hsl(var(--primary) / 0.3), 0 0 40px hsl(var(--primary) / 0.1);
-    --glow-secondary: 0 0 12px hsl(var(--secondary) / 0.16);
-    --glow-accent: 0 0 14px hsl(5 100% 69% / 0.25);
+    --glow-secondary: 0 0 12px hsl(var(--secondary) / 0.3);
+    --glow-accent: 0 0 14px hsl(var(--accent) / 0.3);
     --shadow-sm: 0 1px 2px hsl(229 84% 5% / 0.05);
     --shadow-md: 0 4px 8px -1px hsl(229 84% 5% / 0.08), 0 2px 4px -1px hsl(229 84% 5% / 0.04);
     --shadow-lg: 0 10px 20px -3px hsl(229 84% 5% / 0.1), 0 4px 8px -2px hsl(229 84% 5% / 0.05);
@@ -70,11 +70,11 @@
     --popover-foreground: 220 100% 96%;
     --primary: 171 100% 48%;        /* #00F5D4 Electric Teal */
     --primary-foreground: 229 84% 5%; /* #020617 Base */
-    --secondary: 43 100% 58%;
+    --secondary: 43 100% 58%;       /* Yellowish */
     --secondary-foreground: 229 84% 5%;
     --muted: 229 40% 12%;           /* Subtle navy */
     --muted-foreground: 220 20% 60%;
-    --accent: 5 100% 69%;           /* Hyper-Coral accent */
+    --accent: 43 100% 58%;          /* Yellowish tone */
     --accent-foreground: 229 84% 5%;
     --destructive: 0 84% 60%;
     --destructive-foreground: 0 0% 100%;
@@ -89,9 +89,9 @@
     --surface-2: 229 40% 10%;
     --surface-3: 229 40% 14%;
     /* ── Neon Glows ── */
-    --glow-primary: 0 0 20px hsl(171 100% 48% / 0.5), 0 0 60px hsl(171 100% 48% / 0.2), 0 0 100px hsl(171 100% 48% / 0.08);
+    --glow-primary: 0 0 20px hsl(var(--primary) / 0.5), 0 0 60px hsl(var(--primary) / 0.2), 0 0 100px hsl(var(--primary) / 0.08);
     --glow-secondary: 0 0 24px hsl(var(--secondary) / 0.35);
-    --glow-accent: 0 0 16px hsl(5 100% 69% / 0.4), 0 0 40px hsl(5 100% 69% / 0.15);
+    --glow-accent: 0 0 16px hsl(var(--accent) / 0.4), 0 0 40px hsl(var(--accent) / 0.15);
     --shadow-sm: 0 1px 2px 0 rgb(0 0 0 / 0.3);
     --shadow-md: 0 4px 12px -1px rgb(0 0 0 / 0.4), 0 2px 6px -2px rgb(0 0 0 / 0.3);
     --shadow-lg: 0 12px 24px -3px rgb(0 0 0 / 0.5), 0 4px 8px -4px rgb(0 0 0 / 0.3);
@@ -106,13 +106,13 @@
     --card-foreground: 171 100% 13%;
     --popover: 0 0% 100%;
     --popover-foreground: 171 100% 13%;
-    --primary: 158 72% 22%;        
+    --primary: 158 72% 22%;
     --primary-foreground: 0 0% 100%;
-    --secondary: 43 96% 42%;       
+    --secondary: 43 96% 42%;
     --secondary-foreground: 229 84% 5%;
-    --muted: 164 11% 82%;           
+    --muted: 164 11% 82%;
     --muted-foreground: 220 15% 35%;
-    --accent: 164 11% 58%;          
+    --accent: 43 96% 48%;
     --accent-foreground: 171 100% 13%;
     --border: 165 11% 73%;          
     --input: 164 11% 82%;           
@@ -677,34 +677,34 @@
   }
 
   .text-gradient-warm {
-    @apply bg-clip-text text-transparent bg-gradient-to-r from-accent via-orange-400 to-primary;
+    @apply bg-clip-text text-transparent bg-gradient-to-r from-accent via-yellow-400 to-primary;
   }
 
   /* The 'Dopamine' Gradient (CTA Buttons) */
   .bg-dopamine {
-    background: linear-gradient(135deg, #00F5D4 0%, #FF6F61 100%);
-    box-shadow: 0px 10px 20px rgba(255, 111, 97, 0.3);
+    background: linear-gradient(135deg, #00F5D4 0%, #F4E99B 100%);
+    box-shadow: 0px 10px 20px hsl(171 100% 48% / 0.3);
     color: #020617;
     font-weight: 700;
   }
   :root:not(.dark) .dashboard-theme .bg-dopamine {
-    background: linear-gradient(135deg, #22554B 0%, #6A8A83 100%);
-    box-shadow: 0px 10px 20px rgba(106, 138, 131, 0.3);
-    color: #FFFFFF;
+    background: linear-gradient(135deg, #00F5D4 0%, #F4E99B 100%);
+    box-shadow: 0px 10px 20px hsl(171 100% 48% / 0.3);
+    color: #020617;
   }
 
   .gradient-bg {
-    @apply bg-gradient-to-r from-[hsl(171_100%_48%)] to-[hsl(5_100%_69%)];
+    @apply bg-gradient-to-r from-[hsl(171_100%_48%)] to-[hsl(var(--secondary))];
   }
   :root:not(.dark) .dashboard-theme .gradient-bg {
-    @apply bg-gradient-to-r from-[hsl(171_100%_13%)] to-[hsl(167_13%_48%)];
+    @apply bg-gradient-to-r from-[hsl(171_100%_48%)] to-[hsl(var(--secondary))];
   }
 
   .gradient-bg-warm {
-    @apply bg-gradient-to-br from-[hsl(5_100%_69%)] via-orange-400 to-[hsl(171_100%_48%)];
+    @apply bg-gradient-to-br from-[hsl(var(--secondary))] via-[hsl(var(--accent))] to-[hsl(171_100%_48%)];
   }
   :root:not(.dark) .dashboard-theme .gradient-bg-warm {
-    @apply bg-gradient-to-br from-[hsl(167_27%_32%)] via-[hsl(167_18%_40%)] to-[hsl(171_100%_13%)];
+    @apply bg-gradient-to-br from-[hsl(var(--secondary))] via-[hsl(var(--accent))] to-[hsl(171_100%_48%)];
   }
 
   .gradient-surface {

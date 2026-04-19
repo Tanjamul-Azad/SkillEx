@@ -1,6 +1,6 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { useDocumentTitle } from '@/hooks/useDocumentTitle';
-import { useNavigate } from 'react-router-dom';
+import { useLocation, useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { Users, Send, Inbox, MessageSquare, UserCheck, Clock } from 'lucide-react';
 import DashboardLayout from '@/components/layout/DashboardLayout';
@@ -11,6 +11,7 @@ import { Badge } from '@/components/ui/badge';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Skeleton } from '@/components/ui/skeleton';
 import { connectionService, type Connection } from '@/services/connectionService';
+import { onRealtimeNotification } from '@/lib/realtime';
 import { useAuth } from '@/hooks/useAuth';
 import { useToast } from '@/hooks/use-toast';
 
@@ -25,6 +26,7 @@ const TAB_CONFIG: Record<ConnectionTab, { status?: string; direction: 'all' | 's
 export default function ConnectionsPage() {
   useDocumentTitle('Connections');
   const navigate = useNavigate();
+  const location = useLocation();
   const { user } = useAuth();
   const { toast } = useToast();
 
@@ -34,6 +36,10 @@ export default function ConnectionsPage() {
   const [actionBusy, setActionBusy] = useState<Record<string, boolean>>({});
 
   const fetchConnections = useCallback(async (tab: ConnectionTab) => {
+    if (!user?.id) {
+      return;
+    }
+
     const cfg = TAB_CONFIG[tab];
     setLoading(true);
     try {
@@ -46,11 +52,35 @@ export default function ConnectionsPage() {
     } finally {
       setLoading(false);
     }
-  }, [toast]);
+  }, [toast, user?.id]);
 
   useEffect(() => {
-    fetchConnections(activeTab);
-  }, [activeTab, fetchConnections]);
+    const params = new URLSearchParams(location.search);
+    const tab = params.get('tab');
+    if (tab === 'accepted' || tab === 'sent' || tab === 'received') {
+      setActiveTab(tab);
+    }
+  }, [location.search]);
+
+  useEffect(() => {
+    if (!user?.id) {
+      return;
+    }
+    void fetchConnections(activeTab);
+  }, [activeTab, fetchConnections, user?.id]);
+
+  useEffect(() => {
+    if (!user?.id) {
+      return;
+    }
+
+    return onRealtimeNotification((notification) => {
+      const type = String(notification.type ?? '').toUpperCase();
+      if (type.includes('CONNECTION')) {
+        void fetchConnections(activeTab);
+      }
+    });
+  }, [activeTab, fetchConnections, user?.id]);
 
   const getPartner = (connection: Connection) => {
     if (!user) return connection.requester;

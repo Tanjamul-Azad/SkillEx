@@ -69,13 +69,42 @@ interface Conversation {
   messages: Message[];
 }
 
+function parseDtoDate(value: unknown): Date {
+  if (typeof value === 'string' || typeof value === 'number') {
+    const parsed = new Date(value);
+    if (!Number.isNaN(parsed.getTime())) {
+      return parsed;
+    }
+  }
+
+  if (Array.isArray(value) && value.length >= 5) {
+    const [year, month, day, hour, minute, second = 0, nano = 0] = value;
+    if (
+      typeof year === 'number' &&
+      typeof month === 'number' &&
+      typeof day === 'number' &&
+      typeof hour === 'number' &&
+      typeof minute === 'number'
+    ) {
+      const millis = typeof nano === 'number' ? Math.floor(nano / 1_000_000) : 0;
+      return new Date(year, month - 1, day, hour, minute, typeof second === 'number' ? second : 0, millis);
+    }
+  }
+
+  return new Date();
+}
+
+function messagePreview(dto: MessageDto): string {
+  return dto.type?.toUpperCase() === 'IMAGE' ? '📷 Image' : (dto.content ?? '');
+}
+
 /* ── Mappers ─────────────────────────────────────────────────────────── */
 function mapMessageDto(dto: MessageDto, currentUserId: string): Message {
   return {
     id: dto.id,
     senderId: dto.senderId === currentUserId ? 'me' : dto.senderId,
     content: dto.content,
-    timestamp: new Date(dto.createdAt),
+    timestamp: parseDtoDate(dto.createdAt),
     read: dto.isRead,
     type: (dto.type?.toLowerCase() ?? 'text') as 'text' | 'image',
     imageUrl: dto.imageUrl ?? undefined,
@@ -379,35 +408,104 @@ export default function MessagesPage() {
   useEffect(() => {
     if (!connected || !user) return;
     const unsub = subscribe('/user/queue/messages', (stompMsg) => {
-      const incoming = JSON.parse(stompMsg.body) as MessageDto;
+      let incoming: MessageDto;
+      try {
+        incoming = JSON.parse(stompMsg.body) as MessageDto;
+      } catch {
+        return;
+      }
+
       const isFromMe = incoming.senderId === user.id;
-      // Skip echo of own messages — they were already added optimistically in handleSend
-      if (isFromMe) return;
-      const peerId = incoming.senderId;
+      const peerId = isFromMe ? incoming.receiverId : incoming.senderId;
+      if (!peerId) return;
+
       const isActive = activeConvIdRef.current === peerId;
+      const incomingCreatedAt = parseDtoDate(incoming.createdAt);
+
       setConversations(prev => {
         const idx = prev.findIndex(c => c.id === peerId);
+        const newMsg = mapMessageDto(incoming, user.id);
+
         if (idx < 0) {
-          // Unknown peer — will be picked up on next conversations refresh
-          MessageService.getConversations()
-            .then(dtos => setConversations(dedupeConversations(dtos.map(mapConversationDto))))
+          // New conversation appears instantly without requiring reload.
+          const stubConversation: Conversation = {
+            id: peerId,
+            user: {
+              id: peerId,
+              name: 'New conversation',
+              avatar: undefined,
+              online: false,
+            },
+            lastMessage: messagePreview(incoming),
+            lastMessageTime: incomingCreatedAt,
+            unreadCount: !isFromMe && !isActive ? 1 : 0,
+            pinned: false,
+            messages: [newMsg],
+          };
+
+          UserService.getById(peerId)
+            .then((peer) => {
+              setConversations((current) =>
+                dedupeConversations(
+                  current.map((conversation) =>
+                    conversation.id !== peerId
+                      ? conversation
+                      : {
+                          ...conversation,
+                          user: {
+                            ...conversation.user,
+                            id: peer.id,
+                            name: peer.name,
+                            avatar: peer.avatar ?? undefined,
+                          },
+                        }
+                  )
+                )
+              );
+            })
             .catch(() => {});
-          return prev;
+
+          return dedupeConversations([stubConversation, ...prev]);
         }
+
         const updated = prev.map(c => {
           if (c.id !== peerId) return c;
-          if (c.messages.some(m => m.id === incoming.id)) return c; // dedup
-          const newMsg = mapMessageDto(incoming, user.id);
+
+          const hasIncomingAlready = c.messages.some(m => m.id === incoming.id);
+          const tempReconciledMessages = hasIncomingAlready
+            ? c.messages
+            : c.messages.filter((m) => {
+                if (!m.id.startsWith('temp-') || m.senderId !== 'me' || !isFromMe) {
+                  return true;
+                }
+                return !(
+                  m.content === (incoming.content ?? '') &&
+                  Math.abs(m.timestamp.getTime() - incomingCreatedAt.getTime()) < 120000
+                );
+              });
+
+          const mergedMessages = hasIncomingAlready
+            ? c.messages
+            : dedupeMessages([...tempReconciledMessages, newMsg]);
+
+          const unreadCount = !isFromMe
+            ? (isActive ? 0 : c.unreadCount + 1)
+            : (isActive ? 0 : c.unreadCount);
+
           return {
             ...c,
-            messages: [...c.messages, newMsg],
-            lastMessage: incoming.type === 'IMAGE' ? '📷 Image' : incoming.content,
-            lastMessageTime: new Date(incoming.createdAt),
-            unreadCount: isActive ? 0 : c.unreadCount + 1,
+            messages: mergedMessages,
+            lastMessage: messagePreview(incoming),
+            lastMessageTime: incomingCreatedAt,
+            unreadCount,
           };
         });
         return dedupeConversations(updated);
       });
+
+      if (!isFromMe && isActive) {
+        MessageService.markRead(peerId).catch(() => {});
+      }
     });
     return () => unsub?.();
   }, [connected, user, subscribe]);

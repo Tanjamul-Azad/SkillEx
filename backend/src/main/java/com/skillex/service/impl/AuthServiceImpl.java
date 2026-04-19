@@ -28,6 +28,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
 import java.util.Optional;
+import java.util.UUID;
 
 /**
  * Concrete implementation of AuthService.
@@ -89,6 +90,36 @@ public class AuthServiceImpl implements AuthService {
 
         if (!passwordEncoder.matches(req.password(), user.getPasswordHash())) {
             throw new IllegalArgumentException("Invalid email or password.");
+        }
+
+        String token = jwtUtil.generateToken(user.getId(), user.getEmail(), user.getRole().name());
+        return toAuthResponse(token, user);
+    }
+
+    @Override
+    @Transactional
+    public AuthResponse loginWithGoogle(String email, String name, String avatarUrl) {
+        if (email == null || email.isBlank()) {
+            throw new IllegalArgumentException("Google account email is required.");
+        }
+
+        User user = userRepository.findByEmail(email).orElseGet(() -> {
+            String displayName = firstNonBlank(name, emailLocalPart(email), "SkillEX User");
+            String username = generateUniqueUsername(displayName, email);
+
+            return userRepository.save(User.builder()
+                .name(displayName)
+                .username(username)
+                .email(email)
+                // Required by current schema (password_hash is non-null) even for OAuth users.
+                .passwordHash(passwordEncoder.encode(UUID.randomUUID().toString()))
+                .avatar(sanitizeIntentText(avatarUrl))
+                .build());
+        });
+
+        if ((user.getAvatar() == null || user.getAvatar().isBlank()) && avatarUrl != null && !avatarUrl.isBlank()) {
+            user.setAvatar(avatarUrl);
+            user = userRepository.save(user);
         }
 
         String token = jwtUtil.generateToken(user.getId(), user.getEmail(), user.getRole().name());

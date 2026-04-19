@@ -3,6 +3,7 @@ import React, { createContext, useState, useEffect, useCallback, useMemo } from 
 import { useNavigate } from 'react-router-dom';
 import type { User } from '@/types';
 import { AuthService } from '@/services/authService';
+import { ApiError } from '@/services/http/ApiClient';
 import { registerOn401Handler, clearOn401Handler } from '@/services/http/ApiClient';
 
 interface AuthContextType {
@@ -18,22 +19,71 @@ interface AuthContextType {
 
 export const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
+const AUTH_USER_CACHE_KEY = 'skillex_auth_user';
+
+function readCachedUser(): User | null {
+  try {
+    const raw = sessionStorage.getItem(AUTH_USER_CACHE_KEY);
+    if (!raw) return null;
+    return JSON.parse(raw) as User;
+  } catch {
+    return null;
+  }
+}
+
+function writeCachedUser(user: User | null): void {
+  if (!user) {
+    sessionStorage.removeItem(AUTH_USER_CACHE_KEY);
+    return;
+  }
+
+  sessionStorage.setItem(AUTH_USER_CACHE_KEY, JSON.stringify(user));
+}
+
 export function AuthProvider({ children }: { children: React.ReactNode }) {
-  const [user, setUser]         = useState<User | null>(null);
+  const [user, setUser]         = useState<User | null>(() => readCachedUser());
   const [isLoading, setIsLoading] = useState(true);
   const navigate = useNavigate();
 
   // On mount — restore session from stored JWT
   useEffect(() => {
-    AuthService.getCurrentUser()
-      .then((profile) => setUser(profile))
-      .finally(() => setIsLoading(false));
+    let active = true;
+
+    const restore = async () => {
+      AuthService.consumeGoogleCallbackFromUrl();
+      try {
+        const profile = await AuthService.getCurrentUser();
+        if (!active) return;
+        setUser(profile);
+        writeCachedUser(profile);
+      } catch (error) {
+        if (!active) return;
+        const isTransientFailure =
+          error instanceof ApiError &&
+          (error.status === 0 || error.status >= 500);
+
+        if (!isTransientFailure) {
+          setUser(null);
+          writeCachedUser(null);
+        }
+      } finally {
+        if (active) {
+          setIsLoading(false);
+        }
+      }
+    };
+
+    void restore();
+    return () => {
+      active = false;
+    };
   }, []);
 
   // Register global 401 handler — clears session when token expires
   useEffect(() => {
     registerOn401Handler(() => {
       setUser(null);
+      writeCachedUser(null);
       navigate('/login');
     });
     return () => clearOn401Handler();
@@ -46,6 +96,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       // login now returns the full profile including skillsOffered / skillsWanted
       const { user } = await AuthService.login(email, password);
       setUser(user);
+      writeCachedUser(user);
       return { success: true };
     } catch (error) {
       const message = error instanceof Error ? error.message : 'Login failed';
@@ -62,12 +113,14 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const logout = useCallback((): void => {
     AuthService.logout();
     setUser(null);
+    writeCachedUser(null);
     navigate('/login');
   }, [navigate]);
 
   const refreshUser = useCallback(async (): Promise<void> => {
     const profile = await AuthService.getCurrentUser();
     setUser(profile);
+    writeCachedUser(profile);
   }, []);
 
   const register = useCallback(async (

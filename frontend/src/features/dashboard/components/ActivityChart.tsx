@@ -42,15 +42,12 @@ export function ActivityChart({ data, trend }: ActivityChartProps) {
             <AreaChart data={data} margin={{ top: 10, right: 0, left: 0, bottom: 10 }}>
               <defs>
                 <linearGradient id="colorHours" x1="0" y1="0" x2="0" y2="1">
-                  <stop offset="5%" stopColor="hsl(var(--primary))" stopOpacity={0.6} />
-                  <stop offset="95%" stopColor="hsl(var(--primary))" stopOpacity={0} />
+                  <stop offset="0%" stopColor="hsl(var(--primary))" stopOpacity={0.25} />
+                  <stop offset="100%" stopColor="hsl(var(--primary))" stopOpacity={0.0} />
                 </linearGradient>
-                <filter id="glow">
-                  <feGaussianBlur stdDeviation="4" result="coloredBlur"/>
-                  <feMerge>
-                    <feMergeNode in="coloredBlur"/>
-                    <feMergeNode in="SourceGraphic"/>
-                  </feMerge>
+                <filter id="glow" x="-20%" y="-20%" width="140%" height="140%">
+                  <feGaussianBlur stdDeviation="3" result="blur" />
+                  <feComposite in="SourceGraphic" in2="blur" operator="over" />
                 </filter>
               </defs>
               <Tooltip
@@ -73,7 +70,8 @@ export function ActivityChart({ data, trend }: ActivityChartProps) {
                 type="monotone"
                 dataKey="hours"
                 stroke="hsl(var(--primary))"
-                strokeWidth={3.5}
+                strokeWidth={1.5}
+                strokeOpacity={0.8}
                 fillOpacity={1}
                 fill="url(#colorHours)"
                 animationDuration={2000}

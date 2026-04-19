@@ -13,6 +13,7 @@
 
 import type { User } from '@/types';
 import { httpClient, TokenStore } from './http/ApiClient';
+import { ApiError } from './http/ApiClient';
 
 /** Expose TokenStore under the old export name for backward compat */
 export const tokenStore = TokenStore;
@@ -79,9 +80,12 @@ export const AuthService = {
       // /users/me returns UserProfileDto with skillsOffered + skillsWanted
       const raw = await httpClient.get<Record<string, unknown>>('/users/me');
       return normalizeUser(raw);
-    } catch {
-      TokenStore.clear();
-      return null;
+    } catch (error) {
+      if (error instanceof ApiError && (error.status === 401 || error.status === 403)) {
+        TokenStore.clear();
+        return null;
+      }
+      throw error;
     }
   },
 
@@ -91,6 +95,24 @@ export const AuthService = {
       ? `${import.meta.env.VITE_API_URL}/api`
       : '/api';
     window.location.href = `${apiBase}/auth/google`;
+  },
+
+  /**
+   * Reads OAuth callback params from the URL and stores the JWT when present.
+   * Returns true when a token was consumed from the callback.
+   */
+  consumeGoogleCallbackFromUrl(): boolean {
+    const url = new URL(window.location.href);
+    const token = url.searchParams.get('token');
+
+    if (!token) {
+      return false;
+    }
+
+    TokenStore.set(token);
+    url.searchParams.delete('token');
+    window.history.replaceState({}, document.title, `${url.pathname}${url.search}${url.hash}`);
+    return true;
   },
 };
 

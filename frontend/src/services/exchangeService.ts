@@ -61,7 +61,7 @@ export const exchangeService = {
 
   /** PATCH /api/exchanges/{id}/status — accept / decline / complete */
   updateStatus(id: string, status: 'accepted' | 'declined' | 'completed' | 'cancelled'): Promise<Exchange> {
-    return api.patch<Exchange>(`/exchanges/${id}/status`, { status });
+    return api.patch<Exchange>(`/exchanges/${id}/status`, { status: status.toUpperCase() });
   },
 
   cancel(id: string): Promise<void> {

@@ -13,6 +13,7 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;
+import org.springframework.web.servlet.view.RedirectView;
 import org.springframework.web.bind.annotation.*;
 
 /**
@@ -70,5 +71,14 @@ public class AuthController {
         String userId = (String) authentication.getPrincipal();
         var user = authService.getCurrentUser(userId);
         return ResponseEntity.ok(ApiResponse.ok(dtoMapper.toProfile(user)));
+    }
+
+    /**
+     * GET /api/auth/google — starts Spring Security OAuth2 login flow.
+     * This keeps frontend auth code stable by using the same /api/auth/* namespace.
+     */
+    @GetMapping("/google")
+    public RedirectView googleLogin() {
+        return new RedirectView("/oauth2/authorization/google");
     }
 }

@@ -7,6 +7,7 @@ import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 
+import java.util.Collection;
 import java.util.List;
 
 @Repository
@@ -15,6 +16,9 @@ public interface UserSkillOfferedRepository
 
     @Query("SELECT uso FROM UserSkillOffered uso JOIN FETCH uso.skill WHERE uso.id.userId = :userId")
     List<UserSkillOffered> findByIdUserId(@Param("userId") String userId);
+
+    @Query("SELECT uso FROM UserSkillOffered uso JOIN FETCH uso.skill WHERE uso.id.userId IN :userIds")
+    List<UserSkillOffered> findByIdUserIdIn(@Param("userIds") Collection<String> userIds);
 
     boolean existsByIdUserIdAndIdSkillId(String userId, String skillId);
 

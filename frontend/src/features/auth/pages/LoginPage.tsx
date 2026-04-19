@@ -149,12 +149,24 @@ function AuthPage() {
 function LoginForm() {
   const { login, loginWithGoogle } = useAuth();
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
   const { toast } = useToast();
   const [isLoading, setIsLoading] = React.useState(false);
   const [showPassword, setShowPassword] = React.useState(false);
   const [isForgotMode, setIsForgotMode] = React.useState(false);
   const [resetSent, setResetSent] = React.useState(false);
   const [resetEmail, setResetEmail] = React.useState('');
+
+  React.useEffect(() => {
+    if (searchParams.get('oauth') === 'error') {
+      toast({
+        variant: 'destructive',
+        title: 'Google sign-in failed',
+        description: 'We could not authenticate with Google. Please try again.',
+      });
+      navigate('/login', { replace: true });
+    }
+  }, [navigate, searchParams, toast]);
 
   const form = useForm<LoginFormData>({
     resolver: zodResolver(loginSchema),
@@ -309,21 +321,20 @@ function LoginForm() {
 
       <div className="my-8 flex items-center gap-4">
         <div className="flex-grow border-t border-white/10" />
-        <span className="shrink text-[10px] font-bold tracking-widest uppercase text-muted-foreground">Initialize via</span>
+        <span className="shrink text-[10px] font-bold tracking-widest uppercase text-muted-foreground">Or continue with</span>
         <div className="flex-grow border-t border-white/10" />
       </div>
 
       <Button
         variant="outline"
         className="w-full h-12 rounded-xl text-[10px] font-bold uppercase tracking-widest border-white/10 bg-white/5 hover:bg-white/10 hover:border-white/20 transition-all"
-        disabled
-        title="Google sign-in is coming soon"
+        title="Sign in with Google"
         onClick={async () => {
           await loginWithGoogle();
         }}
       >
         <GoogleIcon className="mr-3 h-4 w-4 drop-shadow-sm" />
-        Google Auth
+        Continue with Google
       </Button>
     </>
   );
@@ -469,16 +480,16 @@ function RegisterForm({ setFormType }: { setFormType: (type: 'login') => void })
   return (
     <>
       <div className="text-center relative">
-        <h1 className="text-3xl lg:text-4xl font-extrabold font-headline tracking-tight text-white drop-shadow-[0_0_15px_rgba(255,255,255,0.1)]">Establish Identity</h1>
+        <h1 className="text-3xl lg:text-4xl font-extrabold font-headline tracking-tight text-white drop-shadow-[0_0_15px_rgba(255,255,255,0.1)]">Create Your Account</h1>
         <p className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground mt-3">
-          {step === 1 ? 'Join the network.' : 'Declare your payload parameters.'}
+          {step === 1 ? 'Tell us a little about you to get started.' : 'Choose your skills so we can personalize your matches.'}
         </p>
       </div>
 
       <div className="mt-8 mb-8 relative">
         <div className="flex justify-between text-[10px] font-bold uppercase tracking-widest text-muted-foreground mb-3 px-1">
-          <span className={cn(step >= 1 ? "text-primary drop-shadow-[0_0_8px_hsl(var(--primary)/0.5)]" : "")}>Phase 1: Credentials</span>
-          <span className={cn(step >= 2 ? "text-primary drop-shadow-[0_0_8px_hsl(var(--primary)/0.5)]" : "")}>Phase 2: Matrix</span>
+          <span className={cn(step >= 1 ? "text-primary drop-shadow-[0_0_8px_hsl(var(--primary)/0.5)]" : "")}>Step 1: Account details</span>
+          <span className={cn(step >= 2 ? "text-primary drop-shadow-[0_0_8px_hsl(var(--primary)/0.5)]" : "")}>Step 2: Skills & preferences</span>
         </div>
         <div className="h-1.5 w-full bg-white/5 rounded-full overflow-hidden shadow-[inset_0_1px_2px_rgba(0,0,0,0.5)]">
           <div 
@@ -505,9 +516,10 @@ function RegisterForm({ setFormType }: { setFormType: (type: 'login') => void })
                   name="fullName"
                   render={({ field }) => (
                     <FormItem>
+                      <FormLabel className="text-[10px] font-bold uppercase tracking-widest text-white/70">Full name</FormLabel>
                       <div className="relative group">
                         <User className="absolute left-4 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground group-focus-within:text-primary transition-colors" />
-                        <Input {...field} placeholder="Designation (Name)" className="pl-11 h-12 bg-black/40 border-white/10 focus:border-primary focus:ring-primary/20 transition-all rounded-xl text-sm font-medium" />
+                        <Input {...field} placeholder="e.g., Sarah Ahmed" className="pl-11 h-12 bg-black/40 border-white/10 focus:border-primary focus:ring-primary/20 transition-all rounded-xl text-sm font-medium" />
                       </div>
                       <FormMessage className="text-[10px]" />
                     </FormItem>
@@ -518,9 +530,10 @@ function RegisterForm({ setFormType }: { setFormType: (type: 'login') => void })
                   name="email"
                   render={({ field }) => (
                     <FormItem>
+                      <FormLabel className="text-[10px] font-bold uppercase tracking-widest text-white/70">Email address</FormLabel>
                       <div className="relative group">
                         <Mail className="absolute left-4 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground group-focus-within:text-primary transition-colors" />
-                        <Input {...field} type="email" placeholder="comms@address.exp" className="pl-11 h-12 bg-black/40 border-white/10 focus:border-primary focus:ring-primary/20 transition-all rounded-xl text-sm font-medium" />
+                        <Input {...field} type="email" placeholder="you@example.com" className="pl-11 h-12 bg-black/40 border-white/10 focus:border-primary focus:ring-primary/20 transition-all rounded-xl text-sm font-medium" />
                       </div>
                       <FormMessage className="text-[10px]" />
                     </FormItem>
@@ -532,9 +545,10 @@ function RegisterForm({ setFormType }: { setFormType: (type: 'login') => void })
                     name="password"
                     render={({ field }) => (
                       <FormItem>
+                        <FormLabel className="text-[10px] font-bold uppercase tracking-widest text-white/70">Password</FormLabel>
                         <div className="relative group">
                           <Lock className="absolute left-4 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground group-focus-within:text-primary transition-colors" />
-                          <Input {...field} type={showPassword ? 'text' : 'password'} placeholder="Access Code" className="pl-11 pr-12 h-12 bg-black/40 border-white/10 focus:border-primary focus:ring-primary/20 transition-all rounded-xl text-sm font-medium" />
+                          <Input {...field} type={showPassword ? 'text' : 'password'} placeholder="Create a password" className="pl-11 pr-12 h-12 bg-black/40 border-white/10 focus:border-primary focus:ring-primary/20 transition-all rounded-xl text-sm font-medium" />
                           <Button
                             variant="ghost"
                             size="icon"
@@ -555,9 +569,10 @@ function RegisterForm({ setFormType }: { setFormType: (type: 'login') => void })
                     name="confirmPassword"
                     render={({ field }) => (
                       <FormItem>
+                        <FormLabel className="text-[10px] font-bold uppercase tracking-widest text-white/70">Confirm password</FormLabel>
                         <div className="relative group">
                           <Lock className="absolute left-4 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground group-focus-within:text-primary transition-colors" />
-                          <Input {...field} type={showConfirmPassword ? 'text' : 'password'} placeholder="Verify Code" className="pl-11 pr-12 h-12 bg-black/40 border-white/10 focus:border-primary focus:ring-primary/20 transition-all rounded-xl text-sm font-medium" />
+                          <Input {...field} type={showConfirmPassword ? 'text' : 'password'} placeholder="Re-enter your password" className="pl-11 pr-12 h-12 bg-black/40 border-white/10 focus:border-primary focus:ring-primary/20 transition-all rounded-xl text-sm font-medium" />
                           <Button
                             variant="ghost"
                             size="icon"
@@ -582,7 +597,7 @@ function RegisterForm({ setFormType }: { setFormType: (type: 'login') => void })
                       if (isValid) setStep(2);
                     }}
                   >
-                    Proceed to Matrix
+                    Continue
                   </Button>
                 </div>
               </motion.div>
@@ -599,7 +614,7 @@ function RegisterForm({ setFormType }: { setFormType: (type: 'login') => void })
                   <div className="absolute top-0 right-0 w-32 h-32 bg-primary/10 blur-3xl rounded-full pointer-events-none" />
                   <div className="flex items-start justify-between gap-4 mb-4 relative z-10">
                     <p className="text-[10px] font-bold uppercase tracking-widest text-primary flex items-center gap-2 drop-shadow-[0_0_5px_hsl(var(--primary)/0.8)]">
-                      <Sparkles className="h-4 w-4 animate-pulse" /> Neural Parameter Extraction
+                      <Sparkles className="h-4 w-4 animate-pulse" /> Smart skill suggestions
                     </p>
                     <Button
                       type="button"
@@ -608,7 +623,7 @@ function RegisterForm({ setFormType }: { setFormType: (type: 'login') => void })
                       disabled={isInterpreting}
                       onClick={handleInterpretIntent}
                     >
-                      {isInterpreting ? 'Scanning...' : 'Extract'}
+                      {isInterpreting ? 'Analyzing...' : 'Suggest skills'}
                     </Button>
                   </div>
 
@@ -617,12 +632,12 @@ function RegisterForm({ setFormType }: { setFormType: (type: 'login') => void })
                     name="teachIntentText"
                     render={({ field }) => (
                       <FormItem className="relative z-10">
-                        <FormLabel className="text-[10px] font-bold uppercase tracking-widest text-white/70">Knowledge Payload (Outgoing)</FormLabel>
+                        <FormLabel className="text-[10px] font-bold uppercase tracking-widest text-white/70">What can you teach?</FormLabel>
                         <FormControl>
                           <Textarea
                             {...field}
                             rows={2}
-                            placeholder="Specify concepts you can transmit..."
+                            placeholder="Example: I can teach Figma basics, logo design, and brand identity."
                             className="text-sm bg-black/50 border-white/10 focus:border-primary focus:ring-primary/20 transition-all rounded-xl placeholder:text-muted-foreground/50 resize-none custom-scrollbar"
                           />
                         </FormControl>
@@ -636,12 +651,12 @@ function RegisterForm({ setFormType }: { setFormType: (type: 'login') => void })
                     name="learnIntentText"
                     render={({ field }) => (
                       <FormItem className="relative z-10">
-                        <FormLabel className="text-[10px] font-bold uppercase tracking-widest text-white/70">Knowledge Query (Incoming)</FormLabel>
+                        <FormLabel className="text-[10px] font-bold uppercase tracking-widest text-white/70">What do you want to learn?</FormLabel>
                         <FormControl>
                           <Textarea
                             {...field}
                             rows={2}
-                            placeholder="Specify concepts you need to acquire..."
+                            placeholder="Example: I want to learn React, TypeScript, and API integration."
                             className="text-sm bg-black/50 border-white/10 focus:border-primary focus:ring-primary/20 transition-all rounded-xl placeholder:text-muted-foreground/50 resize-none custom-scrollbar"
                           />
                         </FormControl>
@@ -653,14 +668,14 @@ function RegisterForm({ setFormType }: { setFormType: (type: 'login') => void })
                   {interpretation && (
                     <div className="text-[10px] font-bold tracking-widest uppercase text-muted-foreground space-y-2 mt-4 pt-4 border-t border-white/10 relative z-10">
                       <p>
-                        Outbound node:{' '}
+                        Suggested teaching skill:{' '}
                         <span className="text-white drop-shadow-[0_0_5px_rgba(255,255,255,0.5)]">
                           {interpretation.teach?.primary?.skillName ?? 'Pending match'}
                         </span>
                         {interpretation.teach?.primary ? <span className="text-primary ml-1">[{interpretation.teach.primary.confidence}%]</span> : ''}
                       </p>
                       <p>
-                        Inbound node:{' '}
+                        Suggested learning skill:{' '}
                         <span className="text-white drop-shadow-[0_0_5px_rgba(255,255,255,0.5)]">
                           {interpretation.learn?.primary?.skillName ?? 'Pending match'}
                         </span>
@@ -675,7 +690,7 @@ function RegisterForm({ setFormType }: { setFormType: (type: 'login') => void })
                     <FormItem>
                       <Select onValueChange={field.onChange} value={field.value ?? ''}>
                         <FormControl>
-                          <SelectTrigger className="h-12 bg-black/40 border-white/10 text-sm font-medium focus:ring-primary/20 focus:border-primary rounded-xl"><SelectValue placeholder="Skill to teach" /></SelectTrigger>
+                          <SelectTrigger className="h-12 bg-black/40 border-white/10 text-sm font-medium focus:ring-primary/20 focus:border-primary rounded-xl"><SelectValue placeholder="Select a skill you can teach" /></SelectTrigger>
                         </FormControl>
                         <SelectContent className="bg-black/90 border-white/10 backdrop-blur-xl rounded-xl">
                           {skillOptions.map(s => <SelectItem key={s.id} value={s.name} className="text-sm font-medium focus:bg-white/10 focus:text-white rounded-lg cursor-pointer transition-colors">{s.name}</SelectItem>)}
@@ -688,7 +703,7 @@ function RegisterForm({ setFormType }: { setFormType: (type: 'login') => void })
                     <FormItem>
                       <Select onValueChange={field.onChange} value={field.value ?? ''}>
                         <FormControl>
-                          <SelectTrigger className="h-12 bg-black/40 border-white/10 text-sm font-medium focus:ring-primary/20 focus:border-primary rounded-xl"><SelectValue placeholder="Skill to learn" /></SelectTrigger>
+                          <SelectTrigger className="h-12 bg-black/40 border-white/10 text-sm font-medium focus:ring-primary/20 focus:border-primary rounded-xl"><SelectValue placeholder="Select a skill you want to learn" /></SelectTrigger>
                         </FormControl>
                         <SelectContent className="bg-black/90 border-white/10 backdrop-blur-xl rounded-xl">
                           {skillOptions.map(s => <SelectItem key={s.id} value={s.name} className="text-sm font-medium focus:bg-white/10 focus:text-white rounded-lg cursor-pointer transition-colors">{s.name}</SelectItem>)}
@@ -703,12 +718,12 @@ function RegisterForm({ setFormType }: { setFormType: (type: 'login') => void })
                   <FormItem>
                     <Select onValueChange={field.onChange} value={field.value ?? ''}>
                       <FormControl>
-                        <SelectTrigger className="h-12 bg-black/40 border-white/10 text-sm font-medium focus:ring-primary/20 focus:border-primary rounded-xl"><SelectValue placeholder="Current capability level" /></SelectTrigger>
+                        <SelectTrigger className="h-12 bg-black/40 border-white/10 text-sm font-medium focus:ring-primary/20 focus:border-primary rounded-xl"><SelectValue placeholder="Your current level" /></SelectTrigger>
                       </FormControl>
                       <SelectContent className="bg-black/90 border-white/10 backdrop-blur-xl rounded-xl">
-                        <SelectItem value="Beginner" className="text-sm font-medium focus:bg-white/10 focus:text-white rounded-lg cursor-pointer transition-colors">Novice (L1)</SelectItem>
-                        <SelectItem value="Moderate" className="text-sm font-medium focus:bg-white/10 focus:text-white rounded-lg cursor-pointer transition-colors">Proficient (L2)</SelectItem>
-                        <SelectItem value="Expert" className="text-sm font-medium focus:bg-white/10 focus:text-white rounded-lg cursor-pointer transition-colors">Master (L3)</SelectItem>
+                        <SelectItem value="Beginner" className="text-sm font-medium focus:bg-white/10 focus:text-white rounded-lg cursor-pointer transition-colors">Beginner</SelectItem>
+                        <SelectItem value="Moderate" className="text-sm font-medium focus:bg-white/10 focus:text-white rounded-lg cursor-pointer transition-colors">Intermediate</SelectItem>
+                        <SelectItem value="Expert" className="text-sm font-medium focus:bg-white/10 focus:text-white rounded-lg cursor-pointer transition-colors">Advanced</SelectItem>
                       </SelectContent>
                     </Select>
                     <FormMessage className="text-[10px]" />
@@ -720,7 +735,7 @@ function RegisterForm({ setFormType }: { setFormType: (type: 'login') => void })
                     <UploadCloud className="h-5 w-5 text-muted-foreground group-hover:text-white transition-colors" />
                   </div>
                   <p className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground text-center leading-relaxed">
-                    <span className="text-primary drop-shadow-[0_0_5px_hsl(var(--primary)/0.5)] cursor-pointer">Inject Image</span> or drag payload here<br />
+                    <span className="text-primary drop-shadow-[0_0_5px_hsl(var(--primary)/0.5)] cursor-pointer">Upload a profile photo</span> or drag and drop here<br />
                     <span className="opacity-50 text-[9px]">Max file size: 5MB</span>
                   </p>
                 </div>
@@ -735,7 +750,7 @@ function RegisterForm({ setFormType }: { setFormType: (type: 'login') => void })
                       </FormControl>
                       <div className="grid gap-1.5 leading-snug">
                         <label className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground cursor-pointer select-none">
-                          I accept the <Link to="/terms" className="text-primary hover:text-primary/80 transition-colors drop-shadow-[0_0_8px_hsl(var(--primary)/0.5)] underline-offset-4 hover:underline">TOS</Link> and <Link to="/privacy" className="text-primary hover:text-primary/80 transition-colors drop-shadow-[0_0_8px_hsl(var(--primary)/0.5)] underline-offset-4 hover:underline">Privacy directives</Link>.
+                          I agree to the <Link to="/terms" className="text-primary hover:text-primary/80 transition-colors drop-shadow-[0_0_8px_hsl(var(--primary)/0.5)] underline-offset-4 hover:underline">Terms</Link> and <Link to="/privacy" className="text-primary hover:text-primary/80 transition-colors drop-shadow-[0_0_8px_hsl(var(--primary)/0.5)] underline-offset-4 hover:underline">Privacy Policy</Link>.
                         </label>
                         <FormMessage className="text-[10px]" />
                       </div>
@@ -745,10 +760,10 @@ function RegisterForm({ setFormType }: { setFormType: (type: 'login') => void })
 
                 <div className="flex gap-4 pt-4">
                   <Button type="button" variant="outline" className="flex-[1] h-12 rounded-xl text-[10px] font-bold uppercase tracking-widest border-white/10 bg-white/5 hover:bg-white/10 hover:border-white/20 transition-all text-muted-foreground hover:text-white shadow-none" onClick={() => setStep(1)}>
-                    Rewind
+                    Back
                   </Button>
                   <Button type="submit" className="flex-[2] h-12 rounded-xl text-[10px] font-bold tracking-widest uppercase shadow-[0_0_20px_hsl(var(--primary)/0.4)] bg-primary text-primary-foreground hover:bg-primary/90 transition-all" disabled={isLoading}>
-                    {isLoading ? 'Processing...' : 'Establish Link'}
+                    {isLoading ? 'Creating account...' : 'Create account'}
                   </Button>
                 </div>
 
@@ -765,7 +780,7 @@ function RegisterForm({ setFormType }: { setFormType: (type: 'login') => void })
                       form.handleSubmit(onSubmit)();
                     }}
                   >
-                    Bypass configuration for now
+                    Skip this step for now
                   </button>
                 </div>
               </motion.div>

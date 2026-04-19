@@ -6,9 +6,10 @@ import { useConnections } from '@/hooks/useConnections';
 import { exchangeService } from '@/services/exchangeService';
 import { connectionService } from '@/services/connectionService';
 import { DashboardService } from '@/services/dashboardService';
+import { onRealtimeNotification } from '@/lib/realtime';
 import type { Exchange } from '@/services/exchangeService';
 import type { Connection } from '@/services/connectionService';
-import { motion } from 'framer-motion';
+import { AnimatePresence, motion } from 'framer-motion';
 import {
   ArrowRight,
   BookOpen,
@@ -26,6 +27,7 @@ import {
   Activity,
   BarChart3,
   Play,
+  X,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -35,7 +37,7 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { Progress } from '@/components/ui/progress';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
 import { Separator } from '@/components/ui/separator';
-import { Link, useNavigate } from 'react-router-dom';
+import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { useCounter } from '@/hooks/useCounter';
 import { useToast } from '@/hooks/use-toast';
 import { cn } from '@/lib/utils';
@@ -148,7 +150,15 @@ const STATUS: Record<ExchangeStatus, { label: string; variant: 'default' | 'seco
 };
 
 /* ─── Exchange card ───────────────────────────────────────────── */
-function ExchangeCard({ exchange, currentUserId }: { exchange: Exchange; currentUserId: string }) {
+function ExchangeCard({
+  exchange,
+  currentUserId,
+  onStatusChanged,
+}: {
+  exchange: Exchange;
+  currentUserId: string;
+  onStatusChanged?: () => Promise<void> | void;
+}) {
   const isRequester = exchange.requester.id === currentUserId;
   const partner = isRequester ? exchange.receiver : exchange.requester;
   const mySkill = isRequester ? exchange.offeredSkill : exchange.wantedSkill;
@@ -192,14 +202,19 @@ function ExchangeCard({ exchange, currentUserId }: { exchange: Exchange; current
                   cfg.dot
                 )} />
               </div>
-              <div className="min-w-0">
+              <button
+                type="button"
+                className="min-w-0 text-left"
+                onClick={() => navigate(`/profile/${partner.id}`)}
+                title={`View ${partner.name}'s profile`}
+              >
                 <p className="truncate text-sm font-semibold text-foreground leading-tight">
                   {partner.name}
                 </p>
                 <p className="truncate text-xs text-muted-foreground mt-0.5">
                   {partner.university ?? 'University'}
                 </p>
-              </div>
+              </button>
             </div>
             <Badge variant={cfg.variant} className="shrink-0 text-[10px] font-semibold capitalize rounded-full px-2 py-0.5">
               {cfg.label}
@@ -259,6 +274,7 @@ function ExchangeCard({ exchange, currentUserId }: { exchange: Exchange; current
                     try {
                       await exchangeService.updateStatus(exchange.id, 'accepted');
                       setLocalStatus('accepted');
+                      await onStatusChanged?.();
                       toast({ title: 'Request accepted', description: `Now matched with ${partner.name.split(' ')[0]}.`, variant: 'success' });
                     } catch {
                       toast({ title: 'Failed to accept', variant: 'destructive' });
@@ -279,8 +295,8 @@ function ExchangeCard({ exchange, currentUserId }: { exchange: Exchange; current
                   size="sm"
                   className="rounded-lg text-xs"
                   onClick={() => {
-                    navigate('/community');
-                    toast({ title: 'Opening Community' });
+                    navigate(`/messages/${partner.id}`);
+                    toast({ title: 'Opening chat' });
                   }}
                 >
                   <MessageSquare className="mr-1.5 h-3.5 w-3.5" />
@@ -304,7 +320,7 @@ function ExchangeCard({ exchange, currentUserId }: { exchange: Exchange; current
         open={declineConfirmOpen}
         onOpenChange={setDeclineConfirmOpen}
         title={`Decline ${partner.name.split(' ')[0]}'s request?`}
-        description="This action can't be undone. They won't receive a notification."
+        description="This action can't be undone. The requester will be notified."
         confirmLabel="Decline"
         cancelLabel="Keep it"
         variant="destructive"
@@ -312,6 +328,7 @@ function ExchangeCard({ exchange, currentUserId }: { exchange: Exchange; current
           try {
             await exchangeService.updateStatus(exchange.id, 'declined');
             setDismissed(true);
+            await onStatusChanged?.();
             toast({ title: 'Request declined', variant: 'destructive' });
           } catch {
             toast({ title: 'Failed to decline', variant: 'destructive' });
@@ -478,6 +495,27 @@ function activityFromExchange(exchange: Exchange, currentUserId: string) {
   }
 }
 
+function formatTimeAgo(createdAt?: string) {
+  if (!createdAt) {
+    return 'just now';
+  }
+
+  const elapsedMs = Date.now() - new Date(createdAt).getTime();
+  const minutes = Math.max(0, Math.floor(elapsedMs / 60000));
+
+  if (minutes < 1) return 'just now';
+  if (minutes < 60) return `${minutes}m`;
+
+  const hours = Math.floor(minutes / 60);
+  if (hours < 24) return `${hours}h`;
+
+  const days = Math.floor(hours / 24);
+  if (days < 7) return `${days}d`;
+
+  const weeks = Math.floor(days / 7);
+  return `${weeks}w`;
+}
+
 /* ─── Onboarding strip (compact, horizontal) ─────────────────── */
 function OnboardingProgress({
   user,
@@ -627,12 +665,14 @@ function ConnectionsTab({
   loading,
   busy,
   onUpdate,
+  onDismiss,
   currentUserId,
 }: {
   connections: Connection[];
   loading: boolean;
   busy: Record<string, boolean>;
   onUpdate: (c: Connection, s: 'accepted' | 'declined') => Promise<void>;
+  onDismiss: (id: string) => void;
   currentUserId: string;
 }) {
   if (loading) {
@@ -655,16 +695,22 @@ function ConnectionsTab({
     return (
       <div className="flex flex-col items-center justify-center py-10 text-center p-4">
         <Users className="h-8 w-8 text-muted-foreground/40 mb-3" />
-        <p className="text-sm font-semibold text-foreground">No pending requests</p>
+        <p className="text-sm font-semibold text-foreground">No quick requests</p>
         <p className="mt-1 text-xs text-muted-foreground">
-          Connection requests will appear here.
+          Open Connections for your full request history.
         </p>
+        <Button asChild variant="link" size="sm" className="mt-1 h-auto p-0 text-xs text-primary">
+          <Link to="/connections">Go to Connections</Link>
+        </Button>
       </div>
     );
   }
 
   return (
     <div className="space-y-2 p-4">
+      <p className="text-[11px] text-muted-foreground">
+        Quick actions only. All requests remain in <Link to="/connections" className="text-primary hover:underline">Connections</Link>.
+      </p>
       {connections.slice(0, 4).map((conn, i) => {
         const partner = conn.requester.id === currentUserId ? conn.receiver : conn.requester;
         return (
@@ -686,6 +732,16 @@ function ConnectionsTab({
                 <p className="truncate text-sm font-semibold text-foreground">{partner.name}</p>
                 <p className="truncate text-xs text-muted-foreground">@{partner.username ?? 'user'}</p>
               </div>
+              <Button
+                size="icon"
+                variant="ghost"
+                className="h-7 w-7 rounded-md text-muted-foreground hover:bg-muted"
+                onClick={() => onDismiss(conn.id)}
+                title="Hide from dashboard"
+                aria-label="Hide from dashboard"
+              >
+                <X className="h-3.5 w-3.5" />
+              </Button>
             </div>
             {conn.message && (
               <p className="mt-2 text-xs text-muted-foreground line-clamp-2 italic">
@@ -987,13 +1043,22 @@ export default function DashboardPage() {
 
   const { user } = useAuth();
   const { toast } = useToast();
-  const { exchanges, loading } = useExchanges();
+  const location = useLocation();
+  const navigate = useNavigate();
+  const { exchanges, loading, refetch } = useExchanges();
   const {
     connections: pendingIncomingConnections,
     loading: connectionsLoading,
     refetch: refetchConnections,
   } = useConnections({ status: 'pending', direction: 'received' });
   const [connectionBusy, setConnectionBusy] = useState<Record<string, boolean>>({});
+  const [incomingRequest, setIncomingRequest] = useState<Exchange | null>(null);
+  const [incomingRequestOpen, setIncomingRequestOpen] = useState(false);
+  const [incomingExchangeBusy, setIncomingExchangeBusy] = useState<Record<string, boolean>>({});
+  const [seenIncomingRequestIds, setSeenIncomingRequestIds] = useState<Set<string>>(new Set());
+  const [dismissedConnectionIds, setDismissedConnectionIds] = useState<Set<string>>(new Set());
+  const [requestTab, setRequestTab] = useState<'received' | 'sent'>('received');
+  const [requestsModalOpen, setRequestsModalOpen] = useState(false);
   const [serverStats, setServerStats] = React.useState<{
     sessionsCompleted?: number;
     skillexScore?: number;
@@ -1001,7 +1066,7 @@ export default function DashboardPage() {
     pendingConnections?: number;
   } | null>(null);
 
-  React.useEffect(() => {
+  const refreshDashboardStats = React.useCallback(() => {
     DashboardService.getStats()
       .then(s => setServerStats({
         sessionsCompleted: s.sessionsCompleted,
@@ -1012,11 +1077,147 @@ export default function DashboardPage() {
       .catch(() => {});
   }, []);
 
+  React.useEffect(() => {
+    refreshDashboardStats();
+  }, [refreshDashboardStats]);
+
   const currentUserId = user?.id ?? '';
+  const dismissedConnectionsStorageKey = currentUserId
+    ? `dashboard-dismissed-connections:${currentUserId}`
+    : '';
+
+  React.useEffect(() => {
+    if (!dismissedConnectionsStorageKey) {
+      setDismissedConnectionIds(new Set());
+      return;
+    }
+
+    try {
+      const stored = sessionStorage.getItem(dismissedConnectionsStorageKey);
+      if (!stored) {
+        setDismissedConnectionIds(new Set());
+        return;
+      }
+
+      const parsed = JSON.parse(stored);
+      if (Array.isArray(parsed)) {
+        setDismissedConnectionIds(new Set(parsed.filter((id): id is string => typeof id === 'string')));
+      }
+    } catch {
+      setDismissedConnectionIds(new Set());
+    }
+  }, [dismissedConnectionsStorageKey]);
+
+  React.useEffect(() => {
+    if (!dismissedConnectionsStorageKey) {
+      return;
+    }
+
+    sessionStorage.setItem(
+      dismissedConnectionsStorageKey,
+      JSON.stringify(Array.from(dismissedConnectionIds))
+    );
+  }, [dismissedConnectionIds, dismissedConnectionsStorageKey]);
+
+  React.useEffect(() => {
+    const params = new URLSearchParams(location.search);
+    const panel = params.get('panel');
+    const requestedTab = params.get('requestsTab');
+
+    if (panel === 'requests') {
+      if (requestedTab === 'received' || requestedTab === 'sent') {
+        setRequestTab(requestedTab);
+      }
+
+      const target = document.getElementById('exchange-requests');
+      if (target) {
+        target.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      }
+      return;
+    }
+
+    if (location.hash === '#exchange-requests') {
+      const target = document.getElementById('exchange-requests');
+      if (target) {
+        target.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      }
+    }
+  }, [location.hash, location.search]);
+
+  const openIncomingRequestPopup = React.useCallback((exchange: Exchange) => {
+    setIncomingRequest(exchange);
+    setIncomingRequestOpen(true);
+    setSeenIncomingRequestIds((prev) => {
+      if (prev.has(exchange.id)) {
+        return prev;
+      }
+      const next = new Set(prev);
+      next.add(exchange.id);
+      return next;
+    });
+  }, []);
+
+  React.useEffect(() => {
+    if (!currentUserId || incomingRequestOpen) {
+      return;
+    }
+
+    const nextIncoming = exchanges
+      .filter((exchange) =>
+        exchange.status?.toLowerCase() === 'pending'
+        && exchange.receiver.id === currentUserId
+        && !seenIncomingRequestIds.has(exchange.id)
+      )
+      .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())[0];
+
+    if (nextIncoming) {
+      openIncomingRequestPopup(nextIncoming);
+    }
+  }, [currentUserId, exchanges, incomingRequestOpen, openIncomingRequestPopup, seenIncomingRequestIds]);
+
+  React.useEffect(() => {
+    if (!incomingRequestOpen || !incomingRequest) {
+      return;
+    }
+    const timerId = window.setTimeout(() => {
+      setIncomingRequestOpen(false);
+    }, 12000);
+    return () => window.clearTimeout(timerId);
+  }, [incomingRequest, incomingRequestOpen]);
+
+  React.useEffect(() => {
+    if (!user?.id) {
+      return;
+    }
+
+    return onRealtimeNotification((notification) => {
+      const type = String(notification.type ?? '').toUpperCase();
+
+      if (type.includes('MATCH') || type.includes('SESSION') || type.includes('REVIEW')) {
+        void refetch();
+        refreshDashboardStats();
+      }
+
+      if (type.includes('CONNECTION')) {
+        void refetchConnections();
+        refreshDashboardStats();
+      }
+    });
+  }, [refetch, refetchConnections, refreshDashboardStats, user?.id]);
   const activeExchanges = exchanges.filter(e => {
     const s = e.status?.toLowerCase();
-    return s === 'pending' || s === 'accepted';
+    return s === 'accepted';
   });
+  const incomingPendingExchanges = exchanges
+    .filter((exchange) => exchange.status?.toLowerCase() === 'pending' && exchange.receiver.id === currentUserId)
+    .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+  const sentPendingExchanges = exchanges
+    .filter((exchange) => exchange.status?.toLowerCase() === 'pending' && exchange.requester.id === currentUserId)
+    .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+  const REQUEST_PREVIEW_LIMIT = 8;
+  const hasMoreReceivedRequests = incomingPendingExchanges.length > REQUEST_PREVIEW_LIMIT;
+  const hasMoreSentRequests = sentPendingExchanges.length > REQUEST_PREVIEW_LIMIT;
+  const activeTabHasMore = requestTab === 'received' ? hasMoreReceivedRequests : hasMoreSentRequests;
   const upcomingSessions = exchanges.filter(
     e => e.status?.toLowerCase() === 'accepted' && e.sessionDate
   );
@@ -1025,9 +1226,76 @@ export default function DashboardPage() {
     .map(e => activityFromExchange(e, currentUserId))
     .filter(Boolean);
 
+  const quickConnectionRequests = pendingIncomingConnections.filter(
+    (connection) => !dismissedConnectionIds.has(connection.id)
+  );
+
+  React.useEffect(() => {
+    if (connectionsLoading) {
+      return;
+    }
+
+    const currentPendingIds = new Set(pendingIncomingConnections.map((connection) => connection.id));
+    setDismissedConnectionIds((prev) => {
+      let changed = false;
+      const next = new Set<string>();
+      for (const id of prev) {
+        if (currentPendingIds.has(id)) {
+          next.add(id);
+        } else {
+          changed = true;
+        }
+      }
+      return changed ? next : prev;
+    });
+  }, [connectionsLoading, pendingIncomingConnections]);
+
   const pendingConnectionCount = connectionsLoading
     ? (serverStats?.pendingConnections ?? 0)
-    : pendingIncomingConnections.length;
+    : quickConnectionRequests.length;
+
+  const handlePendingExchangeAction = async (
+    exchange: Exchange,
+    action: 'accepted' | 'declined' | 'cancelled'
+  ) => {
+    const partnerFirstName = exchange.requester.id === currentUserId
+      ? exchange.receiver.name.split(' ')[0]
+      : exchange.requester.name.split(' ')[0];
+
+    setIncomingExchangeBusy((prev) => ({ ...prev, [exchange.id]: true }));
+    try {
+      if (action === 'cancelled') {
+        await exchangeService.cancel(exchange.id);
+      } else {
+        await exchangeService.updateStatus(exchange.id, action);
+      }
+      await refetch();
+
+      if (incomingRequest?.id === exchange.id) {
+        setIncomingRequestOpen(false);
+        setIncomingRequest(null);
+      }
+
+      toast({
+        title: action === 'accepted'
+          ? 'Exchange accepted'
+          : action === 'declined'
+            ? 'Exchange declined'
+            : 'Request cancelled',
+        description: action === 'accepted'
+          ? `You are now matched with ${partnerFirstName}.`
+          : action === 'declined'
+            ? `You declined ${partnerFirstName}'s request.`
+            : `You cancelled your request to ${partnerFirstName}.`,
+        variant: action === 'accepted' ? 'success' : 'destructive',
+      });
+    } catch (error) {
+      const message = error instanceof Error ? error.message : 'Could not update the request.';
+      toast({ title: 'Update failed', description: message, variant: 'destructive' });
+    } finally {
+      setIncomingExchangeBusy((prev) => ({ ...prev, [exchange.id]: false }));
+    }
+  };
 
   const handleConnectionUpdate = async (
     connection: Connection,
@@ -1039,6 +1307,14 @@ export default function DashboardPage() {
     setConnectionBusy(prev => ({ ...prev, [connection.id]: true }));
     try {
       await connectionService.updateStatus(connection.id, status);
+      setDismissedConnectionIds((prev) => {
+        if (!prev.has(connection.id)) {
+          return prev;
+        }
+        const next = new Set(prev);
+        next.delete(connection.id);
+        return next;
+      });
       await refetchConnections();
       toast({
         title: status === 'accepted' ? 'Connection accepted' : 'Connection declined',
@@ -1051,6 +1327,107 @@ export default function DashboardPage() {
     } finally {
       setConnectionBusy(prev => ({ ...prev, [connection.id]: false }));
     }
+  };
+
+  const handleConnectionDismiss = (connectionId: string) => {
+    setDismissedConnectionIds((prev) => {
+      const next = new Set(prev);
+      next.add(connectionId);
+      return next;
+    });
+  };
+
+  const renderReceivedRequestRow = (exchange: Exchange) => {
+    const busy = Boolean(incomingExchangeBusy[exchange.id]);
+    return (
+      <div key={exchange.id} className="flex items-center gap-3 rounded-lg border border-border/60 bg-muted/20 px-3 py-2.5">
+        <Avatar className="h-8 w-8 ring-1 ring-border">
+          <AvatarImage src={exchange.requester.avatar ?? undefined} />
+          <AvatarFallback className="text-xs font-semibold">
+            {exchange.requester.name.charAt(0)}
+          </AvatarFallback>
+        </Avatar>
+        <div className="min-w-0 flex-1">
+          <button
+            type="button"
+            className="truncate text-left text-sm font-semibold text-foreground hover:text-primary"
+            onClick={() => navigate(`/profile/${exchange.requester.id}`)}
+          >
+            {exchange.requester.name}
+          </button>
+          <div className="flex items-center justify-between gap-2">
+            <p className="truncate text-[11px] text-muted-foreground">
+              {exchange.offeredSkill ? `Offers ${exchange.offeredSkill.name}` : 'Sent you an exchange request'}
+            </p>
+          </div>
+        </div>
+        <div className="flex items-center gap-2 pl-2">
+          <span className="shrink-0 text-[10px] font-semibold uppercase tracking-wide text-muted-foreground/80">
+            {formatTimeAgo(exchange.createdAt)}
+          </span>
+          <Button
+            variant="outline"
+            size="sm"
+            className="h-7 rounded-md px-2 text-[11px] border-destructive/20 text-destructive hover:bg-destructive/8"
+            onClick={() => void handlePendingExchangeAction(exchange, 'declined')}
+            disabled={busy}
+          >
+            Decline
+          </Button>
+          <Button
+            size="sm"
+            className="h-7 rounded-md px-2 text-[11px]"
+            onClick={() => void handlePendingExchangeAction(exchange, 'accepted')}
+            disabled={busy}
+          >
+            {busy ? '...' : 'Accept'}
+          </Button>
+        </div>
+      </div>
+    );
+  };
+
+  const renderSentRequestRow = (exchange: Exchange) => {
+    const busy = Boolean(incomingExchangeBusy[exchange.id]);
+    return (
+      <div key={exchange.id} className="flex items-center gap-3 rounded-lg border border-border/60 bg-muted/20 px-3 py-2.5">
+        <Avatar className="h-8 w-8 ring-1 ring-border">
+          <AvatarImage src={exchange.receiver.avatar ?? undefined} />
+          <AvatarFallback className="text-xs font-semibold">
+            {exchange.receiver.name.charAt(0)}
+          </AvatarFallback>
+        </Avatar>
+        <div className="min-w-0 flex-1">
+          <button
+            type="button"
+            className="truncate text-left text-sm font-semibold text-foreground hover:text-primary"
+            onClick={() => navigate(`/profile/${exchange.receiver.id}`)}
+          >
+            {exchange.receiver.name}
+          </button>
+          <div className="flex items-center justify-between gap-2">
+            <p className="truncate text-[11px] text-muted-foreground">
+              {exchange.wantedSkill ? `Requested ${exchange.wantedSkill.name}` : 'Waiting for response'}
+            </p>
+          </div>
+        </div>
+        <div className="flex items-center gap-2 pl-2">
+          <span className="shrink-0 text-[10px] font-semibold uppercase tracking-wide text-muted-foreground/80">
+            {formatTimeAgo(exchange.createdAt)}
+          </span>
+          <Badge variant="secondary" className="h-6 rounded-full px-2 text-[10px]">Pending</Badge>
+          <Button
+            variant="outline"
+            size="sm"
+            className="h-7 rounded-md px-2 text-[11px]"
+            onClick={() => void handlePendingExchangeAction(exchange, 'cancelled')}
+            disabled={busy}
+          >
+            {busy ? '...' : 'Cancel'}
+          </Button>
+        </div>
+      </div>
+    );
   };
 
   const getGreeting = () => {
@@ -1144,6 +1521,63 @@ export default function DashboardPage() {
           </div>
         )}
 
+        <div id="exchange-requests" className="md:col-span-3 lg:col-span-4">
+          <ScrollReveal animation="fade-up" delay={0.09}>
+            <Card className="border-border/60 bg-card dark:border-white/[0.07]">
+              <CardContent className="p-4">
+                <div className="mb-3 flex items-center justify-between gap-2">
+                  <h3 className="flex items-center gap-2 text-sm font-semibold text-foreground">
+                    <Inbox className="h-4 w-4 text-primary" />
+                    Exchange Requests
+                  </h3>
+                  <div className="flex items-center gap-2">
+                    <Badge variant="secondary" className="text-[10px] rounded-full">
+                      {incomingPendingExchanges.length + sentPendingExchanges.length} total
+                    </Badge>
+                    {activeTabHasMore && (
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        className="h-7 rounded-md px-2 text-[11px] font-semibold text-primary hover:bg-primary/10"
+                        onClick={() => setRequestsModalOpen(true)}
+                      >
+                        See all
+                      </Button>
+                    )}
+                  </div>
+                </div>
+
+                <Tabs value={requestTab} onValueChange={(value) => setRequestTab(value as 'received' | 'sent')} className="w-full">
+                  <TabsList className="h-9 w-full rounded-xl border border-border/50 bg-muted/30 p-1 sm:w-auto">
+                    <TabsTrigger value="received" className="text-[11px] font-semibold">
+                      Received ({incomingPendingExchanges.length})
+                    </TabsTrigger>
+                    <TabsTrigger value="sent" className="text-[11px] font-semibold">
+                      Sent ({sentPendingExchanges.length})
+                    </TabsTrigger>
+                  </TabsList>
+
+                  <TabsContent value="received" className="mt-3 space-y-2">
+                    {incomingPendingExchanges.length === 0 ? (
+                      <p className="rounded-lg border border-dashed border-border/60 px-3 py-4 text-xs text-muted-foreground">
+                        No incoming requests right now.
+                      </p>
+                    ) : incomingPendingExchanges.slice(0, REQUEST_PREVIEW_LIMIT).map(renderReceivedRequestRow)}
+                  </TabsContent>
+
+                  <TabsContent value="sent" className="mt-3 space-y-2">
+                    {sentPendingExchanges.length === 0 ? (
+                      <p className="rounded-lg border border-dashed border-border/60 px-3 py-4 text-xs text-muted-foreground">
+                        You have not sent any pending requests.
+                      </p>
+                    ) : sentPendingExchanges.slice(0, REQUEST_PREVIEW_LIMIT).map(renderSentRequestRow)}
+                  </TabsContent>
+                </Tabs>
+              </CardContent>
+            </Card>
+          </ScrollReveal>
+        </div>
+
         {/* ══ STATS (4 columns) ═════════════════════════════════════════ */}
         {statCards.map((card, i) => (
           <div key={card.title} className="col-span-1">
@@ -1198,7 +1632,14 @@ export default function DashboardPage() {
               </div>
               <div className="flex-1 overflow-y-auto custom-scrollbar mt-2">
                 <TabsContent value="connections" className="m-0 p-0 focus-visible:outline-none">
-                  <ConnectionsTab connections={pendingIncomingConnections} loading={connectionsLoading} busy={connectionBusy} onUpdate={handleConnectionUpdate} currentUserId={currentUserId} />
+                  <ConnectionsTab
+                    connections={quickConnectionRequests}
+                    loading={connectionsLoading}
+                    busy={connectionBusy}
+                    onUpdate={handleConnectionUpdate}
+                    onDismiss={handleConnectionDismiss}
+                    currentUserId={currentUserId}
+                  />
                 </TabsContent>
                 <TabsContent value="skills" className="m-0 focus-visible:outline-none">
                   <SkillsTab user={user} />
@@ -1249,7 +1690,14 @@ export default function DashboardPage() {
                   <EmptyExchanges />
                 ) : (
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                    {activeExchanges.map(ex => <ExchangeCard key={ex.id} exchange={ex} currentUserId={currentUserId} />)}
+                    {activeExchanges.map(ex => (
+                      <ExchangeCard
+                        key={ex.id}
+                        exchange={ex}
+                        currentUserId={currentUserId}
+                        onStatusChanged={refetch}
+                      />
+                    ))}
                   </div>
                 )}
               </div>
@@ -1266,6 +1714,132 @@ export default function DashboardPage() {
         </div>
 
       </div>
+
+      <Dialog open={requestsModalOpen} onOpenChange={setRequestsModalOpen}>
+        <DialogContent className="sm:max-w-2xl max-h-[85vh] overflow-hidden">
+          <DialogHeader>
+            <DialogTitle>All Exchange Requests</DialogTitle>
+            <DialogDescription>
+              Manage incoming and sent requests from one place.
+            </DialogDescription>
+          </DialogHeader>
+
+          <Tabs value={requestTab} onValueChange={(value) => setRequestTab(value as 'received' | 'sent')} className="w-full">
+            <TabsList className="h-9 w-full rounded-xl border border-border/50 bg-muted/30 p-1 sm:w-auto">
+              <TabsTrigger value="received" className="text-[11px] font-semibold">
+                Received ({incomingPendingExchanges.length})
+              </TabsTrigger>
+              <TabsTrigger value="sent" className="text-[11px] font-semibold">
+                Sent ({sentPendingExchanges.length})
+              </TabsTrigger>
+            </TabsList>
+
+            <TabsContent value="received" className="mt-3">
+              <div className="max-h-[52vh] space-y-2 overflow-y-auto pr-1 custom-scrollbar">
+                {incomingPendingExchanges.length === 0 ? (
+                  <p className="rounded-lg border border-dashed border-border/60 px-3 py-4 text-xs text-muted-foreground">
+                    No incoming requests right now.
+                  </p>
+                ) : incomingPendingExchanges.map(renderReceivedRequestRow)}
+              </div>
+            </TabsContent>
+
+            <TabsContent value="sent" className="mt-3">
+              <div className="max-h-[52vh] space-y-2 overflow-y-auto pr-1 custom-scrollbar">
+                {sentPendingExchanges.length === 0 ? (
+                  <p className="rounded-lg border border-dashed border-border/60 px-3 py-4 text-xs text-muted-foreground">
+                    You have not sent any pending requests.
+                  </p>
+                ) : sentPendingExchanges.map(renderSentRequestRow)}
+              </div>
+            </TabsContent>
+          </Tabs>
+
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setRequestsModalOpen(false)}>
+              Close
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      <AnimatePresence>
+        {incomingRequestOpen && incomingRequest && (
+          <motion.div
+            initial={{ opacity: 0, y: -20 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -20 }}
+            transition={{ duration: 0.18 }}
+            className="fixed bottom-4 right-4 z-40 w-[min(92vw,420px)]"
+          >
+            <Card className="border-border/70 bg-card/95 shadow-xl backdrop-blur">
+              <CardContent className="p-4">
+                <div className="mb-2 flex items-start justify-between gap-2">
+                  <div>
+                    <p className="text-sm font-bold text-foreground">Quick View: New Request</p>
+                    <p className="text-xs text-muted-foreground">
+                      Also added to your notification section.
+                    </p>
+                  </div>
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className="h-7 w-7 rounded-lg"
+                    onClick={() => setIncomingRequestOpen(false)}
+                    title="Dismiss quick view"
+                  >
+                    <X className="h-4 w-4" />
+                  </Button>
+                </div>
+
+                <div className="flex items-center gap-3 rounded-lg border border-border/60 bg-muted/20 p-3">
+                  <Avatar className="h-9 w-9 ring-1 ring-border">
+                    <AvatarImage src={incomingRequest.requester.avatar ?? undefined} />
+                    <AvatarFallback className="text-xs font-semibold">
+                      {incomingRequest.requester.name.charAt(0)}
+                    </AvatarFallback>
+                  </Avatar>
+                  <div className="min-w-0 flex-1">
+                    <p className="truncate text-sm font-semibold text-foreground">{incomingRequest.requester.name}</p>
+                    <p className="truncate text-xs text-muted-foreground">
+                      {incomingRequest.offeredSkill ? `Offers ${incomingRequest.offeredSkill.name}` : 'Sent you a request'}
+                    </p>
+                  </div>
+                </div>
+
+                <div className="mt-3 grid grid-cols-3 gap-2">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="text-xs"
+                    onClick={() => navigate(`/profile/${incomingRequest.requester.id}`)}
+                    disabled={Boolean(incomingExchangeBusy[incomingRequest.id])}
+                  >
+                    Profile
+                  </Button>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="text-xs border-destructive/20 text-destructive hover:bg-destructive/8 hover:border-destructive/30"
+                    onClick={() => void handlePendingExchangeAction(incomingRequest, 'declined')}
+                    disabled={Boolean(incomingExchangeBusy[incomingRequest.id])}
+                  >
+                    Decline
+                  </Button>
+                  <Button
+                    size="sm"
+                    className="text-xs"
+                    onClick={() => void handlePendingExchangeAction(incomingRequest, 'accepted')}
+                    disabled={Boolean(incomingExchangeBusy[incomingRequest.id])}
+                  >
+                    {incomingExchangeBusy[incomingRequest.id] ? '...' : 'Accept'}
+                  </Button>
+                </div>
+              </CardContent>
+            </Card>
+          </motion.div>
+        )}
+      </AnimatePresence>
     </DashboardLayout>
   );
 }

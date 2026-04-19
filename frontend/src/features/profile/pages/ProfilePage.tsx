@@ -44,6 +44,7 @@ import {
   connectionService,
   type ConnectionRelationship,
 } from '@/services/connectionService';
+import { ApiError } from '@/services/http/ApiClient';
 
 const containerVariants = {
   hidden: { opacity: 0 },
@@ -376,18 +377,31 @@ export default function ProfilePage() {
     setConnectDialogOpen(true);
   };
 
+  const refreshConnectionRelationship = async (targetUserId: string) => {
+    try {
+      const relationship = await connectionService.getRelationship(targetUserId);
+      setConnectionRelationship(relationship);
+      return relationship;
+    } catch {
+      return null;
+    }
+  };
+
   const handleSendConnectionRequest = async () => {
     if (!profileUser) return;
+
+    const targetUserId = profileUser.id;
+    const targetName = profileUser.name;
 
     setConnectionBusy(true);
     try {
       await connectionService.create({
-        receiverId: profileUser.id,
+        receiverId: targetUserId,
         message: connectMessage.trim() || undefined,
       });
 
       setConnectionRelationship({
-        targetUserId: profileUser.id,
+        targetUserId,
         status: 'PENDING_SENT',
         connectionId: null,
         canMessage: false,
@@ -395,14 +409,55 @@ export default function ProfilePage() {
 
       toast({
         title: 'Connection sent',
-        description: `Your request was sent to ${profileUser.name}.`,
+        description: `Your request was sent to ${targetName}.`,
         variant: 'success',
       });
       setConnectDialogOpen(false);
       setConnectMessage('');
     } catch (error) {
+      const latestRelationship = await refreshConnectionRelationship(targetUserId);
+
+      if (latestRelationship?.status === 'CONNECTED') {
+        toast({
+          title: 'Already connected',
+          description: `You are already connected with ${targetName}.`,
+          variant: 'success',
+        });
+        setConnectDialogOpen(false);
+        return;
+      }
+
+      if (latestRelationship?.status === 'PENDING_SENT') {
+        toast({
+          title: 'Request already sent',
+          description: `Your connection request to ${targetName} is still pending.`,
+        });
+        setConnectDialogOpen(false);
+        return;
+      }
+
+      if (latestRelationship?.status === 'PENDING_RECEIVED') {
+        toast({
+          title: 'Incoming request found',
+          description: `${targetName} already sent you a request. Accept it from this profile or from Connections.`,
+        });
+        setConnectDialogOpen(false);
+        return;
+      }
+
       const message = error instanceof Error ? error.message : 'Could not send request right now.';
-      toast({ title: 'Connect failed', description: message, variant: 'destructive' });
+      const isUnexpectedServerError =
+        error instanceof ApiError &&
+        error.status >= 500 &&
+        message.toLowerCase().includes('unexpected error');
+
+      toast({
+        title: 'Connect failed',
+        description: isUnexpectedServerError
+          ? 'The server could not save this request right now. Please retry in a moment.'
+          : message,
+        variant: 'destructive',
+      });
     } finally {
       setConnectionBusy(false);
     }

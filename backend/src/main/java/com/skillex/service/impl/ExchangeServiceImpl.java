@@ -10,6 +10,7 @@ import com.skillex.repository.SkillRepository;
 import com.skillex.repository.UserRepository;
 import com.skillex.service.DtoMapper;
 import com.skillex.service.ExchangeService;
+import com.skillex.service.NotificationService;
 import jakarta.persistence.EntityNotFoundException;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.PageRequest;
@@ -27,6 +28,7 @@ public class ExchangeServiceImpl implements ExchangeService {
     private final UserRepository userRepository;
     private final SkillRepository skillRepository;
     private final DtoMapper mapper;
+    private final NotificationService notificationService;
 
     @Override
     @Transactional
@@ -62,7 +64,16 @@ public class ExchangeServiceImpl implements ExchangeService {
         exchange.setWantedSkill(wantedSkill);
         exchange.setMessage(req.message());
         exchange.setStatus(Exchange.ExchangeStatus.PENDING);
-        return mapper.toExchange(exchangeRepository.save(exchange));
+        Exchange saved = exchangeRepository.save(exchange);
+
+        notificationService.create(
+            receiver.getId(),
+            requester.getId(),
+            "MATCH_REQUEST",
+            requester.getName() + " sent you a skill exchange request."
+        );
+
+        return mapper.toExchange(saved);
     }
 
     @Override
@@ -91,8 +102,32 @@ public class ExchangeServiceImpl implements ExchangeService {
     public ExchangeDto updateStatus(String exchangeId, String requestingUserId, UpdateExchangeRequest req) {
         Exchange ex = findExchange(exchangeId);
         assertParticipant(ex, requestingUserId);
-        ex.setStatus(Exchange.ExchangeStatus.valueOf(req.status().toUpperCase()));
-        return mapper.toExchange(exchangeRepository.save(ex));
+
+        Exchange.ExchangeStatus next = Exchange.ExchangeStatus.valueOf(req.status().toUpperCase());
+        if (ex.getStatus() == next) {
+            return mapper.toExchange(ex);
+        }
+
+        ex.setStatus(next);
+        Exchange saved = exchangeRepository.save(ex);
+
+        if (next == Exchange.ExchangeStatus.ACCEPTED) {
+            notificationService.create(
+                saved.getRequester().getId(),
+                saved.getReceiver().getId(),
+                "MATCH_REQUEST",
+                saved.getReceiver().getName() + " accepted your skill exchange request."
+            );
+        } else if (next == Exchange.ExchangeStatus.DECLINED) {
+            notificationService.create(
+                saved.getRequester().getId(),
+                saved.getReceiver().getId(),
+                "MATCH_REQUEST",
+                saved.getReceiver().getName() + " declined your skill exchange request."
+            );
+        }
+
+        return mapper.toExchange(saved);
     }
 
     @Override

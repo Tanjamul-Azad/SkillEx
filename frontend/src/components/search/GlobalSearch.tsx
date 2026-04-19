@@ -158,17 +158,19 @@ export default function GlobalSearch({ className }: { className?: string }) {
   const handleSendConnectionRequest = async () => {
     if (!connectTarget) return;
 
-    setConnectBusy((prev) => ({ ...prev, [connectTarget.id]: true }));
+    const target = connectTarget;
+
+    setConnectBusy((prev) => ({ ...prev, [target.id]: true }));
     try {
       await connectionService.create({
-        receiverId: connectTarget.id,
+        receiverId: target.id,
         message: connectMessage.trim() || undefined,
       });
 
       setRelationshipByUser((prev) => ({
         ...prev,
-        [connectTarget.id]: {
-          targetUserId: connectTarget.id,
+        [target.id]: {
+          targetUserId: target.id,
           status: 'PENDING_SENT',
           connectionId: null,
           canMessage: false,
@@ -177,17 +179,54 @@ export default function GlobalSearch({ className }: { className?: string }) {
 
       toast({
         title: 'Connection sent',
-        description: `Your request was sent to ${connectTarget.displayName}.`,
+        description: `Your request was sent to ${target.displayName}.`,
         variant: 'success',
       });
 
       setConnectTarget(null);
       setConnectMessage('');
     } catch (error) {
+      const latestRelationship = await connectionService.getRelationship(target.id).catch(() => null);
+
+      if (latestRelationship) {
+        setRelationshipByUser((prev) => ({
+          ...prev,
+          [target.id]: latestRelationship,
+        }));
+      }
+
+      if (latestRelationship?.status === 'CONNECTED') {
+        toast({
+          title: 'Already connected',
+          description: `You are already connected with ${target.displayName}.`,
+          variant: 'success',
+        });
+        setConnectTarget(null);
+        return;
+      }
+
+      if (latestRelationship?.status === 'PENDING_SENT') {
+        toast({
+          title: 'Request already sent',
+          description: `Your request to ${target.displayName} is still pending.`,
+        });
+        setConnectTarget(null);
+        return;
+      }
+
+      if (latestRelationship?.status === 'PENDING_RECEIVED') {
+        toast({
+          title: 'Incoming request found',
+          description: `${target.displayName} already sent you a request. Open Connections to accept it.`,
+        });
+        setConnectTarget(null);
+        return;
+      }
+
       const message = error instanceof Error ? error.message : 'Could not send request right now.';
       toast({ title: 'Connect failed', description: message, variant: 'destructive' });
     } finally {
-      setConnectBusy((prev) => ({ ...prev, [connectTarget.id]: false }));
+      setConnectBusy((prev) => ({ ...prev, [target.id]: false }));
     }
   };
 

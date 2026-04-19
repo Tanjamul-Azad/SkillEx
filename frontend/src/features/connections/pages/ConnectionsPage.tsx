@@ -1,6 +1,6 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { useDocumentTitle } from '@/hooks/useDocumentTitle';
-import { useNavigate } from 'react-router-dom';
+import { useLocation, useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { Users, Send, Inbox, MessageSquare, UserCheck, Clock } from 'lucide-react';
 import DashboardLayout from '@/components/layout/DashboardLayout';
@@ -11,6 +11,7 @@ import { Badge } from '@/components/ui/badge';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Skeleton } from '@/components/ui/skeleton';
 import { connectionService, type Connection } from '@/services/connectionService';
+import { onRealtimeNotification } from '@/lib/realtime';
 import { useAuth } from '@/hooks/useAuth';
 import { useToast } from '@/hooks/use-toast';
 
@@ -25,6 +26,7 @@ const TAB_CONFIG: Record<ConnectionTab, { status?: string; direction: 'all' | 's
 export default function ConnectionsPage() {
   useDocumentTitle('Connections');
   const navigate = useNavigate();
+  const location = useLocation();
   const { user } = useAuth();
   const { toast } = useToast();
 
@@ -34,6 +36,10 @@ export default function ConnectionsPage() {
   const [actionBusy, setActionBusy] = useState<Record<string, boolean>>({});
 
   const fetchConnections = useCallback(async (tab: ConnectionTab) => {
+    if (!user?.id) {
+      return;
+    }
+
     const cfg = TAB_CONFIG[tab];
     setLoading(true);
     try {
@@ -46,11 +52,35 @@ export default function ConnectionsPage() {
     } finally {
       setLoading(false);
     }
-  }, [toast]);
+  }, [toast, user?.id]);
 
   useEffect(() => {
-    fetchConnections(activeTab);
-  }, [activeTab, fetchConnections]);
+    const params = new URLSearchParams(location.search);
+    const tab = params.get('tab');
+    if (tab === 'accepted' || tab === 'sent' || tab === 'received') {
+      setActiveTab(tab);
+    }
+  }, [location.search]);
+
+  useEffect(() => {
+    if (!user?.id) {
+      return;
+    }
+    void fetchConnections(activeTab);
+  }, [activeTab, fetchConnections, user?.id]);
+
+  useEffect(() => {
+    if (!user?.id) {
+      return;
+    }
+
+    return onRealtimeNotification((notification) => {
+      const type = String(notification.type ?? '').toUpperCase();
+      if (type.includes('CONNECTION')) {
+        void fetchConnections(activeTab);
+      }
+    });
+  }, [activeTab, fetchConnections, user?.id]);
 
   const getPartner = (connection: Connection) => {
     if (!user) return connection.requester;
@@ -105,35 +135,35 @@ export default function ConnectionsPage() {
           initial={{ opacity: 0, y: -10 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.25 }}
-          className="flex flex-col gap-2"
+          className="flex flex-col gap-2 mb-8"
         >
-          <h1 className="font-headline text-3xl font-bold tracking-tight">My Connections</h1>
-          <p className="text-sm text-muted-foreground">Manage accepted, sent, and received connection requests.</p>
+          <h1 className="font-headline text-3xl font-extrabold md:text-5xl leading-none">My Connections</h1>
+          <p className="text-sm text-muted-foreground uppercase tracking-wider font-bold">Manage accepted, sent, and received connection requests.</p>
         </motion.div>
 
-        <Tabs value={activeTab} onValueChange={(value) => setActiveTab(value as ConnectionTab)}>
-          <TabsList className="grid w-full grid-cols-3 sm:w-[520px]">
-            <TabsTrigger value="accepted" className="gap-1.5 text-xs sm:text-sm">
-              <Users className="h-3.5 w-3.5" />
+        <Tabs value={activeTab} onValueChange={(value) => setActiveTab(value as ConnectionTab)} className="space-y-6">
+          <TabsList className="bg-black/20 backdrop-blur-md border border-white/5 rounded-full p-1 inline-flex h-12 w-full md:w-auto shadow-[inset_0_1px_0_0_hsla(0,0%,100%,0.05)]">
+            <TabsTrigger value="accepted" className="rounded-full px-6 text-xs font-bold uppercase tracking-wider data-[state=active]:bg-primary data-[state=active]:text-primary-foreground data-[state=active]:shadow-[0_0_20px_hsl(var(--primary)/0.3)] transition-all flex-1 md:flex-none">
+              <Users className="mr-2 h-3.5 w-3.5" />
               Accepted
             </TabsTrigger>
-            <TabsTrigger value="sent" className="gap-1.5 text-xs sm:text-sm">
-              <Send className="h-3.5 w-3.5" />
+            <TabsTrigger value="sent" className="rounded-full px-6 text-xs font-bold uppercase tracking-wider data-[state=active]:bg-card data-[state=active]:text-foreground data-[state=active]:shadow-[0_0_20px_hsl(var(--card)/0.3)] transition-all flex-1 md:flex-none">
+              <Send className="mr-2 h-3.5 w-3.5" />
               Sent
             </TabsTrigger>
-            <TabsTrigger value="received" className="gap-1.5 text-xs sm:text-sm">
-              <Inbox className="h-3.5 w-3.5" />
+            <TabsTrigger value="received" className="rounded-full px-6 text-xs font-bold uppercase tracking-wider data-[state=active]:bg-card data-[state=active]:text-foreground data-[state=active]:shadow-[0_0_20px_hsl(var(--card)/0.3)] transition-all flex-1 md:flex-none">
+              <Inbox className="mr-2 h-3.5 w-3.5" />
               Received
             </TabsTrigger>
           </TabsList>
         </Tabs>
 
-        <Card className="border-2 border-border/70 shadow-sm">
-          <CardHeader className="pb-3">
-            <CardTitle className="flex items-center gap-2 text-base">
-              {activeTab === 'accepted' ? <UserCheck className="h-4 w-4 text-primary" /> : <Clock className="h-4 w-4 text-primary" />}
+        <Card className="rounded-[2rem] border border-white/5 bg-black/20 p-2 backdrop-blur-md shadow-[inset_0_1px_0_0_hsla(0,0%,100%,0.05)]">
+          <CardHeader className="pb-4">
+            <CardTitle className="flex items-center gap-3 text-lg font-headline font-bold uppercase tracking-wider">
+              {activeTab === 'accepted' ? <div className="p-2 bg-primary/20 rounded-full border border-primary/20 shadow-[0_0_10px_hsl(var(--primary)/0.3)]"><UserCheck className="h-5 w-5 text-primary" /></div> : <div className="p-2 bg-primary/20 rounded-full border border-primary/20 shadow-[0_0_10px_hsl(var(--primary)/0.3)]"><Clock className="h-5 w-5 text-primary" /></div>}
               {activeTab === 'accepted' ? 'Accepted Connections' : activeTab === 'sent' ? 'Sent Requests' : 'Received Requests'}
-              <Badge variant="secondary" className="ml-auto">{connections.length}</Badge>
+              <Badge className="ml-auto bg-white/10 text-foreground border border-white/10 px-3 py-1 font-bold">{connections.length}</Badge>
             </CardTitle>
           </CardHeader>
 
@@ -153,17 +183,20 @@ export default function ConnectionsPage() {
                 ))}
               </div>
             ) : connections.length === 0 ? (
-              <div className="rounded-xl border-2 border-dashed border-border/70 px-4 py-10 text-center">
-                <p className="text-sm font-semibold">{emptyMeta.title}</p>
-                <p className="mt-1 text-xs text-muted-foreground">{emptyMeta.description}</p>
+              <div className="rounded-[2rem] border border-white/5 bg-black/20 backdrop-blur-md px-4 py-20 text-center shadow-[inset_0_1px_0_0_hsla(0,0%,100%,0.05)]">
+                <div className="p-4 bg-white/5 rounded-full inline-flex mb-4">
+                   <Users className="h-12 w-12 text-muted-foreground/50" />
+                </div>
+                <p className="text-xl font-headline font-extrabold">{emptyMeta.title}</p>
+                <p className="mt-2 text-sm text-muted-foreground max-w-sm mx-auto font-bold uppercase tracking-wider">{emptyMeta.description}</p>
               </div>
             ) : (
               <motion.div 
-                className="grid gap-4"
+                className="grid gap-4 sm:grid-cols-2 md:grid-cols-2 xl:grid-cols-3 auto-rows-min"
                 initial="hidden"
                 animate="visible"
                 variants={{
-                  visible: { transition: { staggerChildren: 0.1 } },
+                  visible: { transition: { staggerChildren: 0.05 } },
                 }}
               >
                 {connections.map((connection, _i) => {
@@ -175,69 +208,69 @@ export default function ConnectionsPage() {
                         hidden: { opacity: 0, y: 20 },
                         visible: { opacity: 1, y: 0, transition: { type: 'spring', stiffness: 100 } }
                       }}
-                      className="group relative overflow-hidden rounded-2xl border border-border/40 bg-card p-4 shadow-sm transition-all duration-300 hover:border-primary/40 hover:shadow-[0_8px_30px_rgb(0,0,0,0.04)] dark:hover:shadow-[0_8px_30px_rgb(255,255,255,0.02)]"
+                      className="group relative overflow-hidden rounded-3xl border border-white/5 bg-card shadow-[inset_0_1px_0_0_hsla(0,0%,100%,0.05)] transition-all duration-300 hover:border-primary/40 hover:shadow-[0_8px_30px_hsl(var(--primary)/0.2)] flex flex-col"
                     >
-                      <div className="absolute inset-0 bg-gradient-to-r from-primary/5 via-transparent to-transparent opacity-0 transition-opacity duration-500 group-hover:opacity-100" />
+                      <div className="absolute inset-0 bg-gradient-to-r from-primary/10 via-transparent to-primary/5 opacity-0 transition-opacity duration-500 group-hover:opacity-100 mix-blend-overlay" />
                       
-                      <div className="relative z-10 flex flex-col gap-4 sm:flex-row sm:items-center">
-                        <div className="flex items-center gap-4">
-                          <div className="relative">
-                            <Avatar className="h-14 w-14 ring-2 ring-primary/10 transition-all duration-500 group-hover:ring-primary/40 group-hover:scale-105 shadow-sm">
+                      <div className="relative z-10 flex flex-col p-5 flex-1">
+                        <div className="flex items-start gap-4">
+                          <div className="relative shrink-0">
+                            <Avatar className="h-16 w-16 ring-4 ring-primary/10 transition-all duration-500 group-hover:ring-primary/40 group-hover:scale-105 shadow-lg bg-card">
                               <AvatarImage src={partner.avatar ?? undefined} alt={partner.name} className="object-cover" />
-                              <AvatarFallback className="bg-muted text-lg font-bold">{partner.name.charAt(0)}</AvatarFallback>
+                              <AvatarFallback className="bg-muted text-xl font-bold">{partner.name.charAt(0)}</AvatarFallback>
                             </Avatar>
                             {/* Online indicator dot for accepted connections (mocked representation) */}
                             {activeTab === 'accepted' && (
-                              <span className="absolute bottom-0 right-0 h-3.5 w-3.5 rounded-full border-2 border-background bg-secondary shadow-sm" />
+                              <span className="absolute bottom-0 right-0 h-4 w-4 rounded-full border-[3px] border-card bg-emerald-500 shadow-[0_0_10px_var(--emerald-500)]" />
                             )}
                           </div>
                           
-                          <div className="flex flex-col flex-1 min-w-0">
+                          <div className="flex flex-col flex-1 min-w-0 pt-1">
                             <span 
-                              className="text-base font-headline font-bold leading-tight cursor-pointer hover:text-primary transition-colors truncate"
+                              className="text-lg font-headline font-extrabold leading-tight cursor-pointer hover:text-primary transition-colors truncate drop-shadow-sm"
                               onClick={() => navigate(`/profile/${partner.id}`)}
                             >
                               {partner.name}
                             </span>
-                            <span className="text-xs font-semibold text-muted-foreground">
+                            <span className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground mt-1">
                               @{partner.username ?? 'user'}
                             </span>
                             {connection.message && activeTab !== 'accepted' && (
-                              <p className="mt-2 text-[13px] text-foreground/80 italic border-l-2 border-primary/20 pl-2 py-0.5 w-full sm:max-w-md line-clamp-2">
+                              <p className="mt-3 text-[11px] font-semibold text-muted-foreground italic border-l-2 border-primary/40 pl-3 py-1 w-full bg-white/5 rounded-r-lg line-clamp-3">
                                 "{connection.message}"
                               </p>
                             )}
                           </div>
                         </div>
 
-                        <div className="sm:ml-auto flex flex-wrap items-center gap-2 mt-2 sm:mt-0">
+                        <div className="flex flex-wrap items-end gap-2 mt-auto pt-5">
                           {activeTab === 'accepted' && (
-                            <>
+                            <div className="flex w-full gap-2 mt-2 border-t border-white/5 pt-4">
                               <Button 
                                 size="sm" 
                                 variant="outline" 
-                                className="rounded-xl border-dashed hover:border-solid hover:bg-primary/5 transition-all text-xs"
+                                className="flex-1 rounded-2xl border-white/10 glass-subtle hover:bg-white/10 transition-all text-[10px] font-bold uppercase tracking-wider py-4 h-auto"
                                 onClick={() => navigate(`/profile/${partner.id}`)}
                               >
-                                View Profile
+                                Profile
                               </Button>
                               <Button 
                                 size="sm" 
                                 variant="gradient"
-                                className="rounded-xl text-xs hover:shadow-glow-sm transition-all"
+                                className="flex-1 rounded-2xl shadow-[0_0_15px_hsl(var(--primary)/0.3)] hover:shadow-[0_0_25px_hsl(var(--primary)/0.5)] transition-all text-[10px] font-bold uppercase tracking-wider py-4 h-auto"
                                 onClick={() => navigate(`/messages/${partner.id}`)}
                               >
                                 <MessageSquare className="mr-1.5 h-3.5 w-3.5" />
                                 Message
                               </Button>
-                            </>
+                            </div>
                           )}
 
                           {activeTab === 'sent' && (
                             <Button
                               size="sm"
                               variant="outline"
-                              className="rounded-xl border-destructive/30 text-destructive hover:bg-destructive/10 transition-colors text-xs"
+                              className="w-full mt-4 rounded-2xl border-destructive/30 text-destructive text-[10px] font-bold uppercase tracking-wider hover:bg-destructive/10 transition-colors py-4 h-auto glass-subtle"
                               onClick={() => updateConnectionStatus(connection.id, 'cancelled')}
                               disabled={actionBusy[connection.id]}
                             >
@@ -246,11 +279,11 @@ export default function ConnectionsPage() {
                           )}
 
                           {activeTab === 'received' && (
-                            <>
+                            <div className="flex w-full gap-2 mt-4">
                               <Button
                                 size="sm"
                                 variant="outline"
-                                className="rounded-xl border-destructive/30 text-destructive hover:bg-destructive/10 transition-colors text-xs"
+                                className="flex-1 rounded-2xl border-destructive/40 text-destructive text-[10px] font-bold uppercase tracking-wider hover:bg-destructive/10 transition-colors h-auto py-4 glass-subtle"
                                 onClick={() => updateConnectionStatus(connection.id, 'declined')}
                                 disabled={actionBusy[connection.id]}
                               >
@@ -259,13 +292,13 @@ export default function ConnectionsPage() {
                               <Button
                                 size="sm"
                                 variant="gradient"
-                                className="rounded-xl shadow-glow-sm hover:shadow-glow transition-all text-xs border border-primary/20"
+                                className="flex-1 rounded-2xl shadow-[0_0_15px_hsl(var(--primary)/0.3)] hover:shadow-[0_0_25px_hsl(var(--primary)/0.5)] transition-all text-[10px] font-bold uppercase tracking-wider border-none h-auto py-4"
                                 onClick={() => updateConnectionStatus(connection.id, 'accepted')}
                                 disabled={actionBusy[connection.id]}
                               >
-                                {actionBusy[connection.id] ? 'Accepting...' : 'Accept Request'}
+                                {actionBusy[connection.id] ? 'Accepting...' : 'Accept'}
                               </Button>
-                            </>
+                            </div>
                           )}
                         </div>
                       </div>

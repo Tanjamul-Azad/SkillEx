@@ -1,5 +1,5 @@
 
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { Link } from 'react-router-dom';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { useAuth } from '@/hooks/useAuth';
@@ -27,6 +27,7 @@ import { NotificationService } from '@/services/notificationService';
 import { TokenStore } from '@/services/http/ApiClient';
 import { useWebSocket } from '@/hooks/useWebSocket';
 import type { Notification } from '@/types';
+import { emitRealtimeNotification, normalizeNotificationPayload } from '@/lib/realtime';
 import Logo from '@/components/ui/Logo';
 import { ConfirmDialog } from '@/components/ui/ConfirmDialog';
 import GlobalSearch from '@/components/search/GlobalSearch';
@@ -67,6 +68,24 @@ const PAGE_TITLES: Record<string, string> = {
   '/onboarding': 'Get Started',
 };
 
+const NOTIFICATION_PAGE_SIZE = 25;
+const NOTIFICATION_PREVIEW_LIMIT = 8;
+
+function dedupeNotifications(items: Notification[]): Notification[] {
+  const seen = new Set<string>();
+  const deduped: Notification[] = [];
+
+  for (const item of items) {
+    if (!item?.id || seen.has(item.id)) {
+      continue;
+    }
+    seen.add(item.id);
+    deduped.push(item);
+  }
+
+  return deduped;
+}
+
 export default function Header({
   sidebarWidth: _sidebarWidth = 0,
   headerHeight = 64,
@@ -87,14 +106,49 @@ export default function Header({
 
   const [readIds, setReadIds] = useState<Set<string>>(new Set());
   const [notifs, setNotifs] = useState<Notification[]>([]);
+  const [notifLoading, setNotifLoading] = useState(false);
+  const [notifError, setNotifError] = useState<string | null>(null);
+  const [showAllNotifications, setShowAllNotifications] = useState(false);
+
+  const fetchAllNotifications = useCallback(async () => {
+    if (!user) return;
+
+    setNotifLoading(true);
+    setNotifError(null);
+
+    try {
+      const all: Notification[] = [];
+      let page = 0;
+      let totalPages = 1;
+
+      do {
+        const res = await NotificationService.getAll(page, NOTIFICATION_PAGE_SIZE);
+        all.push(...(res.content ?? []));
+        totalPages = Math.max(res.totalPages ?? 1, 1);
+        page += 1;
+      } while (page < totalPages);
+
+      setNotifs(dedupeNotifications(all));
+    } catch (error) {
+      const message = error instanceof Error ? error.message : 'Could not load notifications.';
+      setNotifError(message);
+    } finally {
+      setNotifLoading(false);
+    }
+  }, [user]);
 
   // ── Initial notification fetch ────────────────────────────────────────────
   useEffect(() => {
-    if (!user) return;
-    NotificationService.getAll(0, 8)
-      .then((res) => setNotifs(res.content ?? []))
-      .catch(() => { /* silently fail — notifications are non-critical */ });
-  }, [user]);
+    if (!user) {
+      setNotifs([]);
+      setReadIds(new Set());
+      setNotifError(null);
+      setNotifLoading(false);
+      return;
+    }
+
+    void fetchAllNotifications();
+  }, [fetchAllNotifications, user]);
 
   // ── Real-time WebSocket notifications ────────────────────────────────────
   const token = TokenStore.get();
@@ -106,8 +160,16 @@ export default function Header({
     // Subscribe to user-specific notification queue
     const unsub = subscribe(`/user/queue/notifications`, (msg) => {
       try {
-        const incoming = JSON.parse(msg.body) as Notification;
-        setNotifs((prev) => [incoming, ...prev].slice(0, 20));
+        const incoming = normalizeNotificationPayload(JSON.parse(msg.body));
+        if (!incoming) {
+          return;
+        }
+        setNotifError(null);
+        emitRealtimeNotification(incoming);
+        setNotifs((prev) => {
+          const merged = dedupeNotifications([incoming, ...prev]);
+          return merged;
+        });
       } catch {
         // ignore malformed frames
       }
@@ -116,11 +178,75 @@ export default function Header({
     return () => unsubRef.current?.();
   }, [connected, user, subscribe]);
 
+  // Fallback polling if WebSocket is disconnected.
+  useEffect(() => {
+    if (!user || connected) {
+      return;
+    }
+
+    const intervalId = window.setInterval(() => {
+      void fetchAllNotifications();
+    }, 15000);
+
+    return () => window.clearInterval(intervalId);
+  }, [connected, fetchAllNotifications, user]);
+
   const unreadCount = notifs.filter((n) => !n.isRead && !readIds.has(n.id)).length;
+  const visibleNotifications = showAllNotifications
+    ? notifs
+    : notifs.slice(0, NOTIFICATION_PREVIEW_LIMIT);
+  const hasHiddenNotifications = notifs.length > NOTIFICATION_PREVIEW_LIMIT;
 
   const markAllRead = () => {
     NotificationService.markAllRead().catch(() => {});
-    setReadIds(new Set(notifs.map((n) => n.id)));
+    setReadIds(new Set());
+    setNotifs((prev) => prev.map((n) => ({ ...n, isRead: true })));
+  };
+
+  const markOneRead = (notificationId: string) => {
+    setReadIds((prev) => {
+      const next = new Set(prev);
+      next.add(notificationId);
+      return next;
+    });
+    setNotifs((prev) => prev.map((n) => (n.id === notificationId ? { ...n, isRead: true } : n)));
+    NotificationService.markRead(notificationId).catch(() => {});
+  };
+
+  const getNotificationRoute = useCallback((notification: Notification): string => {
+    const type = String(notification.type ?? '').toLowerCase();
+    const msg = String(notification.message ?? '').toLowerCase();
+
+    if (type.includes('message')) {
+      return notification.fromUser?.id ? `/messages/${notification.fromUser.id}` : '/messages';
+    }
+
+    if (type.includes('match')) {
+      const sentTabHints = msg.includes('accepted your') || msg.includes('declined your') || msg.includes('your skill exchange request');
+      const tab = sentTabHints ? 'sent' : 'received';
+      return `/dashboard?panel=requests&requestsTab=${tab}#exchange-requests`;
+    }
+
+    if (type.includes('connection')) {
+      return '/connections';
+    }
+
+    if (type.includes('session')) {
+      return '/dashboard?panel=upcoming#upcoming-sessions';
+    }
+
+    if (type.includes('review')) {
+      return notification.fromUser?.id ? `/profile/${notification.fromUser.id}` : '/dashboard';
+    }
+
+    return '/dashboard';
+  }, []);
+
+  const handleNotificationClick = (notification: Notification, isRead: boolean) => {
+    if (!isRead) {
+      markOneRead(notification.id);
+    }
+    navigate(getNotificationRoute(notification));
   };
 
   return (
@@ -195,7 +321,13 @@ export default function Header({
 
           {/* Notifications dropdown */}
           {user && (
-            <DropdownMenu>
+            <DropdownMenu onOpenChange={(open) => {
+              if (open) {
+                void fetchAllNotifications();
+              } else {
+                setShowAllNotifications(false);
+              }
+            }}>
               <DropdownMenuTrigger asChild>
                 <Button
                   variant="ghost"
@@ -236,9 +368,23 @@ export default function Header({
                 </div>
                 <DropdownMenuSeparator />
                 <ScrollArea className="max-h-72">
-                  {notifs.length === 0 ? (
+                  {notifLoading && notifs.length === 0 ? (
+                    <p className="py-6 text-center text-sm text-muted-foreground">Loading notifications...</p>
+                  ) : notifError && notifs.length === 0 ? (
+                    <div className="px-3 py-4 text-center">
+                      <p className="text-xs text-destructive/90">{notifError}</p>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        className="mt-2 h-7 rounded-md px-2 text-[11px] text-primary hover:bg-primary/5"
+                        onClick={() => void fetchAllNotifications()}
+                      >
+                        Retry
+                      </Button>
+                    </div>
+                  ) : visibleNotifications.length === 0 ? (
                     <p className="py-6 text-center text-sm text-muted-foreground">No notifications</p>
-                  ) : notifs.map((n) => {
+                  ) : visibleNotifications.map((n) => {
                     const isRead = n.isRead || readIds.has(n.id);
                     const Icon = getNotifIcon(n.type);
                     const colorClass = getNotifColor(n.type);
@@ -249,7 +395,7 @@ export default function Header({
                           'flex items-start gap-3 px-3 py-2.5 cursor-pointer hover:bg-muted/50 transition-colors border-b border-border/40 last:border-0',
                           !isRead && 'bg-primary/3'
                         )}
-                        onClick={() => setReadIds((prev) => new Set([...prev, n.id]))}
+                        onClick={() => handleNotificationClick(n, isRead)}
                       >
                         <div className={cn('mt-0.5 flex h-7 w-7 shrink-0 items-center justify-center rounded-full', colorClass)}>
                           <Icon className="h-3.5 w-3.5" />
@@ -271,8 +417,29 @@ export default function Header({
                 </ScrollArea>
                 <DropdownMenuSeparator />
                 <div className="p-2">
-                  <Button variant="ghost" size="sm" className="w-full text-xs rounded-lg text-primary hover:bg-primary/5">
-                    View all notifications
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    className="w-full text-xs rounded-lg text-primary hover:bg-primary/5"
+                    onClick={() => {
+                      if (hasHiddenNotifications && !showAllNotifications) {
+                        setShowAllNotifications(true);
+                        return;
+                      }
+
+                      if (showAllNotifications) {
+                        setShowAllNotifications(false);
+                        return;
+                      }
+
+                      void fetchAllNotifications();
+                    }}
+                  >
+                    {showAllNotifications
+                      ? 'Show fewer notifications'
+                      : hasHiddenNotifications
+                        ? `View all notifications (${notifs.length})`
+                        : 'Refresh notifications'}
                   </Button>
                 </div>
               </DropdownMenuContent>

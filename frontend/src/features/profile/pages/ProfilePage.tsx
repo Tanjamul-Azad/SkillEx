@@ -11,9 +11,7 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from '@/components/ui/dialog';
 import { Textarea } from '@/components/ui/textarea';
-import { Progress } from '@/components/ui/progress';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
-import { Separator } from '@/components/ui/separator';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import {
   Zap,
@@ -46,6 +44,7 @@ import {
   connectionService,
   type ConnectionRelationship,
 } from '@/services/connectionService';
+import { ApiError } from '@/services/http/ApiClient';
 
 const containerVariants = {
   hidden: { opacity: 0 },
@@ -69,13 +68,14 @@ function StatCard({
   color: string;
 }) {
   return (
-    <div className="group relative flex flex-col items-center gap-2 p-4 rounded-2xl bg-card border border-border/40 shadow-sm hover:shadow-md hover:border-primary/30 transition-all duration-300">
-      <div className={cn('p-3 rounded-xl transition-transform duration-300 group-hover:scale-110 group-hover:-translate-y-1', color)}>
-        <Icon className="w-5 h-5" />
+    <div className="group relative flex flex-col items-start gap-2 p-5 rounded-[1.5rem] bg-black/40 backdrop-blur-xl border border-white/5 shadow-[inset_0_1px_0_0_hsla(0,0%,100%,0.05)] hover:border-primary/30 transition-all duration-300 overflow-hidden">
+      <div className="absolute top-0 right-0 -mr-6 -mt-6 w-16 h-16 rounded-full bg-white/5 blur-2xl pointer-events-none group-hover:bg-primary/10 transition-colors" />
+      <div className={cn('p-2 rounded-xl transition-transform duration-300 group-hover:scale-105 shadow-[0_0_10px_hsl(var(--primary)/0.1)] border border-white/10 bg-white/5', color)}>
+        <Icon className="w-4 h-4" />
       </div>
-      <div className="text-center">
-        <span className="block text-2xl font-extrabold font-headline">{value}</span>
-        <span className="block text-xs font-semibold text-muted-foreground uppercase tracking-widest mt-0.5">{label}</span>
+      <div>
+        <span className="block text-2xl font-extrabold font-headline leading-none text-white tracking-tight drop-shadow-sm">{value}</span>
+        <span className="block text-[9px] font-bold text-muted-foreground uppercase tracking-widest mt-1.5">{label}</span>
       </div>
     </div>
   );
@@ -107,48 +107,48 @@ function SkillSection({
 
   return (
     <motion.div variants={itemVariants}>
-      <Card id={id} className={cn('h-full border-border/60 transition-all duration-300 group hover:shadow-lg', emphasized && 'ring-2 ring-primary/50 shadow-[0_0_20px_hsl(var(--primary)/0.25)] bg-gradient-to-br from-primary/5 to-transparent')}>
-        <CardHeader className="pb-3 border-b border-border/40 bg-muted/20">
-          <CardTitle className="flex items-center gap-2 text-base font-headline font-bold">
-            <div className={cn("p-1.5 rounded-lg", variant === 'offer' ? 'bg-primary/10 text-primary' : 'bg-secondary/10 text-secondary')}>
+      <Card id={id} className={cn('h-full border border-white/5 bg-black/40 backdrop-blur-xl rounded-[2rem] transition-all duration-300 group hover:border-white/10 shadow-[inset_0_1px_0_0_hsla(0,0%,100%,0.05)] overflow-hidden relative', emphasized && 'ring-1 ring-primary/30 shadow-[0_0_30px_hsl(var(--primary)/0.15)] bg-gradient-to-br from-primary/5 to-transparent')}>
+        <div className={cn("absolute top-0 right-0 -mr-16 -mt-16 w-32 h-32 rounded-full blur-3xl pointer-events-none opacity-20", variant === 'offer' ? 'bg-primary' : 'bg-secondary')} />
+        <CardHeader className="pb-4 border-b border-white/5 relative z-10 px-6 pt-6">
+          <CardTitle className="flex items-center gap-3 text-sm font-bold text-white tracking-wide">
+            <div className={cn("p-1.5 rounded-lg border border-white/10 shadow-sm", variant === 'offer' ? 'bg-primary/10 text-primary' : 'bg-secondary/10 text-secondary')}>
               <Icon className="w-4 h-4" />
             </div>
-            {title}
-            <Badge variant="secondary" className="ml-auto text-xs font-bold px-2 py-0.5 bg-background border-border shadow-sm">
+            <span className="uppercase tracking-widest text-[11px]">{title}</span>
+            <Badge variant="secondary" className="ml-auto text-[9px] uppercase font-bold px-2 py-0.5 bg-white/5 text-muted-foreground border border-white/10 rounded-md">
               {skills.length}
             </Badge>
             {isOwner && (
               <Button
                 size="icon"
                 variant="ghost"
-                className="h-7 w-7 rounded-full hover:bg-primary/20 hover:text-primary transition-colors"
+                className="h-7 w-7 rounded-lg border border-white/10 bg-white/5 hover:bg-primary hover:border-primary hover:text-primary-foreground transition-all shadow-[inset_0_1px_0_0_hsla(0,0%,100%,0.05)]"
                 onClick={onAdd}
                 aria-label={`Add skill to ${title}`}
               >
-                <Plus className="h-4 w-4" />
+                <Plus className="h-3 w-3" />
               </Button>
             )}
           </CardTitle>
         </CardHeader>
-        <CardContent className="pt-4">
+        <CardContent className="pt-6 px-6 pb-6 relative z-10">
           {skills.length === 0 ? (
-            <div className="flex flex-col items-center justify-center gap-3 py-10 px-4 text-center rounded-xl bg-card border border-dashed border-border/80">
-              <div className="w-12 h-12 rounded-full bg-muted/50 flex items-center justify-center border border-border/50">
-                <Icon className="w-5 h-5 text-muted-foreground/60" />
+            <div className="flex flex-col items-center justify-center gap-3 py-10 px-4 text-center rounded-[1rem] bg-black/20 border border-white/5 border-dashed">
+              <div className="w-10 h-10 rounded-full bg-white/5 flex items-center justify-center border border-white/10">
+                <Icon className="w-4 h-4 text-muted-foreground/40" />
               </div>
               <div className="space-y-1">
-                <p className="text-sm font-semibold">{emptyText}</p>
-                <p className="text-xs text-muted-foreground max-w-[200px] mx-auto">Add your first skill to get started on your journey.</p>
+                <p className="text-xs font-medium text-muted-foreground">{emptyText}</p>
               </div>
               {isOwner && (
-                <Button size="sm" variant="gradient" className="mt-3 rounded-full px-6 text-xs h-8 shadow-glow-sm" onClick={onAdd}>
-                  <Plus className="h-3.5 w-3.5 mr-1.5" /> Add Skill
+                <Button size="sm" variant="outline" className="mt-2 rounded-lg px-4 text-[9px] uppercase tracking-widest font-bold h-8 border-white/10 bg-white/5 hover:bg-primary/20 hover:border-primary/50 transition-all text-foreground" onClick={onAdd}>
+                  <Plus className="h-3 w-3 mr-1.5" /> Add Data
                 </Button>
               )}
             </div>
           ) : (
-            <div className="space-y-4">
-              <div className="flex flex-wrap gap-2.5">
+            <div className="space-y-5">
+              <div className="flex flex-wrap gap-2">
                 {displayed.map((skill) => (
                   <SkillBadge key={skill.id} skill={skill} />
                 ))}
@@ -158,13 +158,13 @@ function SkillSection({
                   <Button
                     variant="outline"
                     size="sm"
-                    className="w-full text-xs h-8 rounded-lg border-dashed hover:border-solid transition-all"
+                    className="w-full text-[9px] font-bold uppercase tracking-widest h-9 rounded-xl border-white/10 bg-white/5 hover:bg-white/10 transition-all text-muted-foreground hover:text-white"
                     onClick={() => setShowAll(!showAll)}
                   >
-                    {showAll ? 'Show less' : `+${skills.length - 4} more skills`}
+                    {showAll ? 'Collapse' : `Expand (+${skills.length - 4})`}
                     <ChevronDown
                       className={cn(
-                        'w-3.5 h-3.5 ml-1.5 transition-transform duration-300',
+                        'w-3 h-3 ml-2 transition-transform duration-300',
                         showAll && 'rotate-180'
                       )}
                     />
@@ -184,63 +184,60 @@ function ReviewCard({ review }: { review: Review }) {
 
   return (
     <motion.div variants={itemVariants} className="h-full">
-      <Card className="h-full border-border/60 hover:shadow-md hover:border-primary/30 transition-all duration-300 bg-card group relative overflow-hidden">
-        <div className="absolute inset-0 bg-gradient-to-br from-primary/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500 pointer-events-none" />
-        <CardContent className="p-5 relative z-10">
-          <div className="flex items-start gap-4">
-            <Avatar className="w-11 h-11 shrink-0 ring-2 ring-primary/10 group-hover:ring-primary/30 transition-all duration-300 shadow-sm bg-muted">
-              <AvatarImage src={reviewer?.avatar} alt={reviewer?.name} className="object-cover" />
-              <AvatarFallback className="font-bold text-muted-foreground">{reviewer?.name?.charAt(0) ?? '?'}</AvatarFallback>
-            </Avatar>
-            <div className="flex-1 min-w-0">
-              <div className="flex items-center justify-between gap-2 mb-1.5">
-                <Link
-                  to={`/profile/${reviewer?.id}`}
-                  className="font-headline font-bold text-[15px] hover:text-primary transition-colors truncate"
-                >
-                  {reviewer?.name ?? 'Anonymous User'}
-                </Link>
-                <div className="flex items-center gap-0.5 shrink-0 bg-muted/40 px-2 py-0.5 rounded-full border border-border/50">
-                  {[...Array(5)].map((_, i) => (
-                    <Star
-                      key={i}
-                      className={cn(
-                        'w-3 h-3 transition-colors duration-300',
-                        i < review.rating
-                          ? 'fill-warning text-warning'
-                          : 'fill-muted text-muted'
-                      )}
-                    />
-                  ))}
-                </div>
-              </div>
-              <p className="text-sm text-foreground/80 leading-relaxed italic relative">
-                <span className="text-xl text-primary/20 absolute -left-2 -top-2 select-none font-serif">"</span>
-                {review.comment}
-              </p>
-              <div className="flex items-center gap-2 mt-3">
-                <span className="text-[11px] font-semibold tracking-wider uppercase text-muted-foreground/70">
-                  {new Date(review.createdAt).toLocaleDateString('en-US', {
-                    month: 'short',
-                    day: 'numeric',
-                    year: 'numeric',
-                  })}
-                </span>
-                {review.tags && review.tags.length > 0 && (
-                  <>
-                    <span className="w-1 h-1 rounded-full bg-border" />
-                    <div className="flex gap-1.5 text-[10px] text-primary/70 font-medium">
-                      {review.tags.slice(0,2).map(tag => (
-                        <span key={tag}>#{tag}</span>
-                      ))}
-                    </div>
-                  </>
-                )}
+      <div className="h-full p-6 bg-black/40 backdrop-blur-xl border border-white/5 rounded-[2rem] hover:border-white/10 transition-all duration-500 shadow-[inset_0_1px_0_0_hsla(0,0%,100%,0.05)] group relative overflow-hidden">
+        <div className="absolute inset-0 bg-gradient-to-br from-primary/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-700 pointer-events-none" />
+        <div className="relative z-10 flex items-start gap-5">
+          <Avatar className="w-12 h-12 shrink-0 ring-1 ring-white/10 group-hover:ring-primary/40 transition-all duration-500 shadow-sm bg-black/60">
+            <AvatarImage src={reviewer?.avatar} alt={reviewer?.name} className="object-cover" />
+            <AvatarFallback className="font-extrabold text-muted-foreground bg-gradient-to-br from-white/5 to-white/10">{reviewer?.name?.charAt(0) ?? '?'}</AvatarFallback>
+          </Avatar>
+          <div className="flex-1 min-w-0">
+            <div className="flex items-center justify-between gap-3 mb-2">
+              <Link
+                to={`/profile/${reviewer?.id}`}
+                className="font-headline font-bold text-sm hover:text-primary transition-colors truncate text-white"
+              >
+                {reviewer?.name ?? 'Anonymous User'}
+              </Link>
+              <div className="flex items-center gap-1 shrink-0 bg-white/5 px-2.5 py-1 rounded-lg border border-white/10 shadow-[inset_0_1px_0_0_hsla(0,0%,100%,0.05)]">
+                {[...Array(5)].map((_, i) => (
+                  <Star
+                    key={i}
+                    className={cn(
+                      'w-3 h-3 transition-colors duration-300',
+                      i < review.rating
+                        ? 'fill-warning text-warning drop-shadow-[0_0_5px_rgba(250,204,21,0.5)]'
+                        : 'fill-white/10 text-white/10'
+                    )}
+                  />
+                ))}
               </div>
             </div>
+            <p className="text-sm text-muted-foreground leading-relaxed italic relative font-medium group-hover:text-foreground/90 transition-colors">
+              <span className="text-3xl text-primary/20 absolute -left-4 -top-2 select-none font-serif leading-none">"</span>
+              {review.comment}
+            </p>
+            <div className="flex flex-wrap items-center gap-3 mt-4">
+              <span className="text-[9px] font-bold tracking-widest uppercase text-muted-foreground/60 border border-white/5 px-2 py-1 rounded-md bg-black/20">
+                {new Date(review.createdAt).toLocaleDateString('en-US', {
+                  month: 'short',
+                  day: 'numeric',
+                  year: 'numeric',
+                })}
+              </span>
+              {review.tags && review.tags.length > 0 && (
+                <div className="flex gap-2 text-[9px] text-primary/60 font-bold uppercase tracking-widest">
+                  {review.tags.slice(0, 3).map(tag => (
+                    <span key={tag} className="border border-primary/20 bg-primary/5 px-2 py-1 rounded-md shadow-[inset_0_1px_0_0_hsla(0,0%,100%,0.02)]">
+                      #{tag}
+                    </span>
+                  ))}
+                </div>
+              )}
+            </div>
           </div>
-        </CardContent>
-      </Card>
+        </div>
+      </div>
     </motion.div>
   );
 }
@@ -380,18 +377,31 @@ export default function ProfilePage() {
     setConnectDialogOpen(true);
   };
 
+  const refreshConnectionRelationship = async (targetUserId: string) => {
+    try {
+      const relationship = await connectionService.getRelationship(targetUserId);
+      setConnectionRelationship(relationship);
+      return relationship;
+    } catch {
+      return null;
+    }
+  };
+
   const handleSendConnectionRequest = async () => {
     if (!profileUser) return;
+
+    const targetUserId = profileUser.id;
+    const targetName = profileUser.name;
 
     setConnectionBusy(true);
     try {
       await connectionService.create({
-        receiverId: profileUser.id,
+        receiverId: targetUserId,
         message: connectMessage.trim() || undefined,
       });
 
       setConnectionRelationship({
-        targetUserId: profileUser.id,
+        targetUserId,
         status: 'PENDING_SENT',
         connectionId: null,
         canMessage: false,
@@ -399,14 +409,55 @@ export default function ProfilePage() {
 
       toast({
         title: 'Connection sent',
-        description: `Your request was sent to ${profileUser.name}.`,
+        description: `Your request was sent to ${targetName}.`,
         variant: 'success',
       });
       setConnectDialogOpen(false);
       setConnectMessage('');
     } catch (error) {
+      const latestRelationship = await refreshConnectionRelationship(targetUserId);
+
+      if (latestRelationship?.status === 'CONNECTED') {
+        toast({
+          title: 'Already connected',
+          description: `You are already connected with ${targetName}.`,
+          variant: 'success',
+        });
+        setConnectDialogOpen(false);
+        return;
+      }
+
+      if (latestRelationship?.status === 'PENDING_SENT') {
+        toast({
+          title: 'Request already sent',
+          description: `Your connection request to ${targetName} is still pending.`,
+        });
+        setConnectDialogOpen(false);
+        return;
+      }
+
+      if (latestRelationship?.status === 'PENDING_RECEIVED') {
+        toast({
+          title: 'Incoming request found',
+          description: `${targetName} already sent you a request. Accept it from this profile or from Connections.`,
+        });
+        setConnectDialogOpen(false);
+        return;
+      }
+
       const message = error instanceof Error ? error.message : 'Could not send request right now.';
-      toast({ title: 'Connect failed', description: message, variant: 'destructive' });
+      const isUnexpectedServerError =
+        error instanceof ApiError &&
+        error.status >= 500 &&
+        message.toLowerCase().includes('unexpected error');
+
+      toast({
+        title: 'Connect failed',
+        description: isUnexpectedServerError
+          ? 'The server could not save this request right now. Please retry in a moment.'
+          : message,
+        variant: 'destructive',
+      });
     } finally {
       setConnectionBusy(false);
     }
@@ -487,13 +538,13 @@ export default function ProfilePage() {
                   transition={{ type: "spring", stiffness: 300, damping: 20 }}
                   className="relative group/avatar cursor-pointer shrink-0"
                 >
-                  <Avatar className="w-32 h-32 sm:w-40 sm:h-40 border-[6px] border-card ring-2 ring-primary/30 shadow-2xl transition-all duration-500 group-hover/avatar:ring-primary/60 group-hover/avatar:shadow-[0_0_40px_hsl(var(--primary)/0.4)] bg-muted">
+                  <Avatar className="w-32 h-32 sm:w-40 sm:h-40 border-[4px] border-card ring-1 ring-white/10 shadow-2xl transition-all duration-500 group-hover/avatar:ring-primary/40 group-hover/avatar:shadow-[0_0_30px_hsl(var(--primary)/0.3)] bg-black/40 backdrop-blur-md">
                     <AvatarImage
                       src={profileUser.avatar}
                       alt={profileUser.name}
                       className="object-cover"
                     />
-                    <AvatarFallback className="text-4xl font-extrabold bg-gradient-to-br from-primary/20 to-secondary/20 text-primary">
+                    <AvatarFallback className="text-4xl font-extrabold bg-gradient-to-br from-primary/10 to-secondary/10 text-primary">
                       {profileUser.name.charAt(0)}
                     </AvatarFallback>
                   </Avatar>
@@ -503,9 +554,9 @@ export default function ProfilePage() {
                     <motion.div 
                       initial={{ scale: 0 }}
                       animate={{ scale: 1 }}
-                      className="absolute bottom-2 right-2 sm:bottom-4 sm:right-4 w-7 h-7 bg-emerald-500 flex items-center justify-center rounded-full border-4 border-card shadow-lg z-10"
+                      className="absolute bottom-2 right-2 sm:bottom-4 sm:right-4 w-7 h-7 bg-emerald-500/80 backdrop-blur-md flex items-center justify-center rounded-full border-2 border-card shadow-[0_0_15px_rgba(16,185,129,0.5)] z-10"
                     >
-                       <div className="w-2 h-2 bg-white rounded-full animate-pulse" />
+                       <div className="w-2 h-2 bg-white rounded-full animate-pulse shadow-[0_0_5px_white]" />
                     </motion.div>
                   )}
                 </motion.div>
@@ -513,20 +564,20 @@ export default function ProfilePage() {
                 <div className="flex flex-wrap items-center gap-3 w-full sm:w-auto">
                   {isOwnProfile ? (
                     <>
-                      <Button variant="outline" size="sm" className="glass-subtle shadow-sm flex-1 sm:flex-none border-white/10 hover:bg-white/10" asChild>
+                      <Button variant="outline" size="sm" className="bg-black/20 backdrop-blur-md border-white/5 hover:bg-white/5 hover:border-white/10 shadow-[inset_0_1px_0_0_hsla(0,0%,100%,0.05)] flex-1 sm:flex-none text-[10px] uppercase tracking-widest font-bold" asChild>
                         <Link to="/settings">
-                          <Settings className="w-4 h-4 mr-2" />
+                          <Settings className="w-4 h-4 mr-2 text-muted-foreground group-hover:text-foreground transition-colors" />
                           Settings
                         </Link>
                       </Button>
-                      <Button size="sm" variant="gradient" className="shadow-lg shadow-primary/25 hover:shadow-primary/40 flex-1 sm:flex-none font-semibold" onClick={() => navigate('/settings')}>
+                      <Button size="sm" className="bg-primary/20 hover:bg-primary/30 text-primary border border-primary/30 hover:border-primary/50 shadow-[0_0_20px_hsl(var(--primary)/0.2)] flex-1 sm:flex-none text-[10px] uppercase tracking-widest font-bold transition-all" onClick={() => navigate('/settings')}>
                         <Pencil className="w-4 h-4 mr-2" />
                         Edit Profile
                       </Button>
                     </>
                   ) : (
                     <>
-                      <Button variant="outline" size="sm" className="glass-subtle border-white/10 hover:bg-white/10 shadow-sm flex-1 sm:flex-none" onClick={async () => {
+                      <Button variant="outline" size="sm" className="bg-black/20 backdrop-blur-md border-white/5 hover:bg-white/5 hover:border-white/10 shadow-[inset_0_1px_0_0_hsla(0,0%,100%,0.05)] flex-1 sm:flex-none text-[10px] uppercase tracking-widest font-bold" onClick={async () => {
                         const url = window.location.href;
                         if (navigator.share) {
                           try { await navigator.share({ title: profileUser.name, url }); } catch { /* user cancelled */ }
@@ -535,29 +586,29 @@ export default function ProfilePage() {
                           toast({ title: 'Link copied!', description: 'Profile link copied to clipboard.' });
                         }
                       }}>
-                        <Share2 className="w-4 h-4 mr-1.5" />
+                        <Share2 className="w-4 h-4 mr-2 text-muted-foreground transition-colors" />
                         Share
                       </Button>
-                      <Button variant="outline" size="sm" className="glass-subtle border-white/10 hover:bg-white/10 shadow-sm flex-1 sm:flex-none" onClick={() => navTo(`/messages/${profileUser.id}`)}>
-                        <MessageSquare className="w-4 h-4 mr-1.5 text-primary" />
+                      <Button variant="outline" size="sm" className="bg-black/20 backdrop-blur-md border-white/5 hover:bg-white/5 hover:border-white/10 shadow-[inset_0_1px_0_0_hsla(0,0%,100%,0.05)] flex-1 sm:flex-none text-[10px] uppercase tracking-widest font-bold" onClick={() => navTo(`/messages/${profileUser.id}`)}>
+                        <MessageSquare className="w-4 h-4 mr-2 text-primary transition-colors" />
                         Message
                       </Button>
                       {connectionLoading ? (
-                        <Button size="sm" disabled className="flex-1 sm:flex-none">
+                        <Button size="sm" disabled className="bg-white/5 border-white/5 text-muted-foreground flex-1 sm:flex-none text-[10px] uppercase tracking-widest font-bold">
                           Loading...
                         </Button>
                       ) : isConnected ? (
-                        <Button size="sm" disabled className="flex-1 sm:flex-none bg-emerald-500/20 text-emerald-600 dark:text-emerald-400 border-emerald-500/30 opacity-100">
-                          <CheckCircle className="w-4 h-4 mr-1.5" />
+                        <Button size="sm" disabled className="bg-emerald-500/10 text-emerald-500 border-emerald-500/20 shadow-[0_0_15px_rgba(16,185,129,0.15)] flex-1 sm:flex-none text-[10px] uppercase tracking-widest font-bold opacity-100">
+                          <CheckCircle className="w-4 h-4 mr-2" />
                           Connected
                         </Button>
                       ) : isPendingSent ? (
-                        <Button size="sm" disabled className="flex-1 sm:flex-none">
+                        <Button size="sm" disabled className="bg-white/5 border-white/5 text-muted-foreground flex-1 sm:flex-none text-[10px] uppercase tracking-widest font-bold">
                           Pending
                         </Button>
                       ) : isPendingReceived ? (
-                        <Button size="sm" variant="gradient" className="flex-1 sm:flex-none shadow-lg shadow-primary/20 hover:shadow-primary/40 font-semibold" onClick={handleAcceptIncomingConnection} disabled={connectionBusy}>
-                          <UserPlus className="w-4 h-4 mr-1.5" />
+                        <Button size="sm" className="bg-primary/20 hover:bg-primary/30 text-primary border border-primary/30 hover:border-primary/50 shadow-[0_0_20px_hsl(var(--primary)/0.2)] flex-1 sm:flex-none text-[10px] uppercase tracking-widest font-bold transition-all" onClick={handleAcceptIncomingConnection} disabled={connectionBusy}>
+                          <UserPlus className="w-4 h-4 mr-2" />
                           {connectionBusy ? 'Accepting...' : 'Accept'}
                         </Button>
                       ) : (
@@ -580,16 +631,16 @@ export default function ProfilePage() {
                   <SkillExScoreBadge score={profileUser.skillexScore} />
                 </div>
 
-                <div className="flex flex-wrap items-center gap-y-2 gap-x-5 text-sm font-medium text-muted-foreground">
-                  <span className="flex items-center gap-1.5 bg-muted/50 px-3 py-1 rounded-full border border-border/80">
+                <div className="flex flex-wrap items-center gap-y-2 gap-x-5 text-[10px] uppercase font-bold tracking-widest text-muted-foreground">
+                  <span className="flex items-center gap-1.5 bg-white/5 px-4 py-1.5 rounded-full border border-white/10 shadow-[inset_0_1px_0_0_hsla(0,0%,100%,0.05)]">
                     <MapPin className="w-4 h-4 text-primary/70" />
                     {profileUser.university}
                   </span>
-                  <span className="flex items-center gap-1.5 bg-muted/50 px-3 py-1 rounded-full border border-border/80">
+                  <span className="flex items-center gap-1.5 bg-white/5 px-4 py-1.5 rounded-full border border-white/10 shadow-[inset_0_1px_0_0_hsla(0,0%,100%,0.05)]">
                     <Award className="w-4 h-4 text-warning/70" />
                     {profileUser.level}
                   </span>
-                  <span className="flex items-center gap-1.5 bg-muted/50 px-3 py-1 rounded-full border border-border/80">
+                  <span className="flex items-center gap-1.5 bg-white/5 px-4 py-1.5 rounded-full border border-white/10 shadow-[inset_0_1px_0_0_hsla(0,0%,100%,0.05)]">
                     <Clock className="w-4 h-4 text-blue-500/70" />
                     Joined{' '}
                     {new Date(profileUser.joinedAt).toLocaleDateString('en-US', {
@@ -601,38 +652,39 @@ export default function ProfilePage() {
 
                 {profileUser.bio && (
                   <div className="pt-2">
-                    <p className="text-[15px] text-foreground/80 max-w-3xl leading-relaxed bg-primary/5 border border-primary/10 p-4 rounded-2xl glass-subtle shadow-inner">
-                      {profileUser.bio}
+                    <p className="text-[15px] text-foreground/90 max-w-3xl leading-relaxed bg-black/20 border border-white/5 p-5 rounded-[1.5rem] backdrop-blur-md shadow-[inset_0_1px_0_0_hsla(0,0%,100%,0.05)] border-l-2 border-l-primary relative overflow-hidden">
+                      <span className="absolute -top-4 -left-2 text-6xl text-primary/10 select-none font-serif z-0">"</span>
+                      <span className="relative z-10">{profileUser.bio}</span>
                     </p>
                   </div>
                 )}
               </div>
 
               {/* Stats Row */}
-              <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mt-8 pt-6 border-t border-border/40">
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mt-8 pt-6 border-t border-white/5">
                 <StatCard
                   icon={Play}
                   label="Sessions"
                   value={profileUser.sessionsCompleted}
-                  color="bg-primary/15 text-primary shadow-glow-sm"
+                  color="text-primary"
                 />
                 <StatCard
                   icon={Star}
                   label="Avg Rating"
                   value={avgRating.toFixed(1)}
-                  color="bg-warning/15 text-warning shadow-glow-sm"
+                  color="text-warning"
                 />
                 <StatCard
                   icon={BookOpen}
                   label="Skills Taught"
                   value={profileUser.skillsOffered.length}
-                  color="bg-secondary/15 text-secondary shadow-glow-sm"
+                  color="text-secondary"
                 />
                 <StatCard
                   icon={TrendingUp}
                   label="SkillEx Score"
                   value={profileUser.skillexScore}
-                  color="bg-accent/15 text-accent-foreground shadow-glow-sm"
+                  color="text-accent"
                 />
               </div>
             </div>
@@ -641,53 +693,53 @@ export default function ProfilePage() {
 
         {/* ── Main Content ── */}
         <Tabs value={activeTab} onValueChange={handleTabChange} className="w-full">
-          <TabsList className="w-full sm:w-auto">
-            <TabsTrigger value="skills" className="flex-1 sm:flex-none">
-              <BookOpen className="w-3.5 h-3.5 mr-1.5" />
+          <TabsList className="grid w-full sm:w-auto grid-cols-3 sm:max-w-[400px] mb-8 bg-black/40 backdrop-blur-xl border border-white/5 shadow-[inset_0_1px_0_0_hsla(0,0%,100%,0.05)] rounded-[1.5rem] p-1.5 h-auto">
+            <TabsTrigger value="skills" className="rounded-xl py-2.5 text-[10px] uppercase font-bold tracking-widest data-[state=active]:bg-white/10 data-[state=active]:text-white data-[state=active]:shadow-[0_0_15px_rgba(255,255,255,0.05)] transition-all">
+              <BookOpen className="w-3.5 h-3.5 mr-2 opacity-70" />
               Skills
             </TabsTrigger>
-            <TabsTrigger value="reviews" className="flex-1 sm:flex-none">
-              <Star className="w-3.5 h-3.5 mr-1.5" />
+            <TabsTrigger value="reviews" className="rounded-xl py-2.5 text-[10px] uppercase font-bold tracking-widest data-[state=active]:bg-white/10 data-[state=active]:text-white data-[state=active]:shadow-[0_0_15px_rgba(255,255,255,0.05)] transition-all">
+              <Star className="w-3.5 h-3.5 mr-2 opacity-70" />
               Reviews
               {userReviews.length > 0 && (
-                <Badge variant="secondary" className="ml-1.5 text-xs h-4 px-1.5">
+                <Badge variant="secondary" className="ml-2 text-[9px] h-4 px-1.5 bg-primary/20 text-primary border-primary/30 rounded-md">
                   {userReviews.length}
                 </Badge>
               )}
             </TabsTrigger>
-            <TabsTrigger value="activity" className="flex-1 sm:flex-none">
-              <Zap className="w-3.5 h-3.5 mr-1.5" />
+            <TabsTrigger value="activity" className="rounded-xl py-2.5 text-[10px] uppercase font-bold tracking-widest data-[state=active]:bg-white/10 data-[state=active]:text-white data-[state=active]:shadow-[0_0_15px_rgba(255,255,255,0.05)] transition-all">
+              <Zap className="w-3.5 h-3.5 mr-2 opacity-70" />
               Activity
             </TabsTrigger>
           </TabsList>
 
           {/* ── Skills Tab ── */}
-          <TabsContent value="skills" className="mt-4">
+          <TabsContent value="skills" className="mt-6">
             <motion.div
               variants={containerVariants}
               initial="hidden"
               animate="visible"
-              className="grid sm:grid-cols-2 gap-4"
+              className="grid sm:grid-cols-2 gap-6"
             >
-              <motion.div variants={itemVariants}>
+              <motion.div variants={itemVariants} className="h-full">
                 <SkillSection
                   id="skills-offered"
-                  title="Skills I Offer"
+                  title="Outgoing Payload"
                   skills={offeredSkills}
                   icon={CheckCircle}
-                  emptyText="No skills listed yet."
+                  emptyText="No outgoing modules."
                   variant="offer"
                   emphasized={emphasizeOfferedSkills}
                   isOwner={isOwnProfile}
                   onAdd={() => setAddSkillMode('offered')}
                 />
               </motion.div>
-              <motion.div variants={itemVariants}>
+              <motion.div variants={itemVariants} className="h-full">
                 <SkillSection
-                  title="Skills I Want to Learn"
+                  title="Incoming Query"
                   skills={wantedSkills}
                   icon={BookOpen}
-                  emptyText="No learning goals listed yet."
+                  emptyText="No incoming targets."
                   variant="want"
                   isOwner={isOwnProfile}
                   onAdd={() => setAddSkillMode('wanted')}
@@ -696,108 +748,112 @@ export default function ProfilePage() {
             </motion.div>
 
             {/* XP Progress */}
-            <motion.div variants={itemVariants} initial="hidden" animate="visible">
-              <Card className="mt-4 border-border/60">
-                <CardHeader className="pb-3">
-                  <CardTitle className="flex items-center gap-2 text-base">
-                    <TrendingUp className="w-4 h-4 text-primary" />
-                    SkillEx Progress
-                  </CardTitle>
-                </CardHeader>
-                <CardContent className="space-y-3">
-                  <div className="flex justify-between text-sm mb-1">
-                    <span className="font-medium">{profileUser.level}</span>
-                    <span className="text-muted-foreground">
-                      {profileUser.skillexScore} / {Math.ceil(profileUser.skillexScore / 500) * 500} XP
-                    </span>
+            <motion.div variants={itemVariants} initial="hidden" animate="visible" className="mt-6">
+              <div className="p-6 bg-black/40 backdrop-blur-xl border border-white/5 rounded-[2rem] shadow-[inset_0_1px_0_0_hsla(0,0%,100%,0.05)] relative overflow-hidden group">
+                <div className="absolute right-0 top-0 w-64 h-64 bg-primary/5 blur-3xl rounded-full -mr-32 -mt-32 pointer-events-none group-hover:bg-primary/10 transition-colors duration-700" />
+                <div className="flex items-center justify-between mb-4 relative z-10">
+                  <div className="flex items-center gap-3">
+                    <div className="p-2 rounded-xl bg-primary/10 border border-primary/20 shadow-[0_0_15px_rgba(var(--primary),0.1)]">
+                      <TrendingUp className="w-5 h-5 text-primary drop-shadow-[0_0_8px_rgba(var(--primary),0.5)]" />
+                    </div>
+                    <div>
+                      <h3 className="text-sm font-bold font-headline text-white tracking-wide">Evolution Metrics</h3>
+                      <p className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground mt-0.5">Rank {profileUser.level}</p>
+                    </div>
                   </div>
-                  <Progress
-                    value={(profileUser.skillexScore % 500) / 5}
-                    className="h-2"
+                  <div className="text-right">
+                    <span className="text-2xl font-extrabold font-headline text-white drop-shadow-sm">{profileUser.skillexScore}</span>
+                    <span className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground ml-1">/ {Math.ceil(profileUser.skillexScore / 500) * 500} XP</span>
+                  </div>
+                </div>
+                
+                <div className="relative h-3 w-full bg-black/60 rounded-full overflow-hidden border border-white/5 shadow-[inset_0_2px_4px_rgba(0,0,0,0.5)] z-10 mt-2">
+                  <motion.div 
+                    initial={{ width: 0 }}
+                    animate={{ width: `${(profileUser.skillexScore % 500) / 5}%` }}
+                    transition={{ duration: 1, ease: 'easeOut' }}
+                    className="absolute top-0 left-0 h-full bg-gradient-to-r from-primary/80 to-primary rounded-full shadow-[0_0_10px_hsl(var(--primary)/0.5)]"
                   />
-                  <p className="text-xs text-muted-foreground">
-                    {Math.ceil(profileUser.skillexScore / 500) * 500 - profileUser.skillexScore} XP
-                    needed to reach next level
-                  </p>
-                </CardContent>
-              </Card>
+                </div>
+                <p className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground mt-4 text-center sm:text-left z-10 relative">
+                  <span className="text-white drop-shadow-sm">{Math.ceil(profileUser.skillexScore / 500) * 500 - profileUser.skillexScore} XP</span> required for next tier.
+                </p>
+              </div>
             </motion.div>
           </TabsContent>
 
           {/* ── Reviews Tab ── */}
-          <TabsContent value="reviews" className="mt-4">
+          <TabsContent value="reviews" className="mt-6">
             {userReviews.length === 0 ? (
-              <Card className="border-border/60">
-                <CardContent className="py-12 text-center">
-                  <Star className="w-8 h-8 mx-auto mb-3 text-muted-foreground/40" />
-                  <p className="text-muted-foreground">No reviews yet.</p>
-                  {!isOwnProfile && (
-                    <Button size="sm" className="mt-4" onClick={() => setReviewDialogOpen(true)}>
-                      <Plus className="w-4 h-4 mr-1.5" />
-                      Leave a Review
-                    </Button>
-                  )}
-                </CardContent>
-              </Card>
+              <div className="p-12 text-center bg-black/20 backdrop-blur-xl border border-white/5 border-dashed rounded-[2rem]">
+                <div className="w-16 h-16 mx-auto rounded-full bg-white/5 border border-white/10 flex items-center justify-center mb-4">
+                  <Star className="w-8 h-8 text-muted-foreground/30" />
+                </div>
+                <p className="text-[11px] font-bold uppercase tracking-widest text-muted-foreground mb-6">No evaluations recorded.</p>
+                {!isOwnProfile && (
+                  <Button size="sm" className="rounded-xl px-6 text-[10px] uppercase font-bold tracking-widest bg-primary/20 text-primary border border-primary/30 hover:bg-primary/30 transition-all shadow-[0_0_15px_rgba(var(--primary),0.2)]" onClick={() => setReviewDialogOpen(true)}>
+                    <Plus className="w-3.5 h-3.5 mr-2" />
+                    Submit Evaluation
+                  </Button>
+                )}
+              </div>
             ) : (
               <motion.div
                 variants={containerVariants}
                 initial="hidden"
                 animate="visible"
-                className="space-y-3"
+                className="space-y-6"
               >
                 {/* Rating summary */}
                 <motion.div variants={itemVariants}>
-                  <Card className="border-border/60 bg-muted/30">
-                    <CardContent className="pt-4 pb-4">
-                      <div className="flex items-center gap-4">
-                        <div className="text-center">
-                          <div className="text-4xl font-bold">{avgRating.toFixed(1)}</div>
-                          <div className="flex items-center gap-0.5 justify-center mt-1">
-                            {[...Array(5)].map((_, i) => (
-                              <Star
-                                key={i}
-                                className={cn(
-                                  'w-3.5 h-3.5',
-                                  i < Math.round(avgRating)
-                                    ? 'fill-amber-400 text-amber-400'
-                                    : 'fill-muted text-muted'
-                                )}
-                              />
-                            ))}
-                          </div>
-                          <div className="text-xs text-muted-foreground mt-1">
-                            {userReviews.length} review{userReviews.length !== 1 ? 's' : ''}
-                          </div>
-                        </div>
-                        <Separator orientation="vertical" className="h-12" />
-                        <div className="flex-1 space-y-1">
-                          {[5, 4, 3, 2, 1].map((star) => {
-                            const count = userReviews.filter(
-                              (r) => r.rating === star
-                            ).length;
-                            return (
-                              <div key={star} className="flex items-center gap-2 text-xs">
-                                <span className="w-4 text-right text-muted-foreground">
-                                  {star}
-                                </span>
-                                <Star className="w-3 h-3 fill-amber-400 text-amber-400 shrink-0" />
-                                <Progress
-                                  value={
-                                    userReviews.length
-                                      ? (count / userReviews.length) * 100
-                                      : 0
-                                  }
-                                  className="h-1.5 flex-1"
-                                />
-                                <span className="w-4 text-muted-foreground">{count}</span>
-                              </div>
-                            );
-                          })}
-                        </div>
+                  <div className="p-8 bg-black/40 backdrop-blur-xl border border-white/5 rounded-[2rem] shadow-[inset_0_1px_0_0_hsla(0,0%,100%,0.05)] flex flex-col sm:flex-row items-center gap-8">
+                    <div className="text-center sm:min-w-[150px]">
+                      <div className="text-6xl font-extrabold font-headline tracking-tighter text-white drop-shadow-sm mb-2">{avgRating.toFixed(1)}</div>
+                      <div className="flex items-center gap-1 justify-center mb-3">
+                        {[...Array(5)].map((_, i) => (
+                          <Star
+                            key={i}
+                            className={cn(
+                              'w-4 h-4',
+                              i < Math.round(avgRating)
+                                ? 'fill-warning text-warning drop-shadow-[0_0_8px_rgba(250,204,21,0.5)]'
+                                : 'fill-white/10 text-white/10'
+                            )}
+                          />
+                        ))}
                       </div>
-                    </CardContent>
-                  </Card>
+                      <div className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
+                        {userReviews.length} Record{userReviews.length !== 1 ? 's' : ''}
+                      </div>
+                    </div>
+                    
+                    <div className="hidden sm:block w-px h-24 bg-gradient-to-b from-transparent via-white/10 to-transparent" />
+                    
+                    <div className="flex-1 w-full max-w-sm space-y-3">
+                      {[5, 4, 3, 2, 1].map((star) => {
+                        const count = userReviews.filter(
+                          (r) => r.rating === star
+                        ).length;
+                        return (
+                          <div key={star} className="flex items-center gap-3">
+                            <span className="w-4 text-right text-[10px] font-bold text-muted-foreground">
+                              {star}
+                            </span>
+                            <Star className="w-3.5 h-3.5 fill-warning text-warning shrink-0 opacity-80" />
+                            <div className="h-1.5 flex-1 bg-black/50 rounded-full overflow-hidden border border-white/5">
+                              <motion.div 
+                                initial={{ width: 0 }}
+                                animate={{ width: `${userReviews.length ? (count / userReviews.length) * 100 : 0}%` }}
+                                transition={{ duration: 1, delay: 0.2 }}
+                                className="h-full bg-warning/80 rounded-full shadow-[0_0_8px_rgba(250,204,21,0.5)]"
+                              />
+                            </div>
+                            <span className="w-4 text-[10px] font-bold text-muted-foreground">{count}</span>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </div>
                 </motion.div>
 
                 {userReviews.map((review) => (
@@ -808,16 +864,16 @@ export default function ProfilePage() {
           </TabsContent>
 
           {/* ── Activity Tab ── */}
-          <TabsContent value="activity" className="mt-4">
-            <Card className="border-border/60">
-              <CardContent className="py-12 text-center">
-                <Zap className="w-8 h-8 mx-auto mb-3 text-muted-foreground/40" />
-                <p className="font-medium mb-1">Activity Feed</p>
-                <p className="text-sm text-muted-foreground">
-                  Recent sessions and exchanges will appear here.
-                </p>
-              </CardContent>
-            </Card>
+          <TabsContent value="activity" className="mt-6">
+            <div className="p-12 text-center bg-black/40 backdrop-blur-xl border border-white/5 border-dashed rounded-[2rem] shadow-[inset_0_1px_0_0_hsla(0,0%,100%,0.05)]">
+              <div className="w-16 h-16 mx-auto rounded-full bg-white/5 border border-white/10 flex items-center justify-center mb-4">
+                <Zap className="w-8 h-8 text-muted-foreground/30" />
+              </div>
+              <p className="text-[11px] font-bold uppercase tracking-widest text-muted-foreground">Activity Feed Offline</p>
+              <p className="text-[9px] font-bold text-muted-foreground/50 mt-2 uppercase tracking-wide">
+                System awaiting recent sessions and data exchanges.
+              </p>
+            </div>
           </TabsContent>
         </Tabs>
 
@@ -830,43 +886,44 @@ export default function ProfilePage() {
               exit={{ opacity: 0, y: 12 }}
               transition={{ delay: 0.3 }}
             >
-              <Card className="border-primary/30 bg-gradient-to-r from-primary/5 to-secondary/5">
-                <CardContent className="py-5 flex flex-col sm:flex-row items-center justify-between gap-4">
-                  <div>
-                    <h3 className="font-semibold">
-                      {isConnected
-                        ? `You are connected with ${profileUser.name}`
-                        : `Want to connect with ${profileUser.name}?`}
-                    </h3>
-                    <p className="text-sm text-muted-foreground mt-0.5">
-                      {isConnected
-                        ? 'You can now chat directly and coordinate your next exchange.'
-                        : isPendingSent
-                          ? 'Your connection request is pending approval.'
-                          : isPendingReceived
-                            ? `${profileUser.name.split(' ')[0]} already requested to connect with you.`
-                            : 'Send a connection request and start your learning journey together.'}
-                    </p>
-                  </div>
+              <div className="p-6 bg-black/40 backdrop-blur-xl border border-primary/20 bg-gradient-to-r from-primary/10 to-transparent rounded-[2rem] shadow-[0_0_30px_hsl(var(--primary)/0.15)] flex flex-col sm:flex-row items-center justify-between gap-6 relative overflow-hidden group">
+                <div className="absolute inset-0 bg-gradient-to-r from-primary/5 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-700 pointer-events-none" />
+                <div className="relative z-10 text-center sm:text-left">
+                  <h3 className="text-sm font-bold font-headline text-white tracking-wide">
+                    {isConnected
+                      ? `Neural link established with ${profileUser.name}`
+                      : `Request link with ${profileUser.name}?`}
+                  </h3>
+                  <p className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground mt-1 max-w-lg leading-relaxed">
+                    {isConnected
+                      ? 'Secure channel available for direct communication and coordination.'
+                      : isPendingSent
+                        ? 'Handshake request transmitted. Awaiting node authentication.'
+                        : isPendingReceived
+                          ? `${profileUser.name.split(' ')[0]} has transmitted a handshake request.`
+                          : 'Initiate a secure handshake to unlock direct channels and sync parameters.'}
+                  </p>
+                </div>
+                <div className="relative z-10 shrink-0 w-full sm:w-auto">
                   {connectionLoading ? (
-                    <Button className="shrink-0" disabled>Loading...</Button>
+                    <Button disabled className="w-full sm:w-auto rounded-xl text-[10px] font-bold uppercase tracking-widest shadow-none bg-white/5 border border-white/10 text-muted-foreground">Syncing...</Button>
                   ) : isConnected ? (
-                    <Button className="shrink-0" disabled>Connected</Button>
+                    <Button disabled className="w-full sm:w-auto rounded-xl text-[10px] font-bold uppercase tracking-widest bg-emerald-500/10 text-emerald-500 border border-emerald-500/20 shadow-[0_0_15px_rgba(16,185,129,0.15)]">Link Active</Button>
                   ) : isPendingSent ? (
-                    <Button className="shrink-0" disabled>Pending</Button>
+                    <Button disabled className="w-full sm:w-auto rounded-xl text-[10px] font-bold uppercase tracking-widest bg-white/5 border border-white/10 text-muted-foreground">Transmitting</Button>
                   ) : isPendingReceived ? (
-                    <Button className="shrink-0" onClick={handleAcceptIncomingConnection} disabled={connectionBusy}>
-                      <UserPlus className="w-4 h-4 mr-1.5" />
-                      {connectionBusy ? 'Accepting...' : 'Accept Request'}
+                    <Button className="w-full sm:w-auto rounded-xl text-[10px] font-bold uppercase tracking-widest bg-primary/20 text-primary border border-primary/30 hover:border-primary/50 shadow-[0_0_20px_hsl(var(--primary)/0.2)] transition-all" onClick={handleAcceptIncomingConnection} disabled={connectionBusy}>
+                      <UserPlus className="w-4 h-4 mr-2" />
+                      {connectionBusy ? 'Authenticating...' : 'Accept Protocol'}
                     </Button>
                   ) : (
-                    <Button className="shrink-0" onClick={openConnectDialog} disabled={connectionBusy}>
-                      <UserPlus className="w-4 h-4 mr-1.5" />
-                      Send Connection Request
+                    <Button className="w-full sm:w-auto rounded-xl text-[10px] font-bold uppercase tracking-widest bg-primary text-primary-foreground shadow-[0_0_20px_hsl(var(--primary)/0.3)] hover:bg-primary/90 transition-all border-0" onClick={openConnectDialog} disabled={connectionBusy}>
+                      <UserPlus className="w-4 h-4 mr-2 drop-shadow-sm" />
+                      Initiate Handshake
                     </Button>
                   )}
-                </CardContent>
-              </Card>
+                </div>
+              </div>
             </motion.div>
           )}
         </AnimatePresence>

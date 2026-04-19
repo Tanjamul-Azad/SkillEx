@@ -6,9 +6,10 @@ import { useConnections } from '@/hooks/useConnections';
 import { exchangeService } from '@/services/exchangeService';
 import { connectionService } from '@/services/connectionService';
 import { DashboardService } from '@/services/dashboardService';
+import { onRealtimeNotification } from '@/lib/realtime';
 import type { Exchange } from '@/services/exchangeService';
 import type { Connection } from '@/services/connectionService';
-import { motion } from 'framer-motion';
+import { AnimatePresence, motion } from 'framer-motion';
 import {
   ArrowRight,
   BookOpen,
@@ -18,16 +19,15 @@ import {
   MessageSquare,
   Search,
   Star,
-  TrendingUp,
   Users,
   Video,
   Zap,
   Inbox,
   Award,
   Activity,
-  ChevronRight,
   BarChart3,
   Play,
+  X,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -37,7 +37,7 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { Progress } from '@/components/ui/progress';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
 import { Separator } from '@/components/ui/separator';
-import { Link, useNavigate } from 'react-router-dom';
+import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { useCounter } from '@/hooks/useCounter';
 import { useToast } from '@/hooks/use-toast';
 import { cn } from '@/lib/utils';
@@ -94,35 +94,36 @@ const StatCard = React.memo(({ icon: Icon, title, value, footnote, index }: Stat
         visible: { opacity: 1, y: 0 },
       }}
       transition={{ delay: index * 0.07, type: 'spring', stiffness: 220, damping: 22 }}
+      className="h-full"
     >
-      <Card className="group relative h-full overflow-hidden border-border/60 bg-card transition-all duration-300 hover:border-border hover:shadow-md dark:border-white/[0.07] dark:hover:border-white/[0.12]">
+      <Card className="group relative h-full w-full overflow-hidden border-white/5 bg-card/80 backdrop-blur-md transition-all duration-300 hover:border-white/10 hover:shadow-glow-sm shadow-[inset_0_1px_0_0_hsla(0,0%,100%,0.05)]">
         {/* Consistent left-edge accent — always primary color */}
-        <div className="absolute left-0 top-0 bottom-0 w-[3px] rounded-r-full bg-primary opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
+        <div className="absolute left-0 top-0 bottom-0 w-[4px] bg-primary opacity-0 group-hover:opacity-100 transition-opacity duration-300 shadow-[0_0_10px_var(--primary)]" />
 
-        <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2 pt-5 px-5">
-          <CardTitle className="text-xs font-semibold uppercase tracking-wider text-[hsl(var(--text-secondary))]">
+        <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2 pt-4 px-4">
+          <CardTitle className="text-[11px] font-bold uppercase tracking-wider text-muted-foreground">
             {title}
           </CardTitle>
-          <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-primary/8 dark:bg-primary/12 transition-colors duration-300 group-hover:bg-primary/15 dark:group-hover:bg-primary/20">
+          <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-primary/10 border border-primary/20 transition-all duration-300 group-hover:bg-primary/20 group-hover:shadow-[0_0_12px_var(--primary)]">
             <Icon className="h-4 w-4 text-primary" />
           </div>
         </CardHeader>
 
-        <CardContent className="px-5 pb-5 pt-0">
+        <CardContent className="px-4 pb-4 pt-0">
           <div
             ref={ref}
-            className="font-headline text-3xl font-bold tabular-nums tracking-tight text-foreground"
+            className="font-headline text-[32px] font-bold tabular-nums tracking-tight text-foreground leading-none"
           />
-          <p className="mt-1.5 text-xs text-[hsl(var(--text-secondary))]">{footnote}</p>
+          <p className="mt-1 text-[11px] text-muted-foreground">{footnote}</p>
 
           {/* Animated sparkline */}
-          <div className="mt-4 h-7 w-full opacity-30 group-hover:opacity-60 transition-opacity duration-300">
+          <div className="mt-4 h-6 w-full opacity-40 group-hover:opacity-100 transition-opacity duration-300 drop-shadow-[0_0_4px_var(--primary)]">
             <svg viewBox="0 0 120 28" className="h-full w-full" preserveAspectRatio="none">
               <motion.path
                 d="M0,24 Q20,20 35,13 T70,10 T100,6 T120,2"
                 fill="none"
                 stroke="currentColor"
-                strokeWidth="2"
+                strokeWidth="2.5"
                 strokeLinecap="round"
                 className="text-primary"
                 initial={{ pathLength: 0 }}
@@ -149,7 +150,15 @@ const STATUS: Record<ExchangeStatus, { label: string; variant: 'default' | 'seco
 };
 
 /* ─── Exchange card ───────────────────────────────────────────── */
-function ExchangeCard({ exchange, currentUserId }: { exchange: Exchange; currentUserId: string }) {
+function ExchangeCard({
+  exchange,
+  currentUserId,
+  onStatusChanged,
+}: {
+  exchange: Exchange;
+  currentUserId: string;
+  onStatusChanged?: () => Promise<void> | void;
+}) {
   const isRequester = exchange.requester.id === currentUserId;
   const partner = isRequester ? exchange.receiver : exchange.requester;
   const mySkill = isRequester ? exchange.offeredSkill : exchange.wantedSkill;
@@ -193,14 +202,19 @@ function ExchangeCard({ exchange, currentUserId }: { exchange: Exchange; current
                   cfg.dot
                 )} />
               </div>
-              <div className="min-w-0">
+              <button
+                type="button"
+                className="min-w-0 text-left"
+                onClick={() => navigate(`/profile/${partner.id}`)}
+                title={`View ${partner.name}'s profile`}
+              >
                 <p className="truncate text-sm font-semibold text-foreground leading-tight">
                   {partner.name}
                 </p>
                 <p className="truncate text-xs text-muted-foreground mt-0.5">
                   {partner.university ?? 'University'}
                 </p>
-              </div>
+              </button>
             </div>
             <Badge variant={cfg.variant} className="shrink-0 text-[10px] font-semibold capitalize rounded-full px-2 py-0.5">
               {cfg.label}
@@ -260,6 +274,7 @@ function ExchangeCard({ exchange, currentUserId }: { exchange: Exchange; current
                     try {
                       await exchangeService.updateStatus(exchange.id, 'accepted');
                       setLocalStatus('accepted');
+                      await onStatusChanged?.();
                       toast({ title: 'Request accepted', description: `Now matched with ${partner.name.split(' ')[0]}.`, variant: 'success' });
                     } catch {
                       toast({ title: 'Failed to accept', variant: 'destructive' });
@@ -280,8 +295,8 @@ function ExchangeCard({ exchange, currentUserId }: { exchange: Exchange; current
                   size="sm"
                   className="rounded-lg text-xs"
                   onClick={() => {
-                    navigate('/community');
-                    toast({ title: 'Opening Community' });
+                    navigate(`/messages/${partner.id}`);
+                    toast({ title: 'Opening chat' });
                   }}
                 >
                   <MessageSquare className="mr-1.5 h-3.5 w-3.5" />
@@ -305,7 +320,7 @@ function ExchangeCard({ exchange, currentUserId }: { exchange: Exchange; current
         open={declineConfirmOpen}
         onOpenChange={setDeclineConfirmOpen}
         title={`Decline ${partner.name.split(' ')[0]}'s request?`}
-        description="This action can't be undone. They won't receive a notification."
+        description="This action can't be undone. The requester will be notified."
         confirmLabel="Decline"
         cancelLabel="Keep it"
         variant="destructive"
@@ -313,6 +328,7 @@ function ExchangeCard({ exchange, currentUserId }: { exchange: Exchange; current
           try {
             await exchangeService.updateStatus(exchange.id, 'declined');
             setDismissed(true);
+            await onStatusChanged?.();
             toast({ title: 'Request declined', variant: 'destructive' });
           } catch {
             toast({ title: 'Failed to decline', variant: 'destructive' });
@@ -479,6 +495,27 @@ function activityFromExchange(exchange: Exchange, currentUserId: string) {
   }
 }
 
+function formatTimeAgo(createdAt?: string) {
+  if (!createdAt) {
+    return 'just now';
+  }
+
+  const elapsedMs = Date.now() - new Date(createdAt).getTime();
+  const minutes = Math.max(0, Math.floor(elapsedMs / 60000));
+
+  if (minutes < 1) return 'just now';
+  if (minutes < 60) return `${minutes}m`;
+
+  const hours = Math.floor(minutes / 60);
+  if (hours < 24) return `${hours}h`;
+
+  const days = Math.floor(hours / 24);
+  if (days < 7) return `${days}d`;
+
+  const weeks = Math.floor(days / 7);
+  return `${weeks}w`;
+}
+
 /* ─── Onboarding strip (compact, horizontal) ─────────────────── */
 function OnboardingProgress({
   user,
@@ -628,12 +665,14 @@ function ConnectionsTab({
   loading,
   busy,
   onUpdate,
+  onDismiss,
   currentUserId,
 }: {
   connections: Connection[];
   loading: boolean;
   busy: Record<string, boolean>;
   onUpdate: (c: Connection, s: 'accepted' | 'declined') => Promise<void>;
+  onDismiss: (id: string) => void;
   currentUserId: string;
 }) {
   if (loading) {
@@ -656,16 +695,22 @@ function ConnectionsTab({
     return (
       <div className="flex flex-col items-center justify-center py-10 text-center p-4">
         <Users className="h-8 w-8 text-muted-foreground/40 mb-3" />
-        <p className="text-sm font-semibold text-foreground">No pending requests</p>
+        <p className="text-sm font-semibold text-foreground">No quick requests</p>
         <p className="mt-1 text-xs text-muted-foreground">
-          Connection requests will appear here.
+          Open Connections for your full request history.
         </p>
+        <Button asChild variant="link" size="sm" className="mt-1 h-auto p-0 text-xs text-primary">
+          <Link to="/connections">Go to Connections</Link>
+        </Button>
       </div>
     );
   }
 
   return (
     <div className="space-y-2 p-4">
+      <p className="text-[11px] text-muted-foreground">
+        Quick actions only. All requests remain in <Link to="/connections" className="text-primary hover:underline">Connections</Link>.
+      </p>
       {connections.slice(0, 4).map((conn, i) => {
         const partner = conn.requester.id === currentUserId ? conn.receiver : conn.requester;
         return (
@@ -687,6 +732,16 @@ function ConnectionsTab({
                 <p className="truncate text-sm font-semibold text-foreground">{partner.name}</p>
                 <p className="truncate text-xs text-muted-foreground">@{partner.username ?? 'user'}</p>
               </div>
+              <Button
+                size="icon"
+                variant="ghost"
+                className="h-7 w-7 rounded-md text-muted-foreground hover:bg-muted"
+                onClick={() => onDismiss(conn.id)}
+                title="Hide from dashboard"
+                aria-label="Hide from dashboard"
+              >
+                <X className="h-3.5 w-3.5" />
+              </Button>
             </div>
             {conn.message && (
               <p className="mt-2 text-xs text-muted-foreground line-clamp-2 italic">
@@ -988,13 +1043,22 @@ export default function DashboardPage() {
 
   const { user } = useAuth();
   const { toast } = useToast();
-  const { exchanges, loading } = useExchanges();
+  const location = useLocation();
+  const navigate = useNavigate();
+  const { exchanges, loading, refetch } = useExchanges();
   const {
     connections: pendingIncomingConnections,
     loading: connectionsLoading,
     refetch: refetchConnections,
   } = useConnections({ status: 'pending', direction: 'received' });
   const [connectionBusy, setConnectionBusy] = useState<Record<string, boolean>>({});
+  const [incomingRequest, setIncomingRequest] = useState<Exchange | null>(null);
+  const [incomingRequestOpen, setIncomingRequestOpen] = useState(false);
+  const [incomingExchangeBusy, setIncomingExchangeBusy] = useState<Record<string, boolean>>({});
+  const [seenIncomingRequestIds, setSeenIncomingRequestIds] = useState<Set<string>>(new Set());
+  const [dismissedConnectionIds, setDismissedConnectionIds] = useState<Set<string>>(new Set());
+  const [requestTab, setRequestTab] = useState<'received' | 'sent'>('received');
+  const [requestsModalOpen, setRequestsModalOpen] = useState(false);
   const [serverStats, setServerStats] = React.useState<{
     sessionsCompleted?: number;
     skillexScore?: number;
@@ -1002,7 +1066,7 @@ export default function DashboardPage() {
     pendingConnections?: number;
   } | null>(null);
 
-  React.useEffect(() => {
+  const refreshDashboardStats = React.useCallback(() => {
     DashboardService.getStats()
       .then(s => setServerStats({
         sessionsCompleted: s.sessionsCompleted,
@@ -1013,11 +1077,147 @@ export default function DashboardPage() {
       .catch(() => {});
   }, []);
 
+  React.useEffect(() => {
+    refreshDashboardStats();
+  }, [refreshDashboardStats]);
+
   const currentUserId = user?.id ?? '';
+  const dismissedConnectionsStorageKey = currentUserId
+    ? `dashboard-dismissed-connections:${currentUserId}`
+    : '';
+
+  React.useEffect(() => {
+    if (!dismissedConnectionsStorageKey) {
+      setDismissedConnectionIds(new Set());
+      return;
+    }
+
+    try {
+      const stored = sessionStorage.getItem(dismissedConnectionsStorageKey);
+      if (!stored) {
+        setDismissedConnectionIds(new Set());
+        return;
+      }
+
+      const parsed = JSON.parse(stored);
+      if (Array.isArray(parsed)) {
+        setDismissedConnectionIds(new Set(parsed.filter((id): id is string => typeof id === 'string')));
+      }
+    } catch {
+      setDismissedConnectionIds(new Set());
+    }
+  }, [dismissedConnectionsStorageKey]);
+
+  React.useEffect(() => {
+    if (!dismissedConnectionsStorageKey) {
+      return;
+    }
+
+    sessionStorage.setItem(
+      dismissedConnectionsStorageKey,
+      JSON.stringify(Array.from(dismissedConnectionIds))
+    );
+  }, [dismissedConnectionIds, dismissedConnectionsStorageKey]);
+
+  React.useEffect(() => {
+    const params = new URLSearchParams(location.search);
+    const panel = params.get('panel');
+    const requestedTab = params.get('requestsTab');
+
+    if (panel === 'requests') {
+      if (requestedTab === 'received' || requestedTab === 'sent') {
+        setRequestTab(requestedTab);
+      }
+
+      const target = document.getElementById('exchange-requests');
+      if (target) {
+        target.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      }
+      return;
+    }
+
+    if (location.hash === '#exchange-requests') {
+      const target = document.getElementById('exchange-requests');
+      if (target) {
+        target.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      }
+    }
+  }, [location.hash, location.search]);
+
+  const openIncomingRequestPopup = React.useCallback((exchange: Exchange) => {
+    setIncomingRequest(exchange);
+    setIncomingRequestOpen(true);
+    setSeenIncomingRequestIds((prev) => {
+      if (prev.has(exchange.id)) {
+        return prev;
+      }
+      const next = new Set(prev);
+      next.add(exchange.id);
+      return next;
+    });
+  }, []);
+
+  React.useEffect(() => {
+    if (!currentUserId || incomingRequestOpen) {
+      return;
+    }
+
+    const nextIncoming = exchanges
+      .filter((exchange) =>
+        exchange.status?.toLowerCase() === 'pending'
+        && exchange.receiver.id === currentUserId
+        && !seenIncomingRequestIds.has(exchange.id)
+      )
+      .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())[0];
+
+    if (nextIncoming) {
+      openIncomingRequestPopup(nextIncoming);
+    }
+  }, [currentUserId, exchanges, incomingRequestOpen, openIncomingRequestPopup, seenIncomingRequestIds]);
+
+  React.useEffect(() => {
+    if (!incomingRequestOpen || !incomingRequest) {
+      return;
+    }
+    const timerId = window.setTimeout(() => {
+      setIncomingRequestOpen(false);
+    }, 12000);
+    return () => window.clearTimeout(timerId);
+  }, [incomingRequest, incomingRequestOpen]);
+
+  React.useEffect(() => {
+    if (!user?.id) {
+      return;
+    }
+
+    return onRealtimeNotification((notification) => {
+      const type = String(notification.type ?? '').toUpperCase();
+
+      if (type.includes('MATCH') || type.includes('SESSION') || type.includes('REVIEW')) {
+        void refetch();
+        refreshDashboardStats();
+      }
+
+      if (type.includes('CONNECTION')) {
+        void refetchConnections();
+        refreshDashboardStats();
+      }
+    });
+  }, [refetch, refetchConnections, refreshDashboardStats, user?.id]);
   const activeExchanges = exchanges.filter(e => {
     const s = e.status?.toLowerCase();
-    return s === 'pending' || s === 'accepted';
+    return s === 'accepted';
   });
+  const incomingPendingExchanges = exchanges
+    .filter((exchange) => exchange.status?.toLowerCase() === 'pending' && exchange.receiver.id === currentUserId)
+    .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+  const sentPendingExchanges = exchanges
+    .filter((exchange) => exchange.status?.toLowerCase() === 'pending' && exchange.requester.id === currentUserId)
+    .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+  const REQUEST_PREVIEW_LIMIT = 8;
+  const hasMoreReceivedRequests = incomingPendingExchanges.length > REQUEST_PREVIEW_LIMIT;
+  const hasMoreSentRequests = sentPendingExchanges.length > REQUEST_PREVIEW_LIMIT;
+  const activeTabHasMore = requestTab === 'received' ? hasMoreReceivedRequests : hasMoreSentRequests;
   const upcomingSessions = exchanges.filter(
     e => e.status?.toLowerCase() === 'accepted' && e.sessionDate
   );
@@ -1026,9 +1226,76 @@ export default function DashboardPage() {
     .map(e => activityFromExchange(e, currentUserId))
     .filter(Boolean);
 
+  const quickConnectionRequests = pendingIncomingConnections.filter(
+    (connection) => !dismissedConnectionIds.has(connection.id)
+  );
+
+  React.useEffect(() => {
+    if (connectionsLoading) {
+      return;
+    }
+
+    const currentPendingIds = new Set(pendingIncomingConnections.map((connection) => connection.id));
+    setDismissedConnectionIds((prev) => {
+      let changed = false;
+      const next = new Set<string>();
+      for (const id of prev) {
+        if (currentPendingIds.has(id)) {
+          next.add(id);
+        } else {
+          changed = true;
+        }
+      }
+      return changed ? next : prev;
+    });
+  }, [connectionsLoading, pendingIncomingConnections]);
+
   const pendingConnectionCount = connectionsLoading
     ? (serverStats?.pendingConnections ?? 0)
-    : pendingIncomingConnections.length;
+    : quickConnectionRequests.length;
+
+  const handlePendingExchangeAction = async (
+    exchange: Exchange,
+    action: 'accepted' | 'declined' | 'cancelled'
+  ) => {
+    const partnerFirstName = exchange.requester.id === currentUserId
+      ? exchange.receiver.name.split(' ')[0]
+      : exchange.requester.name.split(' ')[0];
+
+    setIncomingExchangeBusy((prev) => ({ ...prev, [exchange.id]: true }));
+    try {
+      if (action === 'cancelled') {
+        await exchangeService.cancel(exchange.id);
+      } else {
+        await exchangeService.updateStatus(exchange.id, action);
+      }
+      await refetch();
+
+      if (incomingRequest?.id === exchange.id) {
+        setIncomingRequestOpen(false);
+        setIncomingRequest(null);
+      }
+
+      toast({
+        title: action === 'accepted'
+          ? 'Exchange accepted'
+          : action === 'declined'
+            ? 'Exchange declined'
+            : 'Request cancelled',
+        description: action === 'accepted'
+          ? `You are now matched with ${partnerFirstName}.`
+          : action === 'declined'
+            ? `You declined ${partnerFirstName}'s request.`
+            : `You cancelled your request to ${partnerFirstName}.`,
+        variant: action === 'accepted' ? 'success' : 'destructive',
+      });
+    } catch (error) {
+      const message = error instanceof Error ? error.message : 'Could not update the request.';
+      toast({ title: 'Update failed', description: message, variant: 'destructive' });
+    } finally {
+      setIncomingExchangeBusy((prev) => ({ ...prev, [exchange.id]: false }));
+    }
+  };
 
   const handleConnectionUpdate = async (
     connection: Connection,
@@ -1040,6 +1307,14 @@ export default function DashboardPage() {
     setConnectionBusy(prev => ({ ...prev, [connection.id]: true }));
     try {
       await connectionService.updateStatus(connection.id, status);
+      setDismissedConnectionIds((prev) => {
+        if (!prev.has(connection.id)) {
+          return prev;
+        }
+        const next = new Set(prev);
+        next.delete(connection.id);
+        return next;
+      });
       await refetchConnections();
       toast({
         title: status === 'accepted' ? 'Connection accepted' : 'Connection declined',
@@ -1052,6 +1327,107 @@ export default function DashboardPage() {
     } finally {
       setConnectionBusy(prev => ({ ...prev, [connection.id]: false }));
     }
+  };
+
+  const handleConnectionDismiss = (connectionId: string) => {
+    setDismissedConnectionIds((prev) => {
+      const next = new Set(prev);
+      next.add(connectionId);
+      return next;
+    });
+  };
+
+  const renderReceivedRequestRow = (exchange: Exchange) => {
+    const busy = Boolean(incomingExchangeBusy[exchange.id]);
+    return (
+      <div key={exchange.id} className="flex items-center gap-3 rounded-lg border border-border/60 bg-muted/20 px-3 py-2.5">
+        <Avatar className="h-8 w-8 ring-1 ring-border">
+          <AvatarImage src={exchange.requester.avatar ?? undefined} />
+          <AvatarFallback className="text-xs font-semibold">
+            {exchange.requester.name.charAt(0)}
+          </AvatarFallback>
+        </Avatar>
+        <div className="min-w-0 flex-1">
+          <button
+            type="button"
+            className="truncate text-left text-sm font-semibold text-foreground hover:text-primary"
+            onClick={() => navigate(`/profile/${exchange.requester.id}`)}
+          >
+            {exchange.requester.name}
+          </button>
+          <div className="flex items-center justify-between gap-2">
+            <p className="truncate text-[11px] text-muted-foreground">
+              {exchange.offeredSkill ? `Offers ${exchange.offeredSkill.name}` : 'Sent you an exchange request'}
+            </p>
+          </div>
+        </div>
+        <div className="flex items-center gap-2 pl-2">
+          <span className="shrink-0 text-[10px] font-semibold uppercase tracking-wide text-muted-foreground/80">
+            {formatTimeAgo(exchange.createdAt)}
+          </span>
+          <Button
+            variant="outline"
+            size="sm"
+            className="h-7 rounded-md px-2 text-[11px] border-destructive/20 text-destructive hover:bg-destructive/8"
+            onClick={() => void handlePendingExchangeAction(exchange, 'declined')}
+            disabled={busy}
+          >
+            Decline
+          </Button>
+          <Button
+            size="sm"
+            className="h-7 rounded-md px-2 text-[11px]"
+            onClick={() => void handlePendingExchangeAction(exchange, 'accepted')}
+            disabled={busy}
+          >
+            {busy ? '...' : 'Accept'}
+          </Button>
+        </div>
+      </div>
+    );
+  };
+
+  const renderSentRequestRow = (exchange: Exchange) => {
+    const busy = Boolean(incomingExchangeBusy[exchange.id]);
+    return (
+      <div key={exchange.id} className="flex items-center gap-3 rounded-lg border border-border/60 bg-muted/20 px-3 py-2.5">
+        <Avatar className="h-8 w-8 ring-1 ring-border">
+          <AvatarImage src={exchange.receiver.avatar ?? undefined} />
+          <AvatarFallback className="text-xs font-semibold">
+            {exchange.receiver.name.charAt(0)}
+          </AvatarFallback>
+        </Avatar>
+        <div className="min-w-0 flex-1">
+          <button
+            type="button"
+            className="truncate text-left text-sm font-semibold text-foreground hover:text-primary"
+            onClick={() => navigate(`/profile/${exchange.receiver.id}`)}
+          >
+            {exchange.receiver.name}
+          </button>
+          <div className="flex items-center justify-between gap-2">
+            <p className="truncate text-[11px] text-muted-foreground">
+              {exchange.wantedSkill ? `Requested ${exchange.wantedSkill.name}` : 'Waiting for response'}
+            </p>
+          </div>
+        </div>
+        <div className="flex items-center gap-2 pl-2">
+          <span className="shrink-0 text-[10px] font-semibold uppercase tracking-wide text-muted-foreground/80">
+            {formatTimeAgo(exchange.createdAt)}
+          </span>
+          <Badge variant="secondary" className="h-6 rounded-full px-2 text-[10px]">Pending</Badge>
+          <Button
+            variant="outline"
+            size="sm"
+            className="h-7 rounded-md px-2 text-[11px]"
+            onClick={() => void handlePendingExchangeAction(exchange, 'cancelled')}
+            disabled={busy}
+          >
+            {busy ? '...' : 'Cancel'}
+          </Button>
+        </div>
+      </div>
+    );
   };
 
   const getGreeting = () => {
@@ -1096,319 +1472,374 @@ export default function DashboardPage() {
 
   return (
     <DashboardLayout>
-      <div className="mx-auto w-full max-w-7xl space-y-6 px-4 py-6 md:px-6 lg:px-8">
-
-        {/* ══ HERO ═══════════════════════════════════════════════════════ */}
-        <ScrollReveal animation="fade-down" delay={0.05} duration={0.6}>
-          {/* Consistent muted-teal gradient — not cartoonish, not rainbow */}
-          <div className="relative overflow-hidden rounded-2xl border border-border/60 bg-card dark:border-white/[0.07]">
-            {/* Subtle background: one direction, one tone — no orbs */}
-            <div className="absolute inset-0 bg-gradient-to-br from-primary/6 via-transparent to-transparent dark:from-primary/10 dark:to-transparent pointer-events-none" />
-            <div className="absolute inset-0 dot-grid opacity-[0.025] dark:opacity-[0.04] pointer-events-none" />
-
-            <div className="relative z-10 flex flex-col gap-5 p-6 md:flex-row md:items-center md:justify-between lg:p-8">
-              {/* Left — identity */}
-              <div className="flex items-center gap-5">
+      <div className="mx-auto w-full max-w-[1400px] p-4 md:p-6 grid grid-cols-1 md:grid-cols-3 lg:grid-cols-4 auto-rows-[minmax(min-content,max-content)] gap-4">
+        
+        {/* ══ HERO (Spans all columns) ══════════════════════════════════ */}
+        <ScrollReveal animation="fade-down" delay={0.05} duration={0.6} className="md:col-span-3 lg:col-span-4">
+          <div className="relative overflow-hidden rounded-3xl border border-white/5 bg-card/80 backdrop-blur-md shadow-[inset_0_1px_0_0_hsla(0,0%,100%,0.05)]">
+            <div className="absolute inset-0 bg-gradient-to-br from-primary/10 via-transparent to-transparent pointer-events-none" />
+            <div className="absolute inset-0 dot-grid opacity-[0.04] pointer-events-none" />
+            <div className="relative z-10 flex flex-col gap-4 p-5 md:flex-row md:items-center md:justify-between lg:p-6">
+              <div className="flex items-center gap-4">
                 <div className="relative hidden sm:block shrink-0">
-                  <Avatar className="h-14 w-14 ring-2 ring-border shadow-sm">
+                  <Avatar className="h-12 w-12 ring-2 ring-border shadow-sm">
                     <AvatarImage src={user?.avatar} alt={user?.name} />
-                    <AvatarFallback className="text-lg font-bold bg-muted">
-                      {user?.name?.charAt(0)}
-                    </AvatarFallback>
+                    <AvatarFallback className="text-lg font-bold bg-muted">{user?.name?.charAt(0)}</AvatarFallback>
                   </Avatar>
                   {user?.isOnline && (
-                    <span className="absolute bottom-0.5 right-0.5 h-3.5 w-3.5 rounded-full bg-emerald-500 border-2 border-card shadow-sm" />
+                    <span className="absolute bottom-0 right-0 h-3 w-3 rounded-full bg-emerald-500 border-2 border-card" />
                   )}
                 </div>
                 <div>
-                  <motion.p
-                    initial={{ opacity: 0, y: -6 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    transition={{ delay: 0.1 }}
-                    className="text-xs font-semibold uppercase tracking-widest text-muted-foreground mb-1"
-                  >
+                  <motion.p className="text-[10px] font-bold uppercase tracking-widest text-primary mb-1">
                     {getGreeting()}
                   </motion.p>
-                  <motion.h1
-                    initial={{ opacity: 0, y: 6 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    transition={{ delay: 0.16, type: 'spring', stiffness: 200 }}
-                    className="font-headline text-2xl font-bold tracking-tight text-foreground md:text-3xl"
-                  >
+                  <motion.h1 className="font-headline text-xl font-bold tracking-tight text-foreground md:text-2xl">
                     {user?.name?.split(' ')[0] ?? 'Learner'}
                   </motion.h1>
-                  <motion.p
-                    initial={{ opacity: 0 }}
-                    animate={{ opacity: 1 }}
-                    transition={{ delay: 0.26 }}
-                    className="mt-1 text-sm text-muted-foreground max-w-[42ch]"
-                  >
-                    {user?.university
-                      ? `${user.university} · Member since ${new Date(user.joinedAt ?? Date.now()).getFullYear()}`
-                      : 'Skill exchange platform · Track your learning journey'}
+                  <motion.p className="text-xs text-muted-foreground max-w-[42ch]">
+                    {user?.university ? `${user.university} · Member since ${new Date(user.joinedAt ?? Date.now()).getFullYear()}` : 'Skill exchange platform'}
                   </motion.p>
                 </div>
               </div>
-
-              {/* Right — primary actions (Rule 2: enable shortcuts) */}
-              <motion.div
-                initial={{ opacity: 0, x: 12 }}
-                animate={{ opacity: 1, x: 0 }}
-                transition={{ delay: 0.2 }}
-                className="flex flex-wrap gap-2.5 shrink-0"
-              >
-                <Button asChild size="sm" className="rounded-lg">
-                  <Link to="/match">
-                    <Search className="mr-2 h-4 w-4" />
-                    Find a Match
-                  </Link>
+              <motion.div className="flex flex-wrap gap-2.5 shrink-0">
+                <Button asChild size="sm" className="rounded-xl font-semibold bg-primary text-primary-foreground shadow-glow-sm hover:brightness-110 border-0">
+                  <Link to="/match"><Search className="mr-2 h-3.5 w-3.5" /> Find a Match</Link>
                 </Button>
-                <Button asChild variant="outline" size="sm" className="rounded-lg">
-                  <Link to={user?.id ? `/profile/${user.id}` : '/settings'}>
-                    <BarChart3 className="mr-2 h-4 w-4" />
-                    My Profile
-                  </Link>
-                </Button>
-                <Button asChild variant="ghost" size="sm" className="rounded-lg">
-                  <Link to="/community">
-                    <MessageSquare className="mr-2 h-4 w-4" />
-                    Community
-                  </Link>
+                <Button asChild variant="outline" size="sm" className="rounded-xl border-white/10 bg-white/5 hover:bg-white/10 backdrop-blur-sm">
+                  <Link to={user?.id ? `/profile/${user.id}` : '/settings'}><BarChart3 className="mr-2 h-3.5 w-3.5" /> Profile</Link>
                 </Button>
               </motion.div>
             </div>
           </div>
         </ScrollReveal>
 
-        {/* ══ ONBOARDING ══════════════════════════════════════════════════ */}
+        {/* ══ ONBOARDING (Spans all columns if present) ════════════════ */}
         {!loading && user && (
-          <OnboardingProgress user={user} exchanges={exchanges} />
+          <div className="md:col-span-3 lg:col-span-4">
+            <OnboardingProgress user={user} exchanges={exchanges} />
+          </div>
         )}
 
-        {/* ══ INTERACTIVE DASHBOARD SECTION (MODERN LAYOUT) ══════════════ */}
-        <div className="space-y-6">
-          
-          {/* Top Row: Important Stats & Boost Banner */}
-          <div className="grid grid-cols-1 lg:grid-cols-3 gap-5 xl:gap-6">
-            <div className="col-span-1 lg:col-span-2 grid grid-cols-1 sm:grid-cols-2 gap-5 xl:gap-6">
-              <ScrollReveal animation="fade-up" delay={0.1}>
-                {statCards[1] && <StatCard key="active-exchanges" {...statCards[1]} index={0} />}
-              </ScrollReveal>
-              <ScrollReveal animation="fade-up" delay={0.15}>
-                {statCards[3] && <StatCard key="skillex-score" {...statCards[3]} index={1} />}
-              </ScrollReveal>
-            </div>
-            
-            <div className="col-span-1 border-none shadow-none h-full">
-              <ScrollReveal animation="fade-left" delay={0.2}>
-                <BoostBanner />
-              </ScrollReveal>
-            </div>
-          </div>
+        <div id="exchange-requests" className="md:col-span-3 lg:col-span-4">
+          <ScrollReveal animation="fade-up" delay={0.09}>
+            <Card className="border-border/60 bg-card dark:border-white/[0.07]">
+              <CardContent className="p-4">
+                <div className="mb-3 flex items-center justify-between gap-2">
+                  <h3 className="flex items-center gap-2 text-sm font-semibold text-foreground">
+                    <Inbox className="h-4 w-4 text-primary" />
+                    Exchange Requests
+                  </h3>
+                  <div className="flex items-center gap-2">
+                    <Badge variant="secondary" className="text-[10px] rounded-full">
+                      {incomingPendingExchanges.length + sentPendingExchanges.length} total
+                    </Badge>
+                    {activeTabHasMore && (
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        className="h-7 rounded-md px-2 text-[11px] font-semibold text-primary hover:bg-primary/10"
+                        onClick={() => setRequestsModalOpen(true)}
+                      >
+                        See all
+                      </Button>
+                    )}
+                  </div>
+                </div>
 
-          {/* Middle Row: Performance Chart & Task Progress */}
-          <div className="grid grid-cols-1 lg:grid-cols-3 gap-5 xl:gap-6 items-stretch">
-            <div className="col-span-1 lg:col-span-2 min-h-[300px]">
-              <ScrollReveal animation="fade-right" delay={0.1}>
-                <ActivityChart 
-                  data={[
-                    { name: 'Aug', hours: 40, amt: 2400 },
-                    { name: 'Sep', hours: 30, amt: 2210 },
-                    { name: 'Oct', hours: 60, amt: 2290 },
-                    { name: 'Nov', hours: 48, amt: 2000 },
-                    { name: 'Dec', hours: 80, amt: 2181 },
-                    { name: 'Jan', hours: 75, amt: 2500 },
-                    { name: 'Feb', hours: 100, amt: 2100 },
-                    { name: 'Mar', hours: 85, amt: 2100 },
-                  ]} 
-                  trend={12} 
-                />
-              </ScrollReveal>
-            </div>
-            
-            <div className="col-span-1 w-full h-full">
-              <ScrollReveal animation="fade-left" delay={0.15}>
-                <TaskProgressWidget />
-              </ScrollReveal>
-            </div>
-          </div>
+                <Tabs value={requestTab} onValueChange={(value) => setRequestTab(value as 'received' | 'sent')} className="w-full">
+                  <TabsList className="h-9 w-full rounded-xl border border-border/50 bg-muted/30 p-1 sm:w-auto">
+                    <TabsTrigger value="received" className="text-[11px] font-semibold">
+                      Received ({incomingPendingExchanges.length})
+                    </TabsTrigger>
+                    <TabsTrigger value="sent" className="text-[11px] font-semibold">
+                      Sent ({sentPendingExchanges.length})
+                    </TabsTrigger>
+                  </TabsList>
 
-          {/* Bottom Row: Carousel */}
-          <ScrollReveal animation="fade-up" delay={0.2}>
-            <Card className="border-border/60 bg-transparent shadow-none dark:border-transparent mt-4 mb-2">
-              <SessionCarousel exchanges={exchanges} currentUserId={currentUserId} />
+                  <TabsContent value="received" className="mt-3 space-y-2">
+                    {incomingPendingExchanges.length === 0 ? (
+                      <p className="rounded-lg border border-dashed border-border/60 px-3 py-4 text-xs text-muted-foreground">
+                        No incoming requests right now.
+                      </p>
+                    ) : incomingPendingExchanges.slice(0, REQUEST_PREVIEW_LIMIT).map(renderReceivedRequestRow)}
+                  </TabsContent>
+
+                  <TabsContent value="sent" className="mt-3 space-y-2">
+                    {sentPendingExchanges.length === 0 ? (
+                      <p className="rounded-lg border border-dashed border-border/60 px-3 py-4 text-xs text-muted-foreground">
+                        You have not sent any pending requests.
+                      </p>
+                    ) : sentPendingExchanges.slice(0, REQUEST_PREVIEW_LIMIT).map(renderSentRequestRow)}
+                  </TabsContent>
+                </Tabs>
+              </CardContent>
             </Card>
           </ScrollReveal>
-
         </div>
 
-        {/* ══ SECONDARY GRID: ACTIVE EXCHANGES & CONNECTIONS ════════════ */}
-        <div className="grid grid-cols-1 gap-5 xl:grid-cols-[minmax(0,1.6fr)_380px] xl:gap-6 mt-8 pt-8 border-t border-border/40">
+        {/* ══ STATS (4 columns) ═════════════════════════════════════════ */}
+        {statCards.map((card, i) => (
+          <div key={card.title} className="col-span-1">
+            <ScrollReveal animation="fade-up" delay={0.1 + i * 0.05} className="h-full">
+              <StatCard {...card} index={i} />
+            </ScrollReveal>
+          </div>
+        ))}
 
-          {/* ── LEFT COLUMN ─────────────────────────────────────────────── */}
-          <div className="space-y-6">
+        {/* ══ BENTO ROW 1 ═══════════════════════════════════════════════ */}
+        <div className="md:col-span-2 lg:col-span-2 row-span-2 min-h-[300px] flex flex-col">
+          <ScrollReveal animation="fade-right" delay={0.15} className="h-full flex-1">
+            <ActivityChart 
+              data={[
+                { name: 'Aug', hours: 40, amt: 2400 },
+                { name: 'Sep', hours: 30, amt: 2210 },
+                { name: 'Oct', hours: 60, amt: 2290 },
+                { name: 'Nov', hours: 48, amt: 2000 },
+                { name: 'Dec', hours: 80, amt: 2181 },
+                { name: 'Jan', hours: 75, amt: 2500 },
+                { name: 'Feb', hours: 100, amt: 2100 },
+                { name: 'Mar', hours: 85, amt: 2100 },
+              ]} 
+              trend={12} 
+            />
+          </ScrollReveal>
+        </div>
 
-            {/* Active Exchanges */}
-            <ScrollReveal animation="fade-up" delay={0.12}>
-              <SectionHeading
-                icon={Zap}
-                action={
-                  <Button asChild variant="link" size="sm" className="h-auto p-0 text-xs text-primary">
-                    <Link to="/match">
-                      Find more <ArrowRight className="ml-1 h-3 w-3" />
-                    </Link>
-                  </Button>
-                }
-              >
+        <div className="col-span-1 md:col-span-1 lg:col-span-1 row-span-1 flex flex-col h-full">
+          <ScrollReveal animation="fade-up" delay={0.2} className="h-full w-full">
+            <BoostBanner />
+          </ScrollReveal>
+        </div>
+
+        {/* RIGHT COLUMN SIDEBAR TABS (Tall Bento) ═══════════════════════ */}
+        <div className="col-span-1 md:col-span-3 lg:col-span-1 lg:row-span-4 flex flex-col h-[500px] lg:h-auto">
+          <ScrollReveal animation="fade-left" delay={0.18} className="h-full flex-1 w-full bg-card rounded-3xl border border-white/5 shadow-sm overflow-hidden flex flex-col">
+            <div className="p-4 pb-0 flex items-center justify-between">
+              <h2 className="flex items-center gap-2 font-headline text-[13px] font-bold text-foreground uppercase tracking-widest">
+                <Users className="h-4 w-4 text-primary" />
+                Network
+              </h2>
+              {pendingConnectionCount > 0 && <Badge className="text-[9px] rounded-full bg-primary/20 text-primary hover:bg-primary/30 border-0">{pendingConnectionCount} pending</Badge>}
+            </div>
+            <Tabs defaultValue="connections" className="flex-1 flex flex-col min-h-0 mt-3">
+              <div className="px-4">
+                <TabsList className="w-full bg-muted/40 p-1 h-9 rounded-xl border border-white/5">
+                  <TabsTrigger value="connections" className="flex-1 rounded-lg text-[11px] font-semibold data-[state=active]:bg-card data-[state=active]:shadow-sm">Conn.</TabsTrigger>
+                  <TabsTrigger value="skills" className="flex-1 rounded-lg text-[11px] font-semibold data-[state=active]:bg-card data-[state=active]:shadow-sm">Skills</TabsTrigger>
+                  <TabsTrigger value="activity" className="flex-1 rounded-lg text-[11px] font-semibold data-[state=active]:bg-card data-[state=active]:shadow-sm">Activity</TabsTrigger>
+                </TabsList>
+              </div>
+              <div className="flex-1 overflow-y-auto custom-scrollbar mt-2">
+                <TabsContent value="connections" className="m-0 p-0 focus-visible:outline-none">
+                  <ConnectionsTab
+                    connections={quickConnectionRequests}
+                    loading={connectionsLoading}
+                    busy={connectionBusy}
+                    onUpdate={handleConnectionUpdate}
+                    onDismiss={handleConnectionDismiss}
+                    currentUserId={currentUserId}
+                  />
+                </TabsContent>
+                <TabsContent value="skills" className="m-0 focus-visible:outline-none">
+                  <SkillsTab user={user} />
+                </TabsContent>
+                <TabsContent value="activity" className="m-0 focus-visible:outline-none">
+                  <ActivityTab items={activityItems} />
+                </TabsContent>
+              </div>
+            </Tabs>
+          </ScrollReveal>
+        </div>
+
+        {/* ══ BENTO ROW 2 ═══════════════════════════════════════════════ */}
+        <div className="col-span-1 flex flex-col h-full">
+          <ScrollReveal animation="fade-up" delay={0.22} className="h-full">
+            <RankWidget score={skillexScore} />
+          </ScrollReveal>
+        </div>
+
+        {/* ══ BENTO ROW 3 (Carousel + Tasks) ═══════════════════════════ */}
+        <div className="md:col-span-2 lg:col-span-2 min-h-[140px] flex flex-col">
+          <ScrollReveal animation="fade-up" delay={0.24} className="h-full flex-1 w-full bg-card rounded-3xl border border-white/5 shadow-sm p-4 overflow-hidden shadow-[inset_0_1px_0_0_hsla(0,0%,100%,0.05)]">
+             <SessionCarousel exchanges={exchanges} currentUserId={currentUserId} />
+          </ScrollReveal>
+        </div>
+        
+        <div className="col-span-1 md:col-span-1 h-full flex flex-col">
+          <ScrollReveal animation="fade-left" delay={0.26} className="h-full flex-1">
+            <TaskProgressWidget />
+          </ScrollReveal>
+        </div>
+
+        {/* ══ BENTO ROW 4 (Active Exchanges & Sessions) ═════════════════ */}
+        <div className="col-span-1 md:col-span-3 lg:col-span-2 flex flex-col min-h-[300px]">
+          <ScrollReveal animation="fade-up" delay={0.25} className="h-full flex flex-col bg-card rounded-3xl border border-white/5 shadow-sm overflow-hidden p-4 shadow-[inset_0_1px_0_0_hsla(0,0%,100%,0.05)]">
+             <SectionHeading icon={Zap} action={
+                <Button asChild variant="ghost" size="sm" className="h-7 text-xs font-semibold text-primary hover:bg-primary/10">
+                  <Link to="/match">Explore <ArrowRight className="ml-1 h-3 w-3" /></Link>
+                </Button>
+              }>
                 Active Exchanges
               </SectionHeading>
-
-              <motion.div
-                variants={{ hidden: {}, visible: { transition: { staggerChildren: 0.07 } } }}
-                initial="hidden"
-                animate="visible"
-              >
+              
+              <div className="flex-1 overflow-y-auto custom-scrollbar -mx-2 px-2 pb-2">
                 {loading ? (
-                  <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
-                    <ExchangeSkeleton />
-                    <ExchangeSkeleton />
-                  </div>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-3"><ExchangeSkeleton /><ExchangeSkeleton /></div>
                 ) : activeExchanges.length === 0 ? (
                   <EmptyExchanges />
                 ) : (
-                  <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
-                    {activeExchanges.slice(0, 4).map(ex => (
-                      <ExchangeCard key={ex.id} exchange={ex} currentUserId={currentUserId} />
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                    {activeExchanges.map(ex => (
+                      <ExchangeCard
+                        key={ex.id}
+                        exchange={ex}
+                        currentUserId={currentUserId}
+                        onStatusChanged={refetch}
+                      />
                     ))}
                   </div>
                 )}
-              </motion.div>
-            </ScrollReveal>
+              </div>
+          </ScrollReveal>
+        </div>
 
-            {/* Upcoming Sessions */}
-            <ScrollReveal animation="fade-up" delay={0.18}>
-              <SectionHeading icon={CalendarDays}>Upcoming Sessions</SectionHeading>
-              <Card className="border-border/60 bg-card dark:border-white/[0.07]">
-                <CardContent className="p-5">
-                  <UpcomingSessionsSection
-                    sessions={upcomingSessions}
-                    loading={loading}
-                    currentUserId={currentUserId}
-                  />
-                </CardContent>
-              </Card>
-            </ScrollReveal>
+        <div className="col-span-1 md:col-span-3 lg:col-span-1 flex flex-col min-h-[300px]">
+           <ScrollReveal animation="fade-up" delay={0.28} className="h-full flex flex-col bg-card rounded-3xl border border-white/5 shadow-sm overflow-hidden p-4 shadow-[inset_0_1px_0_0_hsla(0,0%,100%,0.05)]">
+             <SectionHeading icon={CalendarDays}>Upcoming</SectionHeading>
+             <div className="flex-1 overflow-y-auto custom-scrollbar -mx-2 px-2">
+               <UpcomingSessionsSection sessions={upcomingSessions} loading={loading} currentUserId={currentUserId} />
+             </div>
+           </ScrollReveal>
+        </div>
 
-            {/* Rank widget — below sessions in left col */}
-            <ScrollReveal animation="fade-up" delay={0.22}>
-              <RankWidget score={skillexScore} />
-            </ScrollReveal>
-          </div>
+      </div>
 
-          {/* ── RIGHT COLUMN ────────────────────────────────────────────── */}
-          <div>
-            <div className="xl:sticky xl:top-[76px] space-y-5">
-              <ScrollReveal animation="fade-left" delay={0.15}>
-                {/* Section header outside the card */}
-                <div className="mb-4 flex items-center justify-between">
-                  <h2 className="flex items-center gap-2 font-headline text-base font-semibold text-foreground">
-                    <Users className="h-4 w-4 text-muted-foreground" />
-                    Your Network
-                  </h2>
-                  {pendingConnectionCount > 0 && (
-                    <Badge className="text-[10px] rounded-full">
-                      {pendingConnectionCount} pending
-                    </Badge>
-                  )}
+      <Dialog open={requestsModalOpen} onOpenChange={setRequestsModalOpen}>
+        <DialogContent className="sm:max-w-2xl max-h-[85vh] overflow-hidden">
+          <DialogHeader>
+            <DialogTitle>All Exchange Requests</DialogTitle>
+            <DialogDescription>
+              Manage incoming and sent requests from one place.
+            </DialogDescription>
+          </DialogHeader>
+
+          <Tabs value={requestTab} onValueChange={(value) => setRequestTab(value as 'received' | 'sent')} className="w-full">
+            <TabsList className="h-9 w-full rounded-xl border border-border/50 bg-muted/30 p-1 sm:w-auto">
+              <TabsTrigger value="received" className="text-[11px] font-semibold">
+                Received ({incomingPendingExchanges.length})
+              </TabsTrigger>
+              <TabsTrigger value="sent" className="text-[11px] font-semibold">
+                Sent ({sentPendingExchanges.length})
+              </TabsTrigger>
+            </TabsList>
+
+            <TabsContent value="received" className="mt-3">
+              <div className="max-h-[52vh] space-y-2 overflow-y-auto pr-1 custom-scrollbar">
+                {incomingPendingExchanges.length === 0 ? (
+                  <p className="rounded-lg border border-dashed border-border/60 px-3 py-4 text-xs text-muted-foreground">
+                    No incoming requests right now.
+                  </p>
+                ) : incomingPendingExchanges.map(renderReceivedRequestRow)}
+              </div>
+            </TabsContent>
+
+            <TabsContent value="sent" className="mt-3">
+              <div className="max-h-[52vh] space-y-2 overflow-y-auto pr-1 custom-scrollbar">
+                {sentPendingExchanges.length === 0 ? (
+                  <p className="rounded-lg border border-dashed border-border/60 px-3 py-4 text-xs text-muted-foreground">
+                    You have not sent any pending requests.
+                  </p>
+                ) : sentPendingExchanges.map(renderSentRequestRow)}
+              </div>
+            </TabsContent>
+          </Tabs>
+
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setRequestsModalOpen(false)}>
+              Close
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      <AnimatePresence>
+        {incomingRequestOpen && incomingRequest && (
+          <motion.div
+            initial={{ opacity: 0, y: -20 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -20 }}
+            transition={{ duration: 0.18 }}
+            className="fixed bottom-4 right-4 z-40 w-[min(92vw,420px)]"
+          >
+            <Card className="border-border/70 bg-card/95 shadow-xl backdrop-blur">
+              <CardContent className="p-4">
+                <div className="mb-2 flex items-start justify-between gap-2">
+                  <div>
+                    <p className="text-sm font-bold text-foreground">Quick View: New Request</p>
+                    <p className="text-xs text-muted-foreground">
+                      Also added to your notification section.
+                    </p>
+                  </div>
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className="h-7 w-7 rounded-lg"
+                    onClick={() => setIncomingRequestOpen(false)}
+                    title="Dismiss quick view"
+                  >
+                    <X className="h-4 w-4" />
+                  </Button>
                 </div>
 
-                {/* ShadCN Tabs — consistent horizontal nav */}
-                <Card className="overflow-hidden border-border/60 bg-card dark:border-white/[0.07]">
-                  <Tabs defaultValue="connections">
-                    <div className="border-b border-border/60 px-1 pt-1">
-                      <TabsList className="w-full bg-transparent h-10 p-0 gap-0">
-                        <TabsTrigger
-                          value="connections"
-                          className="flex-1 rounded-none border-b-2 border-transparent text-xs font-semibold data-[state=active]:border-primary data-[state=active]:text-primary data-[state=active]:bg-transparent data-[state=active]:shadow-none pb-2"
-                        >
-                          Connections
-                          {pendingConnectionCount > 0 && (
-                            <span className="ml-1.5 flex h-4 min-w-4 items-center justify-center rounded-full bg-primary px-1 text-[9px] font-bold text-primary-foreground">
-                              {pendingConnectionCount}
-                            </span>
-                          )}
-                        </TabsTrigger>
-                        <TabsTrigger
-                          value="skills"
-                          className="flex-1 rounded-none border-b-2 border-transparent text-xs font-semibold data-[state=active]:border-primary data-[state=active]:text-primary data-[state=active]:bg-transparent data-[state=active]:shadow-none pb-2"
-                        >
-                          Skills
-                        </TabsTrigger>
-                        <TabsTrigger
-                          value="activity"
-                          className="flex-1 rounded-none border-b-2 border-transparent text-xs font-semibold data-[state=active]:border-primary data-[state=active]:text-primary data-[state=active]:bg-transparent data-[state=active]:shadow-none pb-2"
-                        >
-                          Activity
-                        </TabsTrigger>
-                      </TabsList>
-                    </div>
-
-                    <TabsContent value="connections" className="mt-0 focus-visible:outline-none">
-                      <ConnectionsTab
-                        connections={pendingIncomingConnections}
-                        loading={connectionsLoading}
-                        busy={connectionBusy}
-                        onUpdate={handleConnectionUpdate}
-                        currentUserId={currentUserId}
-                      />
-                    </TabsContent>
-
-                    <TabsContent value="skills" className="mt-0 focus-visible:outline-none">
-                      <SkillsTab user={user} />
-                    </TabsContent>
-
-                    <TabsContent value="activity" className="mt-0 focus-visible:outline-none">
-                      <ActivityTab items={activityItems} />
-                    </TabsContent>
-                  </Tabs>
-                </Card>
-              </ScrollReveal>
-
-              {/* Quick navigation shortcuts (Rule 2: shortcuts) */}
-              <ScrollReveal animation="fade-left" delay={0.22}>
-                <Card className="border-border/60 bg-card dark:border-white/[0.07]">
-                  <CardContent className="p-4">
-                    <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground mb-3">
-                      Navigate
+                <div className="flex items-center gap-3 rounded-lg border border-border/60 bg-muted/20 p-3">
+                  <Avatar className="h-9 w-9 ring-1 ring-border">
+                    <AvatarImage src={incomingRequest.requester.avatar ?? undefined} />
+                    <AvatarFallback className="text-xs font-semibold">
+                      {incomingRequest.requester.name.charAt(0)}
+                    </AvatarFallback>
+                  </Avatar>
+                  <div className="min-w-0 flex-1">
+                    <p className="truncate text-sm font-semibold text-foreground">{incomingRequest.requester.name}</p>
+                    <p className="truncate text-xs text-muted-foreground">
+                      {incomingRequest.offeredSkill ? `Offers ${incomingRequest.offeredSkill.name}` : 'Sent you a request'}
                     </p>
-                    <nav className="space-y-1">
-                      {[
-                        { to: '/match',       Icon: Search,      label: 'Skill Marketplace',   desc: 'Find skill partners' },
-                        { to: '/connections', Icon: Users,       label: 'My Connections',      desc: 'Manage your network' },
-                        { to: '/community',   Icon: MessageSquare, label: 'Community',          desc: 'Discussions & posts' },
-                        { to: '/settings',    Icon: TrendingUp,  label: 'Settings & Profile',  desc: 'Update your skills' },
-                      ].map(item => (
-                        <Link
-                          key={item.to}
-                          to={item.to}
-                          className="group flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm transition-colors duration-150 hover:bg-muted/50"
-                        >
-                          <item.Icon className="h-4 w-4 text-muted-foreground group-hover:text-primary transition-colors duration-150 shrink-0" />
-                          <div className="min-w-0 flex-1">
-                            <p className="text-sm font-medium text-foreground truncate">{item.label}</p>
-                            <p className="text-xs text-muted-foreground truncate">{item.desc}</p>
-                          </div>
-                          <ChevronRight className="h-3.5 w-3.5 text-muted-foreground/40 group-hover:text-primary/60 transition-colors duration-150 shrink-0" />
-                        </Link>
-                      ))}
-                    </nav>
-                  </CardContent>
-                </Card>
-              </ScrollReveal>
-            </div>
-          </div>
-        </div>
-      </div>
+                  </div>
+                </div>
+
+                <div className="mt-3 grid grid-cols-3 gap-2">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="text-xs"
+                    onClick={() => navigate(`/profile/${incomingRequest.requester.id}`)}
+                    disabled={Boolean(incomingExchangeBusy[incomingRequest.id])}
+                  >
+                    Profile
+                  </Button>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="text-xs border-destructive/20 text-destructive hover:bg-destructive/8 hover:border-destructive/30"
+                    onClick={() => void handlePendingExchangeAction(incomingRequest, 'declined')}
+                    disabled={Boolean(incomingExchangeBusy[incomingRequest.id])}
+                  >
+                    Decline
+                  </Button>
+                  <Button
+                    size="sm"
+                    className="text-xs"
+                    onClick={() => void handlePendingExchangeAction(incomingRequest, 'accepted')}
+                    disabled={Boolean(incomingExchangeBusy[incomingRequest.id])}
+                  >
+                    {incomingExchangeBusy[incomingRequest.id] ? '...' : 'Accept'}
+                  </Button>
+                </div>
+              </CardContent>
+            </Card>
+          </motion.div>
+        )}
+      </AnimatePresence>
     </DashboardLayout>
   );
 }

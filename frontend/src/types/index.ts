@@ -118,11 +118,17 @@ export interface Discussion {
   isPinned: boolean;
 }
 
+export interface NotificationUserRef {
+  id: string;
+  name?: string;
+  avatar?: string | null;
+}
+
 export interface Notification {
   id: string;
   type: NotificationType;
   message: string;
-  fromUser?: User;
+  fromUser?: NotificationUserRef;
   createdAt: string;
   isRead: boolean;
 }

@@ -90,22 +90,15 @@ const FilterSidebar: FC<{
   mobileSheetOpen: boolean;
   setMobileSheetOpen: (open: boolean) => void;
 }> = React.memo(({ filters, setFilters, onApply: _onApply, mobileSheetOpen, setMobileSheetOpen }) => {
-  const _activeFilterCount =
-    filters.categories.length +
-    filters.levels.length +
-    (filters.sessionType !== 'Both' ? 1 : 0) +
-    (filters.compatibility[0] > 50 ? 1 : 0) +
-    (filters.rating > 0 ? 1 : 0);
-
   const PillToggle: FC<{ label: string; active: boolean; onClick: () => void }> = ({ label, active, onClick }) => (
     <motion.button
       whileTap={{ scale: 0.95 }}
       onClick={onClick}
       className={cn(
-        'px-4 py-2 rounded-full text-sm font-medium transition-all duration-300 ease-snappy',
+        'px-4 py-2 rounded-xl text-[11px] font-bold uppercase tracking-wider transition-all duration-300 ease-snappy',
         active
-          ? 'bg-primary/20 text-primary border border-primary/50 shadow-sm'
-          : 'bg-muted/40 text-muted-foreground border border-border hover:border-primary/30 hover:bg-muted/60'
+          ? 'bg-primary/20 text-primary border border-primary/50 shadow-glow-sm'
+          : 'bg-muted/20 text-muted-foreground border border-white/5 hover:border-primary/30 hover:bg-muted/40'
       )}
     >
       {label}
@@ -113,10 +106,10 @@ const FilterSidebar: FC<{
   );
 
   const content = (
-    <div className="flex h-full flex-col gap-6 overflow-y-auto p-6">
+    <div className="flex h-full flex-col gap-6 overflow-y-auto custom-scrollbar p-6">
       {/* Categories */}
       <div className="space-y-3">
-        <h3 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Categories</h3>
+        <h3 className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground flex items-center gap-2"><Sparkles className="h-3 w-3 text-primary"/> Categories</h3>
         <div className="flex flex-wrap gap-2">
           {categories.map((category) => (
             <PillToggle
@@ -138,7 +131,7 @@ const FilterSidebar: FC<{
 
       {/* Levels */}
       <div className="space-y-3">
-        <h3 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Level</h3>
+        <h3 className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">Level</h3>
         <div className="flex flex-wrap gap-2">
           {['beginner', 'moderate', 'expert'].map((level) => (
             <PillToggle
@@ -160,7 +153,7 @@ const FilterSidebar: FC<{
 
       {/* Session Type */}
       <div className="space-y-3">
-        <h3 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Session Type</h3>
+        <h3 className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">Session Type</h3>
         <div className="flex flex-wrap gap-2">
           {['Online', 'In-person', 'Both'].map((type) => (
             <PillToggle
@@ -174,10 +167,10 @@ const FilterSidebar: FC<{
       </div>
 
       {/* Minimum Compatibility */}
-      <div className="space-y-4 rounded-2xl bg-muted/20 border border-border/60 p-4">
+      <div className="space-y-4 rounded-3xl bg-card border border-white/5 p-5 shadow-[inset_0_1px_0_0_hsla(0,0%,100%,0.05)]">
         <div className="flex items-center justify-between">
-          <h3 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Min Match</h3>
-          <span className="text-lg font-bold text-primary">{filters.compatibility[0]}%</span>
+          <h3 className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">Min Match</h3>
+          <span className="text-lg font-headline font-bold text-primary drop-shadow-[0_0_8px_var(--primary)]">{filters.compatibility[0]}%</span>
         </div>
         <Slider
           value={filters.compatibility}
@@ -191,7 +184,7 @@ const FilterSidebar: FC<{
 
       {/* Minimum Rating */}
       <div className="space-y-3">
-        <h3 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Minimum Rating</h3>
+        <h3 className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">Minimum Rating</h3>
         <div className="flex gap-2">
           {[3, 4, 4.5].map((r) => (
             <motion.button
@@ -199,10 +192,10 @@ const FilterSidebar: FC<{
               whileTap={{ scale: 0.95 }}
               onClick={() => setFilters({ ...filters, rating: filters.rating === r ? 0 : r })}
               className={cn(
-                'flex items-center justify-center gap-1.5 px-3 py-2 rounded-full text-sm font-medium transition-all duration-300 ease-snappy flex-1',
+                'flex items-center justify-center gap-1.5 px-3 py-2 rounded-xl text-[11px] font-bold uppercase transition-all duration-300 ease-snappy flex-1',
                 filters.rating === r
-                  ? 'bg-warning/20 text-warning border border-warning/50'
-                  : 'bg-muted/40 text-muted-foreground border border-border hover:border-warning/30 hover:bg-muted/60'
+                  ? 'bg-warning/20 text-warning border border-warning/50 shadow-[0_0_12px_var(--warning)]'
+                  : 'bg-muted/20 text-muted-foreground border border-white/5 hover:border-warning/30 hover:bg-muted/40'
               )}
             >
               <span>{r}</span>
@@ -216,7 +209,7 @@ const FilterSidebar: FC<{
       <motion.button
         whileTap={{ scale: 0.95 }}
         onClick={() => setFilters(defaultFilters)}
-        className="mt-2 px-4 py-2 w-full rounded-full text-xs font-medium text-muted-foreground border border-border hover:border-primary/30 bg-muted/20 hover:bg-muted/40 transition-all duration-300 ease-snappy"
+        className="mt-2 px-4 py-3 w-full rounded-xl text-[11px] font-bold uppercase tracking-wider text-muted-foreground border border-white/5 hover:border-primary/30 bg-muted/20 hover:bg-muted/40 transition-all duration-300 ease-snappy"
       >
         Reset Filters
       </motion.button>
@@ -225,7 +218,7 @@ const FilterSidebar: FC<{
 
   return (
     <>
-      <aside className="hidden w-80 shrink-0 border-r border-border/60 bg-card/40 md:block">
+      <aside className="hidden w-80 shrink-0 bg-card rounded-3xl border border-white/5 shadow-sm overflow-hidden shadow-[inset_0_1px_0_0_hsla(0,0%,100%,0.05)] md:block h-[calc(100vh-140px)] sticky top-24">
         {content}
       </aside>
 
@@ -272,7 +265,7 @@ const AIBestMatchCard: FC<{ match: MatchUser; currentUser: User | null }> = Reac
       <motion.div
         initial={{ opacity: 0, y: 8 }}
         animate={{ opacity: 1, y: 0 }}
-        className="group relative mb-6 overflow-hidden rounded-2xl border border-primary/30 shadow-lg hover:shadow-[0_12px_40px_-12px_hsl(var(--primary)/0.35)] transition-all duration-500"
+        className="group relative mb-6 overflow-hidden rounded-[2rem] border border-primary/30 shadow-[inset_0_1px_0_0_hsla(0,0%,100%,0.05)] hover:shadow-[0_12px_40px_-12px_hsl(var(--primary)/0.35)] transition-all duration-500 bg-card/80 backdrop-blur-md"
       >
         {/* Dynamic Cover Image */}
         <div className="absolute inset-0 z-0">
@@ -298,8 +291,8 @@ const AIBestMatchCard: FC<{ match: MatchUser; currentUser: User | null }> = Reac
 
           <div className="grid grid-cols-1 gap-8 md:grid-cols-12 md:items-center">
             <div className="md:col-span-4">
-              <div className="flex items-center gap-4 rounded-xl border border-white/10 bg-background/50 p-4 backdrop-blur-md shadow-sm">
-                <Avatar className="h-16 w-16 ring-4 ring-primary/20 shadow-xl bg-card">
+              <div className="flex items-center gap-4 rounded-3xl border border-white/5 bg-black/20 p-5 backdrop-blur-md shadow-sm">
+                <Avatar className="h-16 w-16 ring-4 ring-primary/20 shadow-[0_0_15px_hsl(var(--primary)/0.3)] bg-card">
                   <AvatarImage src={match.avatar ?? undefined} className="object-cover" />
                   <AvatarFallback className="font-bold text-lg bg-muted text-foreground">{match.name.charAt(0)}</AvatarFallback>
                 </Avatar>
@@ -320,25 +313,29 @@ const AIBestMatchCard: FC<{ match: MatchUser; currentUser: User | null }> = Reac
               </div>
             </div>
 
-            <div className="space-y-5 md:col-span-8">
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div className="rounded-xl border border-white/10 bg-background/50 p-4 backdrop-blur-md shadow-sm">
-                  <h4 className="text-xs font-bold uppercase tracking-wider text-muted-foreground mb-3">Match Metrics</h4>
-                  <div className="space-y-3">
-                    <div className="flex items-center justify-between gap-3">
-                      <span className="text-xs font-medium w-24 shrink-0">Skill Similarity</span>
-                      <Progress value={match.semanticSimilarity} className="h-2 flex-1" />
-                      <span className="text-xs font-bold w-9 text-right">{match.semanticSimilarity}%</span>
+            <div className="space-y-4 md:col-span-8 flex flex-col">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4 auto-rows-min flex-1">
+                <div className="rounded-3xl border border-white/5 bg-black/20 p-5 backdrop-blur-md shadow-[inset_0_1px_0_0_hsla(0,0%,100%,0.05)] h-full">
+                  <h4 className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground mb-4">Match Metrics</h4>
+                  <div className="space-y-4">
+                    <div className="space-y-2">
+                      <div className="flex items-center justify-between text-xs font-bold uppercase tracking-wider">
+                         <span>Skill Similarity</span>
+                         <span className="text-primary">{match.semanticSimilarity}%</span>
+                      </div>
+                      <Progress value={match.semanticSimilarity} className="h-1.5 bg-white/5" indicatorClassName="bg-primary shadow-[0_0_10px_hsl(var(--primary)/0.5)]" />
                     </div>
-                    <div className="flex items-center justify-between gap-3">
-                      <span className="text-xs font-medium w-24 shrink-0">Rating</span>
-                      <Progress value={Math.round((match.rating / 5) * 100)} className="h-2 flex-1" />
-                      <span className="text-xs font-bold w-9 text-right">{match.rating.toFixed(1)}</span>
+                    <div className="space-y-2">
+                      <div className="flex items-center justify-between text-xs font-bold uppercase tracking-wider">
+                         <span>Rating</span>
+                         <span className="text-warning">{typeof match.rating === 'number' ? match.rating.toFixed(1) : '–'}</span>
+                      </div>
+                      <Progress value={typeof match.rating === 'number' ? Math.round((match.rating / 5) * 100) : 0} className="h-1.5 bg-white/5" indicatorClassName="bg-warning shadow-[0_0_10px_hsl(var(--warning)/0.5)]" />
                     </div>
                   </div>
                 </div>
 
-                <div className="rounded-xl border border-white/10 bg-background/50 p-4 backdrop-blur-md shadow-sm flex flex-col justify-center">
+                <div className="rounded-3xl border border-white/5 bg-black/20 p-5 backdrop-blur-md shadow-[inset_0_1px_0_0_hsla(0,0%,100%,0.05)] flex flex-col justify-center h-full min-h-[140px]">
                   <SkillGraphCard
                     offeredSkills={match.wantsToLearnFromYou ?? []}
                     wantedSkills={match.teachesYou ?? []}
@@ -348,13 +345,13 @@ const AIBestMatchCard: FC<{ match: MatchUser; currentUser: User | null }> = Reac
               </div>
 
               {match.matchReasons.length > 0 && (
-                <div>
-                  <h4 className="text-xs font-bold uppercase tracking-wider text-muted-foreground mb-2 flex items-center gap-2">
-                    <Zap className="h-3 w-3 text-primary" /> Why this match?
+                <div className="rounded-3xl border border-primary/10 bg-primary/5 p-4 mt-2 shrink-0">
+                  <h4 className="text-[10px] font-bold uppercase tracking-widest text-primary/80 mb-3 flex items-center gap-2">
+                    <Zap className="h-3 w-3" /> Why this match?
                   </h4>
                   <div className="flex flex-wrap gap-2">
                     {match.matchReasons.slice(0, 4).map((reason: string) => (
-                      <Badge key={reason} variant="secondary" className="px-3 py-1 font-medium bg-primary/10 text-primary border-primary/20">
+                      <Badge key={reason} variant="secondary" className="px-3 py-1 text-[11px] font-bold tracking-wide uppercase bg-primary/10 text-primary border-primary/20">
                         {reason}
                       </Badge>
                     ))}
@@ -362,11 +359,11 @@ const AIBestMatchCard: FC<{ match: MatchUser; currentUser: User | null }> = Reac
                 </div>
               )}
 
-              <div className="flex gap-3 pt-2">
-                <Button variant="gradient" className="flex-1 md:flex-none md:w-48 shadow-lg shadow-primary/25 hover:shadow-primary/40 font-bold" onClick={() => setRequestOpen(true)}>
+              <div className="flex gap-3 pt-2 h-11 mt-auto shrink-0">
+                <Button variant="gradient" className="flex-1 md:flex-none md:w-48 shadow-[0_0_20px_hsl(var(--primary)/0.3)] hover:shadow-[0_0_30px_hsl(var(--primary)/0.5)] font-bold uppercase tracking-wider text-xs h-full rounded-2xl" onClick={() => setRequestOpen(true)}>
                   Request Exchange
                 </Button>
-                <Button variant="outline" className="flex-1 md:flex-none glass-subtle border-white/20 hover:bg-white/10" asChild>
+                <Button variant="outline" className="flex-1 md:flex-none md:w-48 glass-subtle border-white/10 hover:bg-white/10 font-bold uppercase tracking-wider text-xs h-full rounded-2xl" asChild>
                   <Link to={`/profile/${match.id}`}>View Profile</Link>
                 </Button>
               </div>
@@ -388,30 +385,30 @@ const MatchCard: FC<{ match: MatchUser }> = React.memo(({ match }) => {
   const [requestOpen, setRequestOpen] = useState(false);
   return (
     <>
-      <Card className="group relative h-full overflow-hidden transition-all duration-400 ease-snappy hover:-translate-y-1.5 hover:border-primary/40 hover:shadow-[0_12px_40px_-12px_hsl(var(--primary)/0.25),0_4px_12px_hsl(220_20%_40%/0.1)]">
+      <Card className="group relative h-full overflow-hidden border-white/5 bg-card rounded-3xl shadow-[inset_0_1px_0_0_hsla(0,0%,100%,0.05)] transition-all duration-400 ease-snappy hover:-translate-y-1.5 hover:border-primary/30 hover:shadow-[0_12px_40px_-12px_hsl(var(--primary)/0.25)]">
         {/* Animated sheen line */}
-        <div className="absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-white/40 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500 z-20" />
+        <div className="absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-white/20 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500 z-20" />
 
         {/* Dynamic Cover Image */}
         <div className="absolute inset-x-0 top-0 h-20 overflow-hidden z-0">
-          <div className="absolute inset-0 bg-gradient-to-r from-primary/40 to-secondary/40 mix-blend-overlay opacity-60 z-10" />
-          <img src="https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?q=80&w=400&auto=format&fit=crop" alt="Cover" className="h-full w-full object-cover opacity-50 mix-blend-luminosity grayscale group-hover:grayscale-0 transition-all duration-700 group-hover:scale-110 group-hover:opacity-80" />
+          <div className="absolute inset-0 bg-gradient-to-r from-primary/30 to-secondary/30 mix-blend-overlay opacity-60 z-10" />
+          <img src="https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?q=80&w=400&auto=format&fit=crop" alt="Cover" className="h-full w-full object-cover opacity-50 mix-blend-luminosity grayscale group-hover:grayscale-0 transition-all duration-700 group-hover:scale-105 group-hover:opacity-80" />
           <div className="absolute inset-0 bg-gradient-to-t from-card via-card/90 to-transparent z-10" />
         </div>
 
-        <CardContent className="relative z-10 p-5 pt-12">
-          <div className="absolute top-12 right-4"><MatchScoreRing score={match.compatibilityScore} size={48} tone="secondary" /></div>
+        <CardContent className="relative z-10 p-4 pt-12">
+          <div className="absolute top-10 right-4"><MatchScoreRing score={match.compatibilityScore} size={48} tone="secondary" className="drop-shadow-md"/></div>
           <div className="flex items-center gap-3 pr-14 relative z-20">
             <Avatar className="h-14 w-14 ring-4 ring-card group-hover:ring-primary/30 transition-all shadow-lg bg-card">
               <AvatarImage src={match.avatar ?? undefined} className="object-cover" />
               <AvatarFallback className="bg-muted text-foreground font-bold">{match.name.charAt(0)}</AvatarFallback>
             </Avatar>
             <div className="mt-2">
-              <h3 className="font-headline text-base font-bold drop-shadow-sm">{match.name}</h3>
-              <p className="text-sm text-muted-foreground">{match.university}</p>
+              <h3 className="font-headline text-base font-bold drop-shadow-sm leading-tight">{match.name}</h3>
+              <p className="text-xs text-muted-foreground mt-0.5">{match.university}</p>
               {match.isOnline && (
-                <span className="flex items-center gap-1 text-xs font-medium text-emerald-600 dark:text-emerald-400">
-                  <span className="h-1.5 w-1.5 rounded-full bg-emerald-500 inline-block" />
+                <span className="flex items-center gap-1 text-[10px] font-bold uppercase tracking-wider text-emerald-500 mt-1">
+                  <span className="h-1.5 w-1.5 rounded-full bg-emerald-500 inline-block shadow-[0_0_8px_var(--emerald-500)]" />
                   Online
                 </span>
               )}
@@ -419,38 +416,39 @@ const MatchCard: FC<{ match: MatchUser }> = React.memo(({ match }) => {
           </div>
           <div className="mt-4 space-y-2 text-sm">
             {match.teachesYou?.[0] && (
-              <div className="flex items-center gap-2 rounded-lg bg-primary/5 border border-primary/10 px-3 py-1.5">
-                <span className="font-semibold text-xs text-primary/80">Teaches</span>
-                <span className="font-bold text-xs">{match.teachesYou[0]}</span>
+              <div className="flex items-center gap-2 rounded-xl bg-primary/10 border border-primary/20 px-3 py-2">
+                <span className="font-bold text-[11px] uppercase tracking-wider text-primary/80">Teaches</span>
+                <span className="font-bold text-xs truncate flex-1">{match.teachesYou[0]}</span>
               </div>
             )}
             {match.wantsToLearnFromYou?.[0] && (
-              <div className="flex items-center gap-2 rounded-lg bg-muted/60 px-3 py-1.5">
-                <span className="font-semibold text-xs text-muted-foreground">Wants</span>
-                <span className="font-medium text-xs">{match.wantsToLearnFromYou[0]}</span>
+              <div className="flex items-center gap-2 rounded-xl bg-muted/30 border border-white/5 px-3 py-2">
+                <span className="font-bold text-[11px] uppercase tracking-wider text-muted-foreground w-14">Wants</span>
+                <span className="font-semibold text-xs truncate flex-1">{match.wantsToLearnFromYou[0]}</span>
               </div>
             )}
           </div>
-          <div className="mt-3 flex flex-wrap items-center gap-x-4 gap-y-1 text-xs text-muted-foreground">
+          <div className="mt-4 flex flex-wrap items-center gap-x-3 gap-y-2 text-[11px] font-semibold text-muted-foreground">
             <div className="flex items-center gap-1"><Star className="h-3 w-3 fill-warning text-warning" /> {typeof match.rating === 'number' ? match.rating.toFixed(1) : '–'}</div>
-            <div className="flex items-center gap-1"><Users className="h-3 w-3" /> {match.sessionsCompleted} sessions</div>
+            <div className="flex items-center gap-1"><Users className="h-3 w-3" /> {match.sessionsCompleted}</div>
             <div className="flex items-center gap-1"><Zap className="h-3 w-3 text-primary" /> {match.skillexScore}</div>
-            <div className="flex items-center gap-1"><Sparkles className="h-3 w-3 text-primary" /> {match.semanticSimilarity}% similarity</div>
+            <div className="flex items-center gap-1"><Sparkles className="h-3 w-3 text-primary" /> {match.semanticSimilarity}% sim</div>
           </div>
           {match.matchReasons?.[0] && (
-            <div className="mt-3 rounded-lg border border-primary/10 bg-primary/5 px-3 py-2 text-xs text-muted-foreground">
+            <div className="mt-4 rounded-xl border border-primary/20 bg-primary/10 px-3 py-2.5 text-xs text-primary/90 font-medium">
               {match.matchReasons[0]}
             </div>
           )}
         </CardContent>
-        <div className="flex border-t border-white/10 dark:border-white/5">
-          <Button variant="ghost" className="w-1/2 rounded-none rounded-bl-2xl text-sm hover:bg-primary/10 transition-colors" asChild>
-            <Link to={`/profile/${match.id}`}>View Profile</Link>
+        <div className="flex border-t border-white/5 bg-muted/10 h-10 mt-auto">
+          <Button variant="ghost" className="w-1/2 h-full rounded-none rounded-bl-3xl text-xs font-bold uppercase tracking-wider hover:bg-white/5 transition-colors" asChild>
+            <Link to={`/profile/${match.id}`}>Profile</Link>
           </Button>
+          <div className="w-px bg-white/5 h-full" />
           <Button
             onClick={() => setRequestOpen(true)}
-            variant="gradient"
-            className="w-1/2 rounded-none rounded-br-2xl text-sm"
+            variant="ghost"
+            className="w-1/2 h-full rounded-none rounded-br-3xl text-xs font-bold uppercase tracking-wider text-primary hover:bg-primary/10 hover:text-primary transition-colors"
           >
             Request
           </Button>
@@ -522,7 +520,7 @@ const SkillChainCard: FC<{ chain: SkillChain }> = React.memo(({ chain }) => {
   return (
     <motion.div
       layout
-      className="rounded-2xl glass-subtle border border-white/10 p-5 shadow-[inset_0_0_0_1px_rgba(255,255,255,0.06)] hover:border-primary/30 transition-colors duration-300"
+      className="rounded-[2rem] bg-card/80 backdrop-blur-md border border-white/5 p-5 shadow-[inset_0_1px_0_0_hsla(0,0%,100%,0.05)] hover:border-primary/30 transition-colors duration-300"
       initial={{ opacity: 0, y: 16 }}
       animate={{ opacity: 1, y: 0 }}
     >
@@ -651,14 +649,14 @@ const SkillChainsTab = () => {
   return (
     <div className="space-y-5">
       {/* ── How It Works explainer ── */}
-      <div className="rounded-xl glass-subtle border border-white/10 p-4">
-        <div className="flex items-start gap-3">
-          <div className="p-2 bg-primary/10 rounded-full shrink-0 mt-0.5">
-            <GitMerge className="h-4 w-4 text-primary" />
+      <div className="rounded-[2rem] bg-card/80 backdrop-blur-md border border-white/5 p-6 shadow-[inset_0_1px_0_0_hsla(0,0%,100%,0.05)]">
+        <div className="flex items-start gap-4">
+          <div className="p-3 bg-primary/20 rounded-full shrink-0 border border-primary/20 shadow-[0_0_12px_hsl(var(--primary)/0.3)] mt-0.5">
+            <GitMerge className="h-5 w-5 text-primary" />
           </div>
           <div className="flex-1 min-w-0">
-            <p className="text-sm font-semibold">Barter Exchange Detection — How It Works</p>
-            <p className="mt-0.5 text-xs text-muted-foreground leading-relaxed">
+            <p className="text-base font-bold uppercase tracking-wider">Barter Exchange Detection</p>
+            <p className="mt-1 text-xs text-muted-foreground leading-relaxed">
               SkiilEX's AI builds a directed graph of all users and their offered/wanted skills, then
               runs a three-colour DFS cycle-detection algorithm to find exchange rings automatically.
               No money changes hands — every member teaches what they know and learns what they need.
@@ -697,18 +695,18 @@ const SkillChainsTab = () => {
 
       {/* ── Stats bar ── */}
       {!loading && cycles.length > 0 && (
-        <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-4 auto-rows-min">
           {[
-            { icon: <Network className="h-4 w-4 text-primary" />, label: 'Total Chains', value: cycles.length },
-            { icon: <ArrowLeftRight className="h-4 w-4 text-emerald-400" />, label: 'Perfect Swaps', value: perfectSwaps.length },
-            { icon: <Users className="h-4 w-4 text-purple-400" />, label: 'Participants', value: totalParticipants },
-            { icon: <CheckCircle2 className="h-4 w-4 text-amber-400" />, label: 'Your Chains', value: myChainCount },
+            { icon: <Network className="h-5 w-5 text-primary" />, label: 'Total Chains', value: cycles.length },
+            { icon: <ArrowLeftRight className="h-5 w-5 text-emerald-400" />, label: 'Perfect Swaps', value: perfectSwaps.length },
+            { icon: <Users className="h-5 w-5 text-purple-400" />, label: 'Participants', value: totalParticipants },
+            { icon: <CheckCircle2 className="h-5 w-5 text-warning" />, label: 'Your Chains', value: myChainCount },
           ].map(stat => (
-            <div key={stat.label} className="rounded-xl glass-subtle border border-white/10 px-4 py-3 flex items-center gap-3">
-              <div className="p-2 rounded-lg bg-white/[0.04] shrink-0">{stat.icon}</div>
+            <div key={stat.label} className="rounded-3xl border border-white/5 bg-black/20 p-5 backdrop-blur-md shadow-[inset_0_1px_0_0_hsla(0,0%,100%,0.05)] flex items-center justify-center flex-col text-center">
+              <div className="p-3 rounded-full bg-white/5 shrink-0 mb-3">{stat.icon}</div>
               <div>
-                <div className="text-xl font-bold tabular-nums">{stat.value}</div>
-                <div className="text-[11px] text-muted-foreground">{stat.label}</div>
+                <div className="text-3xl font-headline font-extrabold tabular-nums leading-none mb-1 text-primary drop-shadow-[0_0_8px_var(--primary)]">{stat.value}</div>
+                <div className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">{stat.label}</div>
               </div>
             </div>
           ))}
@@ -717,36 +715,36 @@ const SkillChainsTab = () => {
 
       {/* ── Loading ── */}
       {loading ? (
-        <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
-          {[...Array(4)].map((_, i) => <Skeleton key={i} variant="card" />)}
+        <div className="grid grid-cols-1 gap-4 lg:grid-cols-2 auto-rows-min">
+          {[...Array(4)].map((_, i) => <Skeleton key={i} variant="card" className="rounded-[2rem] h-[300px]" />)}
         </div>
       ) : cycles.length === 0 ? (
-        <div className="flex flex-col items-center justify-center rounded-3xl glass-subtle py-20 text-center border border-white/10">
-          <div className="p-4 bg-muted/20 rounded-full">
-            <GitMerge className="h-10 w-10 text-muted-foreground/50" />
+        <div className="flex flex-col items-center justify-center rounded-[2rem] bg-card/80 backdrop-blur-md py-20 text-center border border-white/5 shadow-[inset_0_1px_0_0_hsla(0,0%,100%,0.05)]">
+          <div className="p-5 bg-white/5 rounded-full border border-white/10">
+            <GitMerge className="h-12 w-12 text-muted-foreground/50" />
           </div>
-          <p className="mt-4 text-base font-semibold">No exchange chains detected yet</p>
-          <p className="mt-1 text-sm text-muted-foreground max-w-sm">
-            Add offered and wanted skills to your profile. The algorithm automatically detects
+          <p className="mt-6 text-lg font-headline font-bold">No exchange chains detected yet</p>
+          <p className="mt-2 text-sm text-muted-foreground max-w-md px-4">
+            Add offered and wanted skills to your profile. The AI automatically detects
             2-way swaps and multi-person rings system-wide.
           </p>
-          <Button variant="outline" size="sm" className="mt-5 gap-2" onClick={refetch}>
-            <RefreshCw className="h-3.5 w-3.5" /> Retry Detection
+          <Button variant="outline" size="sm" className="mt-8 gap-2 rounded-2xl glass-subtle border border-white/10 hover:bg-white/10 font-bold uppercase tracking-wider text-xs px-6 py-5" onClick={refetch}>
+            <RefreshCw className="h-4 w-4" /> Retry Detection
           </Button>
         </div>
       ) : (
-        <div className="space-y-6">
+        <div className="space-y-8">
           {/* 2-Way Perfect Swaps */}
           {perfectSwaps.length > 0 && (
             <section>
-              <div className="flex items-center gap-2 mb-3">
-                <ArrowLeftRight className="h-4 w-4 text-emerald-400" />
-                <h3 className="text-sm font-semibold">Perfect 2-Way Swaps</h3>
-                <Badge variant="outline" className="border-emerald-500/40 text-emerald-400 text-[10px]">
+              <div className="flex items-center gap-3 mb-4">
+                <ArrowLeftRight className="h-5 w-5 text-emerald-400 drop-shadow-[0_0_8px_var(--emerald-400)]" />
+                <h3 className="font-headline text-lg font-bold uppercase tracking-wider">Perfect 2-Way Swaps</h3>
+                <Badge className="bg-emerald-500/20 text-emerald-400 border border-emerald-500/40 text-[10px] font-bold px-2.5 py-0.5 rounded-full drop-shadow-[0_0_8px_var(--emerald-400)]">
                   {perfectSwaps.length}
                 </Badge>
               </div>
-              <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
+              <div className="grid grid-cols-1 gap-4 lg:grid-cols-2 auto-rows-min">
                 {perfectSwaps.map((chain, i) => (
                   <ExchangeChainCard
                     key={`swap-${i}`}
@@ -763,14 +761,14 @@ const SkillChainsTab = () => {
           {/* Multi-person chains */}
           {multiChains.length > 0 && (
             <section>
-              <div className="flex items-center gap-2 mb-3">
-                <Zap className="h-4 w-4 text-primary" />
-                <h3 className="text-sm font-semibold">Multi-Person Chains</h3>
-                <Badge variant="outline" className="border-primary/40 text-primary text-[10px]">
+              <div className="flex items-center gap-3 mb-4">
+                <Zap className="h-5 w-5 text-primary drop-shadow-[0_0_8px_var(--primary)]" />
+                <h3 className="font-headline text-lg font-bold uppercase tracking-wider">Multi-Person Chains</h3>
+                <Badge className="bg-primary/20 text-primary border border-primary/40 text-[10px] font-bold px-2.5 py-0.5 rounded-full drop-shadow-[0_0_8px_var(--primary)]">
                   {multiChains.length}
                 </Badge>
               </div>
-              <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
+              <div className="grid grid-cols-1 gap-4 lg:grid-cols-2 auto-rows-min">
                 {multiChains.map((chain, i) => (
                   <ExchangeChainCard
                     key={`chain-${i}`}
@@ -1078,8 +1076,30 @@ export default function MatchPage() {
                     {activeTab === 'direct' ? (
                       <>
                         {bestMatch && <AIBestMatchCard match={bestMatch} currentUser={user} />}
-                        <div className="my-6 flex flex-col items-start gap-4 md:flex-row md:items-center md:justify-between"><p className="font-semibold text-muted-foreground">Showing {otherMatches.length} other matches</p><div className="flex items-center gap-2"><Select value={sortOption} onValueChange={setSortOption}><SelectTrigger className="w-[180px]"><SelectValue placeholder="Sort by" /></SelectTrigger><SelectContent><SelectItem value="best">Best Match</SelectItem><SelectItem value="rating">Rating</SelectItem><SelectItem value="sessions">Sessions</SelectItem></SelectContent></Select><div className="rounded-md bg-muted p-1"><Button aria-label="Grid view" size="sm" variant={view === 'grid' ? 'default' : 'ghost'} onClick={() => setView('grid')}><LayoutGrid /></Button><Button aria-label="List view" size="sm" variant={view === 'list' ? 'default' : 'ghost'} onClick={() => setView('list')}><List /></Button></div></div></div>
-                        {otherMatches.length === 0 && !bestMatch ? <EmptyState onReset={() => setFilters(defaultFilters)} /> : (<motion.div key={view} variants={containerVariants} initial="hidden" animate="visible" className={cn(view === 'grid' ? 'grid grid-cols-1 gap-6 md:grid-cols-2 xl:grid-cols-3' : 'space-y-4')}>{otherMatches.map((match) => (<motion.div variants={itemVariants} key={match.id}><MatchCard match={match} /></motion.div>))}</motion.div>)}
+                        <div className="my-6 rounded-3xl glass-subtle border border-white/5 p-4 flex flex-col items-start gap-4 md:flex-row md:items-center md:justify-between">
+                          <p className="text-xs uppercase tracking-widest font-bold text-muted-foreground ml-2">Showing {otherMatches.length} other matches</p>
+                          <div className="flex items-center gap-3">
+                            <Select value={sortOption} onValueChange={setSortOption}>
+                              <SelectTrigger className="w-[180px] bg-black/40 border-white/10 rounded-xl h-9 text-xs">
+                                <SelectValue placeholder="Sort by" />
+                              </SelectTrigger>
+                              <SelectContent className="rounded-xl border-white/10 bg-black/80 backdrop-blur-xl">
+                                <SelectItem value="best" className="text-xs focus:bg-white/10">Best Match</SelectItem>
+                                <SelectItem value="rating" className="text-xs focus:bg-white/10">Rating</SelectItem>
+                                <SelectItem value="sessions" className="text-xs focus:bg-white/10">Sessions</SelectItem>
+                              </SelectContent>
+                            </Select>
+                            <div className="rounded-xl bg-black/40 border border-white/5 p-1 flex gap-1">
+                              <Button aria-label="Grid view" size="sm" variant={view === 'grid' ? 'secondary' : 'ghost'} onClick={() => setView('grid')} className={cn("h-7 w-7 p-0 rounded-lg", view === 'grid' && "bg-white/10 text-white shadow-sm")}>
+                                <LayoutGrid className="h-3.5 w-3.5" />
+                              </Button>
+                              <Button aria-label="List view" size="sm" variant={view === 'list' ? 'secondary' : 'ghost'} onClick={() => setView('list')} className={cn("h-7 w-7 p-0 rounded-lg", view === 'list' && "bg-white/10 text-white shadow-sm")}>
+                                <List className="h-3.5 w-3.5" />
+                              </Button>
+                            </div>
+                          </div>
+                        </div>
+                        {otherMatches.length === 0 && !bestMatch ? <EmptyState onReset={() => setFilters(defaultFilters)} /> : (<motion.div key={view} variants={containerVariants} initial="hidden" animate="visible" className={cn(view === 'grid' ? 'grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-3 auto-rows-min' : 'space-y-4')}>{otherMatches.map((match) => (<motion.div variants={itemVariants} key={match.id}><MatchCard match={match} /></motion.div>))}</motion.div>)}
                       </>
                     ) : activeTab === 'chain' ? (
                       <SkillChainsTab />

@@ -5,9 +5,12 @@ import com.skillex.model.User;
 import com.skillex.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.data.domain.PageRequest;
 import org.springframework.stereotype.Component;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.time.Duration;
+import java.time.Instant;
 import java.util.*;
 import java.util.stream.Collectors;
 
@@ -49,7 +52,13 @@ import java.util.stream.Collectors;
 @Slf4j
 public class ExchangeGraphBuilder {
 
+    private static final int SUBGRAPH_POOL_PER_HOP = 300;
+    private static final int SUBGRAPH_NODE_CAP = 900;
+    private static final Duration FULL_GRAPH_CACHE_TTL = Duration.ofSeconds(45);
+
     private final UserRepository userRepository;
+    private volatile ExchangeGraph cachedFullGraph;
+    private volatile Instant cachedFullGraphAt = Instant.EPOCH;
 
     // ── Public API ────────────────────────────────────────────────────────────
 
@@ -63,47 +72,33 @@ public class ExchangeGraphBuilder {
      */
     @Transactional(readOnly = true)
     public ExchangeGraph build() {
-        log.debug("ExchangeGraphBuilder: starting full graph build");
-
-        // ── Step 1: Load offered and wanted skills separately (no N+1) ──────
-        List<User> withOffered = userRepository.findAllWithOfferedSkills();
-        List<User> withWanted  = userRepository.findAllWithWantedSkills();
-
-        // ── Step 2: Merge into node map (offered + wanted per user) ──────────
-        Map<String, ExchangeGraphNode> nodes = mergeIntoNodes(withOffered, withWanted);
-
-        // ── Step 3: Build the ExchangeGraph with all nodes ───────────────────
-        ExchangeGraph graph = new ExchangeGraph();
-        for (ExchangeGraphNode node : nodes.values()) {
-            graph.addNode(node);
+        Instant now = Instant.now();
+        ExchangeGraph cached = cachedFullGraph;
+        if (cached != null && now.isBefore(cachedFullGraphAt.plus(FULL_GRAPH_CACHE_TTL))) {
+            return cached;
         }
 
-        // ── Step 4: Add directed edges A → B when A.wanted ∩ B.offered ≠ ∅ ──
-        List<ExchangeGraphNode> nodeList = new ArrayList<>(nodes.values());
-        int edgesAdded = 0;
-
-        for (ExchangeGraphNode nodeA : nodeList) {
-            if (nodeA.wantedSkillIds().isEmpty()) continue;  // A wants nothing → no outgoing edges
-
-            for (ExchangeGraphNode nodeB : nodeList) {
-                if (nodeA.userId().equals(nodeB.userId())) continue; // skip self
-                if (nodeB.offeredSkillIds().isEmpty())     continue; // B offers nothing → no edge
-
-                Set<String> matching = nodeA.matchingSkillsWith(nodeB);
-                if (!matching.isEmpty()) {
-                    graph.addEdge(new ExchangeGraphEdge(
-                        nodeA.userId(),
-                        nodeB.userId(),
-                        matching
-                    ));
-                    edgesAdded++;
-                }
+        synchronized (this) {
+            now = Instant.now();
+            cached = cachedFullGraph;
+            if (cached != null && now.isBefore(cachedFullGraphAt.plus(FULL_GRAPH_CACHE_TTL))) {
+                return cached;
             }
-        }
 
-        log.debug("ExchangeGraphBuilder: built {} — {} nodes, {} edges",
-            graph, nodes.size(), edgesAdded);
-        return graph;
+            log.debug("ExchangeGraphBuilder: starting full graph build");
+
+            List<User> withOffered = userRepository.findAllWithOfferedSkills();
+            List<User> withWanted  = userRepository.findAllWithWantedSkills();
+            Map<String, ExchangeGraphNode> nodes = mergeIntoNodes(withOffered, withWanted);
+            ExchangeGraph graph = buildGraphFromNodes(nodes);
+
+            cachedFullGraph = graph;
+            cachedFullGraphAt = now;
+
+            log.debug("ExchangeGraphBuilder: built {} — {} nodes, {} edges",
+                graph, nodes.size(), graph.edgeCount());
+            return graph;
+        }
     }
 
     /**
@@ -119,10 +114,49 @@ public class ExchangeGraphBuilder {
      */
     @Transactional(readOnly = true)
     public ExchangeGraph buildSubgraph(String userId, int maxHops) {
-        // Build the full graph and extract the relevant subgraph.
-        // For larger scale, this should be replaced with a targeted DB query.
-        ExchangeGraph full = build();
-        return extractSubgraph(full, userId, maxHops);
+        if (maxHops <= 0) {
+            return buildGraphFromNodes(loadNodes(Set.of(userId)));
+        }
+
+        Set<String> discovered = new LinkedHashSet<>();
+        discovered.add(userId);
+
+        Set<String> frontier = new LinkedHashSet<>();
+        frontier.add(userId);
+
+        for (int hop = 0; hop < maxHops && !frontier.isEmpty() && discovered.size() < SUBGRAPH_NODE_CAP; hop++) {
+            Map<String, ExchangeGraphNode> frontierNodes = loadNodes(frontier);
+            if (frontierNodes.isEmpty()) {
+                break;
+            }
+
+            Set<String> wantedSeeds = new LinkedHashSet<>();
+            Set<String> offeredSeeds = new LinkedHashSet<>();
+            for (ExchangeGraphNode node : frontierNodes.values()) {
+                wantedSeeds.addAll(node.wantedSkillIds());
+                offeredSeeds.addAll(node.offeredSkillIds());
+            }
+
+            Set<String> hopCandidates = discoverCandidateIds(userId, wantedSeeds, offeredSeeds);
+            hopCandidates.removeAll(discovered);
+            if (hopCandidates.isEmpty()) {
+                break;
+            }
+
+            int remainingSlots = Math.max(0, SUBGRAPH_NODE_CAP - discovered.size());
+            Set<String> bounded = hopCandidates.stream()
+                .limit(remainingSlots)
+                .collect(Collectors.toCollection(LinkedHashSet::new));
+
+            discovered.addAll(bounded);
+            frontier = bounded;
+        }
+
+        Map<String, ExchangeGraphNode> nodes = loadNodes(discovered);
+        ExchangeGraph subgraph = buildGraphFromNodes(nodes);
+        log.debug("ExchangeGraphBuilder: built subgraph for user {} with {} nodes and {} edges",
+            userId, subgraph.nodeCount(), subgraph.edgeCount());
+        return subgraph;
     }
 
     // ── Private helpers ───────────────────────────────────────────────────────
@@ -169,48 +203,60 @@ public class ExchangeGraphBuilder {
         return result;
     }
 
-    /**
-     * BFS extraction of a subgraph up to {@code maxHops} from {@code rootId}.
-     */
-    private ExchangeGraph extractSubgraph(ExchangeGraph full, String rootId, int maxHops) {
-        ExchangeGraph sub = new ExchangeGraph();
+    private Map<String, ExchangeGraphNode> loadNodes(Set<String> userIds) {
+        if (userIds == null || userIds.isEmpty()) {
+            return Map.of();
+        }
+        List<User> withOffered = userRepository.findAllWithOfferedSkillsByIds(userIds);
+        List<User> withWanted = userRepository.findAllWithWantedSkillsByIds(userIds);
+        return mergeIntoNodes(withOffered, withWanted);
+    }
 
-        Set<String> visited = new LinkedHashSet<>();
-        Deque<String> queue = new ArrayDeque<>();
-        Map<String, Integer> depth = new HashMap<>();
+    private Set<String> discoverCandidateIds(String rootUserId, Set<String> wantedSeeds, Set<String> offeredSeeds) {
+        Set<String> ids = new LinkedHashSet<>();
 
-        queue.add(rootId);
-        depth.put(rootId, 0);
+        if (!wantedSeeds.isEmpty()) {
+            ids.addAll(userRepository.findMatchCandidates(
+                rootUserId,
+                wantedSeeds,
+                PageRequest.of(0, SUBGRAPH_POOL_PER_HOP)
+            ));
+        }
 
-        while (!queue.isEmpty()) {
-            String current = queue.poll();
-            if (visited.contains(current)) continue;
-            visited.add(current);
+        if (!offeredSeeds.isEmpty()) {
+            ids.addAll(userRepository.findCandidatesByWantedSkills(
+                rootUserId,
+                offeredSeeds,
+                PageRequest.of(0, SUBGRAPH_POOL_PER_HOP)
+            ));
+        }
 
-            full.getNode(current).ifPresent(sub::addNode);
+        return ids;
+    }
 
-            int currentDepth = depth.getOrDefault(current, 0);
-            if (currentDepth < maxHops) {
-                for (ExchangeGraphEdge edge : full.outgoingEdges(current)) {
-                    String neighbour = edge.toUserId();
-                    if (!visited.contains(neighbour)) {
-                        depth.putIfAbsent(neighbour, currentDepth + 1);
-                        queue.add(neighbour);
-                    }
+    private ExchangeGraph buildGraphFromNodes(Map<String, ExchangeGraphNode> nodes) {
+        ExchangeGraph graph = new ExchangeGraph();
+        for (ExchangeGraphNode node : nodes.values()) {
+            graph.addNode(node);
+        }
+
+        List<ExchangeGraphNode> nodeList = new ArrayList<>(nodes.values());
+        for (ExchangeGraphNode fromNode : nodeList) {
+            if (fromNode.wantedSkillIds().isEmpty()) {
+                continue;
+            }
+            for (ExchangeGraphNode toNode : nodeList) {
+                if (fromNode.userId().equals(toNode.userId()) || toNode.offeredSkillIds().isEmpty()) {
+                    continue;
+                }
+                Set<String> matching = fromNode.matchingSkillsWith(toNode);
+                if (!matching.isEmpty()) {
+                    graph.addEdge(new ExchangeGraphEdge(fromNode.userId(), toNode.userId(), matching));
                 }
             }
         }
 
-        // Add edges that exist between any two visited nodes
-        for (String from : visited) {
-            for (ExchangeGraphEdge edge : full.outgoingEdges(from)) {
-                if (visited.contains(edge.toUserId())) {
-                    sub.addEdge(edge);
-                }
-            }
-        }
-
-        return sub;
+        return graph;
     }
 
     private static Set<String> skillIds(List<Skill> skills) {

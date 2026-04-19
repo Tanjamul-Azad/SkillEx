@@ -8,11 +8,25 @@ import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 
+import java.math.BigDecimal;
+import java.util.Collection;
 import java.util.List;
 import java.util.Optional;
 
 @Repository
 public interface UserRepository extends JpaRepository<User, String> {
+
+    interface UserSearchCardProjection {
+        String getId();
+        String getName();
+        String getUsername();
+        String getAvatar();
+        String getUniversity();
+        Integer getSkillexScore();
+        BigDecimal getRating();
+        Integer getSessionsCompleted();
+        Boolean getIsOnline();
+    }
 
     Optional<User> findByEmail(String email);
 
@@ -29,6 +43,31 @@ public interface UserRepository extends JpaRepository<User, String> {
         String username,
         String name,
         String university,
+        Pageable pageable);
+
+    @Query("""
+        SELECT
+            u.id AS id,
+            u.name AS name,
+            u.username AS username,
+            u.avatar AS avatar,
+            u.university AS university,
+            u.skillexScore AS skillexScore,
+            u.rating AS rating,
+            u.sessionsCompleted AS sessionsCompleted,
+            u.isOnline AS isOnline
+        FROM User u
+        WHERE u.id <> :viewerId
+          AND (
+              :query IS NULL OR :query = ''
+              OR LOWER(u.username) LIKE LOWER(CONCAT('%', :query, '%'))
+              OR LOWER(u.name) LIKE LOWER(CONCAT('%', :query, '%'))
+              OR LOWER(COALESCE(u.university, '')) LIKE LOWER(CONCAT('%', :query, '%'))
+          )
+        """)
+    Page<UserSearchCardProjection> searchUserCards(
+        @Param("viewerId") String viewerId,
+        @Param("query") String query,
         Pageable pageable);
 
     /**
@@ -83,6 +122,9 @@ public interface UserRepository extends JpaRepository<User, String> {
     @Query("SELECT DISTINCT u FROM User u LEFT JOIN FETCH u.skillsOffered")
     List<User> findAllWithOfferedSkills();
 
+    @Query("SELECT DISTINCT u FROM User u LEFT JOIN FETCH u.skillsOffered WHERE u.id IN :userIds")
+    List<User> findAllWithOfferedSkillsByIds(@Param("userIds") Collection<String> userIds);
+
     /**
      * Fetch all users with their <b>wanted</b> skills eagerly loaded
      * (single query, no N+1).  Used by {@link com.skillex.service.match.graph.ExchangeGraphBuilder}
@@ -90,6 +132,9 @@ public interface UserRepository extends JpaRepository<User, String> {
      */
     @Query("SELECT DISTINCT u FROM User u LEFT JOIN FETCH u.skillsWanted")
     List<User> findAllWithWantedSkills();
+
+    @Query("SELECT DISTINCT u FROM User u LEFT JOIN FETCH u.skillsWanted WHERE u.id IN :userIds")
+    List<User> findAllWithWantedSkillsByIds(@Param("userIds") Collection<String> userIds);
 
     /**
      * Top mentors: users ordered by sessions completed descending, then rating descending.

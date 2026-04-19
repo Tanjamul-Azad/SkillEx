@@ -13,6 +13,7 @@ import com.skillex.model.User;
 public interface AuthService {
     AuthResponse register(RegisterRequest request);
     AuthResponse login(LoginRequest request);
+    AuthResponse loginWithGoogle(String email, String name, String avatarUrl);
     AuthResponse refresh(RefreshTokenRequest request);
     void logout(String userId);
     User getCurrentUser(@org.springframework.lang.NonNull String userId);

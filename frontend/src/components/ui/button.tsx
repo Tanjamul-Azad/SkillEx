@@ -26,13 +26,13 @@ const buttonVariants = cva(
   {
     variants: {
       variant: {
-        // Solid primary — lifts, shadow deepens slightly, bg darkens a touch via opacity
+        // Solid primary — standard UI button (high contrast)
         default:
-          "bg-primary text-primary-foreground " +
-          "shadow-[0_1px_3px_hsl(var(--primary)/0.25),0_2px_8px_hsl(var(--primary)/0.18)] " +
-          "hover:-translate-y-[3px] " +
-          "hover:bg-primary/90 " +
-          "hover:shadow-[0_4px_14px_hsl(var(--primary)/0.30),0_1px_4px_hsl(var(--primary)/0.20)]",
+          "bg-foreground text-background font-medium " +
+          "shadow-[0_1px_2px_hsl(var(--foreground)/0.10)] " +
+          "hover:-translate-y-[2px] " +
+          "hover:bg-foreground/90 " +
+          "hover:shadow-[0_4px_10px_hsl(var(--foreground)/0.15)]",
         // Destructive — same pattern, red tones
         destructive:
           "bg-destructive text-destructive-foreground " +
@@ -60,9 +60,9 @@ const buttonVariants = cva(
         // Link — underline animation only, no translate
         link:
           "text-primary underline-offset-4 hover:underline active:scale-100 rounded-none",
-        // Gradient CTA — primary/secondary gradient fill, glow shadow, slight scale
+        // Solid Highlight CTA — primary fill, glow shadow, slight scale
         gradient:
-          "gradient-bg text-primary-foreground font-bold " +
+          "bg-primary text-primary-foreground font-bold " +
           "shadow-[0_2px_12px_hsl(var(--primary)/0.35),0_1px_4px_hsl(var(--primary)/0.20)] " +
           "hover:-translate-y-[3px] hover:scale-[1.02] " +
           "hover:shadow-[0_6px_20px_hsl(var(--primary)/0.40),0_2px_6px_hsl(var(--primary)/0.25)] " +

@@ -44,9 +44,11 @@ public final class CommunityDtos {
         String content,
         SkillRef skill,
         String badge,
+        String mediaUrl,
         int likes,
         int comments,
         int shares,
+        boolean isLikedByViewer,
         LocalDateTime createdAt
     ) {}
 
@@ -69,4 +71,27 @@ public final class CommunityDtos {
     ) {}
 
     public record SkillRef(String id, String name, String icon, String category) {}
+
+    /** Used by GET /api/community/trending-skills */
+    public record TrendingSkillDto(
+        String id,
+        String name,
+        String icon,
+        String category,
+        long postCount,
+        int growthPercent
+    ) {}
+
+    /** Used by GET /api/community/suggested-users */
+    public record SuggestedUserDto(
+        String id,
+        String name,
+        String username,
+        String avatar,
+        String university,
+        int skillexScore,
+        boolean isOnline,
+        List<String> sharedSkills,
+        String reason
+    ) {}
 }

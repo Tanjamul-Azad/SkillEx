@@ -67,7 +67,9 @@ public class SecurityConfig {
                     "/api/community/circles",
                     "/api/community/circles/**",
                     "/api/community/skill-circles",
-                    "/api/community/skill-circles/**"
+                    "/api/community/skill-circles/**",
+                    "/api/community/trending-skills",
+                    "/api/community/online-count"
                 ).permitAll()
                 .anyRequest().authenticated()
             )

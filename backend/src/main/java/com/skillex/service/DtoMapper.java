@@ -7,6 +7,7 @@ import com.skillex.dto.exchange.ExchangeDto;
 import com.skillex.dto.session.SessionDto;
 import com.skillex.dto.review.ReviewDto;
 import com.skillex.dto.community.CommunityDtos;
+import com.skillex.dto.community.CommentDto;
 import com.skillex.dto.notification.NotificationDto;
 import com.skillex.model.*;
 import com.skillex.repository.UserSkillOfferedRepository;
@@ -50,7 +51,7 @@ public class DtoMapper {
                 Skill s = r.getSkill();
                 return new UserProfileDto.SkillWithLevel(
                     s.getId(), s.getName(), s.getIcon(), s.getCategory(), s.getDescription(),
-                    r.getLevel().name());
+                    r.getLevel().name(), r.getProofVideoUrl(), r.getSubtitle());
             })
             .toList();
 
@@ -59,7 +60,7 @@ public class DtoMapper {
                 Skill s = r.getSkill();
                 return new UserProfileDto.SkillWithLevel(
                     s.getId(), s.getName(), s.getIcon(), s.getCategory(), s.getDescription(),
-                    r.getLevel().name());
+                    r.getLevel().name(), null, null); // wanted skills don't have proofs
             })
             .toList();
 
@@ -159,13 +160,34 @@ public class DtoMapper {
         );
     }
 
+    /**
+     * Maps a Post entity to PostDto WITHOUT viewer context (isLikedByViewer = false).
+     * Use {@link #toPost(Post, boolean)} when viewer context is available.
+     */
     public CommunityDtos.PostDto toPost(Post p) {
+        return toPost(p, false);
+    }
+
+    /**
+     * Maps a Post entity to PostDto WITH viewer context for isLikedByViewer.
+     */
+    public CommunityDtos.PostDto toPost(Post p, boolean isLikedByViewer) {
         return new CommunityDtos.PostDto(
             p.getId(), p.getType().name(),
             toSummary(p.getAuthor()), p.getContent(),
             p.getSkill() == null ? null : toSkillRefCommunity(p.getSkill()),
-            p.getBadge(), p.getLikes(), p.getComments(), p.getShares(),
+            p.getBadge(), p.getMediaUrl(), p.getLikes(), p.getComments(), p.getShares(),
+            isLikedByViewer,
             p.getCreatedAt()
+        );
+    }
+
+    public CommentDto toComment(Comment c) {
+        return new CommentDto(
+            c.getId(),
+            toSummary(c.getAuthor()),
+            c.getContent(),
+            c.getCreatedAt()
         );
     }
 

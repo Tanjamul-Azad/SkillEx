@@ -219,12 +219,12 @@ function ConversationItem({
       className={cn(
         'w-full flex items-center gap-4 p-4 rounded-[1.5rem] text-left transition-all duration-300',
         active
-          ? 'bg-black/40 border border-white/10 shadow-[inset_0_1px_0_0_hsla(0,0%,100%,0.05),0_0_20px_hsl(var(--primary)/0.1)]'
-          : 'bg-black/10 border border-white/5 hover:bg-black/20 hover:border-white/10 shadow-[inset_0_1px_0_0_hsla(0,0%,100%,0.05)]'
+          ? 'bg-surface-1 dark:bg-black/50 border border-border dark:border-white/10 shadow-[inset_0_1px_0_0_var(--primary)/0.03,0_0_20px_hsl(var(--primary)/0.1)]'
+          : 'bg-primary/[0.02] dark:bg-black/20 border border-border/60 dark:border-white/5 hover:bg-white dark:bg-black/40 hover:border-border dark:border-white/10 shadow-[inset_0_1px_0_0_var(--primary)/0.03]'
       )}
     >
       <div className="relative shrink-0">
-        <Avatar className="h-12 w-12 border-2 border-white/5 shadow-sm">
+        <Avatar className="h-12 w-12 border-2 border-border/60 dark:border-white/5 shadow-sm">
           <AvatarImage src={conv.user.avatar} alt={conv.user.name} className="object-cover" />
           <AvatarFallback className="bg-gradient-to-br from-primary/20 to-secondary/20 text-sm font-bold text-primary">
             {getInitials(conv.user.name)}
@@ -280,7 +280,7 @@ function MessageBubble({
       {!isMe && (
         <div className="w-8 shrink-0">
           {showAvatar && (
-            <Avatar className="h-8 w-8 border border-white/10 shadow-sm">
+            <Avatar className="h-8 w-8 border border-border dark:border-white/10 shadow-sm">
               <AvatarFallback className="text-[10px] bg-secondary/20 text-secondary font-bold">
                 {getInitials(peerName)}
               </AvatarFallback>
@@ -290,16 +290,16 @@ function MessageBubble({
       )}
       <div className={cn('max-w-[75%] flex flex-col gap-1.5', isMe ? 'items-end' : 'items-start')}>
         {msg.type === 'image' && msg.imageUrl ? (
-          <div className="rounded-[1.5rem] overflow-hidden max-w-[280px] border border-white/10 shadow-md">
+          <div className="rounded-[1.5rem] overflow-hidden max-w-[280px] border border-border dark:border-white/10 shadow-md">
             <img src={msg.imageUrl} alt="attachment" className="w-full object-cover" />
           </div>
         ) : (
           <div
             className={cn(
-              'px-5 py-3 text-[13px] leading-relaxed backdrop-blur-md shadow-[inset_0_1px_0_0_hsla(0,0%,100%,0.05)] border border-white/5',
+              'px-5 py-3 text-[13px] leading-relaxed backdrop-blur-md shadow-[inset_0_1px_0_0_var(--primary)/0.03] border border-border/60 dark:border-white/5',
               isMe
-                ? 'bg-primary/20 text-foreground rounded-[1.5rem] rounded-br-sm border-primary/20'
-                : 'bg-black/40 text-foreground rounded-[1.5rem] rounded-bl-sm'
+                ? 'bg-primary text-primary-foreground text-foreground rounded-[1.5rem] rounded-br-sm border-primary/20'
+                : 'bg-primary/[0.04] dark:bg-surface-3 text-foreground rounded-[1.5rem] rounded-bl-sm'
             )}
           >
             {msg.content}
@@ -591,21 +591,21 @@ export default function MessagesPage() {
   return (
     <DashboardLayout>
       <div className="h-[calc(100vh-4rem)] flex flex-col p-4 sm:p-6 lg:p-8">
-        <div className="flex-1 flex overflow-hidden rounded-[2rem] border border-white/5 bg-black/20 backdrop-blur-md shadow-[inset_0_1px_0_0_hsla(0,0%,100%,0.05),0_8px_32px_rgba(0,0,0,0.4)]">
+        <div className="flex-1 flex overflow-hidden rounded-[2rem] border border-border/60 dark:border-white/5 bg-white dark:bg-black/40 backdrop-blur-md shadow-[inset_0_1px_0_0_var(--primary)/0.03,0_8px_32px_var(--primary)/0.08]">
 
           {/* ── Sidebar ── */}
           <div className={cn(
-            'w-full md:w-80 xl:w-96 flex-col border-r border-white/5 bg-black/20 backdrop-blur-md',
+            'w-full md:w-80 xl:w-96 flex-col border-r border-border/60 dark:border-white/5 bg-white dark:bg-black/40 backdrop-blur-md',
             mobileShowChat ? 'hidden md:flex' : 'flex'
           )}>
             {/* Header */}
-            <div className="p-6 border-b border-white/5">
+            <div className="p-6 border-b border-border/60 dark:border-white/5">
               <div className="flex items-center justify-between mb-5">
                 <h1 className="text-2xl font-extrabold font-headline text-foreground drop-shadow-sm">Messages</h1>
                 <Button
                   size="icon"
                   variant="ghost"
-                  className="h-10 w-10 rounded-full border border-white/5 bg-white/5 hover:bg-primary/20 hover:border-primary/50 text-foreground hover:text-primary transition-all shadow-[inset_0_1px_0_0_hsla(0,0%,100%,0.05)]"
+                  className="h-10 w-10 rounded-full border border-border/60 dark:border-white/5 border-border dark:border-white/5 bg-primary/[0.04] dark:bg-white/5 hover:bg-primary text-primary-foreground hover:border-primary/50 text-foreground hover:text-primary transition-all shadow-[inset_0_1px_0_0_var(--primary)/0.03]"
                   onClick={() => toast({ title: 'New conversation', description: 'Select a user from their profile to start messaging.' })}
                 >
                   <MessageSquarePlus className="h-5 w-5" />
@@ -617,7 +617,7 @@ export default function MessagesPage() {
                   placeholder="Search conversations..."
                   value={search}
                   onChange={e => setSearch(e.target.value)}
-                  className="pl-11 rounded-full h-11 text-[13px] bg-black/40 border-white/10 text-foreground placeholder:text-muted-foreground focus-visible:ring-primary/50 shadow-[inset_0_1px_0_0_hsla(0,0%,100%,0.05)]"
+                  className="pl-11 rounded-full h-11 text-[13px] bg-surface-1 dark:bg-black/50 border-border dark:border-white/10 text-foreground placeholder:text-muted-foreground focus-visible:ring-primary/50 shadow-[inset_0_1px_0_0_var(--primary)/0.03]"
                 />
               </div>
             </div>
@@ -627,11 +627,11 @@ export default function MessagesPage() {
               {loading ? (
                 <div className="space-y-3 p-3">
                   {[1, 2, 3].map(i => (
-                    <div key={i} className="flex items-center gap-4 p-4 rounded-[1.5rem] bg-black/10 border border-white/5">
-                      <Skeleton className="h-12 w-12 rounded-full shrink-0 bg-white/5" />
+                    <div key={i} className="flex items-center gap-4 p-4 rounded-[1.5rem] bg-primary/[0.02] dark:bg-black/20 border border-border/60 dark:border-white/5">
+                      <Skeleton className="h-12 w-12 rounded-full shrink-0 border-border dark:border-white/5 bg-primary/[0.04] dark:bg-white/5" />
                       <div className="flex-1 space-y-2">
-                        <Skeleton className="h-3 w-32 bg-white/5" />
-                        <Skeleton className="h-3 w-48 bg-white/5" />
+                        <Skeleton className="h-3 w-32 border-border dark:border-white/5 bg-primary/[0.04] dark:bg-white/5" />
+                        <Skeleton className="h-3 w-48 border-border dark:border-white/5 bg-primary/[0.04] dark:bg-white/5" />
                       </div>
                     </div>
                   ))}
@@ -640,11 +640,11 @@ export default function MessagesPage() {
                 <AnimatePresence>
                   {filteredConvs.length === 0 ? (
                     <div className="flex flex-col items-center justify-center h-full py-12 text-center px-6">
-                      <div className="w-20 h-20 rounded-full bg-black/40 border border-white/5 flex items-center justify-center mb-6">
-                        <MessageSquarePlus className="h-8 w-8 text-muted-foreground/40" />
+                      <div className="w-20 h-20 rounded-full bg-surface-1 dark:bg-black/50 border border-border/60 dark:border-white/5 flex items-center justify-center mb-6">
+                        <MessageSquarePlus className="h-8 w-8 text-primary/40" />
                       </div>
                       <p className="text-sm font-bold text-foreground/80 mb-2">No conversations yet</p>
-                      <p className="text-[10px] uppercase font-bold tracking-widest text-muted-foreground/60 text-balance">Exchange matches will appear here</p>
+                      <p className="text-[10px] uppercase font-bold tracking-widest text-primary/60 text-balance">Exchange matches will appear here</p>
                     </div>
                   ) : (
                     filteredConvs.map(conv => (
@@ -670,22 +670,22 @@ export default function MessagesPage() {
                 animate={{ opacity: 1 }}
                 exit={{ opacity: 0 }}
                 className={cn(
-                  'flex-1 flex flex-col min-w-0 bg-black/10',
+                  'flex-1 flex flex-col min-w-0 bg-primary/[0.02] dark:bg-black/20',
                   !mobileShowChat && 'hidden md:flex'
                 )}
               >
                 {/* Chat header */}
-                <div className="flex items-center gap-4 px-6 py-4 border-b border-white/5 bg-black/40 backdrop-blur-md shadow-[0_4px_30px_rgba(0,0,0,0.1)]">
+                <div className="flex items-center gap-4 px-6 py-4 border-b border-border/60 dark:border-white/5 bg-surface-1 dark:bg-black/50 backdrop-blur-md shadow-[0_4px_30px_var(--primary)/0.03]">
                   <Button
                     size="icon"
                     variant="ghost"
-                    className="md:hidden h-10 w-10 border border-white/5 bg-white/5"
+                    className="md:hidden h-10 w-10 border border-border/60 dark:border-white/5 border-border dark:border-white/5 bg-primary/[0.04] dark:bg-white/5"
                     onClick={() => setMobileShowChat(false)}
                   >
                     <ArrowLeft className="h-5 w-5" />
                   </Button>
                   <div className="relative">
-                    <Avatar className="h-10 w-10 border border-white/10 shadow-sm">
+                    <Avatar className="h-10 w-10 border border-border dark:border-white/10 shadow-sm">
                       <AvatarImage src={activeConv.user.avatar} alt={activeConv.user.name} className="object-cover" />
                       <AvatarFallback className="bg-gradient-to-br from-primary/20 to-secondary/20 text-xs font-bold text-primary">
                         {getInitials(activeConv.user.name)}
@@ -705,7 +705,7 @@ export default function MessagesPage() {
                     <Button
                       size="icon"
                       variant="ghost"
-                      className="h-10 w-10 rounded-full border border-white/5 bg-white/5 hover:bg-white/10 shadow-[inset_0_1px_0_0_hsla(0,0%,100%,0.05)]"
+                      className="h-10 w-10 rounded-full border border-border/60 dark:border-white/5 border-border dark:border-white/5 bg-primary/[0.04] dark:bg-white/5 hover:bg-white/10 shadow-[inset_0_1px_0_0_var(--primary)/0.03]"
                       onClick={() => toast({ title: 'Voice call', description: 'Voice calls coming soon.' })}
                     >
                       <Phone className="h-4 w-4 text-muted-foreground" />
@@ -713,18 +713,18 @@ export default function MessagesPage() {
                     <Button
                       size="icon"
                       variant="ghost"
-                      className="h-10 w-10 rounded-full border border-white/5 bg-white/5 hover:bg-white/10 shadow-[inset_0_1px_0_0_hsla(0,0%,100%,0.05)]"
+                      className="h-10 w-10 rounded-full border border-border/60 dark:border-white/5 border-border dark:border-white/5 bg-primary/[0.04] dark:bg-white/5 hover:bg-white/10 shadow-[inset_0_1px_0_0_var(--primary)/0.03]"
                       onClick={() => toast({ title: 'Video call', description: 'Video calls coming soon.' })}
                     >
                       <Video className="h-4 w-4 text-muted-foreground" />
                     </Button>
                     <DropdownMenu>
                       <DropdownMenuTrigger asChild>
-                        <Button size="icon" variant="ghost" className="h-10 w-10 rounded-full border border-white/5 bg-white/5 hover:bg-white/10 shadow-[inset_0_1px_0_0_hsla(0,0%,100%,0.05)]">
+                        <Button size="icon" variant="ghost" className="h-10 w-10 rounded-full border border-border/60 dark:border-white/5 border-border dark:border-white/5 bg-primary/[0.04] dark:bg-white/5 hover:bg-white/10 shadow-[inset_0_1px_0_0_var(--primary)/0.03]">
                           <MoreVertical className="h-4 w-4 text-muted-foreground" />
                         </Button>
                       </DropdownMenuTrigger>
-                      <DropdownMenuContent align="end" className="bg-black/90 backdrop-blur-xl border border-white/10 rounded-2xl shadow-2xl">
+                      <DropdownMenuContent align="end" className="bg-popover dark:bg-black/90 backdrop-blur-xl border border-border dark:border-white/10 rounded-2xl shadow-2xl">
                         <DropdownMenuItem className="focus:bg-white/10 focus:text-foreground text-[11px] uppercase tracking-widest font-bold cursor-pointer" onClick={() => navigate(`/profile/${activeConv.user.id}`)}>View Profile</DropdownMenuItem>
                         <DropdownMenuItem className="focus:bg-white/10 focus:text-foreground text-[11px] uppercase tracking-widest font-bold cursor-pointer" onClick={() => navigate('/match')}>Request Exchange</DropdownMenuItem>
                         <DropdownMenuSeparator className="bg-white/10" />
@@ -765,7 +765,7 @@ export default function MessagesPage() {
                     groupedMessages.map((group) => (
                       <div key={group.date} className="relative z-10">
                         <div className="flex justify-center mb-6 mt-4">
-                          <span className="text-[9px] uppercase tracking-[0.2em] font-extrabold text-muted-foreground/60 bg-black/40 px-4 py-1.5 rounded-full border border-white/5 shadow-[inset_0_1px_0_0_hsla(0,0%,100%,0.05)] backdrop-blur-md">
+                          <span className="text-[9px] uppercase tracking-[0.2em] font-extrabold text-primary/60 bg-surface-1 dark:bg-black/50 px-4 py-1.5 rounded-full border border-border/60 dark:border-white/5 shadow-[inset_0_1px_0_0_var(--primary)/0.03] backdrop-blur-md">
                             {group.date}
                           </span>
                         </div>
@@ -792,10 +792,10 @@ export default function MessagesPage() {
                 </div>
 
                 {/* Input area */}
-                <div className="p-6 border-t border-white/5 bg-black/40 backdrop-blur-md z-20 shadow-[0_-4px_30px_rgba(0,0,0,0.1)] relative">
+                <div className="p-6 border-t border-border/60 dark:border-white/5 bg-surface-1 dark:bg-black/50 backdrop-blur-md z-20 shadow-[0_-4px_30px_var(--primary)/0.03] relative">
                   {!connected && (
                     <div className="absolute -top-10 left-1/2 -translate-x-1/2">
-                      <span className="text-[10px] uppercase font-bold tracking-widest text-warning flex items-center gap-2 bg-warning/10 px-4 py-1.5 rounded-full border border-warning/20 shadow-[inset_0_1px_0_0_hsla(0,0%,100%,0.05)]">
+                      <span className="text-[10px] uppercase font-bold tracking-widest text-warning flex items-center gap-2 bg-warning/10 px-4 py-1.5 rounded-full border border-warning/20 shadow-[inset_0_1px_0_0_var(--primary)/0.03]">
                         <Loader2 className="h-3.5 w-3.5 animate-spin" />
                         Connecting to chat server...
                       </span>
@@ -803,7 +803,7 @@ export default function MessagesPage() {
                   )}
                   <form
                     onSubmit={(e) => { e.preventDefault(); handleSend(); }}
-                    className="flex items-end gap-3 bg-black/40 border border-white/10 rounded-[1.5rem] p-2 focus-within:border-primary/50 focus-within:ring-1 focus-within:ring-primary/50 shadow-[inset_0_1px_0_0_hsla(0,0%,100%,0.05)] transition-all"
+                    className="flex items-end gap-3 bg-surface-1 dark:bg-black/50 border border-border dark:border-white/10 rounded-[1.5rem] p-2 focus-within:border-primary/50 focus-within:ring-1 focus-within:ring-primary/50 shadow-[inset_0_1px_0_0_var(--primary)/0.03] transition-all"
                   >
                     <input
                       type="file"
@@ -836,7 +836,7 @@ export default function MessagesPage() {
                             <Smile className="h-4 w-4" />
                           </Button>
                         </PopoverTrigger>
-                        <PopoverContent side="top" align="end" className="w-[320px] p-0 bg-black/90 backdrop-blur-xl border border-white/10 rounded-[1.5rem] shadow-[0_10px_40px_rgba(0,0,0,0.5)] mb-2">
+                        <PopoverContent side="top" align="end" className="w-[320px] p-0 bg-popover dark:bg-black/90 backdrop-blur-xl border border-border dark:border-white/10 rounded-[1.5rem] shadow-[0_10px_40px_rgba(0,0,0,0.5)] mb-2">
                         <div className="p-4 space-y-4">
                             {([
                               { label: 'Smileys', emojis: ['😀','😂','😍','🥺','😎','🤔','😅','🙌','👍','❤️','🔥','✨','🎉','💯','🚀'] },
@@ -867,7 +867,7 @@ export default function MessagesPage() {
                       type="submit"
                       size="icon"
                       disabled={!newMessage.trim() || sending || !connected}
-                      className="h-11 w-11 shrink-0 rounded-full bg-primary/20 text-primary border border-primary/30 hover:bg-primary/30 hover:border-primary/50 disabled:opacity-50 transition-all shadow-[0_0_15px_hsl(var(--primary)/0.2)] active:scale-95"
+                      className="h-11 w-11 shrink-0 rounded-full bg-primary text-primary-foreground text-primary border border-primary/30 hover:bg-primary/30 hover:border-primary/50 disabled:opacity-50 transition-all shadow-[0_0_15px_hsl(var(--primary)/0.2)] active:scale-95"
                       onClick={(e) => { e.preventDefault(); handleSend(); }}
                     >
                       {sending ? <Loader2 className="h-5 w-5 animate-spin" /> : <Send className="h-4 w-4 ml-0.5" />}
@@ -880,10 +880,10 @@ export default function MessagesPage() {
                 initial={{ opacity: 0 }}
                 animate={{ opacity: 1 }}
                 exit={{ opacity: 0 }}
-                className="hidden md:flex flex-1 flex-col items-center justify-center text-center p-8 bg-black/10 relative overflow-hidden"
+                className="hidden md:flex flex-1 flex-col items-center justify-center text-center p-8 bg-primary/[0.02] dark:bg-black/20 relative overflow-hidden"
               >
                 <div className="absolute inset-0 dot-grid opacity-20 pointer-events-none mix-blend-overlay" />
-                <div className="p-6 rounded-full bg-black/40 border border-white/5 shadow-[0_0_40px_rgba(0,0,0,0.3),inset_0_1px_0_0_hsla(0,0%,100%,0.05)] text-primary backdrop-blur-md relative z-10 mb-8 group transition-transform duration-500 hover:scale-105 hover:shadow-[0_0_60px_hsl(var(--primary)/0.15)]">
+                <div className="p-6 rounded-full bg-surface-1 dark:bg-black/50 border border-border/60 dark:border-white/5 shadow-[0_0_40px_rgba(0,0,0,0.3),inset_0_1px_0_0_var(--primary)/0.03] text-primary backdrop-blur-md relative z-10 mb-8 group transition-transform duration-500 hover:scale-105 hover:shadow-[0_0_60px_hsl(var(--primary)/0.15)]">
                   <MessageSquarePlus className="h-16 w-16 text-primary drop-shadow-[0_0_15px_var(--primary)] transition-transform duration-500 group-hover:scale-110" />
                 </div>
                 <h2 className="text-3xl font-extrabold font-headline text-foreground relative z-10 mb-3 drop-shadow-md">SkillEx Messages</h2>

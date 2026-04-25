@@ -26,4 +26,6 @@ public interface PostRepository extends JpaRepository<Post, String> {
     );
 
     long countByAuthorId(String authorId);
+
+    long countBySkillId(String skillId);
 }

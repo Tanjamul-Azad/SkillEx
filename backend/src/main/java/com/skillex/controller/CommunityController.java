@@ -1,21 +1,23 @@
 package com.skillex.controller;
 
+import com.skillex.config.JwtUtil;
 import com.skillex.dto.common.ApiResponse;
 import com.skillex.dto.common.PagedResponse;
 import com.skillex.dto.community.*;
 import com.skillex.service.CommunityService;
+import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
-import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
+import java.util.Map;
 
 /**
- * REST controller for community features.
- * Base path: /api/community
+ * REST controller for all community features:
+ * events, discussions, posts (with comments & likes), stories, and skill circles.
  */
 @RestController
 @RequestMapping("/api/community")
@@ -23,6 +25,17 @@ import java.util.List;
 public class CommunityController {
 
     private final CommunityService communityService;
+    private final JwtUtil jwtUtil;
+
+    // ── Helper ───────────────────────────────────────────────────────────────
+
+    private String currentUserId(HttpServletRequest request) {
+        String token = request.getHeader("Authorization");
+        if (token != null && token.startsWith("Bearer ")) {
+            return jwtUtil.extractUserId(token.substring(7));
+        }
+        return null;
+    }
 
     // ── Events ──────────────────────────────────────────────────────────────
 
@@ -36,20 +49,22 @@ public class CommunityController {
 
     @PostMapping("/events")
     public ResponseEntity<ApiResponse<CommunityDtos.EventDto>> createEvent(
-        Authentication auth,
-        @Valid @RequestBody CreateEventRequest req
+        HttpServletRequest request,
+        @RequestBody @Valid CreateEventRequest req
     ) {
+        String userId = currentUserId(request);
         return ResponseEntity.status(HttpStatus.CREATED)
-            .body(ApiResponse.ok(communityService.createEvent(userId(auth), req)));
+            .body(ApiResponse.created(communityService.createEvent(userId, req)));
     }
 
     @PostMapping("/events/{eventId}/attend")
-    public ResponseEntity<ApiResponse<String>> attendEvent(
-        Authentication auth,
+    public ResponseEntity<ApiResponse<Void>> attendEvent(
+        HttpServletRequest request,
         @PathVariable String eventId
     ) {
-        communityService.attendEvent(userId(auth), eventId);
-        return ResponseEntity.ok(ApiResponse.ok("Registered for event."));
+        String userId = currentUserId(request);
+        communityService.attendEvent(userId, eventId);
+        return ResponseEntity.ok(ApiResponse.ok(null));
     }
 
     // ── Discussions ──────────────────────────────────────────────────────────
@@ -64,56 +79,105 @@ public class CommunityController {
 
     @PostMapping("/discussions")
     public ResponseEntity<ApiResponse<CommunityDtos.DiscussionDto>> createDiscussion(
-        Authentication auth,
-        @Valid @RequestBody CreateDiscussionRequest req
+        HttpServletRequest request,
+        @RequestBody @Valid CreateDiscussionRequest req
     ) {
+        String userId = currentUserId(request);
         return ResponseEntity.status(HttpStatus.CREATED)
-            .body(ApiResponse.ok(communityService.createDiscussion(userId(auth), req)));
+            .body(ApiResponse.created(communityService.createDiscussion(userId, req)));
     }
 
     @PostMapping("/discussions/{discussionId}/upvote")
-    public ResponseEntity<ApiResponse<CommunityDtos.DiscussionDto>> upvote(
-        Authentication auth,
+    public ResponseEntity<ApiResponse<CommunityDtos.DiscussionDto>> upvoteDiscussion(
+        HttpServletRequest request,
         @PathVariable String discussionId
     ) {
-        return ResponseEntity.ok(ApiResponse.ok(
-            communityService.upvoteDiscussion(userId(auth), discussionId)));
+        String userId = currentUserId(request);
+        return ResponseEntity.ok(ApiResponse.ok(communityService.upvoteDiscussion(userId, discussionId)));
     }
 
     // ── Posts ────────────────────────────────────────────────────────────────
 
     @GetMapping("/posts")
     public ResponseEntity<ApiResponse<PagedResponse<CommunityDtos.PostDto>>> getPosts(
+        HttpServletRequest request,
         @RequestParam(defaultValue = "0") int page,
         @RequestParam(defaultValue = "20") int size
     ) {
-        return ResponseEntity.ok(ApiResponse.ok(communityService.getPosts(page, size)));
+        String viewerId = currentUserId(request);
+        return ResponseEntity.ok(ApiResponse.ok(communityService.getPosts(viewerId, page, size)));
     }
 
     @GetMapping("/posts/search")
-    public ResponseEntity<ApiResponse<PagedResponse<CommunityDtos.PostDto>>> searchPostsByIntent(
-        @RequestParam("intent") String intent,
+    public ResponseEntity<ApiResponse<PagedResponse<CommunityDtos.PostDto>>> searchPosts(
+        HttpServletRequest request,
+        @RequestParam String intent,
         @RequestParam(defaultValue = "0") int page,
         @RequestParam(defaultValue = "20") int size
     ) {
-        return ResponseEntity.ok(ApiResponse.ok(communityService.searchPostsByIntent(intent, page, size)));
+        String viewerId = currentUserId(request);
+        return ResponseEntity.ok(ApiResponse.ok(
+            communityService.searchPostsByIntent(viewerId, intent, page, size)));
+    }
+
+    @GetMapping("/posts/user/{userId}")
+    public ResponseEntity<ApiResponse<PagedResponse<CommunityDtos.PostDto>>> getUserPosts(
+        @PathVariable String userId,
+        @RequestParam(defaultValue = "0") int page,
+        @RequestParam(defaultValue = "10") int size
+    ) {
+        return ResponseEntity.ok(ApiResponse.ok(communityService.getUserPosts(userId, page, size)));
     }
 
     @PostMapping("/posts")
     public ResponseEntity<ApiResponse<CommunityDtos.PostDto>> createPost(
-        Authentication auth,
-        @Valid @RequestBody CreatePostRequest req
+        HttpServletRequest request,
+        @RequestBody @Valid CreatePostRequest req
     ) {
+        String userId = currentUserId(request);
         return ResponseEntity.status(HttpStatus.CREATED)
-            .body(ApiResponse.ok(communityService.createPost(userId(auth), req)));
+            .body(ApiResponse.created(communityService.createPost(userId, req)));
     }
 
     @PostMapping("/posts/{postId}/like")
     public ResponseEntity<ApiResponse<CommunityDtos.PostDto>> likePost(
-        Authentication auth,
+        HttpServletRequest request,
         @PathVariable String postId
     ) {
-        return ResponseEntity.ok(ApiResponse.ok(communityService.likePost(userId(auth), postId)));
+        String userId = currentUserId(request);
+        return ResponseEntity.ok(ApiResponse.ok(communityService.likePost(userId, postId)));
+    }
+
+    @DeleteMapping("/posts/{postId}")
+    public ResponseEntity<ApiResponse<Void>> deletePost(
+        HttpServletRequest request,
+        @PathVariable String postId
+    ) {
+        String userId = currentUserId(request);
+        communityService.deletePost(userId, postId);
+        return ResponseEntity.ok(ApiResponse.ok(null));
+    }
+
+    // ── Comments ─────────────────────────────────────────────────────────────
+
+    @GetMapping("/posts/{postId}/comments")
+    public ResponseEntity<ApiResponse<PagedResponse<CommentDto>>> getComments(
+        @PathVariable String postId,
+        @RequestParam(defaultValue = "0") int page,
+        @RequestParam(defaultValue = "20") int size
+    ) {
+        return ResponseEntity.ok(ApiResponse.ok(communityService.getComments(postId, page, size)));
+    }
+
+    @PostMapping("/posts/{postId}/comments")
+    public ResponseEntity<ApiResponse<CommentDto>> addComment(
+        HttpServletRequest request,
+        @PathVariable String postId,
+        @RequestBody @Valid CreateCommentRequest req
+    ) {
+        String userId = currentUserId(request);
+        return ResponseEntity.status(HttpStatus.CREATED)
+            .body(ApiResponse.created(communityService.addComment(userId, postId, req)));
     }
 
     // ── Stories ──────────────────────────────────────────────────────────────
@@ -125,7 +189,7 @@ public class CommunityController {
 
     // ── Skill Circles ────────────────────────────────────────────────────────
 
-    @GetMapping("/skill-circles")
+    @GetMapping({"/skill-circles", "/circles"})
     public ResponseEntity<ApiResponse<PagedResponse<CommunityDtos.SkillCircleDto>>> getSkillCircles(
         @RequestParam(defaultValue = "0") int page,
         @RequestParam(defaultValue = "20") int size
@@ -133,42 +197,42 @@ public class CommunityController {
         return ResponseEntity.ok(ApiResponse.ok(communityService.getSkillCircles(page, size)));
     }
 
-    @GetMapping("/circles")
-    public ResponseEntity<ApiResponse<PagedResponse<CommunityDtos.SkillCircleDto>>> getCirclesAlias(
-        @RequestParam(defaultValue = "0") int page,
-        @RequestParam(defaultValue = "20") int size
+    @PostMapping({"/skill-circles", "/circles"})
+    public ResponseEntity<ApiResponse<CommunityDtos.SkillCircleDto>> createSkillCircle(
+        HttpServletRequest request,
+        @RequestBody @Valid CreateSkillCircleRequest req
     ) {
-        return ResponseEntity.ok(ApiResponse.ok(communityService.getSkillCircles(page, size)));
-    }
-
-    @PostMapping("/circles")
-    public ResponseEntity<ApiResponse<CommunityDtos.SkillCircleDto>> createCircle(
-        Authentication auth,
-        @Valid @RequestBody CreateSkillCircleRequest req
-    ) {
+        String userId = currentUserId(request);
         return ResponseEntity.status(HttpStatus.CREATED)
-            .body(ApiResponse.ok(communityService.createSkillCircle(userId(auth), req)));
+            .body(ApiResponse.created(communityService.createSkillCircle(userId, req)));
     }
 
-    @PostMapping("/skill-circles/{circleId}/join")
-    public ResponseEntity<ApiResponse<CommunityDtos.SkillCircleDto>> joinCircle(
-        Authentication auth,
+    @PostMapping({"/skill-circles/{circleId}/join", "/circles/{circleId}/join"})
+    public ResponseEntity<ApiResponse<CommunityDtos.SkillCircleDto>> joinSkillCircle(
+        HttpServletRequest request,
         @PathVariable String circleId
     ) {
-        return ResponseEntity.ok(ApiResponse.ok(
-            communityService.joinSkillCircle(userId(auth), circleId)));
+        String userId = currentUserId(request);
+        return ResponseEntity.ok(ApiResponse.ok(communityService.joinSkillCircle(userId, circleId)));
     }
 
-    @PostMapping("/circles/{circleId}/join")
-    public ResponseEntity<ApiResponse<CommunityDtos.SkillCircleDto>> joinCircleAlias(
-        Authentication auth,
-        @PathVariable String circleId
+    // ── Trending & Suggestions ───────────────────────────────────────────────
+
+    @GetMapping("/trending-skills")
+    public ResponseEntity<ApiResponse<List<CommunityDtos.TrendingSkillDto>>> getTrendingSkills() {
+        return ResponseEntity.ok(ApiResponse.ok(communityService.getTrendingSkills()));
+    }
+
+    @GetMapping("/suggested-users")
+    public ResponseEntity<ApiResponse<List<CommunityDtos.SuggestedUserDto>>> getSuggestedUsers(
+        HttpServletRequest request
     ) {
-        return ResponseEntity.ok(ApiResponse.ok(
-            communityService.joinSkillCircle(userId(auth), circleId)));
+        String userId = currentUserId(request);
+        return ResponseEntity.ok(ApiResponse.ok(communityService.getSuggestedUsers(userId)));
     }
 
-    private String userId(Authentication auth) {
-        return (String) auth.getPrincipal();
+    @GetMapping("/online-count")
+    public ResponseEntity<ApiResponse<Map<String, Long>>> getOnlineCount() {
+        return ResponseEntity.ok(ApiResponse.ok(Map.of("count", communityService.getOnlineCount())));
     }
 }

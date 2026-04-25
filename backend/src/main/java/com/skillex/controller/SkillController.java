@@ -87,7 +87,9 @@ public class SkillController {
             req.sourceIntent(),
             0,
             "BEGINNER",
-            "wanted"
+            "wanted",
+            null,
+            null
         );
 
         AddSkillResult result = governanceService.submitUnknownSkill(userId(auth), addSkillRequest);

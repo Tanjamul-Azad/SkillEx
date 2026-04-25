@@ -44,6 +44,7 @@ public class UserServiceImpl implements UserService {
     private final SkillRepository skillRepository;
     private final UserSkillOfferedRepository offeredRepo;
     private final UserSkillWantedRepository wantedRepo;
+    private final com.skillex.repository.PostRepository postRepository;
     private final PasswordEncoder passwordEncoder;
     private final DtoMapper mapper;
     private final SkillCatalogGovernanceService skillCatalogGovernanceService;
@@ -114,14 +115,14 @@ public class UserServiceImpl implements UserService {
         if (req.skillId() != null && !req.skillId().isBlank()) {
             Skill skill = skillRepository.findById(req.skillId())
                 .orElseThrow(() -> new EntityNotFoundException("Skill not found: " + req.skillId()));
-            attachSkill(user, skill, req.type(), level);
+            attachSkill(user, skill, req.type(), level, req.proofVideoUrl(), req.subtitle());
             return new AddSkillResult("ADDED", "Skill added to your profile.", skill.getId(), null);
         }
 
         String name = req.skillName().trim();
         Skill existing = skillRepository.findByNameIgnoreCase(name).orElse(null);
         if (existing != null) {
-            attachSkill(user, existing, req.type(), level);
+            attachSkill(user, existing, req.type(), level, req.proofVideoUrl(), req.subtitle());
             return new AddSkillResult("ADDED", "Matched an existing catalog skill.", existing.getId(), null);
         }
 
@@ -131,7 +132,7 @@ public class UserServiceImpl implements UserService {
             && !pendingResult.skillId().isBlank()) {
             Skill promoted = skillRepository.findById(pendingResult.skillId())
                 .orElseThrow(() -> new EntityNotFoundException("Promoted skill not found: " + pendingResult.skillId()));
-            attachSkill(user, promoted, req.type(), level);
+            attachSkill(user, promoted, req.type(), level, req.proofVideoUrl(), req.subtitle());
             return new AddSkillResult(
                 "ADDED",
                 "Skill auto-promoted and added to your profile.",
@@ -146,14 +147,29 @@ public class UserServiceImpl implements UserService {
     private void attachSkill(User user,
                              Skill skill,
                              String type,
-                             UserSkillOffered.SkillProficiency level) {
+                             UserSkillOffered.SkillProficiency level,
+                             String proofVideoUrl,
+                             String subtitle) {
         if ("offered".equalsIgnoreCase(type)) {
             offeredRepo.deleteByIdUserIdAndIdSkillId(user.getId(), skill.getId());
             UserSkillOffered entry = UserSkillOffered.builder()
                 .id(new UserSkillOffered.UserSkillId(user.getId(), skill.getId()))
                 .user(user).skill(skill).level(level)
+                .proofVideoUrl(proofVideoUrl)
+                .subtitle(subtitle)
                 .build();
             offeredRepo.save(entry);
+
+            if (proofVideoUrl != null && !proofVideoUrl.isBlank()) {
+                com.skillex.model.Post post = com.skillex.model.Post.builder()
+                    .type(com.skillex.model.Post.PostType.SHOWCASE)
+                    .author(user)
+                    .skill(skill)
+                    .content(subtitle != null ? subtitle : "Check out my new skill!")
+                    .mediaUrl(proofVideoUrl)
+                    .build();
+                postRepository.save(post);
+            }
         } else {
             wantedRepo.deleteByIdUserIdAndIdSkillId(user.getId(), skill.getId());
             UserSkillWanted entry = UserSkillWanted.builder()

@@ -19,6 +19,8 @@ export interface Skill {
   category: string;
   level: SkillLevel;
   description: string;
+  proofVideoUrl?: string;
+  subtitle?: string;
 }
 
 export interface User {
@@ -167,4 +169,43 @@ export interface Post {
   likes: number;
   comments: number;
   shares: number;
+  mediaUrl?: string;
+  /** Whether the currently logged-in user has liked this post */
+  isLikedByViewer?: boolean;
+}
+
+/** Persisted comment on a post */
+export interface Comment {
+  id: string;
+  author: {
+    id: string;
+    name: string;
+    avatar: string | null;
+    university?: string | null;
+  };
+  content: string;
+  createdAt: string;
+}
+
+/** Used by GET /api/community/trending-skills */
+export interface TrendingSkill {
+  id: string;
+  name: string;
+  icon: string;
+  category: string;
+  postCount: number;
+  growthPercent: number;
+}
+
+/** Used by GET /api/community/suggested-users */
+export interface SuggestedUser {
+  id: string;
+  name: string;
+  username?: string;
+  avatar: string;
+  university: string;
+  skillexScore: number;
+  isOnline: boolean;
+  sharedSkills: string[];
+  reason: string;
 }

@@ -45,6 +45,12 @@ export function AddSkillDialog({ open, onClose, mode, existingIds, onSave }: Pro
   // custom skill state
   const [customSelected, setCustomSelected] = useState(false);
   const [customCategory, setCustomCategory] = useState('Other');
+  
+  // Showcase Video State
+  const [videoFile, setVideoFile] = useState<File | null>(null);
+  const [videoPreview, setVideoPreview] = useState<string | null>(null);
+  const [subtitle, setSubtitle] = useState('');
+  const [uploading, setUploading] = useState(false);
 
   useEffect(() => {
     if (!open) return;
@@ -79,11 +85,20 @@ export function AddSkillDialog({ open, onClose, mode, existingIds, onSave }: Pro
       return;
     }
     setSaving(true);
+    setUploading(true);
     try {
+      let uploadedVideoUrl: string | undefined;
+      
+      // Upload video if one is selected
+      if (videoFile && mode === 'offered') {
+        const res = await UserService.uploadFile(videoFile);
+        uploadedVideoUrl = res.url;
+      }
+
       await Promise.all([
-        ...Array.from(selected).map((id) => UserService.addSkill(id, mode, 'BEGINNER')),
+        ...Array.from(selected).map((id) => UserService.addSkill(id, mode, 'BEGINNER', uploadedVideoUrl, subtitle)),
         ...(customSelected
-          ? [UserService.addCustomSkill(query.trim(), customCategory, mode, 'BEGINNER')]
+          ? [UserService.addCustomSkill(query.trim(), customCategory, mode, 'BEGINNER', uploadedVideoUrl, subtitle)]
           : []),
       ]);
       const added: Skill[] = [
@@ -94,11 +109,15 @@ export function AddSkillDialog({ open, onClose, mode, existingIds, onSave }: Pro
       ];
       onSave(added);
       setSaving(false);
+      setUploading(false);
       setSelected(new Set());
       setCustomSelected(false);
       setCustomCategory('Other');
       setQuery('');
       setCategory('All');
+      setVideoFile(null);
+      setVideoPreview(null);
+      setSubtitle('');
       onClose();
       toast({
         title: `${added.length} skill${added.length > 1 ? 's' : ''} added`,
@@ -107,6 +126,7 @@ export function AddSkillDialog({ open, onClose, mode, existingIds, onSave }: Pro
       });
     } catch (err) {
       setSaving(false);
+      setUploading(false);
       const msg = err instanceof Error ? err.message : null;
       toast({
         title: 'Could not add skill',
@@ -114,6 +134,24 @@ export function AddSkillDialog({ open, onClose, mode, existingIds, onSave }: Pro
         variant: 'destructive',
       });
     }
+  };
+
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      if (file.size > 50 * 1024 * 1024) { // 50MB limit
+        toast({ title: 'File too large', description: 'Maximum video size is 50MB.', variant: 'destructive' });
+        return;
+      }
+      setVideoFile(file);
+      setVideoPreview(URL.createObjectURL(file));
+    }
+  };
+
+  const removeVideo = () => {
+    setVideoFile(null);
+    setVideoPreview(null);
+    setSubtitle('');
   };
 
   const handleClose = () => {
@@ -266,8 +304,40 @@ export function AddSkillDialog({ open, onClose, mode, existingIds, onSave }: Pro
           </div>
         </ScrollArea>
 
+        {/* Showcase Video Upload */}
+        {mode === 'offered' && totalToAdd > 0 && (
+          <div className="mt-2 border-t border-border/40 pt-3">
+            <h4 className="text-sm font-semibold mb-2 flex items-center gap-2">
+              Add a Showcase Video <span className="text-xs text-muted-foreground font-normal">(Optional)</span>
+            </h4>
+            {!videoPreview ? (
+              <label className="flex flex-col items-center justify-center h-20 rounded-xl border-2 border-dashed border-border/60 hover:border-primary/40 hover:bg-primary/5 transition-colors cursor-pointer">
+                <Plus className="h-5 w-5 text-muted-foreground mb-1" />
+                <span className="text-xs font-medium text-muted-foreground">Upload short video proof (Max 50MB)</span>
+                <input type="file" accept="video/*" className="hidden" onChange={handleFileChange} />
+              </label>
+            ) : (
+              <div className="space-y-2">
+                <div className="relative rounded-xl overflow-hidden bg-black/5 h-28 flex items-center justify-center">
+                  <video src={videoPreview} className="max-h-full max-w-full rounded-md" controls />
+                  <button onClick={removeVideo} className="absolute top-1.5 right-1.5 p-1 bg-black/60 rounded-full text-white hover:bg-black/80 transition-colors">
+                    <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg>
+                  </button>
+                </div>
+                <Input
+                  value={subtitle}
+                  onChange={(e) => setSubtitle(e.target.value)}
+                  placeholder="Add a catchy subtitle for your community post..."
+                  className="rounded-xl h-9 text-sm"
+                  maxLength={100}
+                />
+              </div>
+            )}
+          </div>
+        )}
+
         {/* Footer */}
-        <div className="flex items-center justify-between gap-3 border-t border-border/40 pt-3">
+        <div className="flex items-center justify-between gap-3 border-t border-border/40 pt-3 mt-1">
           <span className="text-sm text-muted-foreground">
             {totalToAdd > 0 ? `${totalToAdd} selected` : 'None selected'}
           </span>
@@ -275,10 +345,10 @@ export function AddSkillDialog({ open, onClose, mode, existingIds, onSave }: Pro
             <Button variant="outline" className="rounded-xl" onClick={handleClose}>Cancel</Button>
             <Button
               variant="gradient"
-              disabled={totalToAdd === 0 || saving}
+              disabled={totalToAdd === 0 || saving || uploading}
               onClick={handleSave}
             >
-              {saving ? 'Saving...' : `Add ${totalToAdd > 0 ? totalToAdd : ''} Skill${totalToAdd !== 1 ? 's' : ''}`}
+              {saving || uploading ? 'Saving...' : `Add ${totalToAdd > 0 ? totalToAdd : ''} Skill${totalToAdd !== 1 ? 's' : ''}`}
             </Button>
           </div>
         </div>

@@ -21,7 +21,10 @@ public record AddSkillRequest(
     @Min(0) @Max(100) Integer matchConfidence,
 
     @NotBlank @Pattern(regexp = "BEGINNER|MODERATE|EXPERT") String level,
-    @NotBlank @Pattern(regexp = "offered|wanted")           String type
+    @NotBlank @Pattern(regexp = "offered|wanted")           String type,
+
+    @Size(max = 500) String proofVideoUrl,
+    @Size(max = 500) String subtitle
 ) {
     public AddSkillRequest {
         if ((skillId == null || skillId.isBlank()) && (skillName == null || skillName.isBlank())) {

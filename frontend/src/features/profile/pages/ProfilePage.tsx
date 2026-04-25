@@ -45,6 +45,10 @@ import {
   type ConnectionRelationship,
 } from '@/services/connectionService';
 import { ApiError } from '@/services/http/ApiClient';
+import { SkillShowcaseViewer } from '@/features/profile/components/SkillShowcaseViewer';
+import { CommunityService } from '@/services/communityService';
+import { PostCard } from '../../community/components/PostCard';
+import type { Post } from '@/types';
 
 const containerVariants = {
   hidden: { opacity: 0 },
@@ -273,6 +277,10 @@ export default function ProfilePage() {
   const [reviewHover, setReviewHover] = useState(0);
   const [reviewComment, setReviewComment] = useState('');
   const [reviewSubmitted, setReviewSubmitted] = useState(false);
+  const [userPosts, setUserPosts] = useState<Post[]>([]);
+  
+  const [showcaseOpen, setShowcaseOpen] = useState(false);
+  const [showcaseIndex, setShowcaseIndex] = useState(0);
 
   const tabParam = searchParams.get('tab');
   const focusParam = searchParams.get('focus');
@@ -295,14 +303,16 @@ export default function ProfilePage() {
     Promise.all([
       UserService.getById(userId),
       ReviewService.getForUser(userId),
+      CommunityService.getUserPosts(userId)
     ])
-      .then(([userResult, reviewsResult]) => {
+      .then(([userResult, reviewsResult, postsResult]) => {
         const u = userResult as User;
         setProfileUser(u);
         setOfferedSkills(u.skillsOffered ?? []);
         setWantedSkills(u.skillsWanted ?? []);
         const reviews = (reviewsResult as unknown as { content?: Review[] }).content ?? (reviewsResult as unknown as Review[]) ?? [];
         setUserReviews(reviews);
+        setUserPosts(postsResult.content ?? []);
       })
       .catch(() => setNotFound(true))
       .finally(() => setLoading(false));
@@ -486,6 +496,16 @@ export default function ProfilePage() {
       setConnectionBusy(false);
     }
   };
+
+  const showcaseVideos = offeredSkills
+    .filter(s => s.proofVideoUrl)
+    .map(s => ({
+      id: s.id,
+      url: s.proofVideoUrl!,
+      subtitle: s.subtitle,
+      skillName: s.name,
+      skillCategory: s.category
+    }));
 
   return (
     <DashboardLayout>
@@ -691,6 +711,44 @@ export default function ProfilePage() {
           </div>
         </motion.div>
 
+        {/* ── Showcase Reels ── */}
+        {showcaseVideos.length > 0 && (
+          <motion.div initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.5, delay: 0.2 }}>
+            <div className="flex items-center justify-between mb-4 px-2">
+              <h2 className="text-xl font-bold text-white flex items-center gap-2 font-headline tracking-wide">
+                <div className="p-1.5 rounded-lg bg-primary/20 text-primary border border-primary/30 shadow-[0_0_10px_hsl(var(--primary)/0.2)]">
+                  <Play className="w-4 h-4" />
+                </div>
+                Showcase Reels
+              </h2>
+            </div>
+            <div className="flex gap-4 overflow-x-auto pb-4 px-2 snap-x snap-mandatory scrollbar-hide">
+              {showcaseVideos.map((video, idx) => (
+                <div
+                  key={video.id}
+                  className="snap-start shrink-0 relative w-40 h-64 sm:w-48 sm:h-72 bg-black/40 border border-white/10 rounded-[1.5rem] overflow-hidden cursor-pointer group hover:border-primary/40 transition-all shadow-[inset_0_1px_0_0_hsla(0,0%,100%,0.05)]"
+                  onClick={() => { setShowcaseIndex(idx); setShowcaseOpen(true); }}
+                >
+                  <video src={video.url} className="w-full h-full object-cover opacity-60 group-hover:opacity-90 group-hover:scale-105 transition-all duration-700" muted playsInline />
+                  <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-black/20 to-transparent flex flex-col justify-end p-4">
+                    <div className="p-2.5 bg-white/10 rounded-full w-max backdrop-blur-md mb-2 group-hover:bg-primary group-hover:text-primary-foreground transition-all duration-300 border border-white/10 group-hover:border-primary/50 group-hover:shadow-[0_0_15px_hsl(var(--primary)/0.5)]">
+                      <Play className="w-4 h-4 text-white group-hover:text-current ml-0.5" />
+                    </div>
+                    <p className="text-white font-extrabold text-sm leading-tight drop-shadow-md line-clamp-2">
+                      {video.subtitle || video.skillName}
+                    </p>
+                    <div className="mt-1">
+                      <Badge variant="outline" className="bg-black/50 text-white/80 border-white/10 text-[9px] uppercase tracking-wider backdrop-blur-md">
+                        {video.skillName}
+                      </Badge>
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </motion.div>
+        )}
+
         {/* ── Main Content ── */}
         <Tabs value={activeTab} onValueChange={handleTabChange} className="w-full">
           <TabsList className="grid w-full sm:w-auto grid-cols-3 sm:max-w-[400px] mb-8 bg-black/40 backdrop-blur-xl border border-white/5 shadow-[inset_0_1px_0_0_hsla(0,0%,100%,0.05)] rounded-[1.5rem] p-1.5 h-auto">
@@ -865,14 +923,28 @@ export default function ProfilePage() {
 
           {/* ── Activity Tab ── */}
           <TabsContent value="activity" className="mt-6">
-            <div className="p-12 text-center bg-black/40 backdrop-blur-xl border border-white/5 border-dashed rounded-[2rem] shadow-[inset_0_1px_0_0_hsla(0,0%,100%,0.05)]">
-              <div className="w-16 h-16 mx-auto rounded-full bg-white/5 border border-white/10 flex items-center justify-center mb-4">
-                <Zap className="w-8 h-8 text-muted-foreground/30" />
-              </div>
-              <p className="text-[11px] font-bold uppercase tracking-widest text-muted-foreground">Activity Feed Offline</p>
-              <p className="text-[9px] font-bold text-muted-foreground/50 mt-2 uppercase tracking-wide">
-                System awaiting recent sessions and data exchanges.
-              </p>
+            <div className="space-y-6">
+              {userPosts.length === 0 ? (
+                <div className="p-12 text-center bg-black/40 backdrop-blur-xl border border-white/5 border-dashed rounded-[2rem] shadow-[inset_0_1px_0_0_hsla(0,0%,100%,0.05)]">
+                  <div className="w-16 h-16 mx-auto rounded-full bg-white/5 border border-white/10 flex items-center justify-center mb-4">
+                    <Zap className="w-8 h-8 text-muted-foreground/30" />
+                  </div>
+                  <p className="text-[11px] font-bold uppercase tracking-widest text-muted-foreground">No recent activity</p>
+                  <p className="text-[9px] font-bold text-muted-foreground/50 mt-2 uppercase tracking-wide">
+                    {isOwnProfile ? "Your skill transmissions will appear here." : `${profileUser.name.split(' ')[0]}'s transmissions will appear here.`}
+                  </p>
+                </div>
+              ) : (
+                <div className="grid grid-cols-1 gap-6">
+                  {userPosts.map(post => (
+                    <PostCard 
+                      key={post.id} 
+                      post={post} 
+                      onDelete={(id) => setUserPosts(prev => prev.filter(p => p.id !== id))}
+                    />
+                  ))}
+                </div>
+              )}
             </div>
           </TabsContent>
         </Tabs>
@@ -1138,6 +1210,14 @@ export default function ProfilePage() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      {/* Showcase Reels Viewer */}
+      <SkillShowcaseViewer
+        videos={showcaseVideos}
+        open={showcaseOpen}
+        onClose={() => setShowcaseOpen(false)}
+        initialIndex={showcaseIndex}
+      />
     </DashboardLayout>
   );
 }

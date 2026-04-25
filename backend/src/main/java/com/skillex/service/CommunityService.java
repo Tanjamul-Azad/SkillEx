@@ -29,13 +29,23 @@ public interface CommunityService {
 
     // ── Posts ────────────────────────────────────────────────────────────────
 
-    PagedResponse<CommunityDtos.PostDto> getPosts(int page, int size);
+    PagedResponse<CommunityDtos.PostDto> getPosts(String viewerId, int page, int size);
 
-    PagedResponse<CommunityDtos.PostDto> searchPostsByIntent(String intent, int page, int size);
+    PagedResponse<CommunityDtos.PostDto> searchPostsByIntent(String viewerId, String intent, int page, int size);
+
+    PagedResponse<CommunityDtos.PostDto> getUserPosts(String userId, int page, int size);
 
     CommunityDtos.PostDto createPost(String authorId, CreatePostRequest req);
 
     CommunityDtos.PostDto likePost(String userId, String postId);
+
+    void deletePost(String userId, String postId);
+
+    // ── Comments ─────────────────────────────────────────────────────────────
+
+    PagedResponse<CommentDto> getComments(String postId, int page, int size);
+
+    CommentDto addComment(String userId, String postId, CreateCommentRequest req);
 
     // ── Stories ──────────────────────────────────────────────────────────────
 
@@ -48,4 +58,12 @@ public interface CommunityService {
     CommunityDtos.SkillCircleDto createSkillCircle(String creatorId, CreateSkillCircleRequest req);
 
     CommunityDtos.SkillCircleDto joinSkillCircle(String userId, String circleId);
+
+    // ── Trending & Suggestions ───────────────────────────────────────────────
+
+    List<CommunityDtos.TrendingSkillDto> getTrendingSkills();
+
+    List<CommunityDtos.SuggestedUserDto> getSuggestedUsers(String userId);
+
+    long getOnlineCount();
 }

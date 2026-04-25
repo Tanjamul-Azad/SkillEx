@@ -14,7 +14,7 @@ const gradientButtonVariants = cva(
   {
     variants: {
       variant: {
-        filled: 'gradient-bg text-primary-foreground shadow-[0_2px_12px_hsl(var(--primary)/0.35)] hover:-translate-y-[3px] hover:scale-[1.02] hover:shadow-[0_6px_20px_hsl(var(--primary)/0.40)]',
+        filled: 'bg-primary text-primary-foreground shadow-[0_2px_12px_hsl(var(--primary)/0.35)] hover:-translate-y-[3px] hover:scale-[1.02] hover:shadow-[0_6px_20px_hsl(var(--primary)/0.40)]',
         outlined: 'border-2 border-primary/50 bg-background text-foreground hover:-translate-y-[3px] hover:border-primary hover:bg-primary/[0.04] hover:shadow-[0_4px_14px_hsl(var(--primary)/0.18)]',
         ghost: 'bg-transparent text-foreground hover:bg-muted hover:-translate-y-px',
       },
@@ -33,7 +33,7 @@ const gradientButtonVariants = cva(
 );
 
 const OutlinedText = ({children}: {children: React.ReactNode}) => (
-    <span className="text-gradient-animated bg-gradient-to-r from-primary via-secondary to-accent">
+    <span className="text-primary">
         {children}
     </span>
 )

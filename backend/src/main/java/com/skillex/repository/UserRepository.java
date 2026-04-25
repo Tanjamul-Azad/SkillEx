@@ -142,4 +142,6 @@ public interface UserRepository extends JpaRepository<User, String> {
      */
     @Query("SELECT u FROM User u ORDER BY u.sessionsCompleted DESC, u.rating DESC")
     List<User> findTopMentors(Pageable pageable);
+
+    long countByIsOnlineTrue();
 }

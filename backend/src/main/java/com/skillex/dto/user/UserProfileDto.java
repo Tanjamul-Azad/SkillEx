@@ -36,6 +36,8 @@ public record UserProfileDto(
         String icon,
         String category,
         String description,
-        String level   // BEGINNER | MODERATE | EXPERT
+        String level,  // BEGINNER | MODERATE | EXPERT
+        String proofVideoUrl,
+        String subtitle
     ) {}
 }

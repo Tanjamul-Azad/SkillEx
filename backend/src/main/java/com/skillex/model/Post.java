@@ -47,6 +47,9 @@ public class Post {
     @Column(length = 100)
     private String badge;
 
+    @Column(name = "media_url", length = 500)
+    private String mediaUrl;
+
     @Column(nullable = false)
     @Builder.Default
     private Integer likes = 0;

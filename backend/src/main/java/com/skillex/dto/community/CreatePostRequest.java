@@ -9,5 +9,6 @@ public record CreatePostRequest(
     @NotBlank @Pattern(regexp = "SHOWCASE|ACHIEVEMENT|EXCHANGE|QUESTION") String type,
     @NotBlank @Size(max = 5000) String content,
     String skillId,   // optional
-    @Size(max = 100) String badge  // optional — for ACHIEVEMENT type
+    @Size(max = 100) String badge,  // optional — for ACHIEVEMENT type
+    @Size(max = 2000) String mediaUrl // optional — for SHOWCASE or general media
 ) {}

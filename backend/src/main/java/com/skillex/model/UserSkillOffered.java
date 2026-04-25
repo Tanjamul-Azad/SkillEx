@@ -40,6 +40,12 @@ public class UserSkillOffered {
     @Builder.Default
     private SkillProficiency level = SkillProficiency.BEGINNER;
 
+    @Column(name = "proof_video_url", length = 500)
+    private String proofVideoUrl;
+
+    @Column(name = "subtitle", length = 500)
+    private String subtitle;
+
     // ── Embedded composite key ────────────────────────────────────────────────
     @Embeddable
     @Getter

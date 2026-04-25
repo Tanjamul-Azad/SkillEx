@@ -60,13 +60,13 @@ export const UserService = {
   },
 
   /** POST /api/users/me/skills — add an existing catalog skill */
-  addSkill: async (skillId: string, type: 'offered' | 'wanted', level = 'BEGINNER'): Promise<void> => {
-    return api.post<void>('/users/me/skills', { skillId, type, level: level.toUpperCase() });
+  addSkill: async (skillId: string, type: 'offered' | 'wanted', level = 'BEGINNER', proofVideoUrl?: string, subtitle?: string): Promise<void> => {
+    return api.post<void>('/users/me/skills', { skillId, type, level: level.toUpperCase(), proofVideoUrl, subtitle });
   },
 
   /** POST /api/users/me/skills — add a custom (non-catalog) skill by name */
-  addCustomSkill: async (skillName: string, skillCategory: string, type: 'offered' | 'wanted', level = 'BEGINNER'): Promise<void> => {
-    return api.post<void>('/users/me/skills', { skillName, skillCategory, type, level: level.toUpperCase() });
+  addCustomSkill: async (skillName: string, skillCategory: string, type: 'offered' | 'wanted', level = 'BEGINNER', proofVideoUrl?: string, subtitle?: string): Promise<void> => {
+    return api.post<void>('/users/me/skills', { skillName, skillCategory, type, level: level.toUpperCase(), proofVideoUrl, subtitle });
   },
 
   /** DELETE /api/users/me/skills/{skillId}?type=offered|wanted */

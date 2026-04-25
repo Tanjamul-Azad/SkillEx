@@ -280,7 +280,7 @@ export const PostCard = React.memo(({ post, onDelete }: PostCardProps) => {
                     postComments.map((comment) => (
                       <div key={comment.id} className="flex gap-3 group/comment">
                         <Avatar className="h-8 w-8 shrink-0 cursor-pointer" onClick={() => navigate(`/profile/${comment.author.id}`)}>
-                          <AvatarImage src={comment.author.avatar} />
+                          <AvatarImage src={comment.author.avatar ?? undefined} />
                           <AvatarFallback className="text-[10px] font-bold">{comment.author.name.charAt(0)}</AvatarFallback>
                         </Avatar>
                         <div className="flex-1 rounded-2xl bg-white/5 border border-white/5 px-4 py-2 group-hover/comment:bg-white/10 transition-colors">

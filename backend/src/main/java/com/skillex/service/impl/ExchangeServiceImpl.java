@@ -19,9 +19,10 @@ import org.springframework.security.access.AccessDeniedException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.util.Objects;
+
 @Service
 @RequiredArgsConstructor
-@SuppressWarnings("null")
 public class ExchangeServiceImpl implements ExchangeService {
 
     private final ExchangeRepository exchangeRepository;
@@ -36,24 +37,27 @@ public class ExchangeServiceImpl implements ExchangeService {
         User requester = findUser(requesterId);
         User receiver  = findUser(req.receiverId());
 
-        if (requester.getId().equals(receiver.getId())) {
+        String requesterIdFromDb = Objects.requireNonNull(requester.getId(), "Requester ID must not be null");
+        String receiverIdFromDb = Objects.requireNonNull(receiver.getId(), "Receiver ID must not be null");
+
+        if (requesterIdFromDb.equals(receiverIdFromDb)) {
             throw new IllegalArgumentException("You cannot create an exchange request with yourself.");
         }
 
         Exchange existingPending = exchangeRepository
             .findFirstByRequesterIdAndReceiverIdAndStatusOrderByCreatedAtDesc(
-                requester.getId(), receiver.getId(), Exchange.ExchangeStatus.PENDING)
+                requesterIdFromDb, receiverIdFromDb, Exchange.ExchangeStatus.PENDING)
             .orElse(null);
         if (existingPending != null) {
             return mapper.toExchange(existingPending);
         }
 
         Skill offeredSkill = (req.offeredSkillId() != null)
-            ? skillRepository.findById(req.offeredSkillId())
+            ? skillRepository.findById(Objects.requireNonNull(req.offeredSkillId(), "Offered skill ID must not be null"))
                 .orElseThrow(() -> new EntityNotFoundException("Skill not found: " + req.offeredSkillId()))
             : null;
         Skill wantedSkill = (req.wantedSkillId() != null)
-            ? skillRepository.findById(req.wantedSkillId())
+            ? skillRepository.findById(Objects.requireNonNull(req.wantedSkillId(), "Wanted skill ID must not be null"))
                 .orElseThrow(() -> new EntityNotFoundException("Skill not found: " + req.wantedSkillId()))
             : null;
 
@@ -67,8 +71,8 @@ public class ExchangeServiceImpl implements ExchangeService {
         Exchange saved = exchangeRepository.save(exchange);
 
         notificationService.create(
-            receiver.getId(),
-            requester.getId(),
+            receiverIdFromDb,
+            requesterIdFromDb,
             "MATCH_REQUEST",
             requester.getName() + " sent you a skill exchange request."
         );
@@ -113,15 +117,15 @@ public class ExchangeServiceImpl implements ExchangeService {
 
         if (next == Exchange.ExchangeStatus.ACCEPTED) {
             notificationService.create(
-                saved.getRequester().getId(),
-                saved.getReceiver().getId(),
+                Objects.requireNonNull(saved.getRequester().getId(), "Requester ID must not be null"),
+                Objects.requireNonNull(saved.getReceiver().getId(), "Receiver ID must not be null"),
                 "MATCH_REQUEST",
                 saved.getReceiver().getName() + " accepted your skill exchange request."
             );
         } else if (next == Exchange.ExchangeStatus.DECLINED) {
             notificationService.create(
-                saved.getRequester().getId(),
-                saved.getReceiver().getId(),
+                Objects.requireNonNull(saved.getRequester().getId(), "Requester ID must not be null"),
+                Objects.requireNonNull(saved.getReceiver().getId(), "Receiver ID must not be null"),
                 "MATCH_REQUEST",
                 saved.getReceiver().getName() + " declined your skill exchange request."
             );
@@ -142,12 +146,12 @@ public class ExchangeServiceImpl implements ExchangeService {
     // ── helpers ──────────────────────────────────────────────────────────────
 
     private Exchange findExchange(String id) {
-        return exchangeRepository.findById(id)
+        return exchangeRepository.findById(Objects.requireNonNull(id, "Exchange ID must not be null"))
             .orElseThrow(() -> new EntityNotFoundException("Exchange not found: " + id));
     }
 
     private User findUser(String id) {
-        return userRepository.findById(id)
+        return userRepository.findById(Objects.requireNonNull(id, "User ID must not be null"))
             .orElseThrow(() -> new EntityNotFoundException("User not found: " + id));
     }
 

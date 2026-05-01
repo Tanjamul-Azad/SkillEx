@@ -92,7 +92,6 @@ public class ReputationServiceImpl implements ReputationService {
 
     // ── helpers ──────────────────────────────────────────────────────────────
 
-    @SuppressWarnings("null")
     private User fetchUser(String id) {
         String safeId = Objects.requireNonNull(id, "userId must not be null");
         return userRepository.findById(safeId)

@@ -25,3 +25,12 @@ backend/src/main/resources/application-secrets.properties
 Thumbs.db
 *.iml
 .idea/
+.vscode/
+
+##──── Java / Maven ──────────────────────────────────
+backend/target/
+*.class
+.factorypath
+.project
+.settings/
+.classpath

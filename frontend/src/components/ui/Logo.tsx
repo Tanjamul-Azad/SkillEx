@@ -20,7 +20,7 @@ const Logo: React.FC<LogoProps> = ({
         md: 'text-xl',
         lg: 'text-2xl',
         xl: 'text-4xl',
-        '2xl': 'text-5xl md:text-6xl',
+        '2xl': 'text-4xl md:text-5xl',
     };
 
     const iconSizeClasses = {

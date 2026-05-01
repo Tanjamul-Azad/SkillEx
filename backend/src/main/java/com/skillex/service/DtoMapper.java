@@ -16,6 +16,7 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Component;
 
 import java.util.List;
+import java.util.Objects;
 
 /**
  * Stateless mapper component that converts JPA entities → DTOs.
@@ -36,8 +37,12 @@ public class DtoMapper {
 
     public UserSummaryDto toSummary(User u) {
         return new UserSummaryDto(
-            u.getId(), u.getName(), u.getUsername(), u.getAvatar(),
-            u.getUniversity(), u.getLevel().name(),
+            Objects.requireNonNull(u.getId(), "User ID must not be null"),
+            Objects.requireNonNull(u.getName(), "Name must not be null"),
+            Objects.requireNonNull(u.getUsername(), "Username must not be null"),
+            u.getAvatar(),
+            u.getUniversity(),
+            u.getLevel() != null ? u.getLevel().name() : "NEWBIE",
             u.getSkillexScore(), u.getRating(), u.getIsOnline()
         );
     }
@@ -65,11 +70,15 @@ public class DtoMapper {
             .toList();
 
         return new UserProfileDto(
-            u.getId(), u.getName(), u.getUsername(), u.getEmail(), u.getAvatar(),
+            Objects.requireNonNull(u.getId(), "User ID must not be null"),
+            Objects.requireNonNull(u.getName(), "Name must not be null"),
+            Objects.requireNonNull(u.getUsername(), "Username must not be null"),
+            Objects.requireNonNull(u.getEmail(), "Email must not be null"),
+            u.getAvatar(),
             u.getUniversity(), u.getLocation(), u.getBio(),
             u.getTeachIntentText(), u.getLearnIntentText(),
-            u.getRole().name().toLowerCase(),
-            u.getLevel().name(),
+            u.getRole() != null ? u.getRole().name().toLowerCase() : "user",
+            u.getLevel() != null ? u.getLevel().name() : "NEWBIE",
             u.getSkillexScore(), u.getSessionsCompleted(),
             u.getRating(), u.getIsOnline(), u.getConnectionsPublic(), u.getJoinedAt(),
             offered, wanted
@@ -93,7 +102,12 @@ public class DtoMapper {
     }
 
     private ExchangeDto.SkillRef toSkillRef(Skill s) {
-        return new ExchangeDto.SkillRef(s.getId(), s.getName(), s.getIcon(), s.getCategory());
+        return new ExchangeDto.SkillRef(
+            Objects.requireNonNull(s.getId(), "Skill ID must not be null"),
+            Objects.requireNonNull(s.getName(), "Skill name must not be null"),
+            s.getIcon(),
+            s.getCategory()
+        );
     }
 
     // ── Connection ───────────────────────────────────────────────────────────

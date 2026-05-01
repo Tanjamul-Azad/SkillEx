@@ -16,10 +16,10 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Objects;
 
 @Service
 @RequiredArgsConstructor
-@SuppressWarnings("null")
 public class DashboardServiceImpl implements DashboardService {
 
     private final UserRepository userRepository;
@@ -30,7 +30,8 @@ public class DashboardServiceImpl implements DashboardService {
     @Override
     @Transactional(readOnly = true)
     public DashboardStatsDto getStats(String userId) {
-        User user = userRepository.findById(userId)
+        String safeUserId = Objects.requireNonNull(userId, "User ID must not be null");
+        User user = userRepository.findById(safeUserId)
             .orElseThrow(() -> new EntityNotFoundException("User not found: " + userId));
 
         long pendingExchanges = exchangeRepository

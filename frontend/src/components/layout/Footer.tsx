@@ -71,7 +71,7 @@ export default function Footer() {
           <div className="col-span-1 lg:col-span-2">
             <FooterLogo />
             <p className="mt-4 max-w-xs text-sm leading-relaxed text-muted-foreground">
-              The free skill exchange platform for students. Trade what you know for what you want to learn.
+              The professional skill exchange platform for a global community. Trade what you know for what you want to learn.
             </p>
             <div className="mt-6 flex items-center gap-2.5">
               {socialLinks.map((social) => (
@@ -144,7 +144,7 @@ export default function Footer() {
             {' '}for learners everywhere.
           </p>
           <p className="text-xs text-muted-foreground/50">
-            Free forever · No credit card · Open to all students
+            Free forever · No credit card · Open to everyone
           </p>
         </div>
       </div>

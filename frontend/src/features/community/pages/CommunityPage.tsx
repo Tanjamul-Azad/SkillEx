@@ -431,7 +431,7 @@ const EventsTab = () => {
           <div className="absolute inset-0 bg-gradient-to-t from-black via-black/50 to-transparent z-10" />
           <div className="relative z-20">
             <Badge className="mb-4 bg-primary text-primary-foreground border-none shadow-[0_0_15px_hsl(var(--primary)/0.5)] text-[10px] font-bold uppercase tracking-widest px-3 py-1">FEATURED EVENT</Badge>
-            <h2 className="text-3xl md:text-5xl font-extrabold font-headline drop-shadow-[0_4px_10px_rgba(0,0,0,1)] tracking-tight">{featuredEvent.title}</h2>
+            <h2 className="text-3xl md:text-4xl font-extrabold font-headline drop-shadow-[0_4px_10px_rgba(0,0,0,1)] tracking-tight">{featuredEvent.title}</h2>
             <p className="mt-3 text-white font-bold text-sm tracking-wide flex items-center gap-2 drop-shadow-[0_2px_5px_rgba(0,0,0,0.8)]"><Calendar className="h-5 w-5 text-primary drop-shadow-[0_0_8px_hsl(var(--primary)/0.8)]" /> {new Date(featuredEvent.eventDate).toDateString()}</p>
           </div>
         </div>

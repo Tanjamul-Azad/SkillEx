@@ -15,15 +15,16 @@ import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Sort;
+import org.springframework.lang.NonNull;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.*;
+import java.util.Objects;
 import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
-@SuppressWarnings("null")
 public class CommunityServiceImpl implements CommunityService {
 
     private final EventRepository eventRepository;
@@ -36,7 +37,6 @@ public class CommunityServiceImpl implements CommunityService {
     private final PostLikeRepository postLikeRepository;
     private final CommentRepository commentRepository;
     private final UserSkillOfferedRepository offeredRepo;
-    private final UserSkillWantedRepository wantedRepo;
     private final SkillService skillService;
     private final DtoMapper mapper;
     private final ApplicationEventPublisher eventPublisher;
@@ -63,7 +63,8 @@ public class CommunityServiceImpl implements CommunityService {
         event.setIsOnline(req.isOnline());
         event.setCoverGradient(req.coverGradient());
         if (req.skillIds() != null) {
-            List<Skill> skills = skillRepository.findAllById(req.skillIds());
+            List<Skill> skills = skillRepository
+                    .findAllById(Objects.requireNonNull(req.skillIds(), "Skill IDs must not be null"));
             event.setSkills(skills);
         }
         return mapper.toEvent(eventRepository.save(event));
@@ -72,9 +73,9 @@ public class CommunityServiceImpl implements CommunityService {
     @Override
     @Transactional
     public void attendEvent(String userId, String eventId) {
-        User user  = findUser(userId);
-        Event event = eventRepository.findById(eventId)
-            .orElseThrow(() -> new EntityNotFoundException("Event not found: " + eventId));
+        User user = findUser(userId);
+        Event event = eventRepository.findById(Objects.requireNonNull(eventId, "Event ID must not be null"))
+                .orElseThrow(() -> new EntityNotFoundException("Event not found: " + eventId));
         if (!event.getAttendees().contains(user)) {
             event.getAttendees().add(user);
             eventRepository.save(event);
@@ -106,7 +107,7 @@ public class CommunityServiceImpl implements CommunityService {
         CommunityDtos.DiscussionDto result = mapper.toDiscussion(discussionRepository.save(discussion));
 
         eventPublisher.publishEvent(new ReputationUpdateEvent(
-            authorId, ReputationUpdateEvent.Trigger.COMMUNITY_INTERACTION));
+                authorId, ReputationUpdateEvent.Trigger.COMMUNITY_INTERACTION));
 
         return result;
     }
@@ -114,8 +115,9 @@ public class CommunityServiceImpl implements CommunityService {
     @Override
     @Transactional
     public CommunityDtos.DiscussionDto upvoteDiscussion(String userId, String discussionId) {
-        Discussion discussion = discussionRepository.findById(discussionId)
-            .orElseThrow(() -> new EntityNotFoundException("Discussion not found: " + discussionId));
+        Discussion discussion = discussionRepository
+                .findById(Objects.requireNonNull(discussionId, "Discussion ID must not be null"))
+                .orElseThrow(() -> new EntityNotFoundException("Discussion not found: " + discussionId));
         discussion.setUpvotes(discussion.getUpvotes() + 1);
         return mapper.toDiscussion(discussionRepository.save(discussion));
     }
@@ -132,7 +134,8 @@ public class CommunityServiceImpl implements CommunityService {
 
     @Override
     @Transactional(readOnly = true)
-    public PagedResponse<CommunityDtos.PostDto> searchPostsByIntent(String viewerId, String intent, int page, int size) {
+    public PagedResponse<CommunityDtos.PostDto> searchPostsByIntent(String viewerId, String intent, int page,
+            int size) {
         var pageable = PageRequest.of(page, size, Sort.by("createdAt").descending());
 
         if (intent == null || intent.isBlank()) {
@@ -140,13 +143,14 @@ public class CommunityServiceImpl implements CommunityService {
         }
 
         List<String> skillIds = skillService.searchByIntent(intent).stream()
-            .map(SkillSearchResultDto::skillId)
-            .limit(8)
-            .collect(Collectors.toList());
+                .map(SkillSearchResultDto::skillId)
+                .limit(8)
+                .collect(Collectors.toList());
 
         Page<Post> pageResult = skillIds.isEmpty()
-            ? postRepository.findByContentContainingIgnoreCaseOrderByCreatedAtDesc(intent, pageable)
-            : postRepository.findBySkill_IdInOrContentContainingIgnoreCaseOrderByCreatedAtDesc(skillIds, intent, pageable);
+                ? postRepository.findByContentContainingIgnoreCaseOrderByCreatedAtDesc(intent, pageable)
+                : postRepository.findBySkill_IdInOrContentContainingIgnoreCaseOrderByCreatedAtDesc(skillIds, intent,
+                        pageable);
 
         return mapPostsWithLikeState(pageResult, viewerId);
     }
@@ -175,14 +179,15 @@ public class CommunityServiceImpl implements CommunityService {
 
         // Link skill to the post if provided
         if (req.skillId() != null && !req.skillId().isBlank()) {
-            Skill skill = skillRepository.findById(req.skillId()).orElse(null);
+            Skill skill = skillRepository.findById(Objects.requireNonNull(req.skillId(), "Skill ID must not be null"))
+                    .orElse(null);
             post.setSkill(skill);
         }
 
         CommunityDtos.PostDto result = mapper.toPost(postRepository.save(post), false);
 
         eventPublisher.publishEvent(new ReputationUpdateEvent(
-            authorId, ReputationUpdateEvent.Trigger.COMMUNITY_INTERACTION));
+                authorId, ReputationUpdateEvent.Trigger.COMMUNITY_INTERACTION));
 
         return result;
     }
@@ -190,8 +195,8 @@ public class CommunityServiceImpl implements CommunityService {
     @Override
     @Transactional
     public CommunityDtos.PostDto likePost(String userId, String postId) {
-        Post post = postRepository.findById(postId)
-            .orElseThrow(() -> new EntityNotFoundException("Post not found: " + postId));
+        Post post = postRepository.findById(Objects.requireNonNull(postId, "Post ID must not be null"))
+                .orElseThrow(() -> new EntityNotFoundException("Post not found: " + postId));
         User user = findUser(userId);
 
         boolean alreadyLiked = postLikeRepository.existsByIdPostIdAndIdUserId(postId, userId);
@@ -204,11 +209,11 @@ public class CommunityServiceImpl implements CommunityService {
             return mapper.toPost(post, false);
         } else {
             // Like: add the like and increment counter
-            PostLike like = PostLike.builder()
-                .id(new PostLike.PostLikeId(postId, userId))
-                .post(post)
-                .user(user)
-                .build();
+            PostLike like = Objects.requireNonNull(PostLike.builder()
+                    .id(new PostLike.PostLikeId(postId, userId))
+                    .post(post)
+                    .user(user)
+                    .build(), "PostLike must not be null");
             postLikeRepository.save(like);
             post.setLikes(post.getLikes() + 1);
             postRepository.save(post);
@@ -219,9 +224,10 @@ public class CommunityServiceImpl implements CommunityService {
     @Override
     @Transactional
     public void deletePost(String userId, String postId) {
-        Post post = postRepository.findById(postId)
-            .orElseThrow(() -> new EntityNotFoundException("Post not found: " + postId));
-        if (!post.getAuthor().getId().equals(userId)) {
+        Post post = postRepository.findById(Objects.requireNonNull(postId, "Post ID must not be null"))
+                .orElseThrow(() -> new EntityNotFoundException("Post not found: " + postId));
+        String authorIdOfPost = Objects.requireNonNull(post.getAuthor().getId(), "Author ID must not be null");
+        if (!authorIdOfPost.equals(userId)) {
             throw new IllegalArgumentException("You can only delete your own posts.");
         }
         // Clean up related data
@@ -235,36 +241,37 @@ public class CommunityServiceImpl implements CommunityService {
     @Override
     @Transactional(readOnly = true)
     public PagedResponse<CommentDto> getComments(String postId, int page, int size) {
-        if (!postRepository.existsById(postId)) {
+        if (!postRepository.existsById(Objects.requireNonNull(postId, "Post ID must not be null"))) {
             throw new EntityNotFoundException("Post not found: " + postId);
         }
         var pageable = PageRequest.of(page, size);
         Page<CommentDto> commentPage = commentRepository
-            .findByPostIdOrderByCreatedAtAsc(postId, pageable)
-            .map(mapper::toComment);
+                .findByPostIdOrderByCreatedAtAsc(postId, pageable)
+                .map(mapper::toComment);
         return PagedResponse.of(commentPage);
     }
 
     @Override
     @Transactional
     public CommentDto addComment(String userId, String postId, CreateCommentRequest req) {
-        Post post = postRepository.findById(postId)
-            .orElseThrow(() -> new EntityNotFoundException("Post not found: " + postId));
+        Post post = postRepository.findById(Objects.requireNonNull(postId, "Post ID must not be null"))
+                .orElseThrow(() -> new EntityNotFoundException("Post not found: " + postId));
         User author = findUser(userId);
 
         Comment comment = Comment.builder()
-            .post(post)
-            .author(author)
-            .content(req.content())
-            .build();
+                .post(post)
+                .author(author)
+                .content(req.content())
+                .build();
         Comment saved = commentRepository.save(comment);
+        Objects.requireNonNull(saved, "Saved comment must not be null");
 
         // Update the post's comment counter
         post.setComments(post.getComments() + 1);
         postRepository.save(post);
 
         eventPublisher.publishEvent(new ReputationUpdateEvent(
-            userId, ReputationUpdateEvent.Trigger.COMMUNITY_INTERACTION));
+                userId, ReputationUpdateEvent.Trigger.COMMUNITY_INTERACTION));
 
         return mapper.toComment(saved);
     }
@@ -275,7 +282,7 @@ public class CommunityServiceImpl implements CommunityService {
     @Transactional(readOnly = true)
     public List<CommunityDtos.StoryDto> getStories() {
         return storyRepository.findAll(Sort.by("createdAt").descending())
-            .stream().map(mapper::toStory).collect(Collectors.toList());
+                .stream().map(mapper::toStory).collect(Collectors.toList());
     }
 
     // ── Skill Circles ────────────────────────────────────────────────────────
@@ -301,7 +308,8 @@ public class CommunityServiceImpl implements CommunityService {
         circle.setMemberCount(1);
 
         if (req.skillIds() != null && !req.skillIds().isEmpty()) {
-            List<Skill> skills = skillRepository.findAllById(req.skillIds());
+            List<Skill> skills = skillRepository
+                    .findAllById(Objects.requireNonNull(req.skillIds(), "Skill IDs must not be null"));
             circle.setSkills(skills);
         }
 
@@ -312,9 +320,10 @@ public class CommunityServiceImpl implements CommunityService {
     @Override
     @Transactional
     public CommunityDtos.SkillCircleDto joinSkillCircle(String userId, String circleId) {
-        User user  = findUser(userId);
-        SkillCircle circle = skillCircleRepository.findById(circleId)
-            .orElseThrow(() -> new EntityNotFoundException("SkillCircle not found: " + circleId));
+        User user = findUser(userId);
+        SkillCircle circle = skillCircleRepository
+                .findById(Objects.requireNonNull(circleId, "Circle ID must not be null"))
+                .orElseThrow(() -> new EntityNotFoundException("SkillCircle not found: " + circleId));
         if (!circle.getMembers().contains(user)) {
             circle.getMembers().add(user);
             circle.setMemberCount(circle.getMemberCount() + 1);
@@ -344,9 +353,8 @@ public class CommunityServiceImpl implements CommunityService {
             // Growth percent: synthetic but consistent ranking-based value
             int growthPercent = Math.max(1, (topSkills.size() - i) * 4);
             result.add(new CommunityDtos.TrendingSkillDto(
-                skill.getId(), skill.getName(), skill.getIcon(), skill.getCategory(),
-                postCount, growthPercent
-            ));
+                    skill.getId(), skill.getName(), skill.getIcon(), skill.getCategory(),
+                    postCount, growthPercent));
         }
         return result;
     }
@@ -356,32 +364,31 @@ public class CommunityServiceImpl implements CommunityService {
     public List<CommunityDtos.SuggestedUserDto> getSuggestedUsers(String userId) {
         User viewer = findUser(userId);
         Set<String> viewerWantedIds = viewer.getSkillsWanted().stream()
-            .map(Skill::getId).collect(Collectors.toSet());
+                .map(Skill::getId).collect(Collectors.toSet());
         Set<String> viewerOfferedIds = viewer.getSkillsOffered().stream()
-            .map(Skill::getId).collect(Collectors.toSet());
+                .map(Skill::getId).collect(Collectors.toSet());
 
         if (viewerWantedIds.isEmpty() && viewerOfferedIds.isEmpty()) {
             // No skills configured — return top-rated users
             return userRepository.findTopMentors(PageRequest.of(0, 5)).stream()
-                .filter(u -> !u.getId().equals(userId))
-                .limit(3)
-                .map(u -> new CommunityDtos.SuggestedUserDto(
-                    u.getId(), u.getName(), u.getUsername(), u.getAvatar(),
-                    u.getUniversity(), u.getSkillexScore(), u.getIsOnline(),
-                    List.of(), "Top mentor on SkillEx"
-                ))
-                .toList();
+                    .filter(u -> !u.getId().equals(userId))
+                    .limit(3)
+                    .map(u -> new CommunityDtos.SuggestedUserDto(
+                            u.getId(), u.getName(), u.getUsername(), u.getAvatar(),
+                            u.getUniversity(), u.getSkillexScore(), u.getIsOnline(),
+                            List.of(), "Top mentor on SkillEx"))
+                    .toList();
         }
 
         // Find users who OFFER skills that the viewer WANTS to learn
         List<String> candidateIds = viewerWantedIds.isEmpty()
-            ? List.of()
-            : userRepository.findMatchCandidates(userId, viewerWantedIds, PageRequest.of(0, 20));
+                ? List.of()
+                : userRepository.findMatchCandidates(userId, viewerWantedIds, PageRequest.of(0, 20));
 
         // Also find users who WANT skills that the viewer OFFERS
         List<String> reverseIds = viewerOfferedIds.isEmpty()
-            ? List.of()
-            : userRepository.findCandidatesByWantedSkills(userId, viewerOfferedIds, PageRequest.of(0, 20));
+                ? List.of()
+                : userRepository.findCandidatesByWantedSkills(userId, viewerOfferedIds, PageRequest.of(0, 20));
 
         Set<String> allCandidateIds = new LinkedHashSet<>(candidateIds);
         allCandidateIds.addAll(reverseIds);
@@ -393,32 +400,31 @@ public class CommunityServiceImpl implements CommunityService {
 
         List<User> candidates = userRepository.findAllById(allCandidateIds);
         Map<String, List<UserSkillOffered>> offeredByUser = offeredRepo
-            .findByIdUserIdIn(allCandidateIds).stream()
-            .collect(Collectors.groupingBy(r -> r.getId().getUserId()));
+                .findByIdUserIdIn(allCandidateIds).stream()
+                .collect(Collectors.groupingBy(r -> r.getId().getUserId()));
 
         return candidates.stream()
-            .limit(5)
-            .map(candidate -> {
-                List<String> sharedSkills = offeredByUser
-                    .getOrDefault(candidate.getId(), List.of())
-                    .stream()
-                    .filter(r -> viewerWantedIds.contains(r.getSkill().getId()))
-                    .map(r -> r.getSkill().getName())
-                    .limit(3)
-                    .toList();
+                .limit(5)
+                .map(candidate -> {
+                    List<String> sharedSkills = offeredByUser
+                            .getOrDefault(candidate.getId(), List.of())
+                            .stream()
+                            .filter(r -> viewerWantedIds.contains(r.getSkill().getId()))
+                            .map(r -> r.getSkill().getName())
+                            .limit(3)
+                            .toList();
 
-                String reason = sharedSkills.isEmpty()
-                    ? "Wants to learn what you teach"
-                    : "Can teach you " + String.join(", ", sharedSkills);
+                    String reason = sharedSkills.isEmpty()
+                            ? "Wants to learn what you teach"
+                            : "Can teach you " + String.join(", ", sharedSkills);
 
-                return new CommunityDtos.SuggestedUserDto(
-                    candidate.getId(), candidate.getName(), candidate.getUsername(),
-                    candidate.getAvatar(), candidate.getUniversity(),
-                    candidate.getSkillexScore(), candidate.getIsOnline(),
-                    sharedSkills, reason
-                );
-            })
-            .toList();
+                    return new CommunityDtos.SuggestedUserDto(
+                            candidate.getId(), candidate.getName(), candidate.getUsername(),
+                            candidate.getAvatar(), candidate.getUniversity(),
+                            candidate.getSkillexScore(), candidate.getIsOnline(),
+                            sharedSkills, reason);
+                })
+                .toList();
     }
 
     @Override
@@ -430,13 +436,14 @@ public class CommunityServiceImpl implements CommunityService {
     // ── helpers ──────────────────────────────────────────────────────────────
 
     private User findUser(String id) {
-        return userRepository.findById(id)
-            .orElseThrow(() -> new EntityNotFoundException("User not found: " + id));
+        return userRepository.findById(Objects.requireNonNull(id, "User ID must not be null"))
+                .orElseThrow(() -> new EntityNotFoundException("User not found: " + id));
     }
 
     /**
      * Maps a page of Post entities to PostDtos with viewer-specific like state.
-     * Uses a single bulk query to resolve isLikedByViewer for all posts in the page.
+     * Uses a single bulk query to resolve isLikedByViewer for all posts in the
+     * page.
      */
     private PagedResponse<CommunityDtos.PostDto> mapPostsWithLikeState(Page<Post> postPage, String viewerId) {
         List<Post> posts = postPage.getContent();
@@ -444,23 +451,24 @@ public class CommunityServiceImpl implements CommunityService {
         // Bulk-resolve which posts the viewer has liked
         Set<String> likedPostIds;
         if (viewerId != null && !viewerId.isBlank() && !posts.isEmpty()) {
-            List<String> postIds = posts.stream().map(Post::getId).toList();
+            List<String> postIds = posts.stream()
+                    .map(p -> Objects.requireNonNull(p.getId(), "Post ID must not be null"))
+                    .toList();
             likedPostIds = new HashSet<>(postLikeRepository.findLikedPostIdsByUser(viewerId, postIds));
         } else {
             likedPostIds = Set.of();
         }
 
         List<CommunityDtos.PostDto> content = posts.stream()
-            .map(post -> mapper.toPost(post, likedPostIds.contains(post.getId())))
-            .toList();
+                .map(post -> mapper.toPost(post, likedPostIds.contains(post.getId())))
+                .toList();
 
         return new PagedResponse<>(
-            content,
-            postPage.getNumber(),
-            postPage.getSize(),
-            postPage.getTotalElements(),
-            postPage.getTotalPages(),
-            postPage.isLast()
-        );
+                content,
+                postPage.getNumber(),
+                postPage.getSize(),
+                postPage.getTotalElements(),
+                postPage.getTotalPages(),
+                postPage.isLast());
     }
 }

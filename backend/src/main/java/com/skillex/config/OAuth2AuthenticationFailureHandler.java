@@ -10,6 +10,7 @@ import org.springframework.stereotype.Component;
 import org.springframework.web.util.UriComponentsBuilder;
 
 import java.io.IOException;
+import java.util.Objects;
 
 @Component
 public class OAuth2AuthenticationFailureHandler implements AuthenticationFailureHandler {
@@ -24,7 +25,7 @@ public class OAuth2AuthenticationFailureHandler implements AuthenticationFailure
         AuthenticationException exception
     ) throws IOException, ServletException {
         String redirectUrl = UriComponentsBuilder
-            .fromHttpUrl(frontendBaseUrl)
+            .fromUriString(Objects.requireNonNull(frontendBaseUrl, "Frontend base URL must not be null"))
             .path("/login")
             .queryParam("oauth", "error")
             .build(true)

@@ -5,7 +5,7 @@
 -- ── posts ─────────────────────────────────────────────────────
 -- Community feed posts. Spring Boot entity: Post.java
 CREATE TABLE IF NOT EXISTS posts (
-  id          VARCHAR(36)   NOT NULL DEFAULT (UUID()),
+  id          VARCHAR(36)   NOT NULL DEFAULT UUID(),
   type        ENUM('SHOWCASE','ACHIEVEMENT','EXCHANGE','QUESTION') NOT NULL DEFAULT 'SHOWCASE',
   author_id   VARCHAR(36)   NOT NULL,
   content     TEXT          NOT NULL,
@@ -23,7 +23,7 @@ CREATE TABLE IF NOT EXISTS posts (
 -- ── stories ───────────────────────────────────────────────────
 -- 24-hour user stories. Spring Boot entity: Story.java
 CREATE TABLE IF NOT EXISTS stories (
-  id          VARCHAR(36)   NOT NULL DEFAULT (UUID()),
+  id          VARCHAR(36)   NOT NULL DEFAULT UUID(),
   user_id     VARCHAR(36)   NOT NULL,
   is_seen     TINYINT(1)    NOT NULL DEFAULT 0,
   created_at  DATETIME      NOT NULL DEFAULT CURRENT_TIMESTAMP,
@@ -64,7 +64,7 @@ CREATE TABLE IF NOT EXISTS skill_circle_skills (
 -- ── notifications ─────────────────────────────────────────────
 -- In-app notifications. Spring Boot entity: Notification.java
 CREATE TABLE IF NOT EXISTS notifications (
-  id           VARCHAR(36)   NOT NULL DEFAULT (UUID()),
+  id           VARCHAR(36)   NOT NULL DEFAULT UUID(),
   user_id      VARCHAR(36)   NOT NULL  COMMENT 'Recipient',
   type         ENUM('MATCH_REQUEST','SESSION_SCHEDULED','REVIEW_LEFT','SYSTEM_UPDATE') NOT NULL,
   message      TEXT          NOT NULL,

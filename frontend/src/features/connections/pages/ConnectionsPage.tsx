@@ -137,7 +137,7 @@ export default function ConnectionsPage() {
           transition={{ duration: 0.25 }}
           className="flex flex-col gap-2 mb-8"
         >
-          <h1 className="font-headline text-3xl font-extrabold md:text-5xl leading-none">My Connections</h1>
+          <h1 className="font-headline text-3xl font-extrabold md:text-4xl lg:text-5xl leading-none">My Connections</h1>
           <p className="text-sm text-muted-foreground uppercase tracking-wider font-bold">Manage accepted, sent, and received connection requests.</p>
         </motion.div>
 

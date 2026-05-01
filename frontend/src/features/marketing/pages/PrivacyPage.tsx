@@ -117,7 +117,7 @@ export default function PrivacyPage() {
           <div className="absolute inset-0 dot-grid opacity-20 dark:opacity-10" />
         </div>
 
-        <div className="container mx-auto max-w-3xl px-4 py-28">
+        <div className="container mx-auto max-w-3xl px-4 py-16 md:py-24">
 
           {/* Header */}
           <motion.div variants={container} initial="hidden" animate="visible" className="mb-14">
@@ -131,7 +131,7 @@ export default function PrivacyPage() {
                 <Lock className="h-6 w-6 text-secondary" />
               </div>
               <div>
-                <h1 className="font-headline text-4xl font-extrabold md:text-5xl">Privacy Policy</h1>
+                <h1 className="font-headline text-3xl font-extrabold md:text-4xl">Privacy Policy</h1>
                 <p className="mt-2 text-muted-foreground text-sm">
                   Last updated: <span className="font-semibold text-foreground/70">1 March 2026</span>
                 </p>

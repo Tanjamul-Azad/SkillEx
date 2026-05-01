@@ -48,8 +48,13 @@ public class OAuth2AuthenticationSuccessHandler implements AuthenticationSuccess
             return;
         }
 
+        if (frontendBaseUrl == null) {
+            response.sendRedirect("/login?oauth=error");
+            return;
+        }
+
         String redirectUrl = UriComponentsBuilder
-            .fromHttpUrl(frontendBaseUrl)
+            .fromUriString(frontendBaseUrl)
             .path("/login")
             .queryParam("oauth", "success")
             .queryParam("token", auth.token())

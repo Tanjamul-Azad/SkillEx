@@ -17,10 +17,10 @@ import org.springframework.transaction.annotation.Transactional;
 import java.util.Comparator;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 
 @Service
 @RequiredArgsConstructor
-@SuppressWarnings("null")
 public class SkillServiceImpl implements SkillService {
 
     private final SkillRepository skillRepository;
@@ -39,7 +39,7 @@ public class SkillServiceImpl implements SkillService {
     @Override
     @Transactional(readOnly = true)
     public Skill getSkillById(String skillId) {
-        return skillRepository.findById(skillId)
+        return skillRepository.findById(Objects.requireNonNull(skillId, "Skill ID must not be null"))
             .orElseThrow(() -> new EntityNotFoundException("Skill not found: " + skillId));
     }
 
@@ -63,10 +63,11 @@ public class SkillServiceImpl implements SkillService {
     @Override
     @Transactional
     public void deleteSkill(String skillId) {
-        if (!skillRepository.existsById(skillId)) {
+        String safeId = Objects.requireNonNull(skillId, "Skill ID must not be null");
+        if (!skillRepository.existsById(safeId)) {
             throw new EntityNotFoundException("Skill not found: " + skillId);
         }
-        skillRepository.deleteById(skillId);
+        skillRepository.deleteById(safeId);
     }
 
     @Override
@@ -88,8 +89,8 @@ public class SkillServiceImpl implements SkillService {
                 double[] skillVector = embeddingMap.get(skill.getId());
                 double similarity = cosine(intentVector, skillVector);
                 return new SkillSearchResultDto(
-                    skill.getId(),
-                    skill.getName(),
+                    Objects.requireNonNull(skill.getId(), "Skill ID must not be null"),
+                    Objects.requireNonNull(skill.getName(), "Skill name must not be null"),
                     skill.getCategory(),
                     skill.getIcon(),
                     skill.getDescription(),

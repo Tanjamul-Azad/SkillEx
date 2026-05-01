@@ -2,18 +2,18 @@
 -- SkillEX — MySQL Initial Schema  V1
 -- Compatible with: MySQL 8.0+ / MariaDB 10.6+
 --
--- IMPORTANT: The `skillex` database must already exist before Flyway runs.
+-- IMPORTANT: The skillex database must already exist before Flyway runs.
 -- Create it manually in phpMyAdmin / mysql CLI:
 --   CREATE DATABASE skillex CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
 --
--- Flyway cannot run CREATE DATABASE / USE statements — they are intentionally
+-- Flyway cannot run CREATE DATABASE / USE statements - they are intentionally
 -- omitted here. The DataSource in application.properties points to the DB directly.
 -- ============================================================
 
 -- ── users ────────────────────────────────────────────────────
 -- Stores registered users. Spring Boot entity: User.java
 CREATE TABLE IF NOT EXISTS users (
-  id                  VARCHAR(36)   NOT NULL DEFAULT (UUID())   COMMENT 'UUID primary key',
+  id                  VARCHAR(36)   NOT NULL DEFAULT UUID()     COMMENT 'UUID primary key',
   name                VARCHAR(100)  NOT NULL                    COMMENT 'Full display name',
   email               VARCHAR(255)  NOT NULL                    COMMENT 'Unique login email',
   password_hash       VARCHAR(255)  NOT NULL                    COMMENT 'BCrypt hashed password',
@@ -22,14 +22,12 @@ CREATE TABLE IF NOT EXISTS users (
   bio                 TEXT                                      COMMENT 'Short personal bio',
   skillex_score       INT           NOT NULL DEFAULT 0          COMMENT 'Platform reputation score',
   -- Matches UserLevel enum names stored by JPA EnumType.STRING
-  level               ENUM('NEWCOMER','LEARNER','PRACTITIONER','SKILLED','ADVANCED','MASTER')
-                                    NOT NULL DEFAULT 'NEWCOMER',
+  level               ENUM('NEWCOMER','LEARNER','PRACTITIONER','SKILLED','ADVANCED','MASTER') NOT NULL DEFAULT 'NEWCOMER',
   sessions_completed  INT           NOT NULL DEFAULT 0,
   rating              DECIMAL(3,2)  NOT NULL DEFAULT 0.00       COMMENT 'Average review rating (0–5)',
   is_online           TINYINT(1)    NOT NULL DEFAULT 0,
   -- Matches UserRole enum names stored by JPA EnumType.STRING
-  role                ENUM('STUDENT','ADMIN')
-                                    NOT NULL DEFAULT 'STUDENT',
+  role                ENUM('STUDENT','ADMIN') NOT NULL DEFAULT 'STUDENT',
   joined_at           DATETIME      NOT NULL DEFAULT CURRENT_TIMESTAMP,
   updated_at          DATETIME      NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
   PRIMARY KEY (id),
@@ -74,7 +72,7 @@ CREATE TABLE IF NOT EXISTS user_skills_wanted (
 -- ── exchanges ─────────────────────────────────────────────────
 -- Peer skill-exchange requests. Spring Boot entity: Exchange.java
 CREATE TABLE IF NOT EXISTS exchanges (
-  id               VARCHAR(36)   NOT NULL DEFAULT (UUID()),
+  id               VARCHAR(36)   NOT NULL DEFAULT UUID(),
   requester_id     VARCHAR(36)   NOT NULL              COMMENT 'User who sent the request',
   receiver_id      VARCHAR(36)   NOT NULL              COMMENT 'User who received the request',
   offered_skill_id VARCHAR(36)   DEFAULT NULL          COMMENT 'Skill requester offers to teach',
@@ -96,7 +94,7 @@ CREATE TABLE IF NOT EXISTS exchanges (
 -- ── sessions ─────────────────────────────────────────────────
 -- A scheduled teaching session linked to an exchange. Spring Boot: Session.java
 CREATE TABLE IF NOT EXISTS sessions (
-  id              VARCHAR(36)   NOT NULL DEFAULT (UUID()),
+  id              VARCHAR(36)   NOT NULL DEFAULT UUID(),
   exchange_id     VARCHAR(36)   NOT NULL,
   teacher_id      VARCHAR(36)   NOT NULL,
   learner_id      VARCHAR(36)   NOT NULL,
@@ -119,7 +117,7 @@ CREATE TABLE IF NOT EXISTS sessions (
 -- ── reviews ──────────────────────────────────────────────────
 -- Post-session reviews. Spring Boot entity: Review.java
 CREATE TABLE IF NOT EXISTS reviews (
-  id          VARCHAR(36)   NOT NULL DEFAULT (UUID()),
+  id          VARCHAR(36)   NOT NULL DEFAULT UUID(),
   session_id  VARCHAR(36)   NOT NULL,
   from_user   VARCHAR(36)   NOT NULL,
   to_user     VARCHAR(36)   NOT NULL,
@@ -137,7 +135,7 @@ CREATE TABLE IF NOT EXISTS reviews (
 -- ── events ───────────────────────────────────────────────────
 -- Community events. Spring Boot entity: Event.java
 CREATE TABLE IF NOT EXISTS events (
-  id              VARCHAR(36)   NOT NULL DEFAULT (UUID()),
+  id              VARCHAR(36)   NOT NULL DEFAULT UUID(),
   title           VARCHAR(200)  NOT NULL,
   description     TEXT          DEFAULT NULL,
   host_id         VARCHAR(36)   NOT NULL,
@@ -162,7 +160,7 @@ CREATE TABLE IF NOT EXISTS event_skills (
 -- ── discussions ──────────────────────────────────────────────
 -- Community discussion board. Spring Boot entity: Discussion.java
 CREATE TABLE IF NOT EXISTS discussions (
-  id         VARCHAR(36)   NOT NULL DEFAULT (UUID()),
+  id         VARCHAR(36)   NOT NULL DEFAULT UUID(),
   title      VARCHAR(300)  NOT NULL,
   content    TEXT          NOT NULL,
   author_id  VARCHAR(36)   NOT NULL,
@@ -179,7 +177,7 @@ CREATE TABLE IF NOT EXISTS discussions (
 -- ── skill_circles ────────────────────────────────────────────
 -- Named groups organized around a skill. Spring Boot entity: SkillCircle.java
 CREATE TABLE IF NOT EXISTS skill_circles (
-  id            VARCHAR(36)   NOT NULL DEFAULT (UUID()),
+  id            VARCHAR(36)   NOT NULL DEFAULT UUID(),
   name          VARCHAR(200)  NOT NULL,
   icon          VARCHAR(50)   DEFAULT '⚡',
   member_count  INT           NOT NULL DEFAULT 0,

@@ -27,6 +27,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
+import java.util.Objects;
 import java.util.Optional;
 import java.util.UUID;
 
@@ -34,13 +35,12 @@ import java.util.UUID;
  * Concrete implementation of AuthService.
  *
  * OOP notes:
- *  - Implements interface  → open/closed, dependency inversion
- *  - @RequiredArgsConstructor → constructor injection (encapsulation)
- *  - @Transactional          → declarative transaction boundary
+ * - Implements interface → open/closed, dependency inversion
+ * - @RequiredArgsConstructor → constructor injection (encapsulation)
+ * - @Transactional → declarative transaction boundary
  */
 @Service
 @RequiredArgsConstructor
-@SuppressWarnings("null")
 public class AuthServiceImpl implements AuthService {
 
     private static final int USERNAME_MAX_LEN = 50;
@@ -63,22 +63,30 @@ public class AuthServiceImpl implements AuthService {
 
         String username = generateUniqueUsername(req.name(), req.email());
 
-        User user = User.builder()
-            .name(req.name())
-            .username(username)
-            .email(req.email())
-            .passwordHash(passwordEncoder.encode(req.password()))
-            .university(req.university())
-            .teachIntentText(sanitizeIntentText(req.skillToTeach()))
-            .learnIntentText(sanitizeIntentText(req.skillToLearn()))
-            .build();
+        String safeName = Objects.requireNonNull(req.name(), "Name must not be null");
+        String safeEmail = Objects.requireNonNull(req.email(), "Email must not be null");
 
-        user = userRepository.save(user);
+        User user = User.builder()
+                .name(safeName)
+                .username(username)
+                .email(safeEmail)
+                .passwordHash(passwordEncoder.encode(req.password()))
+                .university(req.university())
+                .teachIntentText(sanitizeIntentText(req.skillToTeach()))
+                .learnIntentText(sanitizeIntentText(req.skillToLearn()))
+                .build();
+
+        User savedUser = userRepository.save(user);
+        Objects.requireNonNull(savedUser, "Saved user must not be null");
+        user = savedUser;
 
         // Persist initial skills chosen during registration
         saveRegistrationSkills(user, req);
 
-        String token = jwtUtil.generateToken(user.getId(), user.getEmail(), user.getRole().name());
+        String token = jwtUtil.generateToken(
+                Objects.requireNonNull(user.getId(), "User ID must not be null"),
+                Objects.requireNonNull(user.getEmail(), "User email must not be null"),
+                user.getRole() != null ? user.getRole().name() : "USER");
         return toAuthResponse(token, user);
     }
 
@@ -86,13 +94,16 @@ public class AuthServiceImpl implements AuthService {
     @Transactional(readOnly = true)
     public AuthResponse login(LoginRequest req) {
         User user = userRepository.findByEmail(req.email())
-            .orElseThrow(() -> new IllegalArgumentException("Invalid email or password."));
+                .orElseThrow(() -> new IllegalArgumentException("Invalid email or password."));
 
         if (!passwordEncoder.matches(req.password(), user.getPasswordHash())) {
             throw new IllegalArgumentException("Invalid email or password.");
         }
 
-        String token = jwtUtil.generateToken(user.getId(), user.getEmail(), user.getRole().name());
+        String token = jwtUtil.generateToken(
+                Objects.requireNonNull(user.getId(), "User ID must not be null"),
+                Objects.requireNonNull(user.getEmail(), "User email must not be null"),
+                user.getRole() != null ? user.getRole().name() : "USER");
         return toAuthResponse(token, user);
     }
 
@@ -106,23 +117,33 @@ public class AuthServiceImpl implements AuthService {
         User user = userRepository.findByEmail(email).orElseGet(() -> {
             String displayName = firstNonBlank(name, emailLocalPart(email), "SkillEX User");
             String username = generateUniqueUsername(displayName, email);
+            String safeName = Objects.requireNonNull(displayName, "Name must not be null");
+            String safeUsername = Objects.requireNonNull(username, "Username must not be null");
+            String safeEmail = Objects.requireNonNull(email, "Email must not be null");
 
-            return userRepository.save(User.builder()
-                .name(displayName)
-                .username(username)
-                .email(email)
-                // Required by current schema (password_hash is non-null) even for OAuth users.
-                .passwordHash(passwordEncoder.encode(UUID.randomUUID().toString()))
-                .avatar(sanitizeIntentText(avatarUrl))
-                .build());
+            User saved = userRepository.save(User.builder()
+                    .name(safeName)
+                    .username(safeUsername)
+                    .email(safeEmail)
+                    // Required by current schema (password_hash is non-null) even for OAuth users.
+                    .passwordHash(passwordEncoder.encode(UUID.randomUUID().toString()))
+                    .avatar(avatarUrl != null ? avatarUrl : "")
+                    .build());
+            Objects.requireNonNull(saved, "Saved user must not be null");
+            return saved;
         });
 
         if ((user.getAvatar() == null || user.getAvatar().isBlank()) && avatarUrl != null && !avatarUrl.isBlank()) {
             user.setAvatar(avatarUrl);
-            user = userRepository.save(user);
+            User updatedUser = Objects.requireNonNull(userRepository.save(user), "Saved user must not be null");
+            user = updatedUser;
         }
 
-        String token = jwtUtil.generateToken(user.getId(), user.getEmail(), user.getRole().name());
+        String userIdFromDb = Objects.requireNonNull(user.getId(), "User ID must not be null");
+        String userEmailFromDb = Objects.requireNonNull(user.getEmail(), "User email must not be null");
+        String userRoleFromDb = user.getRole() != null ? user.getRole().name() : "USER";
+
+        String token = jwtUtil.generateToken(userIdFromDb, userEmailFromDb, userRoleFromDb);
         return toAuthResponse(token, user);
     }
 
@@ -135,10 +156,14 @@ public class AuthServiceImpl implements AuthService {
         }
 
         String userId = jwtUtil.extractUserId(token);
+        Objects.requireNonNull(userId, "User ID must not be null");
         User user = userRepository.findById(userId)
-            .orElseThrow(() -> new IllegalArgumentException("Invalid refresh token."));
+                .orElseThrow(() -> new IllegalArgumentException("Invalid refresh token."));
 
-        String newToken = jwtUtil.generateToken(user.getId(), user.getEmail(), user.getRole().name());
+        String newToken = jwtUtil.generateToken(
+                Objects.requireNonNull(user.getId(), "User ID must not be null"),
+                Objects.requireNonNull(user.getEmail(), "User email must not be null"),
+                user.getRole() != null ? user.getRole().name() : "USER");
         return toAuthResponse(newToken, user);
     }
 
@@ -151,13 +176,17 @@ public class AuthServiceImpl implements AuthService {
     @Override
     @Transactional(readOnly = true)
     public User getCurrentUser(@NonNull String userId) {
-        return userRepository.findById(userId)
-            .orElseThrow(() -> new IllegalArgumentException("User not found."));
+        String safeId = Objects.requireNonNull(userId, "User ID must not be null");
+        return userRepository.findById(safeId)
+                .orElseThrow(() -> new IllegalArgumentException("User not found."));
     }
 
     // ── Private helpers ──────────────────────────────────────────────────────
 
-    /** Builds the auth response with a full profile DTO so no second round-trip is needed. */
+    /**
+     * Builds the auth response with a full profile DTO so no second round-trip is
+     * needed.
+     */
     private AuthResponse toAuthResponse(String token, User user) {
         return new AuthResponse(token, mapper.toProfile(user));
     }
@@ -170,24 +199,34 @@ public class AuthServiceImpl implements AuthService {
     private void saveRegistrationSkills(User user, RegisterRequest req) {
         UserSkillOffered.SkillProficiency proficiency = parseProficiency(req.level());
 
-        // Write only through the junction entity repos — DtoMapper.toProfile() reads them
-        // directly.  Do NOT also add to user.getSkillsOffered() / getSkillsWanted() and
-        // call userRepository.save(), as that would generate a duplicate-key INSERT on the
+        // Write only through the junction entity repos — DtoMapper.toProfile() reads
+        // them
+        // directly. Do NOT also add to user.getSkillsOffered() / getSkillsWanted() and
+        // call userRepository.save(), as that would generate a duplicate-key INSERT on
+        // the
         // same user_skills_offered / user_skills_wanted row.
         if (req.skillToTeach() != null && !req.skillToTeach().isBlank()) {
-            resolveRegistrationSkill(req.skillToTeach(), true).ifPresent(skill ->
-                offeredRepo.save(UserSkillOffered.builder()
-                    .id(new UserSkillOffered.UserSkillId(user.getId(), skill.getId()))
-                    .user(user).skill(skill).level(proficiency)
-                    .build()));
+            resolveRegistrationSkill(req.skillToTeach(), true).ifPresent(skill -> {
+                String userId = Objects.requireNonNull(user.getId(), "User ID must not be null");
+                String skillId = Objects.requireNonNull(skill.getId(), "Skill ID must not be null");
+                UserSkillOffered offered = Objects.requireNonNull(UserSkillOffered.builder()
+                        .id(new UserSkillOffered.UserSkillId(userId, skillId))
+                        .user(user).skill(skill).level(proficiency)
+                        .build(), "UserSkillOffered must not be null");
+                offeredRepo.save(offered);
+            });
         }
 
         if (req.skillToLearn() != null && !req.skillToLearn().isBlank()) {
-            resolveRegistrationSkill(req.skillToLearn(), false).ifPresent(skill ->
-                wantedRepo.save(UserSkillWanted.builder()
-                    .id(new UserSkillWanted.UserSkillId(user.getId(), skill.getId()))
-                    .user(user).skill(skill).level(proficiency)
-                    .build()));
+            resolveRegistrationSkill(req.skillToLearn(), false).ifPresent(skill -> {
+                String userId = Objects.requireNonNull(user.getId(), "User ID must not be null");
+                String skillId = Objects.requireNonNull(skill.getId(), "Skill ID must not be null");
+                UserSkillWanted wanted = Objects.requireNonNull(UserSkillWanted.builder()
+                        .id(new UserSkillWanted.UserSkillId(userId, skillId))
+                        .user(user).skill(skill).level(proficiency)
+                        .build(), "UserSkillWanted must not be null");
+                wantedRepo.save(wanted);
+            });
         }
     }
 
@@ -199,8 +238,8 @@ public class AuthServiceImpl implements AuthService {
         }
 
         SkillIntentInterpretRequest request = teachSide
-            ? new SkillIntentInterpretRequest(rawName, null)
-            : new SkillIntentInterpretRequest(null, rawName);
+                ? new SkillIntentInterpretRequest(rawName, null)
+                : new SkillIntentInterpretRequest(null, rawName);
 
         SkillIntentInterpretResponse interpreted = skillIntentService.interpret(request);
         SkillIntentInterpretResultDto side = teachSide ? interpreted.teach() : interpreted.learn();
@@ -217,10 +256,11 @@ public class AuthServiceImpl implements AuthService {
     }
 
     private String normalizeSkillName(String rawName) {
-        String normalized = rawName == null ? "" : rawName
-            .replaceAll("[^A-Za-z0-9\\s+/#.-]", " ")
-            .replaceAll("\\s+", " ")
-            .trim();
+        String normalized = rawName == null ? ""
+                : rawName
+                        .replaceAll("[^A-Za-z0-9\\s+/#.-]", " ")
+                        .replaceAll("\\s+", " ")
+                        .trim();
 
         if (normalized.isBlank()) {
             return "";
@@ -234,8 +274,8 @@ public class AuthServiceImpl implements AuthService {
             return null;
         }
         String normalized = raw
-            .replaceAll("\\s+", " ")
-            .trim();
+                .replaceAll("\\s+", " ")
+                .trim();
         return normalized.isBlank() ? null : normalized;
     }
 
@@ -248,8 +288,8 @@ public class AuthServiceImpl implements AuthService {
             String suffixText = "_" + suffix;
             int maxBaseLen = USERNAME_MAX_LEN - suffixText.length();
             String trimmedBase = base.length() > maxBaseLen
-                ? base.substring(0, maxBaseLen)
-                : base;
+                    ? base.substring(0, maxBaseLen)
+                    : base;
             candidate = trimmedBase + suffixText;
             suffix++;
         }
@@ -260,10 +300,10 @@ public class AuthServiceImpl implements AuthService {
     private String normalizeUsernameSeed(String name, String email) {
         String seed = firstNonBlank(name, emailLocalPart(email), "user");
         String normalized = seed.toLowerCase()
-            .replaceAll("[^a-z0-9._-]", "_")
-            .replaceAll("_+", "_")
-            .replaceAll("^[._-]+", "")
-            .replaceAll("[._-]+$", "");
+                .replaceAll("[^a-z0-9._-]", "_")
+                .replaceAll("_+", "_")
+                .replaceAll("^[._-]+", "")
+                .replaceAll("[._-]+$", "");
 
         if (normalized.isBlank()) {
             normalized = "user";
@@ -308,14 +348,15 @@ public class AuthServiceImpl implements AuthService {
         }
 
         return alternatives.stream()
-            .map(SkillIntentSuggestionDto::skillId)
-            .filter(id -> id != null && !id.isBlank())
-            .findFirst()
-            .orElse(null);
+                .map(SkillIntentSuggestionDto::skillId)
+                .filter(id -> id != null && !id.isBlank())
+                .findFirst()
+                .orElse(null);
     }
 
     private UserSkillOffered.SkillProficiency parseProficiency(String raw) {
-        if (raw == null) return UserSkillOffered.SkillProficiency.BEGINNER;
+        if (raw == null)
+            return UserSkillOffered.SkillProficiency.BEGINNER;
         try {
             return UserSkillOffered.SkillProficiency.valueOf(raw.toUpperCase());
         } catch (IllegalArgumentException e) {

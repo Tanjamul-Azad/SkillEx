@@ -15,6 +15,7 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Sort;
+import org.springframework.lang.NonNull;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -23,6 +24,7 @@ import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
+import java.util.Objects;
 import java.util.Set;
 import java.util.stream.Collectors;
 
@@ -30,14 +32,13 @@ import java.util.stream.Collectors;
  * Concrete implementation of UserService.
  *
  * OOP notes:
- *  - Implements interface → Dependency Inversion Principle
- *  - @Transactional(readOnly=true) on all reads for performance
- *  - Password change validated via PasswordEncoder before applying
- *  - Skill add/remove routed to dedicated junction repositories
+ * - Implements interface → Dependency Inversion Principle
+ * - @Transactional(readOnly=true) on all reads for performance
+ * - Password change validated via PasswordEncoder before applying
+ * - Skill add/remove routed to dedicated junction repositories
  */
 @Service
 @RequiredArgsConstructor
-@SuppressWarnings("null")
 public class UserServiceImpl implements UserService {
 
     private final UserRepository userRepository;
@@ -67,22 +68,30 @@ public class UserServiceImpl implements UserService {
     @Transactional
     public UserProfileDto updateProfile(String userId, UpdateProfileRequest req) {
         User user = findUserById(userId);
-        if (req.name()       != null) user.setName(req.name());
+        if (req.name() != null)
+            user.setName(req.name());
         if (req.username() != null) {
             String normalizedUsername = normalizeUsername(req.username());
             if (!normalizedUsername.equalsIgnoreCase(user.getUsername())
-                && userRepository.existsByUsernameIgnoreCase(normalizedUsername)) {
+                    && userRepository.existsByUsernameIgnoreCase(normalizedUsername)) {
                 throw new IllegalArgumentException("Username is already in use.");
             }
             user.setUsername(normalizedUsername);
         }
-        if (req.university() != null) user.setUniversity(req.university());
-        if (req.location()   != null) user.setLocation(req.location());
-        if (req.bio()        != null) user.setBio(req.bio());
-        if (req.teachIntentText() != null) user.setTeachIntentText(req.teachIntentText().trim());
-        if (req.learnIntentText() != null) user.setLearnIntentText(req.learnIntentText().trim());
-        if (req.connectionsPublic() != null) user.setConnectionsPublic(req.connectionsPublic());
-        if (req.avatar()     != null) user.setAvatar(req.avatar());
+        if (req.university() != null)
+            user.setUniversity(req.university());
+        if (req.location() != null)
+            user.setLocation(req.location());
+        if (req.bio() != null)
+            user.setBio(req.bio());
+        if (req.teachIntentText() != null)
+            user.setTeachIntentText(req.teachIntentText().trim());
+        if (req.learnIntentText() != null)
+            user.setLearnIntentText(req.learnIntentText().trim());
+        if (req.connectionsPublic() != null)
+            user.setConnectionsPublic(req.connectionsPublic());
+        if (req.avatar() != null)
+            user.setAvatar(req.avatar());
         // email change — check uniqueness first
         if (req.email() != null && !req.email().equals(user.getEmail())) {
             if (userRepository.existsByEmail(req.email())) {
@@ -90,7 +99,9 @@ public class UserServiceImpl implements UserService {
             }
             user.setEmail(req.email());
         }
-        return mapper.toProfile(userRepository.save(user));
+        User saved = userRepository.save(user);
+        Objects.requireNonNull(saved, "Saved user must not be null");
+        return mapper.toProfile(saved);
     }
 
     @Override
@@ -108,13 +119,12 @@ public class UserServiceImpl implements UserService {
     @Transactional
     public AddSkillResult addSkill(String userId, AddSkillRequest req) {
         User user = findUserById(userId);
-        UserSkillOffered.SkillProficiency level =
-            UserSkillOffered.SkillProficiency.valueOf(req.level());
+        UserSkillOffered.SkillProficiency level = UserSkillOffered.SkillProficiency.valueOf(req.level());
 
         // ── Resolve skill: catalog lookup by ID, or find/create by name ──────
         if (req.skillId() != null && !req.skillId().isBlank()) {
-            Skill skill = skillRepository.findById(req.skillId())
-                .orElseThrow(() -> new EntityNotFoundException("Skill not found: " + req.skillId()));
+            Skill skill = skillRepository.findById(Objects.requireNonNull(req.skillId(), "Skill ID must not be null"))
+                    .orElseThrow(() -> new EntityNotFoundException("Skill not found: " + req.skillId()));
             attachSkill(user, skill, req.type(), level, req.proofVideoUrl(), req.subtitle());
             return new AddSkillResult("ADDED", "Skill added to your profile.", skill.getId(), null);
         }
@@ -128,54 +138,59 @@ public class UserServiceImpl implements UserService {
 
         AddSkillResult pendingResult = skillCatalogGovernanceService.submitUnknownSkill(userId, req);
         if ("ADDED".equalsIgnoreCase(pendingResult.status())
-            && pendingResult.skillId() != null
-            && !pendingResult.skillId().isBlank()) {
-            Skill promoted = skillRepository.findById(pendingResult.skillId())
-                .orElseThrow(() -> new EntityNotFoundException("Promoted skill not found: " + pendingResult.skillId()));
+                && pendingResult.skillId() != null
+                && !pendingResult.skillId().isBlank()) {
+            Skill promoted = skillRepository
+                    .findById(Objects.requireNonNull(pendingResult.skillId(), "Promoted skill ID must not be null"))
+                    .orElseThrow(
+                            () -> new EntityNotFoundException("Promoted skill not found: " + pendingResult.skillId()));
             attachSkill(user, promoted, req.type(), level, req.proofVideoUrl(), req.subtitle());
             return new AddSkillResult(
-                "ADDED",
-                "Skill auto-promoted and added to your profile.",
-                promoted.getId(),
-                pendingResult.pendingId()
-            );
+                    "ADDED",
+                    "Skill auto-promoted and added to your profile.",
+                    promoted.getId(),
+                    pendingResult.pendingId());
         }
 
         return pendingResult;
     }
 
     private void attachSkill(User user,
-                             Skill skill,
-                             String type,
-                             UserSkillOffered.SkillProficiency level,
-                             String proofVideoUrl,
-                             String subtitle) {
+            Skill skill,
+            String type,
+            UserSkillOffered.SkillProficiency level,
+            String proofVideoUrl,
+            String subtitle) {
         if ("offered".equalsIgnoreCase(type)) {
-            offeredRepo.deleteByIdUserIdAndIdSkillId(user.getId(), skill.getId());
-            UserSkillOffered entry = UserSkillOffered.builder()
-                .id(new UserSkillOffered.UserSkillId(user.getId(), skill.getId()))
-                .user(user).skill(skill).level(level)
-                .proofVideoUrl(proofVideoUrl)
-                .subtitle(subtitle)
-                .build();
+            String currentUserId = Objects.requireNonNull(user.getId(), "User ID must not be null");
+            String currentSkillId = Objects.requireNonNull(skill.getId(), "Skill ID must not be null");
+            offeredRepo.deleteByIdUserIdAndIdSkillId(currentUserId, currentSkillId);
+            UserSkillOffered entry = Objects.requireNonNull(UserSkillOffered.builder()
+                    .id(new UserSkillOffered.UserSkillId(currentUserId, currentSkillId))
+                    .user(user).skill(skill).level(level)
+                    .proofVideoUrl(proofVideoUrl)
+                    .subtitle(subtitle)
+                    .build(), "UserSkillOffered must not be null");
             offeredRepo.save(entry);
 
             if (proofVideoUrl != null && !proofVideoUrl.isBlank()) {
-                com.skillex.model.Post post = com.skillex.model.Post.builder()
-                    .type(com.skillex.model.Post.PostType.SHOWCASE)
-                    .author(user)
-                    .skill(skill)
-                    .content(subtitle != null ? subtitle : "Check out my new skill!")
-                    .mediaUrl(proofVideoUrl)
-                    .build();
+                com.skillex.model.Post post = Objects.requireNonNull(com.skillex.model.Post.builder()
+                        .type(com.skillex.model.Post.PostType.SHOWCASE)
+                        .author(user)
+                        .skill(skill)
+                        .content(subtitle != null ? subtitle : "Check out my new skill!")
+                        .mediaUrl(proofVideoUrl)
+                        .build(), "Post must not be null");
                 postRepository.save(post);
             }
         } else {
-            wantedRepo.deleteByIdUserIdAndIdSkillId(user.getId(), skill.getId());
-            UserSkillWanted entry = UserSkillWanted.builder()
-                .id(new UserSkillWanted.UserSkillId(user.getId(), skill.getId()))
-                .user(user).skill(skill).level(level)
-                .build();
+            String currentUserId = Objects.requireNonNull(user.getId(), "User ID must not be null");
+            String currentSkillId = Objects.requireNonNull(skill.getId(), "Skill ID must not be null");
+            wantedRepo.deleteByIdUserIdAndIdSkillId(currentUserId, currentSkillId);
+            UserSkillWanted entry = Objects.requireNonNull(UserSkillWanted.builder()
+                    .id(new UserSkillWanted.UserSkillId(currentUserId, currentSkillId))
+                    .user(user).skill(skill).level(level)
+                    .build(), "UserSkillWanted must not be null");
             wantedRepo.save(entry);
         }
     }
@@ -203,108 +218,107 @@ public class UserServiceImpl implements UserService {
         }
 
         PageRequest pageable = PageRequest.of(page, size, Sort.by("skillexScore").descending());
-        Page<UserRepository.UserSearchCardProjection> results =
-            userRepository.searchUserCards(viewerId, normalizedQuery, pageable);
+        Page<UserRepository.UserSearchCardProjection> results = userRepository.searchUserCards(viewerId,
+                normalizedQuery, pageable);
 
         List<String> candidateIds = results.getContent().stream()
-            .map(UserRepository.UserSearchCardProjection::getId)
-            .toList();
+                .map(UserRepository.UserSearchCardProjection::getId)
+                .toList();
 
         List<UserSkillOffered> offeredRows = candidateIds.isEmpty()
-            ? List.of()
-            : offeredRepo.findByIdUserIdIn(candidateIds);
+                ? List.of()
+                : offeredRepo.findByIdUserIdIn(candidateIds);
         List<UserSkillWanted> wantedRows = candidateIds.isEmpty()
-            ? List.of()
-            : wantedRepo.findByIdUserIdIn(candidateIds);
+                ? List.of()
+                : wantedRepo.findByIdUserIdIn(candidateIds);
 
         Map<String, Set<String>> offeredSkillIdsByUser = offeredRows.stream()
-            .collect(Collectors.groupingBy(
-                row -> row.getId().getUserId(),
-                Collectors.mapping(row -> row.getSkill().getId(), Collectors.toCollection(LinkedHashSet::new))
-            ));
+                .collect(Collectors.groupingBy(
+                        row -> row.getId().getUserId(),
+                        Collectors.mapping(row -> row.getSkill().getId(),
+                                Collectors.toCollection(LinkedHashSet::new))));
 
         Map<String, Set<String>> wantedSkillIdsByUser = wantedRows.stream()
-            .collect(Collectors.groupingBy(
-                row -> row.getId().getUserId(),
-                Collectors.mapping(row -> row.getSkill().getId(), Collectors.toCollection(LinkedHashSet::new))
-            ));
+                .collect(Collectors.groupingBy(
+                        row -> row.getId().getUserId(),
+                        Collectors.mapping(row -> row.getSkill().getId(),
+                                Collectors.toCollection(LinkedHashSet::new))));
 
         Map<String, List<String>> offeredSkillNamesByUser = offeredRows.stream()
-            .collect(Collectors.groupingBy(
-                row -> row.getId().getUserId(),
-                Collectors.collectingAndThen(
-                    Collectors.mapping(row -> row.getSkill().getName(), Collectors.toCollection(LinkedHashSet::new)),
-                    set -> set.stream().limit(3).toList()
-                )
-            ));
+                .collect(Collectors.groupingBy(
+                        row -> row.getId().getUserId(),
+                        Collectors.collectingAndThen(
+                                Collectors.mapping(row -> row.getSkill().getName(),
+                                        Collectors.toCollection(LinkedHashSet::new)),
+                                set -> set.stream().limit(3).toList())));
 
         Map<String, List<String>> wantedSkillNamesByUser = wantedRows.stream()
-            .collect(Collectors.groupingBy(
-                row -> row.getId().getUserId(),
-                Collectors.collectingAndThen(
-                    Collectors.mapping(row -> row.getSkill().getName(), Collectors.toCollection(LinkedHashSet::new)),
-                    set -> set.stream().limit(3).toList()
-                )
-            ));
+                .collect(Collectors.groupingBy(
+                        row -> row.getId().getUserId(),
+                        Collectors.collectingAndThen(
+                                Collectors.mapping(row -> row.getSkill().getName(),
+                                        Collectors.toCollection(LinkedHashSet::new)),
+                                set -> set.stream().limit(3).toList())));
 
         List<UserSearchResultDto> content = results.getContent().stream()
-            .map(candidate -> {
-                String candidateId = candidate.getId();
-                Set<String> candidateOffered = offeredSkillIdsByUser.getOrDefault(candidateId, Set.of());
-                Set<String> candidateWanted = wantedSkillIdsByUser.getOrDefault(candidateId, Set.of());
+                .map(candidate -> {
+                    String candidateId = candidate.getId();
+                    Set<String> candidateOffered = offeredSkillIdsByUser.getOrDefault(candidateId, Set.of());
+                    Set<String> candidateWanted = wantedSkillIdsByUser.getOrDefault(candidateId, Set.of());
 
-                return new UserSearchResultDto(
-                    candidateId,
-                    candidate.getName(),
-                    candidate.getUsername(),
-                    candidate.getAvatar(),
-                    candidate.getUniversity(),
-                    safeInt(candidate.getSkillexScore()),
-                    candidate.getRating(),
-                    safeInt(candidate.getSessionsCompleted()),
-                    overlapMatchPercent(viewerOffered, viewerWanted, candidateOffered, candidateWanted),
-                    Boolean.TRUE.equals(candidate.getIsOnline()),
-                    offeredSkillNamesByUser.getOrDefault(candidateId, List.of()),
-                    wantedSkillNamesByUser.getOrDefault(candidateId, List.of())
-                );
-            })
-            .toList();
+                    return new UserSearchResultDto(
+                            candidateId,
+                            candidate.getName(),
+                            candidate.getUsername(),
+                            candidate.getAvatar(),
+                            candidate.getUniversity(),
+                            safeInt(candidate.getSkillexScore()),
+                            candidate.getRating(),
+                            safeInt(candidate.getSessionsCompleted()),
+                            overlapMatchPercent(viewerOffered, viewerWanted, candidateOffered, candidateWanted),
+                            Boolean.TRUE.equals(candidate.getIsOnline()),
+                            offeredSkillNamesByUser.getOrDefault(candidateId, List.of()),
+                            wantedSkillNamesByUser.getOrDefault(candidateId, List.of()));
+                })
+                .toList();
 
         return new PagedResponse<>(
-            content,
-            results.getNumber(),
-            results.getSize(),
-            results.getTotalElements(),
-            results.getTotalPages(),
-            results.isLast()
-        );
+                content,
+                results.getNumber(),
+                results.getSize(),
+                results.getTotalElements(),
+                results.getTotalPages(),
+                results.isLast());
     }
 
     @Override
     @Transactional
     public void deleteAccount(String userId) {
-        if (!userRepository.existsById(userId)) {
+        String safeUserId = Objects.requireNonNull(userId, "User ID must not be null");
+        if (!userRepository.existsById(safeUserId)) {
             throw new EntityNotFoundException("User not found: " + userId);
         }
-        userRepository.deleteById(userId);
+        userRepository.deleteById(safeUserId);
     }
 
     // ── Private helpers ──────────────────────────────────────────────────────
 
     private User findUserById(String userId) {
-        return userRepository.findById(userId)
-            .orElseThrow(() -> new EntityNotFoundException("User not found: " + userId));
+        return userRepository.findById(Objects.requireNonNull(userId, "User ID must not be null"))
+                .orElseThrow(() -> new EntityNotFoundException("User not found: " + userId));
     }
 
     private String normalizeUsername(String rawUsername) {
-        String normalized = rawUsername == null ? "" : rawUsername.trim().toLowerCase(Locale.ROOT);
+        String normalized = rawUsername == null ? ""
+                : rawUsername.trim().toLowerCase(Objects.requireNonNull(Locale.ROOT, "Locale.ROOT must not be null"));
         if (normalized.startsWith("@")) {
             normalized = normalized.substring(1);
         }
         normalized = normalized.replaceAll("[^a-z0-9_]", "_");
         normalized = normalized.replaceAll("_+", "_");
         if (normalized.length() < 3 || normalized.length() > 50) {
-            throw new IllegalArgumentException("Username must be 3-50 characters and use letters, numbers, or underscores.");
+            throw new IllegalArgumentException(
+                    "Username must be 3-50 characters and use letters, numbers, or underscores.");
         }
         return normalized;
     }
@@ -314,16 +328,15 @@ public class UserServiceImpl implements UserService {
             return Set.of();
         }
         return skills.stream()
-            .map(Skill::getId)
-            .collect(Collectors.toCollection(LinkedHashSet::new));
+                .map(Skill::getId)
+                .collect(Collectors.toCollection(LinkedHashSet::new));
     }
 
     private int overlapMatchPercent(
-        Set<String> viewerOffered,
-        Set<String> viewerWanted,
-        Set<String> candidateOffered,
-        Set<String> candidateWanted
-    ) {
+            Set<String> viewerOffered,
+            Set<String> viewerWanted,
+            Set<String> candidateOffered,
+            Set<String> candidateWanted) {
         int teachMatches = intersectCount(viewerWanted, candidateOffered);
         int learnMatches = intersectCount(viewerOffered, candidateWanted);
 

@@ -53,7 +53,8 @@ if (Test-Path $ensureMysql) {
 }
 
 # Set JAVA_HOME and launch Spring Boot via Gradle.
-$env:JAVA_HOME = "C:\Users\User\.jdk\jdk-21.0.8"
+# Use system JAVA_HOME or PATH
+# $env:JAVA_HOME = "C:\Users\User\.jdk\jdk-21.0.8"
 Set-Location (Join-Path $Root "backend")
 
 $gradleExecutable = $null

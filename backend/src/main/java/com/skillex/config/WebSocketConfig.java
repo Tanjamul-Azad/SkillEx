@@ -37,7 +37,6 @@ import java.util.List;
 public class WebSocketConfig implements WebSocketMessageBrokerConfigurer {
 
     private final JwtChannelInterceptor jwtChannelInterceptor;
-    @NonNull
     private final ObjectMapper objectMapper;
 
     @Override

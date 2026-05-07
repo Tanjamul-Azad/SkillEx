@@ -53,6 +53,17 @@ public class ExchangeController {
         return ResponseEntity.ok(ApiResponse.ok(exchangeService.getById(id, userId(auth))));
     }
 
+    /** GET /api/exchanges/relationship/{targetUserId} */
+    @GetMapping("/relationship/{targetUserId}")
+    public ResponseEntity<ApiResponse<ExchangeRelationshipDto>> relationship(
+        Authentication auth,
+        @PathVariable String targetUserId
+    ) {
+        return ResponseEntity.ok(ApiResponse.ok(
+            exchangeService.getRelationship(userId(auth), targetUserId)
+        ));
+    }
+
     /** PATCH /api/exchanges/{id}/status — accept / decline / complete */
     @PatchMapping("/{id}/status")
     public ResponseEntity<ApiResponse<ExchangeDto>> updateStatus(

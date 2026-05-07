@@ -36,6 +36,18 @@ public interface ExchangeRepository extends JpaRepository<Exchange, String> {
     /** Total exchanges the user has ever received (any status). */
     long countByReceiverId(String receiverId);
 
+    @Query("""
+        SELECT e FROM Exchange e
+        WHERE ((e.requester.id = :userA AND e.receiver.id = :userB)
+            OR (e.requester.id = :userB AND e.receiver.id = :userA))
+        ORDER BY e.createdAt DESC
+        """)
+    java.util.List<Exchange> findPairHistory(
+        @Param("userA") String userA,
+        @Param("userB") String userB,
+        org.springframework.data.domain.Pageable pageable
+    );
+
     @Query("SELECT e FROM Exchange e WHERE (e.requester.id = :userId OR e.receiver.id = :userId) AND e.status = :status")
     Page<Exchange> findByRequesterIdOrReceiverIdAndStatus(
         @Param("userId") String userId1,

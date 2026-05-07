@@ -12,6 +12,7 @@ import com.skillex.repository.SkillRepository;
 import com.skillex.repository.UserRepository;
 import com.skillex.service.DtoMapper;
 import com.skillex.service.SessionService;
+import com.skillex.service.NotificationService;
 import com.skillex.service.reputation.ReputationUpdateEvent;
 import jakarta.persistence.EntityNotFoundException;
 import lombok.RequiredArgsConstructor;
@@ -24,7 +25,6 @@ import org.springframework.transaction.annotation.Transactional;
 
 @Service
 @RequiredArgsConstructor
-@SuppressWarnings("null")
 public class SessionServiceImpl implements SessionService {
 
     private final SessionRepository sessionRepository;
@@ -33,6 +33,7 @@ public class SessionServiceImpl implements SessionService {
     private final SkillRepository skillRepository;
     private final DtoMapper mapper;
     private final ApplicationEventPublisher eventPublisher;
+    private final NotificationService notificationService;
 
     @Override
     @Transactional(readOnly = true)
@@ -71,7 +72,19 @@ public class SessionServiceImpl implements SessionService {
         session.setDurationMins(req.durationMins());
         session.setMeetLink(req.meetLink());
         session.setStatus(Session.SessionStatus.SCHEDULED);
-        return mapper.toSession(sessionRepository.save(session));
+        Session saved = sessionRepository.save(session);
+
+        // Send a real-time notification to the partner
+        try {
+            String senderName = requestingUserId.equals(teacher.getId()) ? teacher.getName() : learner.getName();
+            String recipientId = requestingUserId.equals(teacher.getId()) ? learner.getId() : teacher.getId();
+            String message = senderName + " has scheduled a swap session for " + skill.getName() + "!";
+            notificationService.create(recipientId, requestingUserId, "SESSION_SCHEDULED", message);
+        } catch (Exception e) {
+            // Log warning but don't fail transaction if notification delivery fails
+        }
+
+        return mapper.toSession(saved);
     }
 
     @Override
@@ -98,6 +111,35 @@ public class SessionServiceImpl implements SessionService {
         assertParticipant(session, requestingUserId);
         session.setStatus(Session.SessionStatus.CANCELLED);
         return mapper.toSession(sessionRepository.save(session));
+    }
+
+    @Override
+    @Transactional
+    public SessionDto updateNotes(String sessionId, String notes, String requestingUserId) {
+        Session session = findSession(sessionId);
+        assertParticipant(session, requestingUserId);
+        session.setSharedNotes(notes);
+        return mapper.toSession(sessionRepository.save(session));
+    }
+
+    @Override
+    @Transactional
+    public void joinSession(String sessionId, String requestingUserId) {
+        Session session = findSession(sessionId);
+        assertParticipant(session, requestingUserId);
+
+        // Notify the partner that this user has joined the study room
+        try {
+            User teacher = session.getTeacher();
+            User learner = session.getLearner();
+            String senderName = requestingUserId.equals(teacher.getId()) ? teacher.getName() : learner.getName();
+            String recipientId = requestingUserId.equals(teacher.getId()) ? learner.getId() : teacher.getId();
+            
+            String message = senderName + " has joined the Study Room! Click to join them.";
+            notificationService.create(recipientId, requestingUserId, "SESSION_SCHEDULED", message);
+        } catch (Exception e) {
+            // Log warning but don't fail transaction if notification delivery fails
+        }
     }
 
     // ── helpers ──────────────────────────────────────────────────────────────

@@ -17,8 +17,6 @@ import org.springframework.security.access.AccessDeniedException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import java.util.Objects;
-
 @Service
 @RequiredArgsConstructor
 public class NotificationServiceImpl implements NotificationService {
@@ -39,15 +37,13 @@ public class NotificationServiceImpl implements NotificationService {
     @Override
     @Transactional
     public NotificationDto markRead(String notificationId, String userId) {
-        Notification notification = notificationRepository.findById(Objects.requireNonNull(notificationId, "Notification ID must not be null"))
+        Notification notification = notificationRepository.findById(notificationId)
             .orElseThrow(() -> new EntityNotFoundException("Notification not found: " + notificationId));
-        String recipientId = Objects.requireNonNull(notification.getUser().getId(), "Recipient ID must not be null");
-        if (!recipientId.equals(userId)) {
+        if (!notification.getUser().getId().equals(userId)) {
             throw new AccessDeniedException("This notification does not belong to you.");
         }
         notification.setIsRead(true);
-        Notification saved = Objects.requireNonNull(notificationRepository.save(notification), "Saved notification must not be null");
-        return mapper.toNotification(saved);
+        return mapper.toNotification(notificationRepository.save(notification));
     }
 
     @Override
@@ -59,7 +55,7 @@ public class NotificationServiceImpl implements NotificationService {
     @Override
     @Transactional
     public NotificationDto create(String userId, String fromUserId, String type, String message) {
-        User user = userRepository.findById(Objects.requireNonNull(userId, "User ID must not be null"))
+        User user = userRepository.findById(userId)
             .orElseThrow(() -> new EntityNotFoundException("User not found: " + userId));
         User fromUser = fromUserId != null
             ? userRepository.findById(fromUserId).orElse(null)
@@ -71,10 +67,9 @@ public class NotificationServiceImpl implements NotificationService {
         notification.setType(Notification.NotificationType.valueOf(type.toUpperCase()));
         notification.setMessage(message);
         notification.setIsRead(false);
-        Notification saved = Objects.requireNonNull(notificationRepository.save(notification), "Saved notification must not be null");
-        NotificationDto dto = Objects.requireNonNull(mapper.toNotification(saved), "Notification DTO must not be null");
+        NotificationDto dto = mapper.toNotification(notificationRepository.save(notification));
         // Push real-time via WebSocket (non-blocking; falls back gracefully if WS is down)
-        publisher.push(Objects.requireNonNull(userId, "User ID must not be null"), dto);
+        publisher.push(userId, dto);
         return dto;
     }
 }

@@ -22,6 +22,14 @@ export const env = {
   IS_PROD: getViteEnv('MODE', 'development') === 'production',
   IS_DEV:  getViteEnv('MODE', 'development') !== 'production',
 
+  // ── Firebase Auth (Google popup) ──────────────────────────────
+  FIREBASE_API_KEY: getViteEnv('VITE_FIREBASE_API_KEY', ''),
+  FIREBASE_AUTH_DOMAIN: getViteEnv('VITE_FIREBASE_AUTH_DOMAIN', ''),
+  FIREBASE_PROJECT_ID: getViteEnv('VITE_FIREBASE_PROJECT_ID', ''),
+  FIREBASE_APP_ID: getViteEnv('VITE_FIREBASE_APP_ID', ''),
+  FIREBASE_STORAGE_BUCKET: getViteEnv('VITE_FIREBASE_STORAGE_BUCKET', ''),
+  FIREBASE_MESSAGING_SENDER_ID: getViteEnv('VITE_FIREBASE_MESSAGING_SENDER_ID', ''),
+
 } as const;
 
 export type Env = typeof env;

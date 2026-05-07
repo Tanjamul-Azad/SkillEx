@@ -78,4 +78,14 @@ export const UserService = {
   deleteAccount: async (): Promise<void> => {
     return api.delete<void>('/users/me');
   },
+
+  /** POST /api/users/me/connect-email/request-otp */
+  requestEmailConnectOtp: async (email: string): Promise<void> => {
+    return api.post<void>('/users/me/connect-email/request-otp', { email });
+  },
+
+  /** POST /api/users/me/connect-email/verify-otp */
+  verifyEmailConnectOtp: async (email: string, otp: string): Promise<void> => {
+    return api.post<void>('/users/me/connect-email/verify-otp', { email, otp });
+  },
 };

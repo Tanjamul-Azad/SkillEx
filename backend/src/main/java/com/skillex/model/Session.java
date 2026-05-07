@@ -60,6 +60,9 @@ public class Session {
     @Column(name = "meet_link", length = 500)
     private String meetLink;
 
+    @Column(name = "shared_notes", columnDefinition = "TEXT")
+    private String sharedNotes;
+
     @CreationTimestamp
     @Column(name = "created_at", updatable = false)
     private LocalDateTime createdAt;

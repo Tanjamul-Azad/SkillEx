@@ -866,7 +866,7 @@ export default function ProfilePage() {
                 <motion.div variants={itemVariants}>
                   <div className="p-8 bg-black/40 backdrop-blur-xl border border-white/5 rounded-[2rem] shadow-[inset_0_1px_0_0_hsla(0,0%,100%,0.05)] flex flex-col sm:flex-row items-center gap-8">
                     <div className="text-center sm:min-w-[150px]">
-                      <div className="text-5xl font-extrabold font-headline tracking-tighter text-white drop-shadow-sm mb-2">{avgRating.toFixed(1)}</div>
+                      <div className="text-6xl font-extrabold font-headline tracking-tighter text-white drop-shadow-sm mb-2">{avgRating.toFixed(1)}</div>
                       <div className="flex items-center gap-1 justify-center mb-3">
                         {[...Array(5)].map((_, i) => (
                           <Star

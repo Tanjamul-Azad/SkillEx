@@ -18,4 +18,6 @@ public interface ExchangeService {
     ExchangeDto updateStatus(String exchangeId, String requestingUserId, UpdateExchangeRequest req);
 
     void cancel(String exchangeId, String requestingUserId);
+
+    ExchangeRelationshipDto getRelationship(String userId, String targetUserId);
 }

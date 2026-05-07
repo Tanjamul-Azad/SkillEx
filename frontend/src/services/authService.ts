@@ -1,19 +1,21 @@
 /**
  * src/services/authService.ts
  *
- * Client-side authentication service — calls the Spring Boot JWT endpoints.
+ * Client-side authentication service — calls the Spring Boot JWT endpoints and Firebase Google auth bridge.
  * Uses ApiClient for HTTP (Inheritance / Composition via OOP).
  *
  * Spring Boot endpoints:
  *   POST /api/auth/login             { email, password } → { token, user }
  *   POST /api/auth/register          { name, email, password, university? } → { token?, user, needsEmailConfirmation? }
  *   GET  /api/auth/me                (Bearer) → User
- *   GET  /api/auth/google            → Spring Security OAuth2 redirect
+ *   POST /api/auth/firebase/google    { idToken } → { token, user }
  */
 
 import type { User } from '@/types';
 import { httpClient, TokenStore } from './http/ApiClient';
 import { ApiError } from './http/ApiClient';
+import { signInWithPopup, signOut } from 'firebase/auth';
+import { getFirebaseAuth, googleProvider, isFirebaseConfigured } from './firebaseAuth';
 
 /** Expose TokenStore under the old export name for backward compat */
 export const tokenStore = TokenStore;
@@ -89,32 +91,72 @@ export const AuthService = {
     }
   },
 
-  /** Redirect to Spring Boot Google OAuth2 initiation URL */
-  loginWithGoogle(): void {
-    const apiBase = import.meta.env.VITE_API_URL
-      ? `${import.meta.env.VITE_API_URL}/api`
-      : '/api';
-    window.location.href = `${apiBase}/auth/google`;
-  },
-
-  /**
-   * Reads OAuth callback params from the URL and stores the JWT when present.
-   * Returns true when a token was consumed from the callback.
-   */
-  consumeGoogleCallbackFromUrl(): boolean {
-    const url = new URL(window.location.href);
-    const token = url.searchParams.get('token');
-
-    if (!token) {
-      return false;
+  /** Login with Google using Firebase popup and exchange Firebase token for backend JWT */
+  async loginWithGoogle(): Promise<{ user: User }> {
+    if (!isFirebaseConfigured) {
+      throw new Error('Firebase Google login is not configured. Set the VITE_FIREBASE_* variables first.');
     }
 
-    TokenStore.set(token);
-    url.searchParams.delete('token');
-    window.history.replaceState({}, document.title, `${url.pathname}${url.search}${url.hash}`);
-    return true;
+    const auth = getFirebaseAuth();
+    let popupResult;
+    try {
+      popupResult = await signInWithPopup(auth, googleProvider);
+    } catch (error) {
+      throw new Error(friendlyFirebaseGoogleError(error));
+    }
+    const firebaseIdToken = await popupResult.user.getIdToken();
+
+    TokenStore.clear();
+
+    let data: { token: string; user: Record<string, unknown> };
+    try {
+      data = await httpClient.post<{ token: string; user: Record<string, unknown> }>(
+        '/auth/firebase/google',
+        { idToken: firebaseIdToken }
+      );
+    } catch (error) {
+      throw new Error(friendlyFirebaseGoogleError(error));
+    }
+
+    TokenStore.set(data.token);
+
+    // Keep Firebase auth stateless in this app; backend JWT remains source of truth.
+    await signOut(auth);
+
+    return { user: normalizeUser(data.user) };
   },
 };
+
+function friendlyFirebaseGoogleError(error: unknown): string {
+  const code = getErrorCode(error);
+
+  if (code === 'auth/configuration-not-found') {
+    return 'Google sign-in is not enabled in Firebase Authentication for this project. Enable the Google provider and try again.';
+  }
+
+  if (code === 'auth/unauthorized-domain') {
+    return 'This domain is not authorized in Firebase Authentication. Add the current localhost origin to the Firebase authorized domains list.';
+  }
+
+  if (code === 'auth/popup-closed-by-user') {
+    return 'Google sign-in was cancelled.';
+  }
+
+  if (error instanceof Error && error.message) {
+    return error.message;
+  }
+
+  return 'We could not complete Google sign-in. Please try again.';
+}
+
+function getErrorCode(error: unknown): string | null {
+  if (typeof error !== 'object' || error === null) {
+    return null;
+  }
+
+  const code = (error as { code?: unknown }).code;
+  return typeof code === 'string' ? code : null;
+}
 
 
 

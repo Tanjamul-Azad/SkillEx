@@ -38,7 +38,6 @@ import java.util.UUID;
  */
 @Service
 @RequiredArgsConstructor
-@SuppressWarnings("null")
 public class MatchServiceImpl implements MatchService {
 
     private final MatchEngine           matchEngine;

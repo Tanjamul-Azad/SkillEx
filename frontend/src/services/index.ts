@@ -30,6 +30,6 @@ export { ReviewService }           from './reviewService';
 export { CommunityService }        from './communityService';
 export { exchangeService }         from './exchangeService';
 export { connectionService }       from './connectionService';
-export type { Exchange } from './exchangeService';
+export type { Exchange, ExchangeRelationship, ExchangeRelationshipStatus } from './exchangeService';
 export type { Connection, ConnectionRelationship } from './connectionService';
 

@@ -15,6 +15,7 @@ public record SessionDto(
     int durationMins,
     String status,
     String meetLink,
+    String sharedNotes,
     LocalDateTime createdAt
 ) {
     public record SkillRef(String id, String name, String icon, String category) {}

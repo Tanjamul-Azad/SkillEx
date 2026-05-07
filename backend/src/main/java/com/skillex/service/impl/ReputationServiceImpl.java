@@ -91,8 +91,7 @@ public class ReputationServiceImpl implements ReputationService {
     }
 
     // ── helpers ──────────────────────────────────────────────────────────────
-
-    private User fetchUser(String id) {
+private User fetchUser(String id) {
         String safeId = Objects.requireNonNull(id, "userId must not be null");
         return userRepository.findById(safeId)
             .orElseThrow(() -> new EntityNotFoundException("User not found: " + id));

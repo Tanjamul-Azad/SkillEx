@@ -6,6 +6,7 @@ import { useConnections } from '@/hooks/useConnections';
 import { exchangeService } from '@/services/exchangeService';
 import { connectionService } from '@/services/connectionService';
 import { DashboardService } from '@/services/dashboardService';
+import { SessionService } from '@/services/sessionService';
 import { onRealtimeNotification } from '@/lib/realtime';
 import type { Exchange } from '@/services/exchangeService';
 import type { Connection } from '@/services/connectionService';
@@ -60,7 +61,7 @@ import {
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
-import type { Skill } from '@/types';
+import type { Skill, Session } from '@/types';
 
 /* ─────────────────────────────────────────────────────────────
    SHNEIDERMAN DESIGN PRINCIPLES APPLIED:
@@ -379,14 +380,50 @@ function ExchangeCard({
                 <div className="grid grid-cols-2 gap-3">
                   <div className="space-y-1.5">
                     <Label htmlFor="session-date">Date</Label>
-                    <Input id="session-date" type="date" value={scheduleDate}
-                      min={new Date().toISOString().split('T')[0]}
-                      onChange={e => setScheduleDate(e.target.value)} className="rounded-xl" />
+                    <div className="relative">
+                      <CalendarDays className="absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-primary pointer-events-none z-20" />
+                      <Input
+                        id="session-date"
+                        type="date"
+                        value={scheduleDate}
+                        min={new Date().toISOString().split('T')[0]}
+                        onChange={e => setScheduleDate(e.target.value)}
+                        onClick={(e) => {
+                          try {
+                            e.currentTarget.showPicker();
+                          } catch {}
+                        }}
+                        onFocus={(e) => {
+                          try {
+                            e.currentTarget.showPicker();
+                          } catch {}
+                        }}
+                        className="rounded-xl pl-10 bg-background relative z-10 cursor-pointer"
+                      />
+                    </div>
                   </div>
                   <div className="space-y-1.5">
                     <Label htmlFor="session-time">Time</Label>
-                    <Input id="session-time" type="time" value={scheduleTime}
-                      onChange={e => setScheduleTime(e.target.value)} className="rounded-xl" />
+                    <div className="relative">
+                      <Clock className="absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-primary pointer-events-none z-20" />
+                      <Input
+                        id="session-time"
+                        type="time"
+                        value={scheduleTime}
+                        onChange={e => setScheduleTime(e.target.value)}
+                        onClick={(e) => {
+                          try {
+                            e.currentTarget.showPicker();
+                          } catch {}
+                        }}
+                        onFocus={(e) => {
+                          try {
+                            e.currentTarget.showPicker();
+                          } catch {}
+                        }}
+                        className="rounded-xl pl-10 bg-background relative z-10 cursor-pointer"
+                      />
+                    </div>
                   </div>
                 </div>
                 <div className="space-y-1.5">
@@ -412,7 +449,43 @@ function ExchangeCard({
               </div>
               <DialogFooter>
                 <Button variant="outline" onClick={() => setScheduleOpen(false)}>Cancel</Button>
-                <Button disabled={!scheduleDate || !scheduleTime} onClick={() => setScheduledConfirmed(true)}>
+                <Button
+                  disabled={!scheduleDate || !scheduleTime}
+                  onClick={async () => {
+                    try {
+                      const isTeacher = exchange.requester.id === currentUserId;
+                      const teacherId = isTeacher ? currentUserId : partner.id;
+                      const learnerId = isTeacher ? partner.id : currentUserId;
+                      const skillId = isTeacher ? (exchange.offeredSkill?.id || '') : (exchange.wantedSkill?.id || '');
+
+                      await SessionService.create({
+                        exchangeId: exchange.id,
+                        teacherId,
+                        learnerId,
+                        skillId,
+                        scheduledAt: `${scheduleDate}T${scheduleTime}:00`,
+                        durationMins: 60,
+                        meetLink: `https://meet.jit.si/skillex-session-temp`
+                      });
+
+                      setScheduledConfirmed(true);
+                      if (onStatusChanged) {
+                        await onStatusChanged();
+                      }
+                      toast({
+                        title: '🎉 Session Scheduled!',
+                        description: `Your classroom session with ${partner.name.split(' ')[0]} has been booked.`,
+                        variant: 'success',
+                      });
+                    } catch (err) {
+                      toast({
+                        title: 'Failed to schedule session',
+                        description: 'Please try again or select another slot.',
+                        variant: 'destructive',
+                      });
+                    }
+                  }}
+                >
                   <CalendarDays className="mr-2 h-4 w-4" /> Confirm
                 </Button>
               </DialogFooter>
@@ -934,10 +1007,12 @@ function UpcomingSessionsSection({
   loading,
   currentUserId,
 }: {
-  sessions: Exchange[];
+  sessions: Session[];
   loading: boolean;
   currentUserId: string;
 }) {
+  const navigate = useNavigate();
+
   if (loading) {
     return (
       <div className="space-y-3">
@@ -971,16 +1046,15 @@ function UpcomingSessionsSection({
       {/* Timeline line */}
       <div className="absolute left-[17px] top-5 bottom-5 w-px bg-gradient-to-b from-border via-border/40 to-transparent" />
 
-      {sessions.slice(0, 3).map((exchange, i) => {
-        const partner = exchange.requester.id === currentUserId
-          ? exchange.receiver
-          : exchange.requester;
-        const skill = exchange.offeredSkill ?? exchange.wantedSkill;
+      {sessions.slice(0, 3).map((session, i) => {
+        const isTeacher = session.teacher.id === currentUserId;
+        const partner = isTeacher ? session.learner : session.teacher;
+        const skill = session.skill;
         const isNext = i === 0;
 
         return (
           <motion.div
-            key={exchange.id}
+            key={session.id}
             initial={{ opacity: 0, x: -8 }}
             animate={{ opacity: 1, x: 0 }}
             transition={{ delay: i * 0.08 }}
@@ -1005,28 +1079,30 @@ function UpcomingSessionsSection({
             )}>
               <Avatar className="h-8 w-8 shrink-0">
                 <AvatarImage src={partner.avatar ?? undefined} />
-                <AvatarFallback className="text-xs font-semibold">{partner.name.charAt(0)}</AvatarFallback>
+                <AvatarFallback className="text-xs font-semibold">{partner.name?.charAt(0)}</AvatarFallback>
               </Avatar>
               <div className="min-w-0 flex-1">
                 <p className="text-sm font-semibold truncate">
                   {skill?.name ?? 'Skill Exchange'}
                   <span className="font-normal text-muted-foreground"> with </span>
-                  {partner.name.split(' ')[0]}
+                  {partner.name?.split(' ')[0]}
                 </p>
                 <p className="text-xs text-muted-foreground mt-0.5">
-                  {exchange.sessionDate
-                    ? new Date(exchange.sessionDate).toLocaleDateString('en-US', {
+                  {session.scheduledAt
+                    ? new Date(session.scheduledAt).toLocaleDateString('en-US', {
                         weekday: 'short', month: 'short', day: 'numeric',
                         hour: 'numeric', minute: '2-digit',
                       })
                     : 'Date TBD'}
                 </p>
               </div>
-              {isNext && (
-                <Button size="sm" className="shrink-0 rounded-lg text-xs h-7 px-2.5">
-                  <Play className="h-3 w-3 mr-1" /> Join
-                </Button>
-              )}
+              <Button
+                size="sm"
+                className="shrink-0 rounded-lg text-xs h-7 px-2.5 bg-primary hover:bg-primary/90 text-primary-foreground"
+                onClick={() => navigate(`/study-room/${session.id}`)}
+              >
+                <Play className="h-3 w-3 mr-1" /> Join
+              </Button>
             </div>
           </motion.div>
         );
@@ -1066,6 +1142,21 @@ export default function DashboardPage() {
     pendingConnections?: number;
   } | null>(null);
 
+  const [sessions, setSessions] = useState<Session[]>([]);
+  const [sessionsLoading, setSessionsLoading] = useState(false);
+
+  const fetchSessions = React.useCallback(async () => {
+    try {
+      setSessionsLoading(true);
+      const res = await SessionService.getAll(0, 50);
+      setSessions(res.content);
+    } catch {
+      // ignore
+    } finally {
+      setSessionsLoading(false);
+    }
+  }, []);
+
   const refreshDashboardStats = React.useCallback(() => {
     DashboardService.getStats()
       .then(s => setServerStats({
@@ -1077,9 +1168,17 @@ export default function DashboardPage() {
       .catch(() => {});
   }, []);
 
+  const handleExchangeStatusChanged = React.useCallback(async () => {
+    void refetch();
+    void fetchSessions();
+  }, [refetch, fetchSessions]);
+
   React.useEffect(() => {
     refreshDashboardStats();
-  }, [refreshDashboardStats]);
+    if (user?.id) {
+      fetchSessions();
+    }
+  }, [refreshDashboardStats, fetchSessions, user?.id]);
 
   const currentUserId = user?.id ?? '';
   const dismissedConnectionsStorageKey = currentUserId
@@ -1195,6 +1294,7 @@ export default function DashboardPage() {
 
       if (type.includes('MATCH') || type.includes('SESSION') || type.includes('REVIEW')) {
         void refetch();
+        void fetchSessions();
         refreshDashboardStats();
       }
 
@@ -1203,11 +1303,20 @@ export default function DashboardPage() {
         refreshDashboardStats();
       }
     });
-  }, [refetch, refetchConnections, refreshDashboardStats, user?.id]);
-  const activeExchanges = exchanges.filter(e => {
-    const s = e.status?.toLowerCase();
-    return s === 'accepted';
-  });
+  }, [refetch, refetchConnections, refreshDashboardStats, fetchSessions, user?.id]);
+  const activeExchanges = React.useMemo(() => {
+    const seen = new Set<string>();
+    return exchanges
+      .filter(e => e.status?.toLowerCase() === 'accepted')
+      .filter(e => {
+        const partner = e.requester.id === currentUserId ? e.receiver : e.requester;
+        if (seen.has(partner.id)) {
+          return false;
+        }
+        seen.add(partner.id);
+        return true;
+      });
+  }, [exchanges, currentUserId]);
   const incomingPendingExchanges = exchanges
     .filter((exchange) => exchange.status?.toLowerCase() === 'pending' && exchange.receiver.id === currentUserId)
     .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
@@ -1695,7 +1804,7 @@ export default function DashboardPage() {
                         key={ex.id}
                         exchange={ex}
                         currentUserId={currentUserId}
-                        onStatusChanged={refetch}
+                        onStatusChanged={handleExchangeStatusChanged}
                       />
                     ))}
                   </div>
@@ -1708,7 +1817,7 @@ export default function DashboardPage() {
            <ScrollReveal animation="fade-up" delay={0.28} className="h-full flex flex-col bg-card rounded-3xl border border-white/5 shadow-sm overflow-hidden p-4 shadow-[inset_0_1px_0_0_hsla(0,0%,100%,0.05)]">
              <SectionHeading icon={CalendarDays}>Upcoming</SectionHeading>
              <div className="flex-1 overflow-y-auto custom-scrollbar -mx-2 px-2">
-               <UpcomingSessionsSection sessions={upcomingSessions} loading={loading} currentUserId={currentUserId} />
+               <UpcomingSessionsSection sessions={sessions} loading={sessionsLoading} currentUserId={currentUserId} />
              </div>
            </ScrollReveal>
         </div>

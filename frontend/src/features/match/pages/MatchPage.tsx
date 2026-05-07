@@ -53,6 +53,7 @@ import DashboardLayout from '@/components/layout/DashboardLayout';
 import { RequestExchangeDialog } from '@/features/match/components/RequestExchangeDialog';
 import { useToast } from '@/hooks/use-toast';
 import { UserService } from '@/services/userService';
+import { exchangeService, type ExchangeRelationship } from '@/services/exchangeService';
 import { MarketplaceCard } from '@/features/match/components/MarketplaceCard';
 
 const categories = [
@@ -258,6 +259,26 @@ FilterSidebar.displayName = 'FilterSidebar';
 
 const AIBestMatchCard: FC<{ match: MatchUser; currentUser: User | null }> = React.memo(({ match, currentUser }) => {
   const [requestOpen, setRequestOpen] = useState(false);
+  const [exchangeRelation, setExchangeRelation] = useState<ExchangeRelationship | null>(null);
+
+  useEffect(() => {
+    let active = true;
+    const fetchRelation = async () => {
+      try {
+        const res = await exchangeService.getRelationship(match.id);
+        if (active) {
+          setExchangeRelation(res);
+        }
+      } catch (err) {
+        console.error('Error fetching exchange relationship:', err);
+      }
+    };
+    fetchRelation();
+    return () => {
+      active = false;
+    };
+  }, [match.id]);
+
   const myName = currentUser?.name ?? 'You';
   const score = match.compatibilityScore;
   return (
@@ -315,7 +336,7 @@ const AIBestMatchCard: FC<{ match: MatchUser; currentUser: User | null }> = Reac
 
             <div className="space-y-4 md:col-span-8 flex flex-col">
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4 auto-rows-min flex-1">
-                <div className="rounded-3xl border border-white/5 bg-black/20 p-5 backdrop-blur-md shadow-[inset_0_1px_0_0_hsla(0,0%,100%,0.05)] h-full">
+                <div className="rounded-3xl border border-white/5 bg-black/20 p-5 backdrop-blur-md shadow-sm h-full">
                   <h4 className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground mb-4">Match Metrics</h4>
                   <div className="space-y-4">
                     <div className="space-y-2">
@@ -323,19 +344,19 @@ const AIBestMatchCard: FC<{ match: MatchUser; currentUser: User | null }> = Reac
                          <span>Skill Similarity</span>
                          <span className="text-primary">{match.semanticSimilarity}%</span>
                       </div>
-                      <Progress value={match.semanticSimilarity} className="h-1.5 bg-white/5" indicatorClassName="bg-primary shadow-[0_0_10px_hsl(var(--primary)/0.5)]" />
+                      <Progress value={match.semanticSimilarity} className="h-1.5 bg-primary/10" indicatorClassName="bg-primary shadow-[0_0_10px_hsl(var(--primary)/0.35)]" />
                     </div>
                     <div className="space-y-2">
                       <div className="flex items-center justify-between text-xs font-bold uppercase tracking-wider">
                          <span>Rating</span>
                          <span className="text-warning">{typeof match.rating === 'number' ? match.rating.toFixed(1) : '–'}</span>
                       </div>
-                      <Progress value={typeof match.rating === 'number' ? Math.round((match.rating / 5) * 100) : 0} className="h-1.5 bg-white/5" indicatorClassName="bg-warning shadow-[0_0_10px_hsl(var(--warning)/0.5)]" />
+                      <Progress value={typeof match.rating === 'number' ? Math.round((match.rating / 5) * 100) : 0} className="h-1.5 bg-warning/10" indicatorClassName="bg-warning shadow-[0_0_10px_hsl(var(--warning)/0.35)]" />
                     </div>
                   </div>
                 </div>
 
-                <div className="rounded-3xl border border-white/5 bg-black/20 p-5 backdrop-blur-md shadow-[inset_0_1px_0_0_hsla(0,0%,100%,0.05)] flex flex-col justify-center h-full min-h-[140px]">
+                <div className="rounded-3xl border border-white/5 bg-black/20 p-5 backdrop-blur-md shadow-sm flex flex-col justify-center h-full min-h-[140px]">
                   <SkillGraphCard
                     offeredSkills={match.wantsToLearnFromYou ?? []}
                     wantedSkills={match.teachesYou ?? []}
@@ -345,7 +366,7 @@ const AIBestMatchCard: FC<{ match: MatchUser; currentUser: User | null }> = Reac
               </div>
 
               {match.matchReasons.length > 0 && (
-                <div className="rounded-3xl border border-primary/10 bg-primary/5 p-4 mt-2 shrink-0">
+                <div className="rounded-3xl border border-white/5 bg-black/20 p-4 mt-2 backdrop-blur-md shrink-0">
                   <h4 className="text-[10px] font-bold uppercase tracking-widest text-primary/80 mb-3 flex items-center gap-2">
                     <Zap className="h-3 w-3" /> Why this match?
                   </h4>
@@ -360,9 +381,27 @@ const AIBestMatchCard: FC<{ match: MatchUser; currentUser: User | null }> = Reac
               )}
 
               <div className="flex gap-3 pt-2 h-11 mt-auto shrink-0">
-                <Button variant="gradient" className="flex-1 md:flex-none md:w-48 shadow-[0_0_20px_hsl(var(--primary)/0.3)] hover:shadow-[0_0_30px_hsl(var(--primary)/0.5)] font-bold uppercase tracking-wider text-xs h-full rounded-2xl" onClick={() => setRequestOpen(true)}>
-                  Request Exchange
-                </Button>
+                {exchangeRelation?.status === 'ACCEPTED' ? (
+                  <Button variant="outline" className="flex-1 md:flex-none md:w-48 border-emerald-500/30 bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 font-bold uppercase tracking-wider text-xs h-full rounded-2xl cursor-default hover:bg-emerald-500/10" disabled>
+                    Exchanging
+                  </Button>
+                ) : exchangeRelation?.status === 'DECLINED' ? (
+                  <Button variant="outline" className="flex-1 md:flex-none md:w-48 border-rose-500/30 bg-rose-500/10 text-rose-600 dark:text-rose-400 font-bold uppercase tracking-wider text-xs h-full rounded-2xl cursor-default hover:bg-rose-500/10" disabled>
+                    Rejected
+                  </Button>
+                ) : exchangeRelation?.status === 'PENDING_SENT' ? (
+                  <Button variant="outline" className="flex-1 md:flex-none md:w-48 border-primary/20 bg-primary/10 text-primary font-bold uppercase tracking-wider text-xs h-full rounded-2xl" disabled>
+                    Request Sent
+                  </Button>
+                ) : exchangeRelation?.status === 'PENDING_RECEIVED' ? (
+                  <Button variant="outline" className="flex-1 md:flex-none md:w-48 border-amber-500/30 bg-amber-500/10 text-amber-600 font-bold uppercase tracking-wider text-xs h-full rounded-2xl" disabled>
+                    Incoming Request
+                  </Button>
+                ) : (
+                  <Button variant="gradient" className="flex-1 md:flex-none md:w-48 shadow-[0_0_20px_hsl(var(--primary)/0.3)] hover:shadow-[0_0_30px_hsl(var(--primary)/0.5)] font-bold uppercase tracking-wider text-xs h-full rounded-2xl" onClick={() => setRequestOpen(true)}>
+                    Request Exchange
+                  </Button>
+                )}
                 <Button variant="outline" className="flex-1 md:flex-none md:w-48 glass-subtle border-white/10 hover:bg-white/10 font-bold uppercase tracking-wider text-xs h-full rounded-2xl" asChild>
                   <Link to={`/profile/${match.id}`}>View Profile</Link>
                 </Button>
@@ -375,6 +414,13 @@ const AIBestMatchCard: FC<{ match: MatchUser; currentUser: User | null }> = Reac
         open={requestOpen}
         onClose={() => setRequestOpen(false)}
         targetUser={match as unknown as User}
+        onSuccess={() => {
+          setExchangeRelation({
+            targetUserId: match.id,
+            status: 'PENDING_SENT',
+            exchangeId: null,
+          });
+        }}
       />
     </>
   );
@@ -383,6 +429,26 @@ AIBestMatchCard.displayName = 'AIBestMatchCard';
 
 const MatchCard: FC<{ match: MatchUser }> = React.memo(({ match }) => {
   const [requestOpen, setRequestOpen] = useState(false);
+  const [exchangeRelation, setExchangeRelation] = useState<ExchangeRelationship | null>(null);
+
+  useEffect(() => {
+    let active = true;
+    const fetchRelation = async () => {
+      try {
+        const res = await exchangeService.getRelationship(match.id);
+        if (active) {
+          setExchangeRelation(res);
+        }
+      } catch (err) {
+        console.error('Error fetching exchange relationship:', err);
+      }
+    };
+    fetchRelation();
+    return () => {
+      active = false;
+    };
+  }, [match.id]);
+
   return (
     <>
       <Card className="group relative h-full overflow-hidden border-white/5 bg-card rounded-3xl shadow-[inset_0_1px_0_0_hsla(0,0%,100%,0.05)] transition-all duration-400 ease-snappy hover:-translate-y-1.5 hover:border-primary/30 hover:shadow-[0_12px_40px_-12px_hsl(var(--primary)/0.25)]">
@@ -445,19 +511,60 @@ const MatchCard: FC<{ match: MatchUser }> = React.memo(({ match }) => {
             <Link to={`/profile/${match.id}`}>Profile</Link>
           </Button>
           <div className="w-px bg-white/5 h-full" />
-          <Button
-            onClick={() => setRequestOpen(true)}
-            variant="ghost"
-            className="w-1/2 h-full rounded-none rounded-br-3xl text-xs font-bold uppercase tracking-wider text-primary hover:bg-primary/10 hover:text-primary transition-colors"
-          >
-            Request
-          </Button>
+          {exchangeRelation?.status === 'ACCEPTED' ? (
+            <Button
+              variant="ghost"
+              className="w-1/2 h-full rounded-none rounded-br-3xl text-xs font-bold uppercase tracking-wider text-emerald-600 dark:text-emerald-400 hover:bg-emerald-500/10 cursor-default"
+              disabled
+            >
+              Exchanging
+            </Button>
+          ) : exchangeRelation?.status === 'DECLINED' ? (
+            <Button
+              variant="ghost"
+              className="w-1/2 h-full rounded-none rounded-br-3xl text-xs font-bold uppercase tracking-wider text-rose-600 dark:text-rose-400 hover:bg-rose-500/10 cursor-default"
+              disabled
+            >
+              Rejected
+            </Button>
+          ) : exchangeRelation?.status === 'PENDING_SENT' ? (
+            <Button
+              variant="ghost"
+              className="w-1/2 h-full rounded-none rounded-br-3xl text-xs font-bold uppercase tracking-wider text-primary hover:bg-primary/10"
+              disabled
+            >
+              Sent
+            </Button>
+          ) : exchangeRelation?.status === 'PENDING_RECEIVED' ? (
+            <Button
+              variant="ghost"
+              className="w-1/2 h-full rounded-none rounded-br-3xl text-xs font-bold uppercase tracking-wider text-amber-600 hover:bg-amber-500/10"
+              disabled
+            >
+              Incoming
+            </Button>
+          ) : (
+            <Button
+              onClick={() => setRequestOpen(true)}
+              variant="ghost"
+              className="w-1/2 h-full rounded-none rounded-br-3xl text-xs font-bold uppercase tracking-wider text-primary hover:bg-primary/10 hover:text-primary transition-colors"
+            >
+              Request
+            </Button>
+          )}
         </div>
       </Card>
       <RequestExchangeDialog
         open={requestOpen}
         onClose={() => setRequestOpen(false)}
         targetUser={match as unknown as User}
+        onSuccess={() => {
+          setExchangeRelation({
+            targetUserId: match.id,
+            status: 'PENDING_SENT',
+            exchangeId: null,
+          });
+        }}
       />
     </>
   );

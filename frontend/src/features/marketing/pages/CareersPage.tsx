@@ -144,7 +144,7 @@ export default function CareersPage() {
           <div className="absolute inset-0 dot-grid opacity-30 dark:opacity-15" />
         </div>
 
-        <div className="container mx-auto max-w-4xl px-4 py-16 md:py-24">
+        <div className="container mx-auto max-w-4xl px-4 py-28">
 
           {/* Hero */}
           <motion.div
@@ -160,7 +160,7 @@ export default function CareersPage() {
             </motion.div>
             <motion.h1
               variants={item}
-              className="font-headline text-4xl font-extrabold tracking-tight md:text-6xl text-balance leading-[1.05]"
+              className="font-headline text-5xl font-extrabold tracking-tight md:text-6xl text-balance leading-[1.05]"
             >
               Help us make learning{' '}
               <span className="text-gradient">free for everyone.</span>

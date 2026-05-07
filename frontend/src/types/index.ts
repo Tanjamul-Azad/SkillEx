@@ -79,6 +79,7 @@ export interface Session {
   durationMins: number;
   status: SessionStatus;
   meetLink?: string;
+  sharedNotes?: string;
   createdAt?: string;
 }
 

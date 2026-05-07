@@ -47,7 +47,7 @@ export const SkillGraphCard: FC<Props> = ({
   if (!hasAny) return null;
 
   return (
-    <div className={cn('rounded-xl glass-subtle border border-white/10 p-4 space-y-3', className)}>
+    <div className={cn('rounded-xl bg-background border border-primary/20 p-4 space-y-3 shadow-sm', className)}>
       <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Skill Flow</p>
 
       {teaches.length > 0 && (
@@ -71,7 +71,7 @@ export const SkillGraphCard: FC<Props> = ({
       )}
 
       {teaches.length > 0 && learns.length > 0 && (
-        <div className="border-t border-white/10" />
+        <div className="border-t border-primary/20" />
       )}
 
       {learns.length > 0 && (

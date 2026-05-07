@@ -16,7 +16,6 @@ import org.springframework.web.bind.annotation.*;
 
 import java.security.Principal;
 import java.util.List;
-import java.util.Objects;
 
 /**
  * Handles both REST (message history, conversations) and WebSocket (real-time send).
@@ -81,17 +80,13 @@ public class MessageController {
         @RequestBody SendMessageHttpRequest req
     ) {
         String senderId = userId(auth);
-        if (senderId == null || peerId == null) {
-            return ResponseEntity.badRequest().build();
-        }
-
-        MessageDto saved = Objects.requireNonNull(messageService.sendMessage(
+        MessageDto saved = messageService.sendMessage(
             senderId,
             peerId,
             req.content(),
             req.type(),
             req.imageUrl()
-        ), "Saved message must not be null");
+        );
         messagingTemplate.convertAndSendToUser(peerId, "/queue/messages", saved);
         messagingTemplate.convertAndSendToUser(senderId, "/queue/messages", saved);
         return ResponseEntity.ok(ApiResponse.ok(saved));
@@ -106,31 +101,26 @@ public class MessageController {
      *  - /user/{receiverId}/queue/messages  — recipient's private queue
      *  - /user/{senderId}/queue/messages    — sender's own queue (for multi-tab sync)
      */
-    @MessageMapping("/chat.send")
+@MessageMapping("/chat.send")
     public void handleChatMessage(Principal principal, SendMessageRequest req) {
-        if (principal == null || req.toUserId() == null) return;
-
         String senderId = principal.getName();
-        String receiverId = req.toUserId();
-
-        MessageDto saved = Objects.requireNonNull(messageService.sendMessage(
+        MessageDto saved = messageService.sendMessage(
             senderId,
-            receiverId,
+            req.toUserId(),
             req.content(),
             req.type(),
             req.imageUrl()
-        ), "Saved message must not be null");
+        );
 
         // Push to receiver
-        messagingTemplate.convertAndSendToUser(Objects.requireNonNull(receiverId, "Receiver ID must not be null"), "/queue/messages", saved);
+        messagingTemplate.convertAndSendToUser(req.toUserId(), "/queue/messages", saved);
         // Echo back to sender so all their open tabs stay in sync
-        messagingTemplate.convertAndSendToUser(Objects.requireNonNull(senderId, "Sender ID must not be null"), "/queue/messages", saved);
+        messagingTemplate.convertAndSendToUser(senderId, "/queue/messages", saved);
     }
 
     // ── Helpers ───────────────────────────────────────────────────────────────
 
     private String userId(Authentication auth) {
-        if (auth == null || auth.getPrincipal() == null) return null;
-        return String.valueOf(auth.getPrincipal());
+        return (String) auth.getPrincipal();
     }
 }

@@ -67,4 +67,23 @@ export const exchangeService = {
   cancel(id: string): Promise<void> {
     return api.delete<void>(`/exchanges/${id}`);
   },
+
+  getRelationship(targetUserId: string): Promise<ExchangeRelationship> {
+    return api.get<ExchangeRelationship>(`/exchanges/relationship/${targetUserId}`);
+  },
 };
+
+export type ExchangeRelationshipStatus =
+  | 'NONE'
+  | 'PENDING_SENT'
+  | 'PENDING_RECEIVED'
+  | 'ACCEPTED'
+  | 'COMPLETED'
+  | 'CANCELLED'
+  | 'DECLINED';
+
+export interface ExchangeRelationship {
+  targetUserId: string;
+  status: ExchangeRelationshipStatus;
+  exchangeId: string | null;
+}

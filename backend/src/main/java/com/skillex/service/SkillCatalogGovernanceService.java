@@ -29,7 +29,6 @@ import java.util.Optional;
 @Service
 @RequiredArgsConstructor
 @Slf4j
-@SuppressWarnings("null")
 public class SkillCatalogGovernanceService {
 
     private final PendingSkillRepository pendingSkillRepository;

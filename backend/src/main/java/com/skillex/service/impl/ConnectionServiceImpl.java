@@ -31,7 +31,6 @@ import java.util.List;
 
 @Service
 @RequiredArgsConstructor
-@SuppressWarnings("null")
 @Slf4j
 public class ConnectionServiceImpl implements ConnectionService {
 

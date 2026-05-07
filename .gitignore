@@ -10,12 +10,15 @@ frontend/.env.*.local
 backend/build/
 backend/bin/
 backend/.gradle/
+backend/.gradle-user-home/
 backend/*.jar
+backend/backend-start*.log
 
 ##──── Environment / secrets ────────────────────────
 .env.local
 .env.*.local
 backend/.env
+backend/studio-8823523982-4b8b2-firebase-adminsdk-fbsvc-68ebf46175.json
 # Backend local secrets — never commit real credentials
 backend/src/main/resources/application-local.properties
 backend/src/main/resources/application-secrets.properties
@@ -25,12 +28,3 @@ backend/src/main/resources/application-secrets.properties
 Thumbs.db
 *.iml
 .idea/
-.vscode/
-
-##──── Java / Maven ──────────────────────────────────
-backend/target/
-*.class
-.factorypath
-.project
-.settings/
-.classpath

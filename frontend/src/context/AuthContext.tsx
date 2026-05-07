@@ -11,7 +11,7 @@ interface AuthContextType {
   isAuthenticated: boolean;
   isLoading: boolean;
   login: (email: string, password: string) => Promise<{ success: boolean; error?: string }>;
-  loginWithGoogle: () => void;
+  loginWithGoogle: () => Promise<{ success: boolean; error?: string }>;
   logout: () => void;
   register: (data: { name: string; email: string; password: string; university?: string; skillToTeach?: string; skillToLearn?: string; level?: string }) => Promise<{ success: boolean; needsEmailConfirmation?: boolean; error?: string }>;
   refreshUser: () => Promise<void>;
@@ -50,7 +50,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     let active = true;
 
     const restore = async () => {
-      AuthService.consumeGoogleCallbackFromUrl();
       try {
         const profile = await AuthService.getCurrentUser();
         if (!active) return;
@@ -105,9 +104,23 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
   }, []);
 
-  const loginWithGoogle = useCallback((): void => {
-    AuthService.loginWithGoogle();
-    // Browser redirects to Spring Boot → Google → back to /dashboard or /onboarding
+  const loginWithGoogle = useCallback(async (): Promise<{ success: boolean; error?: string }> => {
+    try {
+      const result = await AuthService.loginWithGoogle();
+
+      if (!result) {
+        // Fallback redirect mode is in progress.
+        return { success: true };
+      }
+
+      setUser(result.user);
+      writeCachedUser(result.user);
+      return { success: true };
+    } catch (error) {
+      const message = error instanceof Error ? error.message : 'Google login failed';
+      console.warn('[auth] Google login failed:', message);
+      return { success: false, error: message };
+    }
   }, []);
 
   const logout = useCallback((): void => {

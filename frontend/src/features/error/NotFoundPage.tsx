@@ -47,7 +47,7 @@ export default function NotFound() {
           initial={{ opacity: 0, scale: 0.7, y: 30 }}
           animate={{ opacity: 1, scale: 1, y: 0 }}
           transition={{ type: 'spring', stiffness: 90, damping: 16 }}
-          className="font-headline text-8xl sm:text-[10rem] md:text-[12rem] font-black leading-none tracking-tighter text-gradient select-none"
+          className="font-headline text-[10rem] md:text-[14rem] font-black leading-none tracking-tighter text-gradient select-none"
           style={{ filter: 'drop-shadow(0 0 60px hsl(var(--primary)/0.25))' }}
         >
           404

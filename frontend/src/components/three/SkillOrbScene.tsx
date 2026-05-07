@@ -1,4 +1,4 @@
-/**
+﻿/**
  * SkillOrbScene - Space-themed Three.js background for SkiilEX
  *
  * Wireframe orb (line-art globe + geodesic inner) + orbital rings +
@@ -7,11 +7,20 @@
  */
 
 import { Suspense, useEffect, useRef } from 'react';
-import { Canvas, useFrame, useThree } from '@react-three/fiber';
+import { Canvas, useFrame } from '@react-three/fiber';
 import { Stars, Html } from '@react-three/drei';
 import { EffectComposer, Bloom } from '@react-three/postprocessing';
 import * as THREE from 'three';
-import { useState, useMemo } from 'react';
+
+const isLowPowerDevice = () => {
+  if (typeof navigator === 'undefined') return false;
+
+  const nav = navigator as Navigator & { deviceMemory?: number };
+  const lowMemory = typeof nav.deviceMemory === 'number' && nav.deviceMemory <= 4;
+  const lowCpu = typeof navigator.hardwareConcurrency === 'number' && navigator.hardwareConcurrency <= 6;
+
+  return lowMemory || lowCpu;
+};
 
 /* -- Ring data & nodes -------------------------------------------- */
 const RING_DATA = [
@@ -37,7 +46,7 @@ function WireframeOrb() {
     <group ref={group}>
       {/* Outer globe grid */}
       <mesh>
-        <sphereGeometry args={[1.22, 32, 32]} />
+        <sphereGeometry args={[1.22, 20, 14]} />
         <meshBasicMaterial
           color="#00E5C3"
           wireframe
@@ -46,20 +55,9 @@ function WireframeOrb() {
           depthWrite={false}
         />
       </mesh>
-      {/* Vertex Points for 'dot' aesthetic */}
-      <points>
-        <sphereGeometry args={[1.22, 32, 32]} />
-        <pointsMaterial
-          color="#00E5C3"
-          size={0.025}
-          sizeAttenuation
-          transparent
-          opacity={0.6}
-        />
-      </points>
       {/* Inner geodesic - denser, slightly smaller */}
       <mesh rotation={[0.6, 0.4, 0.1]}>
-        <icosahedronGeometry args={[0.82, 4]} />
+        <icosahedronGeometry args={[0.82, 2]} />
         <meshBasicMaterial
           color="#00E5C3"
           wireframe
@@ -68,17 +66,6 @@ function WireframeOrb() {
           depthWrite={false}
         />
       </mesh>
-      {/* Inner vertex points */}
-      <points rotation={[0.6, 0.4, 0.1]}>
-        <icosahedronGeometry args={[0.82, 4]} />
-        <pointsMaterial
-          color="#00E5C3"
-          size={0.02}
-          sizeAttenuation
-          transparent
-          opacity={0.4}
-        />
-      </points>
       {/* Tiny bright core point for bloom anchor */}
       <mesh>
         <sphereGeometry args={[0.18, 12, 8]} />
@@ -101,9 +88,9 @@ function OrbitalRing({ radius, rotation, color, speed, nodes }: typeof RING_DATA
 
   return (
     <group rotation={rotation}>
-      {/* The visible ring track - perfectly smooth and thin */}
+      {/* The visible ring track - slightly brighter for premium feel */}
       <mesh>
-        <torusGeometry args={[radius, 0.008, 16, 128]} />
+        <torusGeometry args={[radius, 0.015, 6, 200]} />
         <meshBasicMaterial color={color} transparent opacity={0.35} depthWrite={false} />
       </mesh>
 
@@ -119,7 +106,7 @@ function OrbitalRing({ radius, rotation, color, speed, nodes }: typeof RING_DATA
             <group key={nodeLabel} position={[x, y, 0]}>
               {/* Glowing anchor dot on the ring */}
               <mesh>
-                <sphereGeometry args={[0.05, 32, 32]} />
+                <sphereGeometry args={[0.04, 16, 16]} />
                 <meshBasicMaterial color={color} />
               </mesh>
               <SkillLabel label={nodeLabel} />
@@ -176,42 +163,27 @@ function ParallaxGroup({ children }: { children: React.ReactNode }) {
   }, []);
 
   const elapsed = useRef(0);
-  const { size } = useThree();
-  const isLaptop = size.width < 1500;
-
-  useFrame((state, delta) => {
+  useFrame((_, delta) => {
     if (!group.current) return;
     elapsed.current += delta;
     const t = elapsed.current;
 
-    // Mouse parallax disabled for stability
-    const targetX = 0;
-    const targetY = 0;
+    // Mouse parallax
+    const targetX = mouse.current.x * 0.15;
+    const targetY = -mouse.current.y * 0.10;
 
     // Smooth lerp for mouse + continuous rotation
     group.current.rotation.y = THREE.MathUtils.lerp(
       group.current.rotation.y, targetX + (t * 0.02), 0.025);
     group.current.rotation.x = THREE.MathUtils.lerp(
       group.current.rotation.x, targetY + Math.sin(t * 0.01) * 0.05, 0.025);
-
-    // Responsive scaling & positioning — Restored for high impact
-    const scale = isLaptop ? 1.15 : 1.35;
-    group.current.scale.setScalar(THREE.MathUtils.lerp(group.current.scale.x, scale, 0.05));
-
-    // Shift right on wider screens, center on smaller ones
-    const targetPosX = size.width > 1400 ? 1.6 : size.width > 1024 ? 1.4 : 0;
-    group.current.position.x = THREE.MathUtils.lerp(group.current.position.x, targetPosX, 0.05);
-
-    // Adjust camera Z for consistent perspective
-    const targetZ = 7.5;
-    state.camera.position.z = THREE.MathUtils.lerp(state.camera.position.z, targetZ, 0.05);
   });
 
   return <group ref={group}>{children}</group>;
 }
 
 /* -- Scene contents ----------------------------------------------- */
-function SceneContents() {
+function SceneContents({ lowPower }: { lowPower: boolean }) {
   return (
     <>
       {/* Lighting - Add colored ambient for 'nebula' feel */}
@@ -226,18 +198,34 @@ function SceneContents() {
           <OrbitalRing key={i} {...r} />
         ))}
         {/* Dense starfield tied to parallax group for deep 3D movement */}
-        <Stars radius={50} depth={150} count={4200} factor={5} saturation={0.5} fade speed={0.35} />
+        <Stars
+          radius={50}
+          depth={150}
+          count={lowPower ? 1600 : 4200}
+          factor={lowPower ? 3.2 : 5}
+          saturation={0.5}
+          fade
+          speed={lowPower ? 0.2 : 0.35}
+        />
       </ParallaxGroup>
 
       {/* Background static stars for infinite depth */}
-      <Stars radius={100} depth={50} count={1800} factor={2.5} saturation={0} fade speed={0.1} />
+      <Stars
+        radius={100}
+        depth={50}
+        count={lowPower ? 700 : 1800}
+        factor={lowPower ? 2 : 2.5}
+        saturation={0}
+        fade
+        speed={0.1}
+      />
 
       {/* Bloom: Intense core, glowing lines */}
       <EffectComposer>
         <Bloom
           luminanceThreshold={0.02}
           luminanceSmoothing={0.4}
-          intensity={2.5}
+          intensity={lowPower ? 1.4 : 2.5}
           radius={0.85}
         />
       </EffectComposer>
@@ -247,23 +235,25 @@ function SceneContents() {
 
 /* -- Canvas export ------------------------------------------------ */
 export default function SkillOrbScene() {
+  const lowPower = isLowPowerDevice();
+
   return (
     <Canvas
       camera={{ position: [0, 0, 7.5], fov: 60 }}
       gl={{
         alpha: true,
-        antialias: true,
+        antialias: !lowPower,
         powerPreference: 'high-performance',
       }}
       onCreated={({ gl }) => {
         gl.toneMapping = THREE.ACESFilmicToneMapping;
         gl.toneMappingExposure = 1.15;
       }}
-      dpr={[1, 1.5]}
+      dpr={lowPower ? [1, 1.1] : [1, 1.5]}
       style={{ background: 'transparent' }}
     >
       <Suspense fallback={null}>
-        <SceneContents />
+        <SceneContents lowPower={lowPower} />
       </Suspense>
     </Canvas>
   );

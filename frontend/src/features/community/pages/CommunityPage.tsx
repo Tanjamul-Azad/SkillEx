@@ -164,15 +164,15 @@ const FeedTab = ({ intentFilter, onlineCount }: { intentFilter?: string; onlineC
       {/* Main Feed Column */}
       <div className="flex-1 max-w-[680px] space-y-6">
         {intentFilter && intentFilter.trim().length >= 2 && (
-          <div className="rounded-2xl border border-white/5 bg-black/40 backdrop-blur-xl shadow-sm p-4 flex items-center justify-between gap-4">
+          <div className="rounded-2xl border border-primary/15 bg-card backdrop-blur-xl shadow-sm p-4 flex items-center justify-between gap-4">
             <div>
-              <p className="text-sm font-bold text-white">Filtered feed</p>
+              <p className="text-sm font-bold text-foreground">Filtered feed</p>
               <p className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground mt-1">"{intentFilter}"</p>
             </div>
             <Button
               variant="outline"
               size="sm"
-              className="rounded-xl border-white/10 text-[10px] font-bold uppercase tracking-widest h-8"
+              className="rounded-xl border-primary/20 text-[10px] font-bold uppercase tracking-widest h-8"
               onClick={() => navigate('/community?tab=feed', { replace: true })}
             >
               Clear
@@ -181,7 +181,7 @@ const FeedTab = ({ intentFilter, onlineCount }: { intentFilter?: string; onlineC
         )}
 
         {/* Stories */}
-        <div className="rounded-2xl border border-white/5 bg-black/40 backdrop-blur-xl shadow-sm p-4">
+        <div className="rounded-2xl border border-primary/15 bg-card shadow-sm p-4">
           <div className="flex gap-4 overflow-x-auto pb-2 custom-scrollbar">
             <StoryCircle isSelf selfUser={user} />
             {stories.map(story => <StoryCircle key={story.id} story={story} />)}
@@ -203,9 +203,9 @@ const FeedTab = ({ intentFilter, onlineCount }: { intentFilter?: string; onlineC
         </div>
 
         {localPosts.length === 0 && !loadingMore && (
-          <div className="rounded-2xl border border-white/5 bg-black/40 backdrop-blur-xl p-12 text-center">
+          <div className="rounded-2xl border border-primary/15 bg-card p-12 text-center shadow-sm">
             <Rss className="h-10 w-10 text-muted-foreground/30 mx-auto mb-4" />
-            <p className="font-headline text-lg font-bold text-white mb-2">No transmissions</p>
+            <p className="font-headline text-lg font-bold text-foreground mb-2">No transmissions</p>
             <p className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">The node is silent. Share your data first.</p>
           </div>
         )}
@@ -213,9 +213,9 @@ const FeedTab = ({ intentFilter, onlineCount }: { intentFilter?: string; onlineC
 
       {/* Right Sidebar - Hidden on smaller screens */}
       <aside className="hidden lg:block w-[320px] space-y-6">
-        <div className="rounded-2xl border border-white/5 bg-black/40 backdrop-blur-xl shadow-sm">
-          <div className="p-6 border-b border-white/5 flex items-center justify-between">
-             <h3 className="font-headline text-lg font-bold text-white tracking-wide">Trending Skills</h3>
+        <div className="rounded-2xl border border-primary/15 bg-card shadow-sm">
+          <div className="p-6 border-b border-primary/10 flex items-center justify-between">
+             <h3 className="font-headline text-lg font-bold text-foreground tracking-wide">Trending Skills</h3>
              <div className="flex items-center gap-1.5">
                <Circle className="h-2 w-2 fill-[#22c55e] text-[#22c55e] animate-pulse" />
                <span className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">{onlineCount} online</span>
@@ -225,7 +225,7 @@ const FeedTab = ({ intentFilter, onlineCount }: { intentFilter?: string; onlineC
             <ul className="space-y-4">
               {trendingSkills.slice(0, 6).map((skill, i) => (
                 <li key={skill.id} className="flex items-center justify-between text-sm group">
-                  <span className="font-bold text-white/80 group-hover:text-primary transition-colors flex items-center gap-2">
+                  <span className="font-bold text-foreground/80 group-hover:text-primary transition-colors flex items-center gap-2">
                     <span className="text-muted-foreground text-xs">{i + 1}.</span>
                     {skill.icon && <span>{skill.icon}</span>}
                     {skill.name}
@@ -242,19 +242,19 @@ const FeedTab = ({ intentFilter, onlineCount }: { intentFilter?: string; onlineC
           </div>
         </div>
 
-        <div className="rounded-2xl border border-white/5 bg-black/40 backdrop-blur-xl shadow-sm">
-          <div className="p-6 border-b border-white/5">
-             <h3 className="font-headline text-lg font-bold text-white tracking-wide">Suggested To Follow</h3>
+        <div className="rounded-2xl border border-primary/15 bg-card shadow-sm">
+          <div className="p-6 border-b border-primary/10">
+             <h3 className="font-headline text-lg font-bold text-foreground tracking-wide">Suggested To Follow</h3>
           </div>
           <div className="p-6 space-y-5">
               {suggestions.map(u => (
                 <div key={u.id} className="flex items-center gap-3">
-                  <Avatar className="h-10 w-10 ring-2 ring-white/5 shadow-sm cursor-pointer" onClick={() => navigate(`/profile/${u.id}`)}>
+                  <Avatar className="h-10 w-10 ring-2 ring-primary/15 shadow-sm cursor-pointer" onClick={() => navigate(`/profile/${u.id}`)}>
                     <AvatarImage src={u.avatar} />
                     <AvatarFallback className="font-bold bg-primary/20 text-primary">{u.name.charAt(0)}</AvatarFallback>
                   </Avatar>
                   <div className="flex-1 min-w-0">
-                    <p className="font-bold text-sm text-white truncate hover:text-primary transition-colors cursor-pointer" onClick={() => navigate(`/profile/${u.id}`)}>{u.name}</p>
+                    <p className="font-bold text-sm text-foreground truncate hover:text-primary transition-colors cursor-pointer" onClick={() => navigate(`/profile/${u.id}`)}>{u.name}</p>
                     <p className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground truncate">{u.reason}</p>
                   </div>
                   <Button
@@ -264,7 +264,7 @@ const FeedTab = ({ intentFilter, onlineCount }: { intentFilter?: string; onlineC
                       'rounded-xl text-[10px] font-bold uppercase tracking-widest transition-all px-4',
                       followedUsers.has(u.id) 
                         ? 'bg-primary text-primary-foreground hover:bg-primary/90 shadow-[0_0_15px_hsl(var(--primary)/0.2)]'
-                        : 'border-white/10 hover:bg-white/10 hover:text-white text-muted-foreground'
+                        : 'border-primary/20 hover:bg-primary/5 hover:text-primary text-muted-foreground'
                     )}
                     onClick={() =>
                       setFollowedUsers(prev => {
@@ -293,7 +293,7 @@ const EventCard = React.memo(({ event }: { event: Event }) => {
   const [interested, setInterested] = React.useState(false);
   const { toast } = useToast();
   return (
-    <div className="group relative overflow-hidden h-full flex flex-col rounded-2xl border border-white/5 bg-black/40 backdrop-blur-xl transition-all duration-300 hover:border-white/10 shadow-sm">
+    <div className="group relative overflow-hidden h-full flex flex-col rounded-2xl border border-primary/15 bg-card backdrop-blur-xl transition-all duration-300 hover:border-primary/20 shadow-sm">
       <div className={cn("relative h-[220px] w-full flex flex-col justify-end p-5 overflow-hidden shrink-0", event.coverGradient)}>
         <img src="https://images.unsplash.com/photo-1505373877841-8d25f7d46678?auto=format&fit=crop&w=400&q=80" alt="Event Cover" className="absolute inset-0 h-full w-full object-cover mix-blend-overlay opacity-50 transition-transform duration-700 group-hover:scale-110" />
         <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-black/20 to-transparent z-10" />
@@ -301,18 +301,18 @@ const EventCard = React.memo(({ event }: { event: Event }) => {
           <Badge className="w-fit bg-red-500/20 text-red-500 hover:bg-red-500/30 backdrop-blur-md border border-red-500/30 font-bold uppercase tracking-widest text-[9px] px-2 py-0.5 rounded-md shadow-[0_0_10px_rgba(239,68,68,0.2)]">
             UPCOMING
           </Badge>
-          <h3 className="font-headline text-2xl font-extrabold text-white leading-tight drop-shadow-md">{event.title}</h3>
+          <h3 className="font-headline text-2xl font-extrabold text-foreground leading-tight drop-shadow-md">{event.title}</h3>
         </div>
       </div>
       <div className="p-5 flex flex-col flex-1 relative z-20 bg-transparent">
         {/* Compact Details Row */}
-        <div className="flex items-start justify-between gap-3 mb-4 border-b border-white/5 pb-4">
+        <div className="flex items-start justify-between gap-3 mb-4 border-b border-primary/15 pb-4">
           <div className="space-y-2 mt-1">
-            <div className="flex items-center gap-2 text-white/90 font-bold text-sm">
+            <div className="flex items-center gap-2 text-foreground/90 font-bold text-sm">
               <Calendar className="h-4 w-4 text-primary drop-shadow-[0_0_8px_rgba(var(--primary-color),0.5)]" />
               {new Date(event.eventDate).toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric', year: 'numeric' })}
             </div>
-            <div className="flex items-center gap-2 text-white/90 font-bold text-sm">
+            <div className="flex items-center gap-2 text-foreground/90 font-bold text-sm">
               <MapPin className="h-4 w-4 text-secondary drop-shadow-[0_0_8px_rgba(var(--secondary-color),0.5)]" />
               {event.isOnline ? `Online Event` : event.location}
             </div>
@@ -324,7 +324,7 @@ const EventCard = React.memo(({ event }: { event: Event }) => {
                  <AvatarImage src={event.host.avatar} className="object-cover" />
                  <AvatarFallback className="font-bold text-xs bg-primary/20 text-primary">{event.host.name.charAt(0)}</AvatarFallback>
                </Avatar>
-               <p className="font-bold text-sm leading-tight text-white hover:text-primary transition-colors">{event.host.name.split(' ')[0]}</p>
+               <p className="font-bold text-sm leading-tight text-foreground hover:text-primary transition-colors">{event.host.name.split(' ')[0]}</p>
              </div>
           </div>
         </div>
@@ -334,12 +334,12 @@ const EventCard = React.memo(({ event }: { event: Event }) => {
           <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest mb-2 mt-1">Target Skills</p>
           <div className="flex flex-wrap gap-1.5">
             {event.skills.slice(0, 3).map(skill => (
-              <Badge key={skill.id} variant="secondary" className="px-2 py-1 text-[10px] font-bold uppercase tracking-wider bg-white/5 text-white hover:bg-primary/20 hover:text-primary transition-colors border border-white/5 shadow-[0_2px_10px_rgba(0,0,0,0.2)]">
+              <Badge key={skill.id} variant="secondary" className="px-2 py-1 text-[10px] font-bold uppercase tracking-wider bg-primary/5 text-foreground hover:bg-primary/10 hover:text-primary transition-colors border border-primary/15 shadow-[0_2px_10px_rgba(0,0,0,0.2)]">
                 {skill.name}
               </Badge>
             ))}
             {event.skills.length > 3 && (
-              <Badge variant="secondary" className="px-2 py-1 text-[10px] font-bold uppercase tracking-wider bg-white/5 text-white/60 border border-white/5 shadow-[0_2px_10px_rgba(0,0,0,0.2)]">
+              <Badge variant="secondary" className="px-2 py-1 text-[10px] font-bold uppercase tracking-wider bg-primary/5 text-foreground/60 border border-primary/15 shadow-[0_2px_10px_rgba(0,0,0,0.2)]">
                 +{event.skills.length - 3}
               </Badge>
             )}
@@ -349,7 +349,7 @@ const EventCard = React.memo(({ event }: { event: Event }) => {
         <div className="flex-grow" />
 
         {/* Going & Buttons row */}
-        <div className="mt-5 pt-4 border-t border-white/10 flex items-center justify-between gap-3">
+        <div className="mt-5 pt-4 border-t border-primary/20 flex items-center justify-between gap-3">
           <div className="flex flex-col gap-1 shrink-0">
             <span className="text-[10px] font-bold tracking-widest uppercase text-muted-foreground">Going</span>
             <div className="flex items-center -space-x-2">
@@ -360,7 +360,7 @@ const EventCard = React.memo(({ event }: { event: Event }) => {
                 </Avatar>
               ))}
               {event.attendees.length > 3 && (
-                <div className="flex h-7 w-7 items-center justify-center rounded-full border-[2px] border-black/80 bg-white/10 text-[10px] font-bold text-white shadow-[0_0_10px_rgba(255,255,255,0.1)] relative z-10 backdrop-blur-sm">
+                <div className="flex h-7 w-7 items-center justify-center rounded-full border-[2px] border-black/80 bg-primary/10 text-[10px] font-bold text-foreground shadow-[0_0_10px_rgba(255,255,255,0.1)] relative z-10 backdrop-blur-sm">
                   +{event.attendees.length - 3}
                 </div>
               )}
@@ -371,7 +371,7 @@ const EventCard = React.memo(({ event }: { event: Event }) => {
             <Button 
               variant="outline" 
               size="sm"
-              className={cn('h-9 rounded-xl border border-white/10 border-dashed hover:border-solid hover:bg-white/5 hover:text-white transition-all font-bold uppercase tracking-widest text-[10px] px-3 text-muted-foreground', interested && 'bg-red-500/10 text-red-500 border-red-500/30 border-solid shadow-[0_0_15px_rgba(239,68,68,0.2)] hover:bg-red-500/20 hover:text-red-500')} 
+              className={cn('h-9 rounded-xl border border-primary/20 border-dashed hover:border-solid hover:bg-primary/5 hover:text-primary transition-all font-bold uppercase tracking-widest text-[10px] px-3 text-muted-foreground', interested && 'bg-red-500/10 text-red-500 border-red-500/30 border-solid shadow-[0_0_15px_rgba(239,68,68,0.2)] hover:bg-red-500/20 hover:text-red-500')} 
               onClick={async () => {
                 const wasInterested = interested;
                 setInterested(!wasInterested);
@@ -426,17 +426,17 @@ const EventsTab = () => {
   return (
     <div className="space-y-6">
       {featuredEvent ? (
-        <div className={cn("relative h-64 rounded-[2rem] overflow-hidden p-8 flex flex-col justify-end text-white shadow-[0_0_30px_rgba(0,0,0,0.5)] group border border-white/10", featuredEvent.coverGradient)}>
+        <div className={cn("relative h-64 rounded-[2rem] overflow-hidden p-8 flex flex-col justify-end text-foreground shadow-[0_0_30px_rgba(0,0,0,0.5)] group border border-primary/20", featuredEvent.coverGradient)}>
           <img src="https://images.unsplash.com/photo-1540575467063-178a50c2df87?auto=format&fit=crop&w=1200&q=80" alt="Featured Event" className="absolute inset-0 h-full w-full object-cover mix-blend-overlay opacity-50 group-hover:scale-105 transition-transform duration-700" />
           <div className="absolute inset-0 bg-gradient-to-t from-black via-black/50 to-transparent z-10" />
           <div className="relative z-20">
             <Badge className="mb-4 bg-primary text-primary-foreground border-none shadow-[0_0_15px_hsl(var(--primary)/0.5)] text-[10px] font-bold uppercase tracking-widest px-3 py-1">FEATURED EVENT</Badge>
-            <h2 className="text-3xl md:text-4xl font-extrabold font-headline drop-shadow-[0_4px_10px_rgba(0,0,0,1)] tracking-tight">{featuredEvent.title}</h2>
-            <p className="mt-3 text-white font-bold text-sm tracking-wide flex items-center gap-2 drop-shadow-[0_2px_5px_rgba(0,0,0,0.8)]"><Calendar className="h-5 w-5 text-primary drop-shadow-[0_0_8px_hsl(var(--primary)/0.8)]" /> {new Date(featuredEvent.eventDate).toDateString()}</p>
+            <h2 className="text-3xl md:text-5xl font-extrabold font-headline drop-shadow-[0_4px_10px_rgba(0,0,0,1)] tracking-tight">{featuredEvent.title}</h2>
+            <p className="mt-3 text-foreground font-bold text-sm tracking-wide flex items-center gap-2 drop-shadow-[0_2px_5px_rgba(0,0,0,0.8)]"><Calendar className="h-5 w-5 text-primary drop-shadow-[0_0_8px_hsl(var(--primary)/0.8)]" /> {new Date(featuredEvent.eventDate).toDateString()}</p>
           </div>
         </div>
       ) : (
-        <div className="h-48 rounded-[2rem] border border-white/5 bg-black/40 backdrop-blur-xl flex items-center justify-center text-[10px] uppercase font-bold tracking-widest text-muted-foreground shadow-[inset_0_1px_0_0_hsla(0,0%,100%,0.05)]">Loading events...</div>
+        <div className="h-48 rounded-[2rem] border border-primary/15 bg-card backdrop-blur-xl flex items-center justify-center text-[10px] uppercase font-bold tracking-widest text-muted-foreground shadow-[inset_0_1px_0_0_hsla(0,0%,100%,0.05)]">Loading events...</div>
       )}
       <div className="flex gap-3 overflow-x-auto pb-2 custom-scrollbar">
         {filterChips.map(chip => (
@@ -447,7 +447,7 @@ const EventsTab = () => {
               "rounded-xl text-[10px] font-bold uppercase tracking-widest transition-all",
               activeFilter === chip 
                 ? "bg-primary text-primary-foreground shadow-[0_0_15px_hsl(var(--primary)/0.2)] hover:bg-primary/90" 
-                : "border-white/10 bg-black/40 text-muted-foreground hover:text-white hover:bg-white/10 hover:border-white/20"
+                : "border-primary/20 bg-card text-muted-foreground hover:text-primary hover:bg-primary/10 hover:border-primary/25"
             )}
             onClick={() => setActiveFilter(chip)}
           >
@@ -475,7 +475,7 @@ const CircleCard = React.memo(({ circle }: { circle: SkillCircle }) => {
   const { toast } = useToast();
   return (
     <>
-      <div className="group relative overflow-hidden h-full flex flex-col rounded-2xl border border-white/5 bg-black/40 backdrop-blur-xl transition-all duration-300 hover:border-white/10 shadow-sm">
+      <div className="group relative overflow-hidden h-full flex flex-col rounded-2xl border border-primary/15 bg-card backdrop-blur-xl transition-all duration-300 hover:border-primary/20 shadow-sm">
         <div className="absolute inset-0 bg-gradient-to-br from-primary/5 via-transparent to-transparent opacity-0 transition-opacity duration-500 group-hover:opacity-100 pointer-events-none" />
         <div className="p-6 flex-grow flex flex-col relative z-10">
           <div className="flex justify-between items-start">
@@ -485,26 +485,26 @@ const CircleCard = React.memo(({ circle }: { circle: SkillCircle }) => {
             <Badge 
               variant="secondary"
               className={cn(
-                'px-3 py-1.5 text-[9px] font-bold uppercase tracking-widest shadow-[0_2px_10px_rgba(0,0,0,0.2)] border border-white/10 backdrop-blur-md',
+                'px-3 py-1.5 text-[9px] font-bold uppercase tracking-widest shadow-[0_2px_10px_rgba(0,0,0,0.2)] border border-primary/20 backdrop-blur-md',
                 circle.activity === 'VERY_ACTIVE' ? 'bg-primary/20 text-primary hover:bg-primary/30 border-primary/30 shadow-[0_0_10px_hsl(var(--primary)/0.2)]' : 
                 circle.activity === 'QUIET' ? 'bg-destructive/20 text-destructive hover:bg-destructive/30 border-destructive/30 shadow-[0_0_10px_rgba(239,68,68,0.2)]' : 
-                'bg-white/10 text-white hover:bg-white/20'
+                'bg-primary/10 text-foreground hover:bg-primary/15'
               )}
             >
               {ACTIVITY_LABELS[circle.activity] ?? circle.activity}
             </Badge>
           </div>
-          <h3 className="mt-6 text-2xl font-extrabold font-headline leading-tight text-white hover:text-primary transition-colors cursor-pointer drop-shadow-sm">{circle.name}</h3>
+          <h3 className="mt-6 text-2xl font-extrabold font-headline leading-tight text-foreground hover:text-primary transition-colors cursor-pointer drop-shadow-sm">{circle.name}</h3>
           <div className="flex flex-wrap gap-2 mt-4">
             {circle.skills.map(skill => (
-              <Badge key={skill.id} variant="outline" className="px-2.5 py-1 text-[10px] font-bold uppercase tracking-widest bg-white/5 border border-white/10 hover:border-primary/50 hover:bg-primary/10 hover:text-primary transition-all text-white/80 shadow-[0_2px_8px_rgba(0,0,0,0.1)]">
+              <Badge key={skill.id} variant="outline" className="px-2.5 py-1 text-[10px] font-bold uppercase tracking-widest bg-primary/5 border border-primary/20 hover:border-primary/50 hover:bg-primary/10 hover:text-primary transition-all text-foreground/80 shadow-[0_2px_8px_rgba(0,0,0,0.1)]">
                 {skill.name}
               </Badge>
             ))}
           </div>
           <div className="flex-grow" />
           
-          <div className="mt-6 bg-black/20 p-4 rounded-2xl border border-white/5 shadow-[inset_0_1px_0_0_hsla(0,0%,100%,0.05)]">
+          <div className="mt-6 bg-background p-4 rounded-2xl border border-primary/15 shadow-[inset_0_1px_0_0_hsla(0,0%,100%,0.05)]">
             <div className="flex items-center justify-between">
               <div className="flex flex-col gap-1">
                 <span className="text-[10px] font-bold tracking-widest uppercase text-muted-foreground">Members</span>
@@ -516,7 +516,7 @@ const CircleCard = React.memo(({ circle }: { circle: SkillCircle }) => {
                     </Avatar>
                   ))}
                   {circle.members.length > 4 && (
-                    <div className="flex h-7 w-7 items-center justify-center rounded-full border-[2px] border-black/80 bg-white/10 text-[10px] font-bold text-white shadow-[0_0_10px_rgba(255,255,255,0.1)] relative z-10 backdrop-blur-sm">
+                    <div className="flex h-7 w-7 items-center justify-center rounded-full border-[2px] border-black/80 bg-primary/10 text-[10px] font-bold text-foreground shadow-[0_0_10px_rgba(255,255,255,0.1)] relative z-10 backdrop-blur-sm">
                       +{circle.members.length - 4}
                     </div>
                   )}
@@ -524,7 +524,7 @@ const CircleCard = React.memo(({ circle }: { circle: SkillCircle }) => {
               </div>
               <div className="text-right">
                 <span className="text-[10px] font-bold tracking-widest uppercase text-muted-foreground block mb-1">Total</span>
-                <p className="text-xl font-headline font-extrabold text-white">{circle.memberCount}</p>
+                <p className="text-xl font-headline font-extrabold text-foreground">{circle.memberCount}</p>
               </div>
             </div>
           </div>
@@ -540,7 +540,7 @@ const CircleCard = React.memo(({ circle }: { circle: SkillCircle }) => {
             <Button 
               variant="outline" 
               size="sm"
-              className="flex-1 rounded-xl text-[10px] font-bold uppercase tracking-widest border border-white/10 border-dashed hover:border-solid hover:bg-white/10 hover:text-white transition-all text-muted-foreground h-10"
+              className="flex-1 rounded-xl text-[10px] font-bold uppercase tracking-widest border border-primary/20 border-dashed hover:border-solid hover:bg-primary/10 hover:text-primary transition-all text-muted-foreground h-10"
               onClick={() => toast({ title: circle.name, description: `${circle.memberCount} members · ${ACTIVITY_LABELS[circle.activity] ?? circle.activity}` })}
             >
               Preview
@@ -550,7 +550,7 @@ const CircleCard = React.memo(({ circle }: { circle: SkillCircle }) => {
               className={cn(
                 'flex-1 rounded-xl text-[10px] font-bold uppercase tracking-widest transition-all h-10',
                 joined 
-                  ? 'border border-primary/30 text-primary bg-primary/10 hover:bg-primary/20 shadow-[0_0_15px_hsl(var(--primary)/0.2)]' 
+                  ? 'border border-primary/30 text-primary bg-primary/10 hover:bg-primary/10 shadow-[0_0_15px_hsl(var(--primary)/0.2)]' 
                   : 'bg-primary text-primary-foreground hover:bg-primary/90 shadow-[0_0_15px_hsl(var(--primary)/0.3)] hover:shadow-[0_0_25px_hsl(var(--primary)/0.5)]'
               )}
               onClick={async () => {
@@ -598,16 +598,16 @@ const SkillCirclesTab = () => {
   return (
     <div className="space-y-8">
       <div>
-        <h2 className="text-3xl font-extrabold font-headline text-white tracking-tight drop-shadow-md">Join Skill Circles</h2>
+        <h2 className="text-3xl font-extrabold font-headline text-foreground tracking-tight drop-shadow-md">Join Skill Circles</h2>
         <p className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground mt-2">Exchange skills and grow together in topic-focused groups.</p>
       </div>
       <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
-        <div className="rounded-[2rem] border-2 border-dashed border-white/20 bg-black/20 backdrop-blur-xl flex flex-col items-center justify-center text-center p-8 min-h-[300px] cursor-pointer hover:border-primary/50 hover:bg-primary/5 transition-all duration-300 group shadow-[inset_0_1px_0_0_hsla(0,0%,100%,0.05)] h-full">
-          <div className="h-20 w-20 rounded-full bg-white/5 border border-white/10 flex items-center justify-center group-hover:bg-primary/20 group-hover:border-primary/30 group-hover:scale-110 transition-all duration-300 shadow-[0_0_15px_rgba(255,255,255,0.05)] group-hover:shadow-[0_0_25px_hsl(var(--primary)/0.3)]">
+        <div className="rounded-[2rem] border-2 border-dashed border-primary/25 bg-background backdrop-blur-xl flex flex-col items-center justify-center text-center p-8 min-h-[300px] cursor-pointer hover:border-primary/50 hover:bg-primary/5 transition-all duration-300 group shadow-[inset_0_1px_0_0_hsla(0,0%,100%,0.05)] h-full">
+          <div className="h-20 w-20 rounded-full bg-primary/5 border border-primary/20 flex items-center justify-center group-hover:bg-primary/10 group-hover:border-primary/30 group-hover:scale-110 transition-all duration-300 shadow-[0_0_15px_rgba(255,255,255,0.05)] group-hover:shadow-[0_0_25px_hsl(var(--primary)/0.3)]">
             <Plus className="h-10 w-10 text-muted-foreground group-hover:text-primary transition-colors" />
           </div>
-          <h3 className="mt-6 font-extrabold font-headline text-xl text-white group-hover:text-primary transition-colors">Create New Circle</h3>
-          <p className="mt-2 text-[10px] font-bold uppercase tracking-widest text-muted-foreground group-hover:text-white/70 transition-colors">Start a new community</p>
+          <h3 className="mt-6 font-extrabold font-headline text-xl text-foreground group-hover:text-primary transition-colors">Create New Circle</h3>
+          <p className="mt-2 text-[10px] font-bold uppercase tracking-widest text-muted-foreground group-hover:text-primary transition-colors">Start a new community</p>
         </div>
         {circles.map(circle => <CircleCard key={circle.id} circle={circle} />)}
       </div>
@@ -635,8 +635,8 @@ const DiscussionCard = React.memo(({ discussion: d }: { discussion: Discussion }
   return (
     <div 
       className={cn(
-        "group relative overflow-hidden rounded-2xl border border-white/5 bg-black/40 backdrop-blur-xl transition-all duration-300 hover:border-white/10 cursor-pointer flex flex-col justify-center shadow-sm",
-        d.isPinned ? "border-amber-500/30 bg-amber-500/10 hover:border-amber-500/50 shadow-[0_0_15px_rgba(245,158,11,0.1)]" : "border-white/5 hover:border-primary/40"
+        "group relative overflow-hidden rounded-2xl border border-primary/15 bg-card backdrop-blur-xl transition-all duration-300 hover:border-primary/20 cursor-pointer flex flex-col justify-center shadow-sm",
+        d.isPinned ? "border-amber-500/30 bg-amber-500/10 hover:border-amber-500/50 shadow-[0_0_15px_rgba(245,158,11,0.1)]" : "border-primary/15 hover:border-primary/40"
       )}
     >
       <div className="absolute inset-0 bg-gradient-to-r from-primary/5 via-transparent to-transparent opacity-0 transition-opacity duration-500 group-hover:opacity-100 pointer-events-none" />
@@ -644,7 +644,7 @@ const DiscussionCard = React.memo(({ discussion: d }: { discussion: Discussion }
         <div 
           className={cn(
             "flex flex-col items-center justify-center gap-2 p-3 rounded-2xl border transition-all duration-300 shrink-0 min-w-[64px] min-h-[64px] shadow-sm hover:scale-105 active:scale-95 backdrop-blur-md",
-            upvoted ? "bg-primary/20 border-primary/40 text-primary shadow-[0_0_15px_hsl(var(--primary)/0.2)]" : "bg-black/40 border-white/10 text-muted-foreground hover:border-primary/30 hover:text-primary hover:bg-primary/10"
+            upvoted ? "bg-primary/20 border-primary/40 text-primary shadow-[0_0_15px_hsl(var(--primary)/0.2)]" : "bg-card border-primary/20 text-muted-foreground hover:border-primary/30 hover:text-primary hover:bg-primary/10"
           )}
           onClick={(e) => {
             e.stopPropagation();
@@ -663,14 +663,14 @@ const DiscussionCard = React.memo(({ discussion: d }: { discussion: Discussion }
                 <Pin className="h-3 w-3" /> Pinned
               </Badge>
             )}
-            <Badge variant="secondary" className="px-2.5 py-1 text-[9px] font-bold uppercase tracking-widest bg-white/10 text-white hover:bg-primary/20 hover:text-primary transition-colors border border-white/10">
+            <Badge variant="secondary" className="px-2.5 py-1 text-[9px] font-bold uppercase tracking-widest bg-primary/10 text-foreground hover:bg-primary/10 hover:text-primary transition-colors border border-primary/20">
               {d.category}
             </Badge>
             <span className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground ml-auto hidden sm:inline-block">
               {d.createdAt}
             </span>
           </div>
-          <h3 className="font-headline font-extrabold text-lg sm:text-xl leading-snug text-white group-hover:text-primary transition-colors pr-2 line-clamp-2 drop-shadow-sm">
+          <h3 className="font-headline font-extrabold text-lg sm:text-xl leading-snug text-foreground group-hover:text-primary transition-colors pr-2 line-clamp-2 drop-shadow-sm">
             {d.title}
           </h3>
           <div className="mt-4 flex items-center flex-wrap gap-x-5 gap-y-3">
@@ -679,15 +679,15 @@ const DiscussionCard = React.memo(({ discussion: d }: { discussion: Discussion }
                 <AvatarImage src={d.author.avatar} className="object-cover" />
                 <AvatarFallback className="font-bold text-[10px] bg-primary/20 text-primary">{d.author.name.charAt(0)}</AvatarFallback>
               </Avatar>
-              <span className="text-xs font-bold text-white/80 hover:text-primary transition-colors">{d.author.name}</span>
+              <span className="text-xs font-bold text-foreground/80 hover:text-primary transition-colors">{d.author.name}</span>
             </div>
-            <div className="flex items-center gap-4 text-[10px] font-bold uppercase tracking-widest text-muted-foreground border-l border-white/10 pl-4">
-              <div className="flex items-center gap-2 hover:text-white transition-colors cursor-pointer">
+            <div className="flex items-center gap-4 text-[10px] font-bold uppercase tracking-widest text-muted-foreground border-l border-primary/20 pl-4">
+              <div className="flex items-center gap-2 hover:text-primary transition-colors cursor-pointer">
                 <div className="h-6 w-6 rounded-full bg-secondary/10 text-secondary flex items-center justify-center border border-secondary/20 shadow-[0_0_8px_rgba(var(--secondary-color),0.2)]"><MessageSquare className="h-3 w-3" /></div>
                 {d.replies} <span className="hidden sm:inline">replies</span>
               </div>
-              <div className="flex items-center gap-2 hover:text-white transition-colors cursor-pointer">
-                <span className="h-1.5 w-1.5 rounded-full bg-white/20 shadow-[0_0_5px_rgba(255,255,255,0.5)]" />
+              <div className="flex items-center gap-2 hover:text-primary transition-colors cursor-pointer">
+                <span className="h-1.5 w-1.5 rounded-full bg-primary/15 shadow-[0_0_5px_rgba(255,255,255,0.5)]" />
                 {d.views} <span className="hidden sm:inline">views</span>
               </div>
               <span className="sm:hidden ml-auto text-[10px]">{d.createdAt}</span>
@@ -712,7 +712,7 @@ const DiscussionsTab = () => {
   return (
     <div className="grid grid-cols-1 lg:grid-cols-4 gap-8">
       <aside className="col-span-1">
-        <div className="rounded-2xl border border-white/5 bg-black/40 backdrop-blur-xl shadow-sm p-4 space-y-2">
+        <div className="rounded-2xl border border-primary/15 bg-card backdrop-blur-xl shadow-sm p-4 space-y-2">
             {categories.map(cat => (
               <Button
                 key={cat}
@@ -721,7 +721,7 @@ const DiscussionsTab = () => {
                   "w-full justify-start rounded-xl text-[10px] font-bold uppercase tracking-widest transition-all",
                   activeCategory === cat 
                     ? "bg-primary text-primary-foreground shadow-[0_0_15px_hsl(var(--primary)/0.2)] hover:bg-primary/90" 
-                    : "text-muted-foreground hover:bg-white/5 hover:text-white"
+                    : "text-muted-foreground hover:bg-primary/5 hover:text-primary"
                 )}
                 onClick={() => setActiveCategory(cat)}
               >
@@ -737,9 +737,9 @@ const DiscussionsTab = () => {
             <DiscussionCard key={d.id} discussion={d} />
           ))}
         {discussions.filter(d => activeCategory === 'All' || d.category === activeCategory).length === 0 && (
-          <div className="rounded-2xl border border-white/5 bg-black/40 backdrop-blur-xl p-12 text-center">
+          <div className="rounded-2xl border border-primary/15 bg-card backdrop-blur-xl p-12 text-center">
             <MessageSquare className="h-12 w-12 text-muted-foreground/30 mx-auto mb-4" />
-            <p className="font-headline text-lg font-bold text-white mb-2">No discussions found</p>
+            <p className="font-headline text-lg font-bold text-foreground mb-2">No discussions found</p>
             <p className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">Be the first to start a conversation in this category!</p>
           </div>
         )}
@@ -782,22 +782,22 @@ export default function CommunityPage() {
   return (
     <DashboardLayout>
       <div className="container mx-auto p-4 md:p-8 space-y-8">
-        <div className="rounded-2xl border border-white/5 bg-black/40 backdrop-blur-xl shadow-sm p-6 md:p-8 relative overflow-hidden">
-          <div className="absolute inset-0 bg-[url('/noise.png')] opacity-[0.03] mix-blend-overlay pointer-events-none" />
+        <div className="rounded-2xl border border-primary/20 bg-card shadow-sm p-6 md:p-8 relative overflow-hidden">
+          <div className="absolute inset-0 bg-gradient-to-br from-primary/10 via-transparent to-emerald-50/70 pointer-events-none" />
           <div className="flex flex-col md:flex-row md:items-start md:justify-between gap-6 relative z-10">
             <div>
-              <h1 className="font-headline text-3xl md:text-4xl font-extrabold tracking-tight text-white">Community Hub</h1>
+              <h1 className="font-headline text-3xl md:text-4xl font-extrabold tracking-tight text-foreground">Community Hub</h1>
               <p className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground mt-2">Join discussions, attend events, and connect with other learners.</p>
             </div>
-            <div className="flex items-center gap-2 px-4 py-2 rounded-xl bg-white/5 border border-white/10 backdrop-blur-md shadow-[0_0_15px_rgba(34,197,94,0.1)]">
+            <div className="flex items-center gap-2 px-4 py-2 rounded-xl bg-background border border-primary/20 shadow-[0_8px_22px_-18px_hsl(var(--primary)/0.5)]">
               <Circle className="h-2 w-2 fill-green-500 text-green-500 drop-shadow-[0_0_5px_rgba(34,197,94,0.8)] animate-pulse" />
-              <span className="text-[10px] font-bold uppercase tracking-widest text-white/90">{onlineCount} members online</span>
+              <span className="text-[10px] font-bold uppercase tracking-widest text-foreground">{onlineCount} members online</span>
             </div>
           </div>
         </div>
 
         <div className="pt-2">
-          <div className="border-b border-white/10">
+          <div className="border-b border-primary/15">
             <div className="flex space-x-6 overflow-x-auto custom-scrollbar pb-1">
               {tabs.map((tab) => (
                 <button
@@ -805,7 +805,7 @@ export default function CommunityPage() {
                   onClick={() => setActiveTab(tab.id)}
                   className={cn(
                     "relative flex-shrink-0 whitespace-nowrap py-3 px-1 text-[10px] font-bold uppercase tracking-widest transition-colors outline-none flex items-center gap-2",
-                    activeTab === tab.id ? 'text-primary drop-shadow-[0_0_8px_hsl(var(--primary)/0.5)]' : 'text-muted-foreground hover:text-white'
+                    activeTab === tab.id ? 'text-primary drop-shadow-[0_0_8px_hsl(var(--primary)/0.35)]' : 'text-muted-foreground hover:text-primary'
                   )}
                 >
                   <tab.icon className="h-4 w-4" />

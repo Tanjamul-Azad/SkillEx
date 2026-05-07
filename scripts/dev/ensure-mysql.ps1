@@ -88,7 +88,7 @@ function Start-MySqlServiceIfNeeded {
 function Start-XamppMySqlIfNeeded {
     $roots = @()
     if ($env:XAMPP_HOME) { $roots += $env:XAMPP_HOME }
-    $roots += @("D:\\xamp", "F:\\Xamp", "C:\\xampp")
+    $roots += @("F:\\Xamp", "C:\\xampp")
     $roots = $roots | Select-Object -Unique
 
     foreach ($root in $roots) {
@@ -136,7 +136,7 @@ function Confirm-DatabaseExists {
 
     $roots = @()
     if ($env:XAMPP_HOME) { $roots += $env:XAMPP_HOME }
-    $roots += @("D:\\xamp", "F:\\Xamp", "C:\\xampp")
+    $roots += @("F:\\Xamp", "C:\\xampp")
     $roots = $roots | Select-Object -Unique
 
     $mysqlExe = $null

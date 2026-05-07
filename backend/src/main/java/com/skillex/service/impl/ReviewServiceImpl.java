@@ -25,7 +25,6 @@ import java.math.BigDecimal;
 
 @Service
 @RequiredArgsConstructor
-@SuppressWarnings("null")
 public class ReviewServiceImpl implements ReviewService {
 
     private final ReviewRepository reviewRepository;

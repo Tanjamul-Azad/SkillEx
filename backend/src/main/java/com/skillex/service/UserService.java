@@ -20,4 +20,8 @@ public interface UserService {
     PagedResponse<UserSearchResultDto> searchUsers(String viewerId, String query, int page, int size);
 
     void deleteAccount(String userId);
+
+    void requestEmailConnectOtp(String userId, RequestOtpRequest req);
+
+    void verifyEmailConnectOtp(String userId, VerifyOtpRequest req);
 }

@@ -28,7 +28,6 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.when;
 
 @ExtendWith(MockitoExtension.class)
-@SuppressWarnings("null")
 class AuthServiceImplTest {
 
     @Mock private UserRepository userRepository;
@@ -65,7 +64,7 @@ class AuthServiceImplTest {
             null, List.of(), List.of()
         );
 
-        when(userRepository.existsByEmail("alice@example.com")).thenReturn(false);
+        when(userRepository.existsByEmailIgnoreCase("alice@example.com")).thenReturn(false);
         when(passwordEncoder.encode("Passw0rd!")).thenReturn("enc");
         when(userRepository.save(any(User.class))).thenReturn(saved);
         when(jwtUtil.generateToken("u1", "alice@example.com", "STUDENT")).thenReturn("jwt");
@@ -90,7 +89,7 @@ class AuthServiceImplTest {
             null, List.of(), List.of()
         );
 
-        when(userRepository.findByEmail("alice@example.com")).thenReturn(Optional.of(existing));
+        when(userRepository.findByEmailIgnoreCase("alice@example.com")).thenReturn(Optional.of(existing));
         when(passwordEncoder.matches("Passw0rd!", "enc")).thenReturn(true);
         when(jwtUtil.generateToken("u1", "alice@example.com", "STUDENT")).thenReturn("jwt");
         when(dtoMapper.toProfile(existing)).thenReturn(profile);

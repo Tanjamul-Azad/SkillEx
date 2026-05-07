@@ -110,6 +110,13 @@ export default function SettingsPage() {
   const [showCurrent, setShowCurrent] = useState(false);
   const [showNext, setShowNext] = useState(false);
 
+  // Connect Email state
+  const [connectEmail, setConnectEmail] = useState('');
+  const [connectOtp, setConnectOtp] = useState('');
+  const [connectStep, setConnectStep] = useState<'input' | 'otp'>('input');
+  const [isRequestingOtp, setIsRequestingOtp] = useState(false);
+  const [isVerifyingOtp, setIsVerifyingOtp] = useState(false);
+
   // Dialog state
   const [confirmLogoutAll, setConfirmLogoutAll] = useState(false);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
@@ -407,6 +414,43 @@ export default function SettingsPage() {
     showOnline: true,
     allowMatchRequests: true,
   });
+
+  const handleRequestOtp = useCallback(async () => {
+    if (!connectEmail || !connectEmail.includes('@')) {
+      toast({ title: 'Invalid Email', description: 'Please enter a valid email address.', variant: 'destructive' });
+      return;
+    }
+    setIsRequestingOtp(true);
+    try {
+      await UserService.requestEmailConnectOtp(connectEmail);
+      toast({ title: 'OTP Sent', description: 'Please check your email for the OTP.', variant: 'success' });
+      setConnectStep('otp');
+    } catch (err: any) {
+      toast({ title: 'Failed to send OTP', description: err.response?.data?.message || err.message || 'Please try again.', variant: 'destructive' });
+    } finally {
+      setIsRequestingOtp(false);
+    }
+  }, [connectEmail, toast]);
+
+  const handleVerifyOtp = useCallback(async () => {
+    if (!connectOtp || connectOtp.length !== 6) {
+      toast({ title: 'Invalid OTP', description: 'Please enter the 6-digit OTP.', variant: 'destructive' });
+      return;
+    }
+    setIsVerifyingOtp(true);
+    try {
+      await UserService.verifyEmailConnectOtp(connectEmail, connectOtp);
+      toast({ title: 'Email Connected', description: 'Your email has been successfully updated.', variant: 'success' });
+      await refreshUser();
+      setConnectStep('input');
+      setConnectEmail('');
+      setConnectOtp('');
+    } catch (err: any) {
+      toast({ title: 'Verification Failed', description: err.response?.data?.message || err.message || 'Please check your OTP and try again.', variant: 'destructive' });
+    } finally {
+      setIsVerifyingOtp(false);
+    }
+  }, [connectEmail, connectOtp, refreshUser, toast]);
 
   /* Profile form */
   const profileForm = useForm<ProfileFormData>({
@@ -1019,13 +1063,78 @@ export default function SettingsPage() {
 
             {/* ── SECURITY ── */}
             {active === 'security' && (
-              <div className="overflow-hidden rounded-[2rem] border border-white/5 bg-black/40 backdrop-blur-xl shadow-[inset_0_1px_0_0_hsla(0,0%,100%,0.05)]">
-                <div className="p-6 border-b border-white/5 bg-white/5">
-                  <h3 className="text-xl font-extrabold font-headline text-white flex items-center gap-2">
-                    <Lock className="h-5 w-5 text-primary" /> Change Password
-                  </h3>
-                  <p className="text-[10px] uppercase font-bold tracking-widest text-muted-foreground mt-1">Use a strong password that you don't use elsewhere.</p>
+              <div className="space-y-6">
+                {/* CONNECT EMAIL BLOCK */}
+                <div className="overflow-hidden rounded-[2rem] border border-white/5 bg-black/40 backdrop-blur-xl shadow-[inset_0_1px_0_0_hsla(0,0%,100%,0.05)]">
+                  <div className="p-6 border-b border-white/5 bg-white/5">
+                    <h3 className="text-xl font-extrabold font-headline text-white flex items-center gap-2">
+                      <Lock className="h-5 w-5 text-accent" /> Connect Google Account
+                    </h3>
+                    <p className="text-[10px] uppercase font-bold tracking-widest text-muted-foreground mt-1">Verify a Gmail address to log in with Google next time.</p>
+                  </div>
+                  <div className="p-6">
+                    {connectStep === 'input' ? (
+                      <div className="space-y-4 max-w-md">
+                        <div className="space-y-2">
+                          <Label className="text-[10px] uppercase font-bold tracking-widest text-muted-foreground">New Email Address</Label>
+                          <Input
+                            type="email"
+                            placeholder="your.google.account@gmail.com"
+                            value={connectEmail}
+                            onChange={(e) => setConnectEmail(e.target.value)}
+                            className="appearance-none bg-black/20 border-white/10 text-white placeholder-white/30 focus:ring-accent/50 focus:border-accent/50 rounded-xl"
+                          />
+                        </div>
+                        <Button 
+                          onClick={handleRequestOtp} 
+                          disabled={isRequestingOtp || !connectEmail}
+                          className="min-w-[160px] bg-accent text-accent-foreground hover:bg-accent/90 rounded-xl font-bold shadow-[0_0_20px_hsl(var(--accent)/0.2)] hover:shadow-[0_0_30px_hsl(var(--accent)/0.4)] transition-all"
+                        >
+                          {isRequestingOtp ? <><Loader2 className="mr-2 h-4 w-4 animate-spin" /> Sending...</> : 'Send OTP'}
+                        </Button>
+                      </div>
+                    ) : (
+                      <div className="space-y-4 max-w-md">
+                        <div className="space-y-2">
+                          <Label className="text-[10px] uppercase font-bold tracking-widest text-muted-foreground">Enter 6-digit OTP</Label>
+                          <Input
+                            type="text"
+                            maxLength={6}
+                            placeholder="123456"
+                            value={connectOtp}
+                            onChange={(e) => setConnectOtp(e.target.value)}
+                            className="appearance-none bg-black/20 border-white/10 text-white placeholder-white/30 focus:ring-accent/50 focus:border-accent/50 rounded-xl tracking-widest font-mono text-lg"
+                          />
+                          <p className="text-xs text-muted-foreground">OTP sent to: <strong>{connectEmail}</strong></p>
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <Button 
+                            onClick={handleVerifyOtp} 
+                            disabled={isVerifyingOtp || connectOtp.length !== 6}
+                            className="flex-1 bg-accent text-accent-foreground hover:bg-accent/90 rounded-xl font-bold shadow-[0_0_20px_hsl(var(--accent)/0.2)] hover:shadow-[0_0_30px_hsl(var(--accent)/0.4)] transition-all"
+                          >
+                            {isVerifyingOtp ? <><Loader2 className="mr-2 h-4 w-4 animate-spin" /> Verifying...</> : 'Verify & Connect'}
+                          </Button>
+                          <Button 
+                            variant="outline" 
+                            onClick={() => setConnectStep('input')}
+                            className="rounded-xl border-white/10 bg-white/5 hover:bg-white/10"
+                          >
+                            Cancel
+                          </Button>
+                        </div>
+                      </div>
+                    )}
+                  </div>
                 </div>
+
+                <div className="overflow-hidden rounded-[2rem] border border-white/5 bg-black/40 backdrop-blur-xl shadow-[inset_0_1px_0_0_hsla(0,0%,100%,0.05)]">
+                  <div className="p-6 border-b border-white/5 bg-white/5">
+                    <h3 className="text-xl font-extrabold font-headline text-white flex items-center gap-2">
+                      <Shield className="h-5 w-5 text-primary" /> Change Password
+                    </h3>
+                    <p className="text-[10px] uppercase font-bold tracking-widest text-muted-foreground mt-1">Use a strong password that you don't use elsewhere.</p>
+                  </div>
                 <div className="p-6">
                   <Form {...passwordForm}>
                     <form onSubmit={passwordForm.handleSubmit(handlePasswordSave)} className="space-y-6 max-w-md">
@@ -1082,6 +1191,7 @@ export default function SettingsPage() {
                     </form>
                   </Form>
                 </div>
+              </div>
               </div>
             )}
 

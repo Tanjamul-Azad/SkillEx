@@ -8,7 +8,7 @@ REST API backend for the SkillEX peer skill-exchange platform.
 |---|---|
 | Framework | Spring Boot 3.4 + Java 21 |
 | Database | MySQL 8.0 (Flyway migrations) |
-| Security | Spring Security 6 + JWT (jjwt 0.12) |
+| Security | Spring Security 6 + JWT (jjwt 0.12) + Firebase Admin (Google sign-in verification) |
 | ORM | Spring Data JPA (Hibernate) |
 | Build | Gradle 8.10+ (wrapper) |
 
@@ -54,7 +54,8 @@ backend/
 - Vite dev server proxies these to `http://localhost:8080` (see `frontend/vite.config.ts`)
 - Spring Boot controllers are mapped at `/api/**`
 - Communication is **JSON over HTTP REST**
-- Auth uses **JWT Bearer tokens** — frontend stores token in `localStorage`, sends as `Authorization: Bearer <token>` header
+- Auth uses **JWT Bearer tokens** — frontend stores token in `sessionStorage`, sends as `Authorization: Bearer <token>` header
+- Google sign-in uses a Firebase popup on the frontend and Firebase Admin verification on the backend before issuing the app JWT
 
 ## AOOP Layers
 
@@ -80,6 +81,10 @@ mysql -u root -p -e "CREATE DATABASE skillex;"
 # 2. Copy & configure environment
 cp .env.example .env
 # Set spring.datasource.url / username / password in application.properties
+# Add Firebase settings in backend/.env:
+#   FIREBASE_GOOGLE_ENABLED=true
+#   FIREBASE_PROJECT_ID=<your firebase project id>
+#   FIREBASE_SERVICE_ACCOUNT_PATH=<path to firebase-admin JSON>
 
 # 3. Run
 ./gradlew bootRun
@@ -94,6 +99,7 @@ The app starts on `http://localhost:8080`. Flyway will automatically run
 |---|---|---|
 | POST | /api/auth/register | Create account |
 | POST | /api/auth/login | Login → JWT |
+| POST | /api/auth/firebase/google | Verify Firebase Google ID token → app JWT |
 | GET | /api/auth/me | Get current user |
 | GET | /api/users/{id} | Get user profile |
 | PUT | /api/users/{id} | Update profile |

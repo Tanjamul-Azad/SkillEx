@@ -33,8 +33,6 @@ import java.util.List;
 public class SecurityConfig {
 
     private final JwtAuthFilter jwtAuthFilter;
-    private final OAuth2AuthenticationSuccessHandler oAuth2SuccessHandler;
-    private final OAuth2AuthenticationFailureHandler oAuth2FailureHandler;
 
     @Value("${app.cors.allowed-origins}")
     private String allowedOriginsRaw;
@@ -46,10 +44,8 @@ public class SecurityConfig {
             .cors(cors -> cors.configurationSource(corsConfigurationSource()))
             .sessionManagement(s -> s.sessionCreationPolicy(SessionCreationPolicy.IF_REQUIRED))
             .authorizeHttpRequests(auth -> auth
-                .requestMatchers(HttpMethod.POST, "/api/auth/login", "/api/auth/register", "/api/auth/refresh").permitAll()
+                .requestMatchers(HttpMethod.POST, "/api/auth/login", "/api/auth/register", "/api/auth/refresh", "/api/auth/firebase/google").permitAll()
                 .requestMatchers(HttpMethod.POST, "/api/skills/interpret").permitAll()
-                .requestMatchers("/api/auth/google/**").permitAll()
-                .requestMatchers("/oauth2/**", "/login/oauth2/**").permitAll()
                 // WebSocket handshake endpoints (SockJS negotiation)
                 .requestMatchers("/ws/**", "/ws/info").permitAll()
                 // Static uploads
@@ -79,10 +75,6 @@ public class SecurityConfig {
                     response.setStatus(401);
                     response.getWriter().write("{\"success\":false,\"message\":\"Unauthorized\"}");
                 })
-            )
-            .oauth2Login(oauth2 -> oauth2
-                .successHandler(oAuth2SuccessHandler)
-                .failureHandler(oAuth2FailureHandler)
             )
             .addFilterBefore(jwtAuthFilter, UsernamePasswordAuthenticationFilter.class);
 

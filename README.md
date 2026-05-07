@@ -147,9 +147,23 @@ Flyway automatically applies `V1__initial_schema.sql` on first run.
 
 | File | Purpose |
 |------|---------|
-| `frontend/.env.local` | Vite dev vars (`VITE_API_URL`, `VITE_APP_URL`) |
-| `backend/.env` | Backend secrets/config for local runs (DB, JWT, embedding provider/API keys) |
+| `frontend/.env.local` | Vite dev vars (`VITE_API_URL`, `VITE_APP_URL`, Firebase web app config) |
+| `backend/.env` | Backend secrets/config for local runs (DB, JWT, Firebase service account, embedding provider/API keys) |
 | `backend/src/main/resources/application.properties` | Spring Boot defaults + env var bindings |
+
+### Firebase Google Sign-In Setup
+
+1. Enable Google sign-in in Firebase Authentication.
+2. Copy the Firebase web app config into `frontend/.env.local`:
+      - `VITE_FIREBASE_API_KEY`
+      - `VITE_FIREBASE_AUTH_DOMAIN`
+      - `VITE_FIREBASE_PROJECT_ID`
+      - `VITE_FIREBASE_APP_ID`
+      - `VITE_FIREBASE_STORAGE_BUCKET`
+      - `VITE_FIREBASE_MESSAGING_SENDER_ID`
+3. Put the Firebase Admin service-account JSON in `backend/` and set `FIREBASE_SERVICE_ACCOUNT_PATH` in `backend/.env`.
+4. Set `FIREBASE_GOOGLE_ENABLED=true` in `backend/.env`.
+5. Run `npm run dev` or `./start.ps1`.
 
 ### Gemini Embedding API Setup
 

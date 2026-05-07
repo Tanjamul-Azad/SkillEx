@@ -90,7 +90,7 @@ export const PostComposer = React.memo(({ onPost }: PostComposerProps) => {
   const selectedSkill = skills.find(s => s.id === selectedSkillId);
 
   return (
-    <div className="overflow-hidden rounded-2xl border border-white/5 bg-black/40 backdrop-blur-xl shadow-sm">
+    <div className="overflow-hidden rounded-2xl border border-primary/15 bg-card shadow-sm">
       <div className="p-4 sm:p-5">
         <div className="flex items-start gap-4">
           <Avatar className="mt-0.5 shrink-0 ring-2 ring-primary/20 shadow-[0_0_15px_hsl(var(--primary)/0.2)]">
@@ -103,7 +103,7 @@ export const PostComposer = React.memo(({ onPost }: PostComposerProps) => {
               onChange={(e) => setContent(e.target.value)}
               onFocus={() => setFocused(true)}
               placeholder="Share a skill tip, a win, or ask a question..."
-              className="w-full resize-none appearance-none rounded-xl bg-black/20 border border-white/10 px-4 py-3 text-sm placeholder:text-white/30 text-white focus:outline-none focus:ring-2 focus:ring-primary/50 focus:border-primary/50 transition-all custom-scrollbar"
+              className="w-full resize-none appearance-none rounded-xl bg-background border border-primary/15 px-4 py-3 text-sm placeholder:text-muted-foreground/60 text-foreground focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary/50 transition-all custom-scrollbar"
               rows={focused ? 3 : 1}
             />
             
@@ -126,7 +126,7 @@ export const PostComposer = React.memo(({ onPost }: PostComposerProps) => {
                             'flex items-center gap-2 rounded-xl px-3 py-1.5 text-[10px] uppercase tracking-widest font-bold transition-all border outline-none',
                             postType === id
                               ? 'bg-primary/20 text-primary border-primary/30 shadow-[0_0_15px_hsl(var(--primary)/0.2)] scale-[1.02]'
-                              : 'border-white/5 bg-black/40 text-muted-foreground hover:border-white/20 hover:text-white hover:bg-white/5'
+                              : 'border-primary/15 bg-background text-muted-foreground hover:border-primary/35 hover:text-primary hover:bg-primary/5'
                           )}
                         >
                           <Icon className="h-3 w-3" />
@@ -143,15 +143,15 @@ export const PostComposer = React.memo(({ onPost }: PostComposerProps) => {
                             size="sm" 
                             className={cn(
                               "rounded-xl text-[10px] uppercase font-bold tracking-widest transition-all",
-                              selectedSkillId ? "text-primary bg-primary/10 border border-primary/20" : "text-muted-foreground hover:bg-white/5 hover:text-white"
+                              selectedSkillId ? "text-primary bg-primary/10 border border-primary/20" : "text-muted-foreground hover:bg-primary/5 hover:text-primary"
                             )}
                           >
                             <Tag className="mr-2 h-3 w-3" />
                             {selectedSkill ? selectedSkill.name : 'Tag Skill'}
                           </Button>
                         </DropdownMenuTrigger>
-                        <DropdownMenuContent align="end" className="w-56 rounded-2xl border border-white/10 bg-black/90 backdrop-blur-xl shadow-2xl p-2 max-h-64 overflow-y-auto custom-scrollbar">
-                          <div className="px-2 py-1.5 text-[9px] font-bold uppercase tracking-widest text-muted-foreground border-b border-white/5 mb-1">Select Skill</div>
+                        <DropdownMenuContent align="end" className="w-56 rounded-2xl border border-primary/20 bg-popover shadow-2xl p-2 max-h-64 overflow-y-auto custom-scrollbar">
+                          <div className="px-2 py-1.5 text-[9px] font-bold uppercase tracking-widest text-muted-foreground border-b border-primary/10 mb-1">Select Skill</div>
                           <DropdownMenuItem onClick={() => setSelectedSkillId(null)} className="rounded-lg text-[10px] font-bold uppercase tracking-widest focus:bg-primary/10 focus:text-primary cursor-pointer">
                              No Skill
                           </DropdownMenuItem>
@@ -167,11 +167,11 @@ export const PostComposer = React.memo(({ onPost }: PostComposerProps) => {
                         </DropdownMenuContent>
                       </DropdownMenu>
 
-                      <div className="flex items-center gap-3 ml-2 border-l border-white/10 pl-4">
+                      <div className="flex items-center gap-3 ml-2 border-l border-primary/15 pl-4">
                         <Button
                           size="sm"
                           variant="ghost"
-                          className="rounded-xl text-[10px] uppercase font-bold tracking-widest text-muted-foreground hover:bg-white/10 hover:text-white transition-colors"
+                          className="rounded-xl text-[10px] uppercase font-bold tracking-widest text-muted-foreground hover:bg-primary/5 hover:text-primary transition-colors"
                           onClick={() => { 
                             setContent(''); 
                             setFocused(false); 
@@ -196,7 +196,7 @@ export const PostComposer = React.memo(({ onPost }: PostComposerProps) => {
 
                   {/* Attached image/video preview */}
                   {attachedPreview && (
-                    <div className="relative mt-4 rounded-xl overflow-hidden border border-white/10 group/img shadow-[inset_0_1px_0_0_hsla(0,0%,100%,0.05)]">
+                    <div className="relative mt-4 rounded-xl overflow-hidden border border-primary/15 group/img shadow-sm">
                       {attachedFile?.type.startsWith('video/') ? (
                         <video src={attachedPreview} className="w-full max-h-52 object-cover opacity-80 group-hover/img:opacity-100 transition-opacity" muted loop playsInline autoPlay />
                       ) : (
@@ -205,7 +205,7 @@ export const PostComposer = React.memo(({ onPost }: PostComposerProps) => {
                       <button
                         type="button"
                         onClick={() => { setAttachedPreview(null); setAttachedFile(null); }}
-                        className="absolute top-2 right-2 h-8 w-8 rounded-full bg-black/60 hover:bg-destructive/80 text-white flex items-center justify-center transition-all backdrop-blur-md border border-white/20 hover:border-destructive"
+                        className="absolute top-2 right-2 h-8 w-8 rounded-full bg-black/60 hover:bg-destructive/80 text-foreground flex items-center justify-center transition-all backdrop-blur-md border border-primary/25 hover:border-destructive"
                       >
                         <svg className="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><path d="M18 6 6 18M6 6l12 12"/></svg>
                       </button>
@@ -219,15 +219,15 @@ export const PostComposer = React.memo(({ onPost }: PostComposerProps) => {
         {/* Hidden file input */}
         <input ref={fileInputRef} type="file" accept="image/*,video/*" className="hidden" onChange={handleAttach} />
         {!focused && (
-          <div className="mt-4 flex justify-between border-t border-white/5 pt-4">
+          <div className="mt-4 flex justify-between border-t border-primary/10 pt-4">
             <div className="flex gap-2">
-              <Button variant="ghost" size="sm" className="text-[10px] uppercase font-bold tracking-widest text-muted-foreground hover:text-white hover:bg-white/5 rounded-xl transition-all" onClick={() => fileInputRef.current?.click()}>
+              <Button variant="ghost" size="sm" className="text-[10px] uppercase font-bold tracking-widest text-muted-foreground hover:text-primary hover:bg-primary/5 rounded-xl transition-all" onClick={() => fileInputRef.current?.click()}>
                 <ImageIcon className="mr-2 h-4 w-4" /> Photo / Video
               </Button>
-              <Button variant="ghost" size="sm" className="text-[10px] uppercase font-bold tracking-widest text-muted-foreground hover:text-white hover:bg-white/5 rounded-xl transition-all" onClick={() => { setPostType('question'); setFocused(true); }}>
+              <Button variant="ghost" size="sm" className="text-[10px] uppercase font-bold tracking-widest text-muted-foreground hover:text-primary hover:bg-primary/5 rounded-xl transition-all" onClick={() => { setPostType('question'); setFocused(true); }}>
                 <HelpCircle className="mr-2 h-4 w-4" /> Ask Question
               </Button>
-              <Button variant="ghost" size="sm" className="text-[10px] uppercase font-bold tracking-widest text-muted-foreground hover:text-white hover:bg-white/5 rounded-xl transition-all hidden sm:flex" onClick={() => { setPostType('showcase'); setFocused(true); }}>
+              <Button variant="ghost" size="sm" className="text-[10px] uppercase font-bold tracking-widest text-muted-foreground hover:text-primary hover:bg-primary/5 rounded-xl transition-all hidden sm:flex" onClick={() => { setPostType('showcase'); setFocused(true); }}>
                 <Tag className="mr-2 h-4 w-4" /> Showcase
               </Button>
             </div>

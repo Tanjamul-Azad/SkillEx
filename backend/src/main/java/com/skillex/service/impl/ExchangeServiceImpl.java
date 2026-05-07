@@ -8,6 +8,7 @@ import com.skillex.model.User;
 import com.skillex.repository.ExchangeRepository;
 import com.skillex.repository.SkillRepository;
 import com.skillex.repository.UserRepository;
+import com.skillex.repository.ConnectionRepository;
 import com.skillex.service.DtoMapper;
 import com.skillex.service.ExchangeService;
 import com.skillex.service.NotificationService;
@@ -19,8 +20,6 @@ import org.springframework.security.access.AccessDeniedException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import java.util.Objects;
-
 @Service
 @RequiredArgsConstructor
 public class ExchangeServiceImpl implements ExchangeService {
@@ -28,6 +27,7 @@ public class ExchangeServiceImpl implements ExchangeService {
     private final ExchangeRepository exchangeRepository;
     private final UserRepository userRepository;
     private final SkillRepository skillRepository;
+    private final ConnectionRepository connectionRepository;
     private final DtoMapper mapper;
     private final NotificationService notificationService;
 
@@ -37,27 +37,24 @@ public class ExchangeServiceImpl implements ExchangeService {
         User requester = findUser(requesterId);
         User receiver  = findUser(req.receiverId());
 
-        String requesterIdFromDb = Objects.requireNonNull(requester.getId(), "Requester ID must not be null");
-        String receiverIdFromDb = Objects.requireNonNull(receiver.getId(), "Receiver ID must not be null");
-
-        if (requesterIdFromDb.equals(receiverIdFromDb)) {
+        if (requester.getId().equals(receiver.getId())) {
             throw new IllegalArgumentException("You cannot create an exchange request with yourself.");
         }
 
         Exchange existingPending = exchangeRepository
             .findFirstByRequesterIdAndReceiverIdAndStatusOrderByCreatedAtDesc(
-                requesterIdFromDb, receiverIdFromDb, Exchange.ExchangeStatus.PENDING)
+                requester.getId(), receiver.getId(), Exchange.ExchangeStatus.PENDING)
             .orElse(null);
         if (existingPending != null) {
             return mapper.toExchange(existingPending);
         }
 
         Skill offeredSkill = (req.offeredSkillId() != null)
-            ? skillRepository.findById(Objects.requireNonNull(req.offeredSkillId(), "Offered skill ID must not be null"))
+            ? skillRepository.findById(req.offeredSkillId())
                 .orElseThrow(() -> new EntityNotFoundException("Skill not found: " + req.offeredSkillId()))
             : null;
         Skill wantedSkill = (req.wantedSkillId() != null)
-            ? skillRepository.findById(Objects.requireNonNull(req.wantedSkillId(), "Wanted skill ID must not be null"))
+            ? skillRepository.findById(req.wantedSkillId())
                 .orElseThrow(() -> new EntityNotFoundException("Skill not found: " + req.wantedSkillId()))
             : null;
 
@@ -71,8 +68,8 @@ public class ExchangeServiceImpl implements ExchangeService {
         Exchange saved = exchangeRepository.save(exchange);
 
         notificationService.create(
-            receiverIdFromDb,
-            requesterIdFromDb,
+            receiver.getId(),
+            requester.getId(),
             "MATCH_REQUEST",
             requester.getName() + " sent you a skill exchange request."
         );
@@ -117,15 +114,39 @@ public class ExchangeServiceImpl implements ExchangeService {
 
         if (next == Exchange.ExchangeStatus.ACCEPTED) {
             notificationService.create(
-                Objects.requireNonNull(saved.getRequester().getId(), "Requester ID must not be null"),
-                Objects.requireNonNull(saved.getReceiver().getId(), "Receiver ID must not be null"),
+                saved.getRequester().getId(),
+                saved.getReceiver().getId(),
                 "MATCH_REQUEST",
                 saved.getReceiver().getName() + " accepted your skill exchange request."
             );
+
+            // Symmetrically auto-create or accept Connection
+            try {
+                com.skillex.model.Connection existingConn = connectionRepository.findPairHistory(
+                    saved.getRequester().getId(),
+                    saved.getReceiver().getId(),
+                    PageRequest.of(0, 1)
+                ).stream().findFirst().orElse(null);
+
+                if (existingConn == null) {
+                    com.skillex.model.Connection newConn = new com.skillex.model.Connection();
+                    newConn.setRequester(saved.getRequester());
+                    newConn.setReceiver(saved.getReceiver());
+                    newConn.setStatus(com.skillex.model.Connection.ConnectionStatus.ACCEPTED);
+                    newConn.setRespondedAt(java.time.LocalDateTime.now());
+                    connectionRepository.save(newConn);
+                } else if (existingConn.getStatus() == com.skillex.model.Connection.ConnectionStatus.PENDING) {
+                    existingConn.setStatus(com.skillex.model.Connection.ConnectionStatus.ACCEPTED);
+                    existingConn.setRespondedAt(java.time.LocalDateTime.now());
+                    connectionRepository.save(existingConn);
+                }
+            } catch (Exception e) {
+                // Ignore silent errors during auto-connection sync
+            }
         } else if (next == Exchange.ExchangeStatus.DECLINED) {
             notificationService.create(
-                Objects.requireNonNull(saved.getRequester().getId(), "Requester ID must not be null"),
-                Objects.requireNonNull(saved.getReceiver().getId(), "Receiver ID must not be null"),
+                saved.getRequester().getId(),
+                saved.getReceiver().getId(),
                 "MATCH_REQUEST",
                 saved.getReceiver().getName() + " declined your skill exchange request."
             );
@@ -143,15 +164,46 @@ public class ExchangeServiceImpl implements ExchangeService {
         exchangeRepository.save(ex);
     }
 
+    @Override
+    @Transactional(readOnly = true)
+    public ExchangeRelationshipDto getRelationship(String userId, String targetUserId) {
+        if (userId.equals(targetUserId)) {
+            return new ExchangeRelationshipDto(targetUserId, "NONE", null);
+        }
+
+        Exchange latest = exchangeRepository.findPairHistory(
+            userId,
+            targetUserId,
+            PageRequest.of(0, 1)
+        ).stream().findFirst().orElse(null);
+
+        if (latest == null) {
+            return new ExchangeRelationshipDto(targetUserId, "NONE", null);
+        }
+
+        return switch (latest.getStatus()) {
+            case ACCEPTED -> new ExchangeRelationshipDto(targetUserId, "ACCEPTED", latest.getId());
+            case PENDING -> {
+                String status = latest.getRequester().getId().equals(userId)
+                    ? "PENDING_SENT"
+                    : "PENDING_RECEIVED";
+                yield new ExchangeRelationshipDto(targetUserId, status, latest.getId());
+            }
+            case DECLINED -> new ExchangeRelationshipDto(targetUserId, "DECLINED", latest.getId());
+            case COMPLETED -> new ExchangeRelationshipDto(targetUserId, "COMPLETED", latest.getId());
+            case CANCELLED -> new ExchangeRelationshipDto(targetUserId, "CANCELLED", latest.getId());
+        };
+    }
+
     // ── helpers ──────────────────────────────────────────────────────────────
 
     private Exchange findExchange(String id) {
-        return exchangeRepository.findById(Objects.requireNonNull(id, "Exchange ID must not be null"))
+        return exchangeRepository.findById(id)
             .orElseThrow(() -> new EntityNotFoundException("Exchange not found: " + id));
     }
 
     private User findUser(String id) {
-        return userRepository.findById(Objects.requireNonNull(id, "User ID must not be null"))
+        return userRepository.findById(id)
             .orElseThrow(() -> new EntityNotFoundException("User not found: " + id));
     }
 

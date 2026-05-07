@@ -17,11 +17,13 @@ DB_PASSWORD=your_mysql_password
 APP_JWT_SECRET=replace_with_a_long_random_secret_at_least_32_chars
 APP_JWT_EXPIRATION_MS=86400000
 
-# ── Google OAuth2 ─────────────────────────────────────────────────
-# Create credentials at: https://console.cloud.google.com/apis/credentials
-# Authorized redirect URI: http://localhost:8080/login/oauth2/code/google
-GOOGLE_CLIENT_ID=your_google_client_id.apps.googleusercontent.com
-GOOGLE_CLIENT_SECRET=your_google_client_secret
+# ── Firebase Google popup auth (frontend popup -> backend JWT) ──
+FIREBASE_GOOGLE_ENABLED=true
+FIREBASE_PROJECT_ID=your_firebase_project_id
+# Prefer path for local development
+FIREBASE_SERVICE_ACCOUNT_PATH=path/to/firebase-service-account.json
+# Optional alternative to path: raw single-line JSON string
+FIREBASE_SERVICE_ACCOUNT_JSON=
 
 # ── AI / Gemini ───────────────────────────────────────────────────
 # Get key at: https://aistudio.google.com/app/apikey

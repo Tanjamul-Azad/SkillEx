@@ -134,8 +134,7 @@ public class CycleScorer {
      * @return top-N {@link ScoredCycle}s, best first
      */
     @Transactional(readOnly = true)
-    @SuppressWarnings("null")
-    public List<ScoredCycle> rankCycles(List<ExchangeCycle> cycles, int limit) {
+public List<ScoredCycle> rankCycles(List<ExchangeCycle> cycles, int limit) {
         if (cycles.isEmpty()) return List.of();
 
         // Load all unique participant users across all cycles in one query
@@ -277,8 +276,7 @@ public class CycleScorer {
     // ── Utility ───────────────────────────────────────────────────────────────
 
     /** Load all participant {@link User} entities for a single cycle in one query. */
-    @SuppressWarnings("null")
-    private Map<String, User> loadParticipants(ExchangeCycle cycle) {
+private Map<String, User> loadParticipants(ExchangeCycle cycle) {
         return userRepository.findAllById(cycle.userIds()).stream()
             .collect(Collectors.toMap(User::getId, u -> u));
     }

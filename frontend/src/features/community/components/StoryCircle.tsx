@@ -34,7 +34,7 @@ export const StoryCircle = React.memo(({ story, isSelf, selfUser }: StoryCircleP
 
   return (
     <div className="flex flex-col items-center gap-2 flex-shrink-0 cursor-pointer group">
-      <div className={cn("h-16 w-16 rounded-full p-0.5 flex items-center justify-center transition-all duration-300 group-hover:scale-105", story.isSeen ? 'bg-white/10' : 'bg-gradient-to-tr from-primary to-secondary shadow-glow-sm')}>
+      <div className={cn("h-16 w-16 rounded-full p-0.5 flex items-center justify-center transition-all duration-300 group-hover:scale-105", story.isSeen ? 'bg-primary/10' : 'bg-gradient-to-tr from-primary to-secondary shadow-glow-sm')}>
         <Avatar className="h-[58px] w-[58px] border-2 border-background">
           <AvatarImage src={story.user.avatar} />
           <AvatarFallback>{story.user.name.charAt(0)}</AvatarFallback>

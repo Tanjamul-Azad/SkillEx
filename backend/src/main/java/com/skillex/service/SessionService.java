@@ -14,6 +14,10 @@ public interface SessionService {
 
     SessionDto create(String requestingUserId, CreateSessionRequest req);
 
+    SessionDto updateNotes(String sessionId, String notes, String requestingUserId);
+
+    void joinSession(String sessionId, String requestingUserId);
+
     SessionDto markCompleted(String sessionId, String requestingUserId);
 
     SessionDto markCancelled(String sessionId, String requestingUserId);

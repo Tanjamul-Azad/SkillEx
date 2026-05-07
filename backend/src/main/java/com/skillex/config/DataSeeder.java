@@ -26,7 +26,6 @@ import java.util.List;
 @Slf4j
 @Component
 @RequiredArgsConstructor
-@SuppressWarnings("null")
 public class DataSeeder {
 
     private static final int USERNAME_MAX_LEN = 50;

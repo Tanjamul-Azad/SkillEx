@@ -38,8 +38,7 @@ public class BasicMatchStrategy implements MatchStrategy {
 
     @Override
     @Transactional(readOnly = true)
-    @SuppressWarnings("null")
-    public List<MatchUserDto> findMatches(UUID userId, int limit) {
+public List<MatchUserDto> findMatches(UUID userId, int limit) {
         String uid = userId.toString();
 
         User current = userRepository.findById(uid)

@@ -105,6 +105,26 @@ public class UserController {
         return ResponseEntity.ok(ApiResponse.ok("Account deleted."));
     }
 
+    /** POST /api/users/me/connect-email/request-otp */
+    @PostMapping("/me/connect-email/request-otp")
+    public ResponseEntity<ApiResponse<String>> requestEmailConnectOtp(
+        Authentication auth,
+        @Valid @RequestBody RequestOtpRequest req
+    ) {
+        userService.requestEmailConnectOtp(userId(auth), req);
+        return ResponseEntity.ok(ApiResponse.ok("OTP sent to new email."));
+    }
+
+    /** POST /api/users/me/connect-email/verify-otp */
+    @PostMapping("/me/connect-email/verify-otp")
+    public ResponseEntity<ApiResponse<String>> verifyEmailConnectOtp(
+        Authentication auth,
+        @Valid @RequestBody VerifyOtpRequest req
+    ) {
+        userService.verifyEmailConnectOtp(userId(auth), req);
+        return ResponseEntity.ok(ApiResponse.ok("Email successfully connected."));
+    }
+
     // ── helpers ──────────────────────────────────────────────────────────────
 
     private String userId(Authentication auth) {

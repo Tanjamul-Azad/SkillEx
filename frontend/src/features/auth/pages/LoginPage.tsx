@@ -6,20 +6,16 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { Link } from 'react-router-dom';
-import { Eye, EyeOff, Lock, Mail, User, UploadCloud, CheckCircle2, Sparkles } from 'lucide-react';
+import { Eye, EyeOff, Lock, Mail, User, CheckCircle2 } from 'lucide-react';
 import { useAuth } from '@/hooks/useAuth';
 import { useToast } from '@/hooks/use-toast';
 import { cn } from '@/lib/utils';
-import { SkillService, SkillIntentInterpretResponse } from '@/services/skillService';
-import type { Skill } from '@/types';
 import { AuthGraphic } from '@/components/auth/AuthGraphic';
 
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Checkbox } from '@/components/ui/checkbox';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
-import { Textarea } from '@/components/ui/textarea';
 import { GoogleIcon } from '@/components/icons/GoogleIcon';
 import Logo from '@/components/ui/Logo';
 import PasswordStrengthMeter from '@/components/auth/PasswordStrengthMeter';
@@ -37,11 +33,6 @@ const registerSchema = z
     email: z.string().email({ message: 'Please enter a valid email.' }),
     password: z.string().min(8, { message: 'Password must be at least 8 characters.' }),
     confirmPassword: z.string(),
-    teachIntentText: z.string().max(400).optional(),
-    learnIntentText: z.string().max(400).optional(),
-    skillToTeach: z.string().optional(),
-    skillToLearn: z.string().optional(),
-    level: z.enum(['Beginner', 'Moderate', 'Expert']).optional(),
     terms: z.boolean().refine((val) => val === true, {
       message: 'You must accept the terms and conditions.',
     }),
@@ -149,24 +140,14 @@ function AuthPage() {
 function LoginForm() {
   const { login, loginWithGoogle } = useAuth();
   const navigate = useNavigate();
-  const [searchParams] = useSearchParams();
+  const [_searchParams] = useSearchParams();
   const { toast } = useToast();
   const [isLoading, setIsLoading] = React.useState(false);
+  const [isGoogleLoading, setIsGoogleLoading] = React.useState(false);
   const [showPassword, setShowPassword] = React.useState(false);
   const [isForgotMode, setIsForgotMode] = React.useState(false);
   const [resetSent, setResetSent] = React.useState(false);
   const [resetEmail, setResetEmail] = React.useState('');
-
-  React.useEffect(() => {
-    if (searchParams.get('oauth') === 'error') {
-      toast({
-        variant: 'destructive',
-        title: 'Google sign-in failed',
-        description: 'We could not authenticate with Google. Please try again.',
-      });
-      navigate('/login', { replace: true });
-    }
-  }, [navigate, searchParams, toast]);
 
   const form = useForm<LoginFormData>({
     resolver: zodResolver(loginSchema),
@@ -329,32 +310,43 @@ function LoginForm() {
         variant="outline"
         className="w-full h-12 rounded-xl text-[10px] font-bold uppercase tracking-widest border-white/10 bg-white/5 hover:bg-white/10 hover:border-white/20 transition-all"
         title="Sign in with Google"
+        disabled={isGoogleLoading}
         onClick={async () => {
-          await loginWithGoogle();
+          setIsGoogleLoading(true);
+          const result = await loginWithGoogle();
+
+          if (result.success) {
+            toast({
+              title: 'Google login successful',
+              description: 'Redirecting to your dashboard.',
+              variant: 'success',
+            });
+            navigate('/dashboard');
+            return;
+          }
+
+          toast({
+            variant: 'destructive',
+            title: 'Google sign-in failed',
+            description: result.error ?? 'We could not authenticate with Google. Please try again.',
+          });
+          setIsGoogleLoading(false);
         }}
       >
         <GoogleIcon className="mr-3 h-4 w-4 drop-shadow-sm" />
-        Continue with Google
+        {isGoogleLoading ? 'Connecting...' : 'Continue with Google'}
       </Button>
     </>
   );
 }
 
 function RegisterForm({ setFormType }: { setFormType: (type: 'login') => void }) {
-  const [step, setStep] = React.useState(1);
   const { register } = useAuth();
   const { toast } = useToast();
   const [isLoading, setIsLoading] = React.useState(false);
   const [showPassword, setShowPassword] = React.useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = React.useState(false);
   const [isSuccess, setIsSuccess] = React.useState(false);
-  const [skillOptions, setSkillOptions] = React.useState<Skill[]>([]);
-  const [isInterpreting, setIsInterpreting] = React.useState(false);
-  const [interpretation, setInterpretation] = React.useState<SkillIntentInterpretResponse | null>(null);
-
-  React.useEffect(() => {
-    SkillService.getAll().then((s) => setSkillOptions(Array.isArray(s) ? s : [])).catch(() => {});
-  }, []);
 
   const form = useForm<RegisterFormData>({
     resolver: zodResolver(registerSchema),
@@ -363,63 +355,11 @@ function RegisterForm({ setFormType }: { setFormType: (type: 'login') => void })
       email: '',
       password: '',
       confirmPassword: '',
-      teachIntentText: '',
-      learnIntentText: '',
       terms: false,
     },
   });
 
-  const applyInterpretation = React.useCallback((result: SkillIntentInterpretResponse) => {
-    setInterpretation(result);
 
-    const teachPrimary = result.teach?.primary?.skillName;
-    const learnPrimary = result.learn?.primary?.skillName;
-    const inferredLevel = result.learn?.inferredLevel ?? result.teach?.inferredLevel;
-
-    if (teachPrimary) {
-      form.setValue('skillToTeach', teachPrimary, { shouldValidate: true });
-    }
-    if (learnPrimary) {
-      form.setValue('skillToLearn', learnPrimary, { shouldValidate: true });
-    }
-    if (inferredLevel && !form.getValues('level')) {
-      form.setValue('level', inferredLevel, { shouldValidate: true });
-    }
-  }, [form]);
-
-  const handleInterpretIntent = React.useCallback(async () => {
-    const teachText = form.getValues('teachIntentText')?.trim();
-    const learnText = form.getValues('learnIntentText')?.trim();
-
-    if (!teachText && !learnText) {
-      toast({
-        variant: 'destructive',
-        title: 'Write your intent first',
-        description: 'Add at least one natural-language line so AI can suggest skills.',
-      });
-      return;
-    }
-
-    setIsInterpreting(true);
-    try {
-      const result = await SkillService.interpretIntent({ teachText, learnText });
-      applyInterpretation(result);
-
-      toast({
-        title: 'AI suggestions ready',
-        description: 'We mapped your text to skill(s). Review and adjust if needed.',
-        variant: 'success',
-      });
-    } catch {
-      toast({
-        variant: 'destructive',
-        title: 'AI suggestion failed',
-        description: 'Could not interpret your text right now. You can still select skills manually.',
-      });
-    } finally {
-      setIsInterpreting(false);
-    }
-  }, [applyInterpretation, form, toast]);
 
   const onSubmit = async (data: RegisterFormData) => {
     setIsLoading(true);
@@ -428,9 +368,6 @@ function RegisterForm({ setFormType }: { setFormType: (type: 'login') => void })
       email: data.email,
       password: data.password,
       university: '',
-      skillToTeach: data.skillToTeach || undefined,
-      skillToLearn: data.skillToLearn || undefined,
-      level: data.level || undefined,
     });
 
     if (result.success) {
@@ -482,27 +419,13 @@ function RegisterForm({ setFormType }: { setFormType: (type: 'login') => void })
       <div className="text-center relative">
         <h1 className="text-3xl lg:text-4xl font-extrabold font-headline tracking-tight text-white drop-shadow-[0_0_15px_rgba(255,255,255,0.1)]">Create Your Account</h1>
         <p className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground mt-3">
-          {step === 1 ? 'Tell us a little about you to get started.' : 'Choose your skills so we can personalize your matches.'}
+          Tell us a little about you to get started.
         </p>
       </div>
 
-      <div className="mt-8 mb-8 relative">
-        <div className="flex justify-between text-[10px] font-bold uppercase tracking-widest text-muted-foreground mb-3 px-1">
-          <span className={cn(step >= 1 ? "text-primary drop-shadow-[0_0_8px_hsl(var(--primary)/0.5)]" : "")}>Step 1: Account details</span>
-          <span className={cn(step >= 2 ? "text-primary drop-shadow-[0_0_8px_hsl(var(--primary)/0.5)]" : "")}>Step 2: Skills & preferences</span>
-        </div>
-        <div className="h-1.5 w-full bg-white/5 rounded-full overflow-hidden shadow-[inset_0_1px_2px_rgba(0,0,0,0.5)]">
-          <div 
-            className="h-full bg-primary shadow-[0_0_10px_hsl(var(--primary)/0.8)] transition-all duration-500 ease-out" 
-            style={{ width: step === 1 ? '50%' : '100%' }}
-          />
-        </div>
-      </div>
-
       <Form {...form}>
-        <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-5 relative">
+        <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-5 relative mt-8">
           <AnimatePresence mode="wait">
-            {step === 1 ? (
               <motion.div
                 key="step1"
                 initial={{ opacity: 0, x: 20 }}
@@ -588,158 +511,6 @@ function RegisterForm({ setFormType }: { setFormType: (type: 'login') => void })
                     )}
                   />
                 </div>
-                <div className="pt-2">
-                  <Button
-                    type="button"
-                    className="w-full h-12 rounded-xl text-[10px] font-bold tracking-widest uppercase shadow-[0_0_15px_hsl(var(--primary)/0.3)] bg-primary text-primary-foreground hover:bg-primary/90 transition-all"
-                    onClick={async () => {
-                      const isValid = await form.trigger(['fullName', 'email', 'password', 'confirmPassword']);
-                      if (isValid) setStep(2);
-                    }}
-                  >
-                    Continue
-                  </Button>
-                </div>
-              </motion.div>
-            ) : (
-              <motion.div
-                key="step2"
-                initial={{ opacity: 0, x: 20 }}
-                animate={{ opacity: 1, x: 0 }}
-                exit={{ opacity: 0, x: -20 }}
-                transition={{ duration: 0.3, ease: 'easeOut' }}
-                className="space-y-6"
-              >
-                <div className="rounded-[1.5rem] border border-primary/20 bg-primary/5 p-5 shadow-[inset_0_0_20px_rgba(34,197,94,0.05)] backdrop-blur-md relative overflow-hidden">
-                  <div className="absolute top-0 right-0 w-32 h-32 bg-primary/10 blur-3xl rounded-full pointer-events-none" />
-                  <div className="flex items-start justify-between gap-4 mb-4 relative z-10">
-                    <p className="text-[10px] font-bold uppercase tracking-widest text-primary flex items-center gap-2 drop-shadow-[0_0_5px_hsl(var(--primary)/0.8)]">
-                      <Sparkles className="h-4 w-4 animate-pulse" /> Smart skill suggestions
-                    </p>
-                    <Button
-                      type="button"
-                      size="sm"
-                      className="h-8 py-0 px-3 rounded-lg text-[10px] font-bold tracking-widest uppercase bg-white/10 hover:bg-white/20 border border-white/10 text-white transition-all shadow-none"
-                      disabled={isInterpreting}
-                      onClick={handleInterpretIntent}
-                    >
-                      {isInterpreting ? 'Analyzing...' : 'Suggest skills'}
-                    </Button>
-                  </div>
-
-                  <FormField
-                    control={form.control}
-                    name="teachIntentText"
-                    render={({ field }) => (
-                      <FormItem className="relative z-10">
-                        <FormLabel className="text-[10px] font-bold uppercase tracking-widest text-white/70">What can you teach?</FormLabel>
-                        <FormControl>
-                          <Textarea
-                            {...field}
-                            rows={2}
-                            placeholder="Example: I can teach Figma basics, logo design, and brand identity."
-                            className="text-sm bg-black/50 border-white/10 focus:border-primary focus:ring-primary/20 transition-all rounded-xl placeholder:text-muted-foreground/50 resize-none custom-scrollbar"
-                          />
-                        </FormControl>
-                        <FormMessage className="text-[10px]" />
-                      </FormItem>
-                    )}
-                  />
-
-                  <FormField
-                    control={form.control}
-                    name="learnIntentText"
-                    render={({ field }) => (
-                      <FormItem className="relative z-10">
-                        <FormLabel className="text-[10px] font-bold uppercase tracking-widest text-white/70">What do you want to learn?</FormLabel>
-                        <FormControl>
-                          <Textarea
-                            {...field}
-                            rows={2}
-                            placeholder="Example: I want to learn React, TypeScript, and API integration."
-                            className="text-sm bg-black/50 border-white/10 focus:border-primary focus:ring-primary/20 transition-all rounded-xl placeholder:text-muted-foreground/50 resize-none custom-scrollbar"
-                          />
-                        </FormControl>
-                        <FormMessage className="text-[10px]" />
-                      </FormItem>
-                    )}
-                  />
-
-                  {interpretation && (
-                    <div className="text-[10px] font-bold tracking-widest uppercase text-muted-foreground space-y-2 mt-4 pt-4 border-t border-white/10 relative z-10">
-                      <p>
-                        Suggested teaching skill:{' '}
-                        <span className="text-white drop-shadow-[0_0_5px_rgba(255,255,255,0.5)]">
-                          {interpretation.teach?.primary?.skillName ?? 'Pending match'}
-                        </span>
-                        {interpretation.teach?.primary ? <span className="text-primary ml-1">[{interpretation.teach.primary.confidence}%]</span> : ''}
-                      </p>
-                      <p>
-                        Suggested learning skill:{' '}
-                        <span className="text-white drop-shadow-[0_0_5px_rgba(255,255,255,0.5)]">
-                          {interpretation.learn?.primary?.skillName ?? 'Pending match'}
-                        </span>
-                        {interpretation.learn?.primary ? <span className="text-primary ml-1">[{interpretation.learn.primary.confidence}%]</span> : ''}
-                      </p>
-                    </div>
-                  )}
-                </div>
-
-                <div className="grid gap-5 sm:grid-cols-2 pt-2">
-                  <FormField control={form.control} name="skillToTeach" render={({ field }) => (
-                    <FormItem>
-                      <Select onValueChange={field.onChange} value={field.value ?? ''}>
-                        <FormControl>
-                          <SelectTrigger className="h-12 bg-black/40 border-white/10 text-sm font-medium focus:ring-primary/20 focus:border-primary rounded-xl"><SelectValue placeholder="Select a skill you can teach" /></SelectTrigger>
-                        </FormControl>
-                        <SelectContent className="bg-black/90 border-white/10 backdrop-blur-xl rounded-xl">
-                          {skillOptions.map(s => <SelectItem key={s.id} value={s.name} className="text-sm font-medium focus:bg-white/10 focus:text-white rounded-lg cursor-pointer transition-colors">{s.name}</SelectItem>)}
-                        </SelectContent>
-                      </Select>
-                      <FormMessage className="text-[10px]" />
-                    </FormItem>
-                  )} />
-                  <FormField control={form.control} name="skillToLearn" render={({ field }) => (
-                    <FormItem>
-                      <Select onValueChange={field.onChange} value={field.value ?? ''}>
-                        <FormControl>
-                          <SelectTrigger className="h-12 bg-black/40 border-white/10 text-sm font-medium focus:ring-primary/20 focus:border-primary rounded-xl"><SelectValue placeholder="Select a skill you want to learn" /></SelectTrigger>
-                        </FormControl>
-                        <SelectContent className="bg-black/90 border-white/10 backdrop-blur-xl rounded-xl">
-                          {skillOptions.map(s => <SelectItem key={s.id} value={s.name} className="text-sm font-medium focus:bg-white/10 focus:text-white rounded-lg cursor-pointer transition-colors">{s.name}</SelectItem>)}
-                        </SelectContent>
-                      </Select>
-                      <FormMessage className="text-[10px]" />
-                    </FormItem>
-                  )} />
-                </div>
-
-                <FormField control={form.control} name="level" render={({ field }) => (
-                  <FormItem>
-                    <Select onValueChange={field.onChange} value={field.value ?? ''}>
-                      <FormControl>
-                        <SelectTrigger className="h-12 bg-black/40 border-white/10 text-sm font-medium focus:ring-primary/20 focus:border-primary rounded-xl"><SelectValue placeholder="Your current level" /></SelectTrigger>
-                      </FormControl>
-                      <SelectContent className="bg-black/90 border-white/10 backdrop-blur-xl rounded-xl">
-                        <SelectItem value="Beginner" className="text-sm font-medium focus:bg-white/10 focus:text-white rounded-lg cursor-pointer transition-colors">Beginner</SelectItem>
-                        <SelectItem value="Moderate" className="text-sm font-medium focus:bg-white/10 focus:text-white rounded-lg cursor-pointer transition-colors">Intermediate</SelectItem>
-                        <SelectItem value="Expert" className="text-sm font-medium focus:bg-white/10 focus:text-white rounded-lg cursor-pointer transition-colors">Advanced</SelectItem>
-                      </SelectContent>
-                    </Select>
-                    <FormMessage className="text-[10px]" />
-                  </FormItem>
-                )} />
-
-                <div className="flex flex-col items-center justify-center p-6 border border-dashed border-white/10 rounded-[1.5rem] bg-white/5 hover:bg-white/10 hover:border-white/30 transition-all cursor-pointer group shadow-[inset_0_1px_4px_rgba(0,0,0,0.5)]">
-                  <div className="h-12 w-12 rounded-full bg-black/50 border border-white/5 flex items-center justify-center shadow-inner group-hover:scale-110 transition-transform mb-3">
-                    <UploadCloud className="h-5 w-5 text-muted-foreground group-hover:text-white transition-colors" />
-                  </div>
-                  <p className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground text-center leading-relaxed">
-                    <span className="text-primary drop-shadow-[0_0_5px_hsl(var(--primary)/0.5)] cursor-pointer">Upload a profile photo</span> or drag and drop here<br />
-                    <span className="opacity-50 text-[9px]">Max file size: 5MB</span>
-                  </p>
-                </div>
-
                 <FormField
                   control={form.control}
                   name="terms"
@@ -758,33 +529,16 @@ function RegisterForm({ setFormType }: { setFormType: (type: 'login') => void })
                   )}
                 />
 
-                <div className="flex gap-4 pt-4">
-                  <Button type="button" variant="outline" className="flex-[1] h-12 rounded-xl text-[10px] font-bold uppercase tracking-widest border-white/10 bg-white/5 hover:bg-white/10 hover:border-white/20 transition-all text-muted-foreground hover:text-white shadow-none" onClick={() => setStep(1)}>
-                    Back
-                  </Button>
-                  <Button type="submit" className="flex-[2] h-12 rounded-xl text-[10px] font-bold tracking-widest uppercase shadow-[0_0_20px_hsl(var(--primary)/0.4)] bg-primary text-primary-foreground hover:bg-primary/90 transition-all" disabled={isLoading}>
+                <div className="pt-2">
+                  <Button
+                    type="submit"
+                    className="w-full h-12 rounded-xl text-[10px] font-bold tracking-widest uppercase shadow-[0_0_15px_hsl(var(--primary)/0.3)] bg-primary text-primary-foreground hover:bg-primary/90 transition-all"
+                    disabled={isLoading}
+                  >
                     {isLoading ? 'Creating account...' : 'Create account'}
                   </Button>
                 </div>
-
-                <div className="pt-3">
-                  <button
-                    type="button"
-                    className="w-full text-center text-[9px] font-bold uppercase tracking-widest text-muted-foreground/60 hover:text-white/80 transition-colors py-2 rounded-lg hover:bg-white/5"
-                    onClick={async () => {
-                      const isValid = await form.trigger(['terms']);
-                      if (!isValid) return;
-                      form.setValue('skillToTeach', undefined);
-                      form.setValue('skillToLearn', undefined);
-                      form.setValue('level', undefined);
-                      form.handleSubmit(onSubmit)();
-                    }}
-                  >
-                    Skip this step for now
-                  </button>
-                </div>
               </motion.div>
-            )}
           </AnimatePresence>
         </form>
       </Form>

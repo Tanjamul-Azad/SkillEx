@@ -40,8 +40,7 @@ public class SkillEmbeddingSyncService {
 
     @EventListener(ApplicationReadyEvent.class)
     @Transactional
-    @SuppressWarnings("null")
-    public void refreshEmbeddings() {
+public void refreshEmbeddings() {
         List<Skill> skills = skillRepository.findAll();
         if (skills.isEmpty()) {
             return;
@@ -81,8 +80,7 @@ public class SkillEmbeddingSyncService {
 
     @Async("appTaskExecutor")
     @Transactional
-    @SuppressWarnings("null")
-    public void refreshSkillEmbeddingAsync(String skillId) {
+public void refreshSkillEmbeddingAsync(String skillId) {
         Skill skill = skillRepository.findById(skillId).orElse(null);
         if (skill == null) {
             return;

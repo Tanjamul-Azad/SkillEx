@@ -42,4 +42,14 @@ export const SessionService = {
   cancel: async (id: string): Promise<Session> => {
     return api.patch<Session>(`/sessions/${id}/cancel`, {});
   },
+
+  /** PATCH /api/sessions/{id}/notes */
+  updateNotes: async (id: string, notes: string): Promise<Session> => {
+    return api.patch<Session>(`/sessions/${id}/notes`, { notes });
+  },
+
+  /** POST /api/sessions/{id}/join */
+  joinSession: async (id: string): Promise<void> => {
+    return api.post<void>(`/sessions/${id}/join`, {});
+  },
 };

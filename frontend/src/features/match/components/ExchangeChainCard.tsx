@@ -100,7 +100,7 @@ function ParticipantBox({
         'relative flex flex-col items-center gap-2 rounded-xl border px-3 py-2.5 min-w-[100px] max-w-[130px]',
         isCurrentUser
           ? 'border-primary/50 bg-primary/10'
-          : 'border-white/10 bg-white/[0.03]',
+          : 'border-primary/20 bg-white/[0.03]',
       )}
     >
       {isCurrentUser && (
@@ -121,7 +121,7 @@ function ParticipantBox({
           </div>
         )}
         {wantsSkill && (
-          <div className="text-[9px] font-medium px-1.5 py-0.5 rounded-full border border-white/10 bg-white/5 text-muted-foreground text-center truncate">
+          <div className="text-[9px] font-medium px-1.5 py-0.5 rounded-full border border-primary/20 bg-primary/5 text-muted-foreground text-center truncate">
             Wants: {wantsSkill}
           </div>
         )}
@@ -196,7 +196,7 @@ export const ExchangeChainCard: FC<Props> = ({ data, currentUserId, className, o
       className={cn(
         'rounded-2xl border p-4 space-y-4',
         'bg-gradient-to-br from-white/[0.04] to-white/[0.01]',
-        'border-white/10 hover:border-primary/30 transition-colors duration-300',
+        'border-primary/20 hover:border-primary/30 transition-colors duration-300',
         'shadow-[inset_0_0_0_1px_rgba(255,255,255,0.05)]',
         myIdx !== -1 && 'border-primary/25',
         className,
@@ -284,7 +284,7 @@ export const ExchangeChainCard: FC<Props> = ({ data, currentUserId, className, o
       </div>
 
       {/* ── Quality scores ─────────────────────────────────── */}
-      <div className="space-y-1.5 border-t border-white/10 pt-3">
+      <div className="space-y-1.5 border-t border-primary/20 pt-3">
         <QualityBar
           label="Avg Rating"
           value={averageRating / 5}

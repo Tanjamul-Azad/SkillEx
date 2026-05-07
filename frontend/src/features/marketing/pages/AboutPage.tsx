@@ -72,7 +72,7 @@ export default function AboutPage() {
           <div className="absolute inset-0 dot-grid opacity-30 dark:opacity-15" />
         </div>
 
-        <div className="container mx-auto max-w-5xl px-4 py-16 md:py-24">
+        <div className="container mx-auto max-w-5xl px-4 py-28">
 
           {/* Hero */}
           <motion.div
@@ -88,7 +88,7 @@ export default function AboutPage() {
             </motion.div>
             <motion.h1
               variants={item}
-              className="font-headline text-4xl font-extrabold tracking-tight md:text-6xl lg:text-7xl text-balance leading-[1.05]"
+              className="font-headline text-5xl font-extrabold tracking-tight md:text-6xl lg:text-[4.5rem] text-balance leading-[1.05]"
             >
               We're building the future
               <br />
@@ -134,7 +134,7 @@ export default function AboutPage() {
             initial="hidden"
             whileInView="visible"
             viewport={{ once: true, amount: 0.3 }}
-            className="mt-16 md:mt-24"
+            className="mt-24"
           >
             <div className="rounded-3xl glass border border-primary/20 p-10 md:p-14 relative overflow-hidden">
               <div className="absolute -top-12 -right-12 h-48 w-48 rounded-full bg-primary/15 blur-3xl pointer-events-none" />

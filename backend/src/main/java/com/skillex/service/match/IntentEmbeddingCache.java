@@ -23,7 +23,6 @@ import java.util.StringJoiner;
  */
 @Component
 @Slf4j
-@SuppressWarnings("null")
 public class IntentEmbeddingCache {
 
     private final TextEmbeddingProvider embeddingProvider;

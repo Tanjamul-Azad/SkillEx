@@ -20,6 +20,7 @@ const CommunityPage = React.lazy(() => import('./features/community/pages/Commun
 const ProfilePage = React.lazy(() => import('./features/profile/pages/ProfilePage'));
 const SettingsPage = React.lazy(() => import('./features/settings/pages/SettingsPage'));
 const MessagesPage = React.lazy(() => import('./features/messages/pages/MessagesPage'));
+const StudyRoomPage = React.lazy(() => import('@/features/dashboard/pages/StudyRoomPage'));
 const OnboardingPage = React.lazy(() => import('./features/onboarding/pages/OnboardingPage'));
 const NotFoundPage = React.lazy(() => import('./features/error/NotFoundPage'));
 const AboutPage = React.lazy(() => import('./features/marketing/pages/AboutPage'));
@@ -121,6 +122,7 @@ function AppShell() {
           <Route path="/settings" element={<SettingsPage />} />
           <Route path="/messages" element={<MessagesPage />} />
           <Route path="/messages/:userId" element={<MessagesPage />} />
+          <Route path="/study-room/:sessionId" element={<StudyRoomPage />} />
           <Route path="/onboarding" element={<OnboardingPage />} />
           <Route path="/about" element={<AboutPage />} />
           <Route path="/careers" element={<CareersPage />} />

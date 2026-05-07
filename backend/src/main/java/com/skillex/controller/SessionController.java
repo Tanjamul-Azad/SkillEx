@@ -86,6 +86,26 @@ public class SessionController {
         return ResponseEntity.ok(ApiResponse.ok(sessionService.markCancelled(id, userId(auth))));
     }
 
+    /** PATCH /api/sessions/{id}/notes */
+    @PatchMapping("/{id}/notes")
+    public ResponseEntity<ApiResponse<SessionDto>> updateNotes(
+        Authentication auth,
+        @PathVariable String id,
+        @RequestBody UpdateNotesRequest req
+    ) {
+        return ResponseEntity.ok(ApiResponse.ok(sessionService.updateNotes(id, req.notes(), userId(auth))));
+    }
+
+    /** POST /api/sessions/{id}/join */
+    @PostMapping("/{id}/join")
+    public ResponseEntity<ApiResponse<Void>> joinSession(
+        Authentication auth,
+        @PathVariable String id
+    ) {
+        sessionService.joinSession(id, userId(auth));
+        return ResponseEntity.ok(ApiResponse.ok(null));
+    }
+
     private String userId(Authentication auth) {
         return (String) auth.getPrincipal();
     }

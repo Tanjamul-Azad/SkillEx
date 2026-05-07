@@ -107,7 +107,7 @@ export default function TrustPage() {
         </div>
 
         {/* ─── Hero ─── */}
-        <section className="relative pt-20 pb-16">
+        <section className="relative pt-32 pb-20">
           <div className="container mx-auto max-w-4xl px-4 text-center">
             <motion.div variants={container} initial="hidden" animate="visible">
               <motion.div variants={item}>
@@ -115,7 +115,7 @@ export default function TrustPage() {
                   Trust & Safety
                 </Badge>
               </motion.div>
-              <motion.h1 variants={item} className="font-headline text-4xl font-extrabold md:text-5xl lg:text-6xl mb-5">
+              <motion.h1 variants={item} className="font-headline text-5xl font-extrabold md:text-6xl mb-5">
                 Your safety is{' '}
                 <span className="text-gradient">non-negotiable</span>
               </motion.h1>

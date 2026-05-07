@@ -1,7 +1,7 @@
 
 import React, { useRef, lazy, Suspense, useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
-import { motion } from 'framer-motion';
+import { motion, useMotionValue, useReducedMotion, useSpring, useTransform } from 'framer-motion';
 import {
   Zap, Code, Film, Music, Figma, Camera, Mic, Database, ArrowRight,
   Pencil, Bot, RefreshCw, Star, Quote, Users, Sparkles, TrendingUp,
@@ -78,7 +78,8 @@ const Section = React.memo(({ children, className, id }: {
       variants={container}
       initial="hidden"
       animate={isInView ? 'visible' : 'hidden'}
-      className={cn('w-full py-16 sm:py-24', className)}
+      style={{ contentVisibility: 'auto', containIntrinsicSize: '900px' }}
+      className={cn('w-full py-24 sm:py-32', className)}
     >
       {children}
     </motion.section>
@@ -104,7 +105,7 @@ const SectionTitle = ({ children, className }: { children: React.ReactNode; clas
   <motion.h2
     variants={item}
     className={cn(
-      'text-3xl font-extrabold tracking-tight text-center font-headline md:text-4xl lg:text-5xl xl:text-6xl text-balance',
+      'text-4xl font-extrabold tracking-tight text-center font-headline md:text-5xl lg:text-6xl text-balance',
       className
     )}
   >
@@ -153,33 +154,82 @@ const SpotlightCard = ({ children, className }: { children: React.ReactNode; cla
 
 /* ── Magnetic pull wrapper for buttons ─────────────────────────────────── */
 const Magnetic = ({ children }: { children: React.ReactElement }) => {
-  return children;
+  const ref = useRef<HTMLDivElement>(null);
+  const [position, setPosition] = useState({ x: 0, y: 0 });
+
+  const handleMouseMove = (e: React.MouseEvent) => {
+    if (!ref.current) return;
+    const { clientX, clientY } = e;
+    const { left, top, width, height } = ref.current.getBoundingClientRect();
+    const centerX = left + width / 2;
+    const centerY = top + height / 2;
+    const x = clientX - centerX;
+    const y = clientY - centerY;
+    setPosition({ x: x * 0.35, y: y * 0.35 });
+  };
+
+  const reset = () => setPosition({ x: 0, y: 0 });
+
+  return (
+    <motion.div
+      ref={ref}
+      onMouseMove={handleMouseMove}
+      onMouseLeave={reset}
+      animate={{ x: position.x, y: position.y }}
+      transition={{ type: "spring", stiffness: 150, damping: 15, mass: 0.1 }}
+    >
+      {children}
+    </motion.div>
+  );
 };
 
 /* ── 3D Mouse Parallax for Hero text ───────────────────────────────────── */
 const HeroParallax = ({ children }: { children: React.ReactNode }) => {
-  const [mousePos, setMousePos] = useState({ x: 0, y: 0 });
+  const reduceMotion = useReducedMotion();
+  const mouseX = useMotionValue(0);
+  const mouseY = useMotionValue(0);
+
+  const rotateY = useSpring(useTransform(mouseX, [-1, 1], [-5.5, 5.5]), { stiffness: 55, damping: 20 });
+  const rotateX = useSpring(useTransform(mouseY, [-1, 1], [5.5, -5.5]), { stiffness: 55, damping: 20 });
+  const x = useSpring(useTransform(mouseX, [-1, 1], [-12, 12]), { stiffness: 55, damping: 20 });
+  const y = useSpring(useTransform(mouseY, [-1, 1], [-12, 12]), { stiffness: 55, damping: 20 });
 
   useEffect(() => {
+    if (reduceMotion) return;
+
+    let raf = 0;
     const handleMouseMove = (e: MouseEvent) => {
-      const x = (e.clientX / window.innerWidth) * 2 - 1;
-      const y = (e.clientY / window.innerHeight) * 2 - 1;
-      setMousePos({ x, y });
+      const nextX = (e.clientX / window.innerWidth) * 2 - 1;
+      const nextY = (e.clientY / window.innerHeight) * 2 - 1;
+
+      if (raf) return;
+      raf = window.requestAnimationFrame(() => {
+        mouseX.set(nextX);
+        mouseY.set(nextY);
+        raf = 0;
+      });
     };
-    window.addEventListener('mousemove', handleMouseMove);
-    return () => window.removeEventListener('mousemove', handleMouseMove);
-  }, []);
+
+    window.addEventListener('mousemove', handleMouseMove, { passive: true });
+    return () => {
+      window.removeEventListener('mousemove', handleMouseMove);
+      if (raf) window.cancelAnimationFrame(raf);
+    };
+  }, [mouseX, mouseY, reduceMotion]);
+
+  if (reduceMotion) {
+    return <div>{children}</div>;
+  }
 
   return (
     <motion.div
       style={{
-        rotateY: mousePos.x * 2.5,
-        rotateX: -mousePos.y * 2.5,
-        x: mousePos.x * 5,
-        y: mousePos.y * 5,
+        rotateY,
+        rotateX,
+        x,
+        y,
         transformStyle: 'preserve-3d' as const,
       }}
-      transition={{ type: 'spring', stiffness: 35, damping: 20 }}
     >
       {children}
     </motion.div>
@@ -267,11 +317,11 @@ const beforeItems = [
   'Cold DMs with zero responses',
   'No accountability or reviews',
   'Scattered across multiple platforms',
-  'You are always the learner, never the teacher',
+  'You are always the student, never the teacher',
 ];
 
 const afterItems = [
-  'Completely free — global expertise exchange',
+  'Completely free — forever for students',
   'AI-matched by skill & learning goal',
   'Verified ratings and trust system',
   'One platform, everything unified',
@@ -403,7 +453,7 @@ const FloatingBubble = React.memo(({ skill }: {
   return (
     /* Outer: entry fade-in + scale */
     <motion.div
-      className="absolute hidden 2xl:block"
+      className="absolute hidden xl:block"
       style={posStyle}
       initial={{ opacity: 0, scale: 0.4 }}
       animate={{ opacity: 1, scale: 1 }}
@@ -412,7 +462,7 @@ const FloatingBubble = React.memo(({ skill }: {
       {/* Inner: continuous bubble float */}
       <motion.div
         className="flex items-center gap-3 rounded-full border border-white/5 bg-white-[2%] backdrop-blur-xl p-1.5 pr-5 text-sm font-medium shadow-2xl shadow-primary/5 cursor-default select-none glass-subtle overflow-hidden relative"
-        animate={{ y: [0, -8, 0] }}
+        animate={{ y: [0, -10, 0] }}
         transition={{
           duration: skill.duration,
           repeat: Infinity,
@@ -454,7 +504,7 @@ const HeroSection = () => {
     <section className="relative flex min-h-screen w-full overflow-hidden bg-transparent">
 
       {/* ── All hero text ── */}
-      <div className="relative z-10 flex w-full flex-col justify-center px-6 pt-40 pb-24 md:px-12 lg:px-20 xl:px-28">
+      <div className="relative z-10 flex w-full flex-col justify-center px-6 py-24 md:px-12 lg:px-20 xl:px-28">
         <HeroParallax>
           <motion.div
             variants={container}
@@ -463,9 +513,20 @@ const HeroSection = () => {
             className="flex flex-col gap-8 max-w-xl"
           >
             {/* Social proof badge */}
+            <motion.div variants={item}>
+              <Link to="/login" className="group relative inline-flex items-center gap-3 rounded-full glass-subtle border-white/5 px-2 py-2 pr-5 text-sm font-medium text-foreground/80 transition-all hover:text-foreground hover:shadow-glow-sm overflow-hidden">
+                <div className="absolute inset-0 bg-gradient-to-r from-primary/10 via-accent/10 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-700 pointer-events-none" />
+                <div className="flex h-7 w-7 items-center justify-center rounded-full bg-primary/20 shrink-0">
+                  <Sparkles className="h-3.5 w-3.5 text-primary" />
+                </div>
+                <span className="relative z-10">Trusted by <strong className="text-foreground font-semibold">12,000+ students</strong> &middot; 150+ universities</span>
+                <ChevronRight className="relative z-10 h-3.5 w-3.5 text-muted-foreground transition-transform group-hover:translate-x-1" />
+              </Link>
+            </motion.div>
 
+            {/* Headline — High-impact cinematic reveal optimized for laptops */}
             <div
-              className="font-headline font-extrabold tracking-tighter leading-[1.1] text-5xl md:text-6xl lg:text-7xl xl:text-[5rem]"
+              className="font-headline font-extrabold tracking-tighter leading-[0.95] text-6xl md:text-8xl lg:text-[5.5rem] xl:text-[6.2rem]"
               style={{ perspective: '1200px' }}
             >
               {/* Line 1: "Trade Skills" — High-speed slide from left */}
@@ -508,26 +569,27 @@ const HeroSection = () => {
               </motion.div>
             </div>
 
+            {/* Subheadline */}
             <motion.p
               variants={item}
-              className="text-sm text-muted-foreground leading-relaxed md:text-base max-w-md"
+              className="text-lg text-muted-foreground leading-relaxed md:text-xl max-w-md"
             >
-              Join a global network of experts, creators, and lifelong learners. 
-              Trade your mastery for the skills you need. No tuition, no fees—just pure knowledge exchange.
+              Connect with students who have what you want to learn — and teach what you know.
+              No payments. Just pure knowledge exchange.
             </motion.p>
 
             {/* CTAs */}
             <motion.div variants={item} className="flex flex-col gap-4 sm:flex-row">
               <Magnetic>
-                <Button asChild variant="gradient" size="lg" className="group h-12 rounded-2xl px-8 text-sm shadow-glow hover:shadow-glow-lg transition-all">
+                <Button asChild variant="gradient" size="lg" className="group h-14 rounded-2xl px-10 text-base shadow-glow hover:shadow-glow-lg transition-all">
                   <Link to="/login">
                     Start Exchanging Free
                     <ArrowRight className="ml-2 h-4 w-4 transition-transform group-hover:translate-x-1" />
                   </Link>
                 </Button>
               </Magnetic>
-              <Button size="lg" variant="outline" className="h-12 rounded-2xl px-8 text-sm font-semibold border-border/60 hover:border-primary/40 hover:bg-primary/5" onClick={() => { const el = document.getElementById('featured-skills'); if (el) el.scrollIntoView({ behavior: 'smooth', block: 'start' }); }}>
-                Explore Skills
+              <Button size="lg" variant="outline" className="h-14 rounded-2xl px-8 text-base font-semibold border-border/60 hover:border-primary/40 hover:bg-primary/5" onClick={() => { const el = document.getElementById('how-it-works'); if (el) el.scrollIntoView({ behavior: 'smooth', block: 'start' }); }}>
+                See how it works
               </Button>
             </motion.div>
 
@@ -838,8 +900,8 @@ const StatCounter = React.memo(({ value, label, suffix = '+', icon: Icon, color 
       </div>
       <div>
         <div className="flex items-baseline justify-center gap-0.5">
-          <span ref={ref} className="font-headline text-4xl font-black tabular-nums" />
-          <span className="font-headline text-3xl font-black text-primary">{suffix}</span>
+          <span ref={ref} className="font-headline text-5xl font-black tabular-nums" />
+          <span className="font-headline text-4xl font-black text-primary">{suffix}</span>
         </div>
         <p className="mt-1 text-sm text-muted-foreground font-medium">{label}</p>
       </div>
@@ -858,7 +920,7 @@ const StatsSection = () => (
           <StatCounter value={12000} label="Skills listed" suffix="+" icon={Zap} color="bg-primary/10 text-primary" />
           <StatCounter value={8500} label="Exchanges completed" suffix="+" icon={RefreshCw} color="bg-secondary/10 text-secondary" />
           <StatCounter value={4.9} label="Average rating" suffix="★" icon={Star} color="bg-accent/10 text-accent" />
-          <StatCounter value={150} label="Global Communities" suffix="+" icon={Users} color="bg-purple-500/10 text-purple-500" />
+          <StatCounter value={150} label="Universities" suffix="+" icon={Users} color="bg-purple-500/10 text-purple-500" />
         </div>
       </SpotlightCard>
     </div>
@@ -901,8 +963,9 @@ const FeaturedSkillsSection = () => {
               <motion.div
                 key={skill.id}
                 variants={item}
+                whileHover={{ y: -6, transition: { type: 'spring', stiffness: 300 } }}
               >
-                <Card className="group h-full overflow-hidden glass transition-all duration-400 ease-snappy hover:shadow-glow-sm">
+                <Card className="group h-full overflow-hidden glass transition-all duration-400 ease-snappy hover:shadow-glow-sm hover:-translate-y-2">
                   {/* Animated sheen line */}
                   <div className="absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-white/40 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
                   <CardContent className="p-6">
@@ -970,24 +1033,24 @@ const testimonials = [
     name: 'Nadia Rahman',
     university: 'BUET',
     avatar: 'https://images.unsplash.com/photo-1494790108377-be9c29b29330?auto=format&fit=crop&w=100&q=80',
-    role: 'Software Engineer',
-    text: "SkillEx is a game-changer. I mastered advanced Python through peer-to-peer exchange without the heavy cost of traditional courses. The community is incredibly high-caliber.",
+    role: 'Computer Science, 3rd Year',
+    text: "SkillEx is a game-changer. I learned Python from a senior without spending a single taka. The platform is intuitive and the community is incredibly supportive.",
     rating: 5,
   },
   {
     name: 'Karim Chowdhury',
     university: 'Dhaka University',
     avatar: 'https://images.unsplash.com/photo-1599566150163-29194dcaad36?auto=format&fit=crop&w=100&q=80',
-    role: 'Marketing Lead',
-    text: "I was looking to sharpen my public speaking for keynote events. Through SkillEx, I found an expert coach who helped me find my voice. It's the future of networking.",
+    role: 'Business Studies, 2nd Year',
+    text: "I was struggling with public speaking. Through SkillEx I found a practice partner who's now a close friend. It's boosted my confidence immensely.",
     rating: 5,
   },
   {
     name: 'Fatema Akhter',
     university: 'NSU',
     avatar: 'https://images.unsplash.com/photo-1438761681033-6461ffad8d80?auto=format&fit=crop&w=100&q=80',
-    role: 'Creative Director',
-    text: "I traded UI/UX design mentorship for high-end music production insights. Everyone wins, and the quality of knowledge being shared is professional-grade.",
+    role: 'Graphic Design, 4th Year',
+    text: "I traded Figma lessons for music production sessions. That's the magic — everyone wins, no one pays. Completely changed how I think about learning.",
     rating: 5,
   },
 ];
@@ -997,8 +1060,8 @@ const TestimonialsSection = () => (
     <div className="container mx-auto px-4">
       <SectionLabel><Star className="h-3.5 w-3.5" /> Testimonials</SectionLabel>
       <SectionTitle>
-        What our community{' '}
-        <span className="text-gradient">says</span>
+        What students{' '}
+        <span className="text-gradient">say</span>
       </SectionTitle>
       <GradientUnderline />
 
@@ -1044,9 +1107,9 @@ const TestimonialsSection = () => (
 ══════════════════════════════════════════════════════════════════════════════ */
 const CtaBanner = () => {
   return (
-    <Section className="w-full pb-20">
+    <Section className="w-full pb-32">
       <div className="container mx-auto px-4">
-        <SpotlightCard className="rounded-3xl glass-strong border border-primary/20 p-10 md:p-16 text-center text-foreground shadow-glow">
+        <SpotlightCard className="rounded-3xl glass-strong border border-primary/20 p-16 text-center text-foreground shadow-glow">
           {/* Noise texture */}
           <div className="pointer-events-none absolute inset-0 opacity-[0.06] z-0"
             style={{ backgroundImage: 'url("data:image/svg+xml,%3Csvg viewBox=\'0 0 200 200\' xmlns=\'http://www.w3.org/2000/svg\'%3E%3Cfilter id=\'n\'%3E%3CfeTurbulence type=\'fractalNoise\' baseFrequency=\'0.75\' numOctaves=\'4\' stitchTiles=\'stitch\'/%3E%3C/filter%3E%3Crect width=\'100%25\' height=\'100%25\' filter=\'url(%23n)\'/%3E%3C/svg%3E")' }}
@@ -1056,13 +1119,13 @@ const CtaBanner = () => {
           <div className="animate-blob absolute -bottom-20 -right-20 h-72 w-72 rounded-full bg-secondary/20 blur-3xl opacity-50 z-0" style={{ animationDelay: '5s' }} />
 
           <motion.div variants={item} className="relative z-10 inline-flex items-center gap-2 rounded-full bg-primary/10 border border-primary/20 px-4 py-1.5 text-sm font-medium mb-6 text-primary">
-            <Sparkles className="h-4 w-4" /> Global Expertise Network
+            <Sparkles className="h-4 w-4" /> Free forever for students
           </motion.div>
           <motion.h2 variants={item} className="relative z-10 font-headline text-4xl font-extrabold md:text-5xl text-balance">
             Ready to start trading skills?
           </motion.h2>
           <motion.p variants={item} className="relative z-10 mt-4 max-w-lg mx-auto text-lg text-foreground/80 text-balance">
-            Join thousands of experts and creators leveling up — completely free.
+            Join thousands of students who are leveling up — completely free.
           </motion.p>
           <motion.div variants={item} className="relative z-10 mt-10 flex flex-col items-center gap-4 sm:flex-row sm:justify-center">
             <Button
@@ -1076,9 +1139,9 @@ const CtaBanner = () => {
               size="lg"
               variant="outline"
               className="h-14 rounded-2xl px-8 text-base font-semibold border-white/10 hover:bg-white/5"
-              onClick={() => { const el = document.getElementById('testimonials'); if (el) el.scrollIntoView({ behavior: 'smooth', block: 'start' }); }}
+              onClick={() => { const el = document.getElementById('how-it-works'); if (el) el.scrollIntoView({ behavior: 'smooth', block: 'start' }); }}
             >
-              View Success Stories
+              See how it works
             </Button>
           </motion.div>
         </SpotlightCard>
@@ -1091,21 +1154,57 @@ const CtaBanner = () => {
    PAGE EXPORT
 ══════════════════════════════════════════════════════════════════════════════ */
 export default function LandingPage() {
-  /* Show Three.js scene only on desktop+hover-capable devices */
-  const [showScene, setShowScene] = useState(() =>
-    typeof window !== 'undefined' &&
-    window.innerWidth >= 1024 &&
-    window.matchMedia('(hover: hover)').matches,
-  );
+  /* Defer Three.js scene so first paint on laptops remains fast */
+  const [showScene, setShowScene] = useState(false);
 
   useEffect(() => {
-    const check = () =>
-      setShowScene(
-        window.innerWidth >= 1024 &&
-        window.matchMedia('(hover: hover)').matches,
+    const shouldEnableScene = () => {
+      const lowMemory = typeof (navigator as Navigator & { deviceMemory?: number }).deviceMemory === 'number'
+        && (navigator as Navigator & { deviceMemory?: number }).deviceMemory! <= 4;
+      const lowCpu = typeof navigator.hardwareConcurrency === 'number' && navigator.hardwareConcurrency <= 6;
+      const prefersReducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+      return (
+        window.innerWidth >= 1200 &&
+        window.matchMedia('(hover: hover)').matches &&
+        !prefersReducedMotion &&
+        !lowMemory &&
+        !lowCpu
       );
-    window.addEventListener('resize', check);
-    return () => window.removeEventListener('resize', check);
+    };
+
+    const scheduleEnable = () => {
+      setShowScene(false);
+      if (!shouldEnableScene()) return;
+
+      const enable = () => setShowScene(true);
+      const idle = window as Window & {
+        requestIdleCallback?: (cb: IdleRequestCallback, options?: IdleRequestOptions) => number;
+        cancelIdleCallback?: (id: number) => void;
+      };
+
+      if (idle.requestIdleCallback) {
+        const idleId = idle.requestIdleCallback(() => enable(), { timeout: 1500 });
+        return () => idle.cancelIdleCallback?.(idleId);
+      }
+
+      const t = window.setTimeout(enable, 900);
+      return () => window.clearTimeout(t);
+    };
+
+    let cancel = scheduleEnable();
+
+    const onResize = () => {
+      if (cancel) cancel();
+      cancel = scheduleEnable();
+    };
+
+    window.addEventListener('resize', onResize, { passive: true });
+
+    return () => {
+      if (cancel) cancel();
+      window.removeEventListener('resize', onResize);
+    };
   }, []);
 
   return (

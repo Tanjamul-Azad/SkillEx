@@ -1,4 +1,4 @@
-import React, { FC, useState } from 'react';
+import React, { FC, useState, useEffect } from 'react';
 import { ArrowUpRight, Briefcase, GraduationCap, Sparkles, Star, Store, Users } from 'lucide-react';
 import { Link } from 'react-router-dom';
 
@@ -8,9 +8,29 @@ import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
 import type { User } from '@/types';
 import { RequestExchangeDialog } from '@/features/match/components/RequestExchangeDialog';
+import { exchangeService, type ExchangeRelationship } from '@/services/exchangeService';
 
 export const MarketplaceCard: FC<{ profile: User }> = React.memo(({ profile }) => {
   const [requestOpen, setRequestOpen] = useState(false);
+  const [exchangeRelation, setExchangeRelation] = useState<ExchangeRelationship | null>(null);
+
+  useEffect(() => {
+    let active = true;
+    const fetchRelation = async () => {
+      try {
+        const res = await exchangeService.getRelationship(profile.id);
+        if (active) {
+          setExchangeRelation(res);
+        }
+      } catch (err) {
+        console.error('Error fetching exchange relationship:', err);
+      }
+    };
+    fetchRelation();
+    return () => {
+      active = false;
+    };
+  }, [profile.id]);
 
   const offered = profile.skillsOffered ?? [];
   const wanted = profile.skillsWanted ?? [];
@@ -33,14 +53,14 @@ export const MarketplaceCard: FC<{ profile: User }> = React.memo(({ profile }) =
                 decoding="async"
                 className="h-full w-full object-cover opacity-60 blur-[1px] scale-110 transition-all duration-700 group-hover:scale-[1.16] group-hover:opacity-75"
               />
-              <div className="absolute inset-0 bg-gradient-to-r from-slate-900/65 via-primary/30 to-secondary/35" />
+              <div className="absolute inset-0 bg-gradient-to-r from-card/90 via-primary/20 to-emerald-50/60" />
             </>
           ) : (
-            <div className="absolute inset-0 bg-[radial-gradient(circle_at_20%_20%,hsl(var(--primary)/0.35),transparent_55%),radial-gradient(circle_at_80%_0%,hsl(var(--secondary)/0.28),transparent_48%),linear-gradient(120deg,hsl(218_40%_14%),hsl(230_32%_18%))]" />
+            <div className="absolute inset-0 bg-[radial-gradient(circle_at_20%_20%,hsl(var(--primary)/0.18),transparent_55%),radial-gradient(circle_at_80%_0%,hsl(var(--secondary)/0.14),transparent_48%),linear-gradient(120deg,hsl(var(--card)),hsl(var(--background)))]" />
           )}
 
           <div className="absolute inset-0 bg-gradient-to-t from-card via-card/92 to-transparent z-10" />
-          <div className="absolute right-3 top-3 z-20 inline-flex items-center gap-1.5 rounded-full border border-white/30 bg-black/30 px-2.5 py-1 text-[10px] font-semibold uppercase tracking-wide text-white/90 backdrop-blur">
+          <div className="absolute right-3 top-3 z-20 inline-flex items-center gap-1.5 rounded-full border border-primary/25 bg-background/90 px-2.5 py-1 text-[10px] font-semibold uppercase tracking-wide text-foreground/90">
             <Store className="h-3 w-3" />
             Skill Shop
           </div>
@@ -142,21 +162,55 @@ export const MarketplaceCard: FC<{ profile: User }> = React.memo(({ profile }) =
           </div>
         </CardContent>
 
-        <div className="grid grid-cols-3 border-t border-white/10 dark:border-white/5">
+        <div className="grid grid-cols-3 border-t border-primary/20 dark:border-primary/15">
           <Button variant="ghost" className="rounded-none rounded-bl-2xl text-sm hover:bg-primary/10" asChild>
             <Link to={`/profile/${profile.id}`}>View Profile</Link>
           </Button>
           <Button variant="ghost" className="rounded-none text-sm hover:bg-primary/10" asChild>
             <Link to={`/profile/${profile.id}?tab=skills&focus=offered#skills-offered`}>Skill Shop</Link>
           </Button>
-          <Button
-            onClick={() => setRequestOpen(true)}
-            variant="gradient"
-            className="rounded-none rounded-br-2xl text-sm"
-            aria-label={`Connect with ${profile.name}`}
-          >
-            Connect <ArrowUpRight className="ml-1 h-3.5 w-3.5" />
-          </Button>
+          {exchangeRelation?.status === 'ACCEPTED' ? (
+            <Button
+              variant="ghost"
+              className="rounded-none rounded-br-2xl text-sm text-emerald-600 dark:text-emerald-400 hover:bg-emerald-500/10 cursor-default"
+              disabled
+            >
+              Exchanging
+            </Button>
+          ) : exchangeRelation?.status === 'DECLINED' ? (
+            <Button
+              variant="ghost"
+              className="rounded-none rounded-br-2xl text-sm text-rose-600 dark:text-rose-400 hover:bg-rose-500/10 cursor-default"
+              disabled
+            >
+              Rejected
+            </Button>
+          ) : exchangeRelation?.status === 'PENDING_SENT' ? (
+            <Button
+              variant="ghost"
+              className="rounded-none rounded-br-2xl text-sm text-primary hover:bg-primary/10"
+              disabled
+            >
+              Sent
+            </Button>
+          ) : exchangeRelation?.status === 'PENDING_RECEIVED' ? (
+            <Button
+              variant="ghost"
+              className="rounded-none rounded-br-2xl text-sm text-amber-600 hover:bg-amber-500/10"
+              disabled
+            >
+              Incoming
+            </Button>
+          ) : (
+            <Button
+              onClick={() => setRequestOpen(true)}
+              variant="gradient"
+              className="rounded-none rounded-br-2xl text-sm"
+              aria-label={`Connect with ${profile.name}`}
+            >
+              Connect <ArrowUpRight className="ml-1 h-3.5 w-3.5" />
+            </Button>
+          )}
         </div>
       </Card>
 
@@ -164,6 +218,13 @@ export const MarketplaceCard: FC<{ profile: User }> = React.memo(({ profile }) =
         open={requestOpen}
         onClose={() => setRequestOpen(false)}
         targetUser={profile}
+        onSuccess={() => {
+          setExchangeRelation({
+            targetUserId: profile.id,
+            status: 'PENDING_SENT',
+            exchangeId: null,
+          });
+        }}
       />
     </>
   );

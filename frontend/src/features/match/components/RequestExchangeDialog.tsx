@@ -36,9 +36,10 @@ interface Props {
   open: boolean;
   onClose: () => void;
   targetUser: User;
+  onSuccess?: () => void;
 }
 
-export function RequestExchangeDialog({ open, onClose, targetUser }: Props) {
+export function RequestExchangeDialog({ open, onClose, targetUser, onSuccess }: Props) {
   const { user } = useAuth();
   const { toast } = useToast();
   const [step, setStep] = useState<'form' | 'success'>('form');
@@ -81,6 +82,7 @@ export function RequestExchangeDialog({ open, onClose, targetUser }: Props) {
         message: data.message,
       });
       setStep('success');
+      if (onSuccess) onSuccess();
     } catch (err) {
       toast({
         variant: 'destructive',

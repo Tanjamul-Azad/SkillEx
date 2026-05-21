@@ -9,6 +9,7 @@ import com.skillex.dto.review.ReviewDto;
 import com.skillex.dto.community.CommunityDtos;
 import com.skillex.dto.community.CommentDto;
 import com.skillex.dto.notification.NotificationDto;
+import com.skillex.dto.feedback.FeedbackDto;
 import com.skillex.model.*;
 import com.skillex.repository.UserSkillOfferedRepository;
 import com.skillex.repository.UserSkillWantedRepository;
@@ -121,7 +122,10 @@ public class DtoMapper {
             new SessionDto.SkillRef(s.getSkill().getId(), s.getSkill().getName(),
                 s.getSkill().getIcon(), s.getSkill().getCategory()),
             s.getScheduledAt(), s.getDurationMins(),
-            s.getStatus().name(), s.getMeetLink(), s.getSharedNotes(), s.getCreatedAt()
+            s.getStatus().name(), s.getMeetLink(), s.getSharedNotes(),
+            s.getProposedBy() != null ? s.getProposedBy().getId() : null,
+            s.getSessionType() != null ? s.getSessionType().name() : "VIDEO",
+            s.getCreatedAt()
         );
     }
 
@@ -135,6 +139,18 @@ public class DtoMapper {
             toSummary(r.getToUser()),
             new ReviewDto.SkillRef(r.getSkill().getId(), r.getSkill().getName(), r.getSkill().getIcon()),
             r.getRating(), r.getComment(), r.getCreatedAt()
+        );
+    }
+
+    // ── Feedback ──────────────────────────────────────────────────────────────
+
+    public FeedbackDto toFeedback(Feedback f) {
+        return new FeedbackDto(
+            f.getId(),
+            toSummary(f.getUser()),
+            f.getRating(),
+            f.getComment(),
+            f.getCreatedAt()
         );
     }
 

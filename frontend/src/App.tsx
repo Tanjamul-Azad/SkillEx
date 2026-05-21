@@ -28,6 +28,9 @@ const CareersPage = React.lazy(() => import('./features/marketing/pages/CareersP
 const TermsPage = React.lazy(() => import('./features/marketing/pages/TermsPage'));
 const PrivacyPage = React.lazy(() => import('./features/marketing/pages/PrivacyPage'));
 const TrustPage = React.lazy(() => import('./features/marketing/pages/TrustPage'));
+const SessionRoomPage = React.lazy(() => import('./features/sessions/pages/SessionRoomPage'));
+const SessionReviewPage = React.lazy(() => import('./features/sessions/pages/SessionReviewPage'));
+
 
 // Helper for preloading the current route chunk
 const preloadCurrentRoute = () => {
@@ -77,7 +80,7 @@ function SplashScreen({ onDone }: { onDone: () => void }) {
         className="flex flex-col items-center gap-3 select-none"
       >
         {/* Wordmark */}
-        <Logo size="2xl" showIcon={false} />
+        <Logo size="2xl" />
         {/* Tagline */}
         <motion.p
           initial={{ opacity: 0 }}
@@ -123,6 +126,8 @@ function AppShell() {
           <Route path="/messages" element={<MessagesPage />} />
           <Route path="/messages/:userId" element={<MessagesPage />} />
           <Route path="/study-room/:sessionId" element={<StudyRoomPage />} />
+          <Route path="/sessions/:sessionId" element={<SessionRoomPage />} />
+          <Route path="/sessions/:sessionId/review" element={<SessionReviewPage />} />
           <Route path="/onboarding" element={<OnboardingPage />} />
           <Route path="/about" element={<AboutPage />} />
           <Route path="/careers" element={<CareersPage />} />

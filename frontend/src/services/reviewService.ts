@@ -15,10 +15,11 @@ export const ReviewService = {
     return api.get<PagedResponse<Review>>(`/reviews?userId=${userId}&page=${page}&size=${size}`);
   },
 
-  /** POST /api/reviews — submit a review */
+  /** POST /api/reviews — submit a review (matches backend CreateReviewRequest fields) */
   create: async (data: {
-    revieweeId: string;
-    exchangeId: string;
+    sessionId: string;
+    toUserId: string;
+    skillId: string;
     rating: number;
     comment?: string;
   }): Promise<Review> => {

@@ -27,6 +27,7 @@ export { SkillService }            from './skillService';
 export { MatchService }            from './matchService';
 export { SessionService }          from './sessionService';
 export { ReviewService }           from './reviewService';
+export { FeedbackService }         from './feedbackService';
 export { CommunityService }        from './communityService';
 export { exchangeService }         from './exchangeService';
 export { connectionService }       from './connectionService';

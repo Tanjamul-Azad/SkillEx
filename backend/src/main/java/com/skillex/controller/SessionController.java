@@ -11,6 +11,8 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
 
+import java.time.LocalDateTime;
+
 /**
  * REST controller for skill-swap sessions.
  * Base path: /api/sessions
@@ -42,7 +44,7 @@ public class SessionController {
         return ResponseEntity.ok(ApiResponse.ok(sessionService.getById(id, userId(auth))));
     }
 
-    /** POST /api/sessions — schedule a new session */
+    /** POST /api/sessions — propose a new session */
     @PostMapping
     public ResponseEntity<ApiResponse<SessionDto>> create(
         Authentication auth,
@@ -50,6 +52,26 @@ public class SessionController {
     ) {
         SessionDto dto = sessionService.create(userId(auth), req);
         return ResponseEntity.status(HttpStatus.CREATED).body(ApiResponse.ok(dto));
+    }
+
+    /** PUT /api/sessions/{id}/accept — accept a proposed session time */
+    @PutMapping("/{id}/accept")
+    public ResponseEntity<ApiResponse<SessionDto>> acceptProposal(
+        Authentication auth,
+        @PathVariable String id
+    ) {
+        return ResponseEntity.ok(ApiResponse.ok(sessionService.acceptProposal(id, userId(auth))));
+    }
+
+    /** PUT /api/sessions/{id}/reschedule — propose a different time */
+    @PutMapping("/{id}/reschedule")
+    public ResponseEntity<ApiResponse<SessionDto>> reschedule(
+        Authentication auth,
+        @PathVariable String id,
+        @RequestBody RescheduleRequest req
+    ) {
+        return ResponseEntity.ok(ApiResponse.ok(
+            sessionService.reschedule(id, userId(auth), req.scheduledAt(), req.durationMins())));
     }
 
     /** PATCH /api/sessions/{id}/complete */
@@ -96,17 +118,21 @@ public class SessionController {
         return ResponseEntity.ok(ApiResponse.ok(sessionService.updateNotes(id, req.notes(), userId(auth))));
     }
 
-    /** POST /api/sessions/{id}/join */
-    @PostMapping("/{id}/join")
-    public ResponseEntity<ApiResponse<Void>> joinSession(
+    /** DELETE /api/sessions/{id} — post-review cleanup (delete session, transcripts, notes) */
+    @DeleteMapping("/{id}")
+    public ResponseEntity<ApiResponse<Void>> deleteSession(
         Authentication auth,
         @PathVariable String id
     ) {
-        sessionService.joinSession(id, userId(auth));
+        sessionService.deleteSession(id, userId(auth));
         return ResponseEntity.ok(ApiResponse.ok(null));
     }
 
     private String userId(Authentication auth) {
         return (String) auth.getPrincipal();
     }
+
+    /** Inline DTO for reschedule requests */
+    public record RescheduleRequest(LocalDateTime scheduledAt, int durationMins) {}
 }
+

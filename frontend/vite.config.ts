@@ -1,6 +1,20 @@
 import { defineConfig } from 'vite';
 import react from '@vitejs/plugin-react';
 import path from 'path';
+import type { IncomingMessage, ServerResponse } from 'http';
+
+const handleProxyError = (err: Error & { code?: string }, req: IncomingMessage, res: ServerResponse) => {
+  const isBackendStarting = err.code === 'ECONNREFUSED';
+  const isSockJsProbe = req.url?.startsWith('/ws/info');
+
+  if (isBackendStarting && isSockJsProbe && !res.headersSent) {
+    res.writeHead(503, { 'Content-Type': 'text/plain' });
+    res.end('Backend is still starting');
+    return;
+  }
+
+  console.warn(`[vite proxy] ${req.url ?? 'request'} failed: ${err.message}`);
+};
 
 export default defineConfig({
   plugins: [react()],
@@ -36,11 +50,18 @@ export default defineConfig({
         changeOrigin: true,
         secure: false,
       },
-      '/uploads': { target: 'http://localhost:8080', changeOrigin: true }, '/ws': {
+      '/uploads': {
+        target: 'http://localhost:8080',
+        changeOrigin: true,
+      },
+      '/ws': {
         target: 'http://localhost:8080',
         changeOrigin: true,
         secure: false,
         ws: true,
+        configure: (proxy) => {
+          proxy.on('error', handleProxyError);
+        },
       },
     },
   },

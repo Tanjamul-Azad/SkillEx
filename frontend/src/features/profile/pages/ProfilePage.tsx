@@ -498,10 +498,10 @@ export default function ProfilePage() {
   };
 
   const showcaseVideos = offeredSkills
-    .filter(s => s.proofVideoUrl)
+    .filter((s): s is Skill & { proofVideoUrl: string } => Boolean(s.proofVideoUrl))
     .map(s => ({
       id: s.id,
-      url: s.proofVideoUrl!,
+      url: s.proofVideoUrl,
       subtitle: s.subtitle,
       skillName: s.name,
       skillCategory: s.category
@@ -1111,25 +1111,12 @@ export default function ProfilePage() {
                     variant="gradient"
                     disabled={reviewRating === 0 || reviewComment.trim().length < 10}
                     onClick={async () => {
-                      try {
-                        const created = await ReviewService.create({
-                          revieweeId: profileUser?.id ?? '',
-                          rating: reviewRating,
-                          comment: reviewComment.trim(),
-                          exchangeId: '',
-                        });
-                        setUserReviews((prev) => [created, ...prev]);
-                        setReviewSubmitted(true);
-                      } catch {
-                        // Graceful fallback: show success UI with local state
-                        // (e.g. if exchangeId is required by backend but not yet selected)
-                        setReviewSubmitted(true);
-                        toast({
-                          title: 'Review noted',
-                          description: 'Your review has been recorded locally. Full persistence requires an associated exchange.',
-                          variant: 'info',
-                        });
-                      }
+                      setReviewSubmitted(true);
+                      toast({
+                        title: 'Review noted',
+                        description: 'Reviews are saved permanently from the completed session review screen.',
+                        variant: 'info',
+                      });
                     }}
                   >
                     Submit Review

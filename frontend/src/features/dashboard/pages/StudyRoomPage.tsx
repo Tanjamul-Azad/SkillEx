@@ -2,9 +2,9 @@ import React, { useState, useEffect, useRef } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
-  Hash, Volume2, Mic, MicOff, Video, VideoOff, Settings,
-  LogOut, Send, Eye, Edit2, Play, Users, CheckCircle, Clock,
-  ChevronLeft, Sparkles, AlertCircle, FileText, Check, Save, Share2
+  Hash, Volume2,
+  LogOut, Send, Eye, Edit2, CheckCircle, Clock,
+  ChevronLeft, Sparkles, Check, Save
 } from 'lucide-react';
 import { useAuth } from '@/hooks/useAuth';
 import { useWebSocket } from '@/hooks/useWebSocket';
@@ -54,7 +54,6 @@ export default function StudyRoomPage() {
   // WebSocket Chat Integration
   const [messages, setMessages] = useState<Message[]>([]);
   const [newMessage, setNewMessage] = useState('');
-  const [sending, setSending] = useState(false);
   const chatEndRef = useRef<HTMLDivElement>(null);
 
   const token = TokenStore.get();
@@ -89,7 +88,7 @@ export default function StudyRoomPage() {
 
         // Fetch history
         const historyRes = await MessageService.getHistory(partnerId);
-        const mappedMsgs = historyRes.content.map((m: any) => ({
+        const mappedMsgs = historyRes.content.map((m: { id?: string; senderId: string; content: string; createdAt?: string | number | Date; }) => ({
           id: m.id || `msg-${Date.now()}-${Math.random()}`,
           senderId: m.senderId,
           content: m.content,
@@ -98,7 +97,7 @@ export default function StudyRoomPage() {
         setMessages(mappedMsgs);
 
         setLoading(false);
-      } catch (err) {
+      } catch {
         toast({
           title: 'Failed to join study room',
           description: 'Ensure you are a registered participant of this session.',
@@ -166,7 +165,7 @@ export default function StudyRoomPage() {
             return [...prev, newMsg];
           });
         }
-      } catch (err) {
+      } catch {
         // ignore malformed frames
       }
     });
@@ -193,7 +192,7 @@ export default function StudyRoomPage() {
       try {
         await SessionService.updateNotes(sessionId, notesText);
         setLastSavedTime(new Date());
-      } catch (err) {
+      } catch {
         toast({ title: 'Auto-save failed', description: 'Could not sync notes with server.', variant: 'destructive' });
       } finally {
         setIsSavingNotes(false);
@@ -216,7 +215,7 @@ export default function StudyRoomPage() {
         if (updated.sharedNotes !== notesText) {
           setNotesText(updated.sharedNotes || '');
         }
-      } catch (err) {
+      } catch {
         // quiet fail on background sync
       }
     }, 5000);
@@ -230,8 +229,6 @@ export default function StudyRoomPage() {
 
     const text = newMessage.trim();
     setNewMessage('');
-    setSending(true);
-
     // Optimistic UI append
     const tempMsg: Message = {
       id: `temp-${Date.now()}`,
@@ -242,7 +239,6 @@ export default function StudyRoomPage() {
     setMessages(prev => [...prev, tempMsg]);
 
     send('/app/chat.send', { toUserId: peerUser.id, content: text, type: 'TEXT' });
-    setSending(false);
   };
 
   // Complete Session Handler
@@ -256,7 +252,7 @@ export default function StudyRoomPage() {
         className: 'bg-gradient-to-r from-[#00E5C3]/20 via-background to-background border-[#00E5C3]'
       });
       navigate('/dashboard');
-    } catch (err) {
+    } catch {
       toast({ title: 'Could not complete session', variant: 'destructive' });
     }
   };
@@ -527,7 +523,7 @@ export default function StudyRoomPage() {
                         </p>
                       </div>
                     ) : (
-                      messages.map((m, i) => {
+                      messages.map((m) => {
                         const isMe = m.senderId === user?.id;
                         const isTemp = m.id.startsWith('temp-');
                         

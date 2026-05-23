@@ -8,37 +8,20 @@ import {
   Users,
   MessageSquare,
   Plus,
-  Image as ImageIcon,
-  Tag,
-  HelpCircle,
   Heart,
-  Share2,
-  Bookmark,
   ArrowUp,
   MapPin,
-  MoreHorizontal,
   Circle,
   Pin,
-  Play,
-  Flag,
-  Trash2,
   Loader2,
-  ChevronDown,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuSeparator,
-  DropdownMenuTrigger,
-} from '@/components/ui/dropdown-menu';
 import { ConfirmDialog } from '@/components/ui/ConfirmDialog';
 import { useAuth } from '@/hooks/useAuth';
 import { useToast } from '@/hooks/use-toast';
-import { timeAgo, cn } from '@/lib/utils';
+import { cn } from '@/lib/utils';
 import DashboardLayout from '@/components/layout/DashboardLayout';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { PostCard } from '../components/PostCard';
@@ -113,23 +96,7 @@ const FeedTab = ({ intentFilter, onlineCount }: { intentFilter?: string; onlineC
 
   const loadMoreRef = useRef<HTMLDivElement>(null);
 
-  useEffect(() => {
-    if (!hasMore || loadingMore) return;
-    
-    const observer = new IntersectionObserver((entries) => {
-      if (entries[0].isIntersecting) {
-        loadMore();
-      }
-    }, { threshold: 0.5 });
-
-    if (loadMoreRef.current) {
-      observer.observe(loadMoreRef.current);
-    }
-
-    return () => observer.disconnect();
-  }, [hasMore, loadingMore, currentPage, intentFilter]);
-
-  const loadMore = async () => {
+  const loadMore = useCallback(async () => {
     if (loadingMore || !hasMore) return;
     setLoadingMore(true);
     try {
@@ -149,7 +116,23 @@ const FeedTab = ({ intentFilter, onlineCount }: { intentFilter?: string; onlineC
       }
     } catch { /* ignore */ }
     setLoadingMore(false);
-  };
+  }, [currentPage, hasMore, intentFilter, loadingMore]);
+
+  useEffect(() => {
+    if (!hasMore || loadingMore) return;
+    
+    const observer = new IntersectionObserver((entries) => {
+      if (entries[0].isIntersecting) {
+        loadMore();
+      }
+    }, { threshold: 0.5 });
+
+    if (loadMoreRef.current) {
+      observer.observe(loadMoreRef.current);
+    }
+
+    return () => observer.disconnect();
+  }, [hasMore, loadingMore, loadMore]);
 
   const handleNewPost = (post: Post) => {
     setLocalPosts((prev) => [post, ...prev]);
@@ -353,8 +336,12 @@ const EventCard = React.memo(({ event }: { event: Event }) => {
           <div className="flex flex-col gap-1 shrink-0">
             <span className="text-[10px] font-bold tracking-widest uppercase text-muted-foreground">Going</span>
             <div className="flex items-center -space-x-2">
-              {event.attendees.slice(0, 3).map(att => (
-                <Avatar key={att.id} className="h-7 w-7 border-[2px] border-black/80 shadow-[0_0_10px_rgba(255,255,255,0.1)] hover:scale-110 transition-transform relative z-10 z-[1] z-[2] z-[3] z-[4] hover:z-20">
+              {event.attendees.slice(0, 3).map((att, index) => (
+                <Avatar
+                  key={att.id}
+                  className="h-7 w-7 border-[2px] border-black/80 shadow-[0_0_10px_rgba(255,255,255,0.1)] hover:scale-110 transition-transform relative hover:z-20"
+                  style={{ zIndex: 10 - index }}
+                >
                   <AvatarImage src={att.avatar} className="object-cover" />
                   <AvatarFallback className="text-[10px] font-bold bg-primary/20 text-primary">{att.name.charAt(0)}</AvatarFallback>
                 </Avatar>
@@ -509,8 +496,12 @@ const CircleCard = React.memo(({ circle }: { circle: SkillCircle }) => {
               <div className="flex flex-col gap-1">
                 <span className="text-[10px] font-bold tracking-widest uppercase text-muted-foreground">Members</span>
                 <div className="flex items-center -space-x-2 mt-1">
-                  {circle.members.slice(0, 4).map(m => (
-                    <Avatar key={m.id} className="h-7 w-7 border-[2px] border-black/80 shadow-[0_0_10px_rgba(255,255,255,0.1)] hover:scale-110 transition-transform relative z-10 z-[1] z-[2] z-[3] z-[4] hover:z-20">
+                  {circle.members.slice(0, 4).map((m, index) => (
+                    <Avatar
+                      key={m.id}
+                      className="h-7 w-7 border-[2px] border-black/80 shadow-[0_0_10px_rgba(255,255,255,0.1)] hover:scale-110 transition-transform relative hover:z-20"
+                      style={{ zIndex: 10 - index }}
+                    >
                       <AvatarImage src={m.avatar} className="object-cover" />
                       <AvatarFallback className="text-[10px] font-bold bg-primary/20 text-primary">{m.name.charAt(0)}</AvatarFallback>
                     </Avatar>

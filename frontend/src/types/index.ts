@@ -3,7 +3,7 @@ import type { SkillLevel } from '@/lib/constants';
 export type { SkillLevel };
 
 export type MatchStatus = 'pending' | 'active' | 'completed' | 'cancelled';
-export type SessionStatus = 'scheduled' | 'completed' | 'cancelled';
+export type SessionStatus = 'proposed' | 'scheduled' | 'in_progress' | 'completed' | 'cancelled';
 export type NotificationType =
   | 'MATCH_REQUEST'
   | 'CONNECTION_REQUEST'
@@ -80,6 +80,10 @@ export interface Session {
   status: SessionStatus;
   meetLink?: string;
   sharedNotes?: string;
+  /** Who proposed the current time slot */
+  proposedById?: string;
+  /** VIDEO or AUDIO */
+  sessionType?: 'VIDEO' | 'AUDIO';
   createdAt?: string;
 }
 
@@ -210,3 +214,22 @@ export interface SuggestedUser {
   sharedSkills: string[];
   reason: string;
 }
+
+export interface Feedback {
+  id: string;
+  user: {
+    id: string;
+    name: string;
+    username: string;
+    avatar: string;
+    university: string;
+    level: string;
+    skillexScore: number;
+    rating: number;
+    isOnline: boolean;
+  };
+  rating: number;
+  comment: string;
+  createdAt: string;
+}
+

@@ -5,8 +5,15 @@ import { motion, useMotionValue, useReducedMotion, useSpring, useTransform } fro
 import {
   Zap, Code, Film, Music, Figma, Camera, Mic, Database, ArrowRight,
   Pencil, Bot, RefreshCw, Star, Quote, Users, Sparkles, TrendingUp,
-  Shield, ChevronRight, X, Check,
+  Shield, ChevronRight, ChevronLeft, X, Check,
 } from 'lucide-react';
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Card, CardContent } from '@/components/ui/card';
@@ -14,6 +21,9 @@ import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { useCounter } from '@/hooks/useCounter';
 import { useScrollAnimation } from '@/hooks/useScrollAnimation';
 import { cn } from '@/lib/utils';
+import { useAuth } from '@/hooks/useAuth';
+import { FeedbackService } from '@/services/feedbackService';
+import type { Feedback } from '@/types';
 
 /* Static display data for the marketing page — no auth/API needed */
 const skills = [
@@ -786,7 +796,7 @@ const SkillChainSection = () => {
           {/* Right — SVG chain diagram */}
           <motion.div
             variants={item}
-            className="relative flex items-center justify-center"
+            className="relative flex items-center justify-center lg:justify-end lg:pr-12"
           >
             <svg viewBox="0 0 360 400" className="w-full max-w-sm" fill="none">
               {/* Orbit ring */}
@@ -1028,88 +1038,455 @@ const FeaturedSkillsSection = () => {
 /* ══════════════════════════════════════════════════════════════════════════════
    TESTIMONIALS
 ══════════════════════════════════════════════════════════════════════════════ */
-const testimonials = [
-  {
-    name: 'Nadia Rahman',
-    university: 'BUET',
-    avatar: 'https://images.unsplash.com/photo-1494790108377-be9c29b29330?auto=format&fit=crop&w=100&q=80',
-    role: 'Computer Science, 3rd Year',
-    text: "SkillEx is a game-changer. I learned Python from a senior without spending a single taka. The platform is intuitive and the community is incredibly supportive.",
-    rating: 5,
-  },
-  {
-    name: 'Karim Chowdhury',
-    university: 'Dhaka University',
-    avatar: 'https://images.unsplash.com/photo-1599566150163-29194dcaad36?auto=format&fit=crop&w=100&q=80',
-    role: 'Business Studies, 2nd Year',
-    text: "I was struggling with public speaking. Through SkillEx I found a practice partner who's now a close friend. It's boosted my confidence immensely.",
-    rating: 5,
-  },
-  {
-    name: 'Fatema Akhter',
-    university: 'NSU',
-    avatar: 'https://images.unsplash.com/photo-1438761681033-6461ffad8d80?auto=format&fit=crop&w=100&q=80',
-    role: 'Graphic Design, 4th Year',
-    text: "I traded Figma lessons for music production sessions. That's the magic — everyone wins, no one pays. Completely changed how I think about learning.",
-    rating: 5,
-  },
-];
+interface TestimonialsSectionProps {
+  feedbacks: Feedback[];
+  isLoading: boolean;
+  onFeedbackSubmitted: () => void;
+}
 
-const TestimonialsSection = () => (
-  <Section id="testimonials">
-    <div className="container mx-auto px-4">
-      <SectionLabel><Star className="h-3.5 w-3.5" /> Testimonials</SectionLabel>
-      <SectionTitle>
-        What students{' '}
-        <span className="text-gradient">say</span>
-      </SectionTitle>
-      <GradientUnderline />
+const TestimonialsSection = ({ feedbacks, isLoading, onFeedbackSubmitted }: TestimonialsSectionProps) => {
+  const { isAuthenticated } = useAuth();
+  const [cardsToShow, setCardsToShow] = useState(2);
+  const [activeIndex, setActiveIndex] = useState(0);
+  const [isHovered, setIsHovered] = useState(false);
+  const [isDialogOpen, setIsDialogOpen] = useState(false);
+  
+  // Modal feedback form state
+  const [rating, setRating] = useState(5);
+  const [hoverRating, setHoverRating] = useState<number | null>(null);
+  const [comment, setComment] = useState('');
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [successMessage, setSuccessMessage] = useState('');
+  const [errorMessage, setErrorMessage] = useState('');
 
-      <div className="mt-14 grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-3">
-        {testimonials.map((t, i) => (
-          <motion.div
-            key={i}
-            variants={item}
-            whileHover={{ y: -5, transition: { type: 'spring', stiffness: 300 } }}
-            className="h-full"
-          >
-            <SpotlightCard className="group h-full rounded-2xl glass transition-all duration-400 ease-snappy hover:shadow-glow-sm border-white/5">
-              <div className="absolute inset-0 bg-gradient-to-br from-primary/10 via-transparent to-secondary/10 opacity-0 group-hover:opacity-100 transition-opacity duration-500 z-0" />
-              <div className="relative p-8 flex flex-col h-full z-10">
-                <div className="flex items-center gap-0.5 mb-4">
-                  {Array.from({ length: t.rating }).map((_, si) => (
-                    <Star key={si} className="h-4 w-4 fill-accent text-accent" />
-                  ))}
+  // Handle responsive viewports: 2 cards on desktop/tablet, 1 on mobile
+  useEffect(() => {
+    const handleResize = () => {
+      if (window.innerWidth < 768) {
+        setCardsToShow(1);
+      } else {
+        setCardsToShow(2);
+      }
+    };
+    handleResize();
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
+  }, []);
+
+  const totalSlides = feedbacks.length + 1; // plus 1 for the trailing "Submit your feedback" card
+  const isNavigable = totalSlides > cardsToShow;
+
+  // Auto-play hook
+  useEffect(() => {
+    if (!isNavigable || isHovered || isDialogOpen) return;
+
+    const timer = setInterval(() => {
+      setActiveIndex((prev) => {
+        if (prev >= totalSlides - cardsToShow) {
+          return 0;
+        }
+        return prev + 1;
+      });
+    }, 5000);
+
+    return () => clearInterval(timer);
+  }, [isNavigable, isHovered, isDialogOpen, totalSlides, cardsToShow]);
+
+  const handleNext = () => {
+    setActiveIndex((prev) => {
+      if (prev >= totalSlides - cardsToShow) {
+        return 0;
+      }
+      return prev + 1;
+    });
+  };
+
+  const handlePrev = () => {
+    setActiveIndex((prev) => {
+      if (prev <= 0) {
+        return Math.max(0, totalSlides - cardsToShow);
+      }
+      return prev - 1;
+    });
+  };
+
+  const handleDialogSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!comment.trim() || comment.trim().length < 10) return;
+
+    try {
+      setIsSubmitting(true);
+      setErrorMessage('');
+      await FeedbackService.create({ rating, comment });
+      setSuccessMessage('Thank you! Your feedback has been published.');
+      setComment('');
+      setRating(5);
+      onFeedbackSubmitted();
+      
+      // Auto close modal after successful submit
+      setTimeout(() => {
+        setIsDialogOpen(false);
+        setSuccessMessage('');
+      }, 2000);
+    } catch (err) {
+      const message = err instanceof Error && err.message
+        ? err.message
+        : 'Failed to submit feedback. Please try again.';
+      setErrorMessage(message);
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  return (
+    <Section id="testimonials">
+      <div className="container mx-auto px-4">
+        <SectionLabel><Star className="h-3.5 w-3.5 animate-pulse text-accent" /> Testimonials</SectionLabel>
+        
+        <div className="flex flex-col items-center justify-center text-center mb-8">
+          <SectionTitle>
+            What students{' '}
+            <span className="text-gradient font-headline">say</span>
+          </SectionTitle>
+          <GradientUnderline />
+        </div>
+
+        {isLoading ? (
+          <div className="mt-14 grid grid-cols-1 gap-6 md:grid-cols-2">
+            {[1, 2].map((n) => (
+              <div key={n} className="h-64 rounded-3xl bg-[#0b0c10] border border-white/10 animate-pulse p-8 flex flex-col justify-between">
+                <div>
+                  <div className="h-4 w-24 bg-white/10 rounded mb-4" />
+                  <div className="h-3 w-full bg-white/5 rounded mb-2" />
+                  <div className="h-3 w-5/6 bg-white/5 rounded" />
                 </div>
-                <Quote className="h-7 w-7 text-primary/20 mb-3 shrink-0" />
-                <p className="flex-1 text-foreground/80 leading-relaxed text-sm">"{t.text}"</p>
-                <div className="mt-6 flex items-center gap-3 border-t border-border/50 pt-5">
-                  <Avatar className="h-11 w-11 ring-2 ring-background">
-                    <AvatarImage src={t.avatar} />
-                    <AvatarFallback>{t.name.charAt(0)}</AvatarFallback>
-                  </Avatar>
-                  <div className="min-w-0">
-                    <p className="font-semibold text-sm">{t.name}</p>
-                    <p className="text-xs text-muted-foreground truncate">{t.role} · {t.university}</p>
+                <div className="flex items-center gap-3 pt-5 border-t border-white/5">
+                  <div className="h-11 w-11 rounded-full bg-white/10" />
+                  <div className="space-y-2 flex-1">
+                    <div className="h-3.5 w-24 bg-white/10 rounded" />
+                    <div className="h-3 w-32 bg-white/5 rounded" />
                   </div>
                 </div>
               </div>
-            </SpotlightCard>
-          </motion.div>
-        ))}
+            ))}
+          </div>
+        ) : feedbacks.length === 0 ? (
+          /* Gorgeous Solid Empty State Card with inline Submit Feedback Button */
+          <div className="mt-14 text-center py-16 px-10 bg-[#0b0c10] border border-white/10 max-w-2xl mx-auto rounded-3xl shadow-glow-sm shadow-black/80 flex flex-col items-center justify-center relative overflow-hidden">
+            <div className="absolute inset-0 bg-gradient-to-br from-primary/5 via-transparent to-secondary/5 opacity-50 z-0" />
+            <div className="relative z-10 flex flex-col items-center">
+              <Quote className="h-10 w-10 text-primary/30 mb-4" />
+              <h3 className="text-xl font-bold text-foreground mb-2">Be the first to share your experience!</h3>
+              <p className="text-muted-foreground text-sm max-w-md mx-auto mb-6 leading-relaxed">
+                No feedbacks have been published yet. Share your journey with SkillEX and help others see the power of skill-trading!
+              </p>
+              
+              <Button 
+                onClick={() => setIsDialogOpen(true)}
+                className="rounded-xl bg-primary text-primary-foreground hover:bg-primary/90 flex items-center gap-2 group transition-all duration-300 font-bold px-6 shadow-glow-sm"
+              >
+                <Sparkles className="h-4 w-4 text-primary-foreground group-hover:scale-110 transition-transform" />
+                <span>Submit Your Feedback</span>
+              </Button>
+            </div>
+          </div>
+        ) : (
+          <div 
+            className="mt-14 relative px-2 md:px-12 group"
+            onMouseEnter={() => setIsHovered(true)}
+            onMouseLeave={() => setIsHovered(false)}
+          >
+            {/* Viewport wrapper */}
+            <div className="overflow-hidden w-full py-4">
+              <motion.div 
+                className="flex gap-6"
+                animate={{ x: `calc(-${activeIndex * (100 / cardsToShow)}% - ${activeIndex * (24 / cardsToShow)}px)` }}
+                transition={{ type: 'spring', stiffness: 220, damping: 26 }}
+              >
+                {/* Seeded and user submitted reviews */}
+                {feedbacks.map((t) => (
+                  <div 
+                    key={t.id}
+                    className={cn(
+                      "shrink-0 transition-transform duration-300",
+                      cardsToShow === 1 ? "w-full" : "w-[calc(50%-12px)]"
+                    )}
+                  >
+                    <SpotlightCard className="group/card h-full rounded-2xl bg-[#0b0c10] hover:shadow-glow-sm border-white/10 flex flex-col justify-between min-h-[300px] relative overflow-hidden transition-all duration-300 hover:-translate-y-1 shadow-glow-sm shadow-black/60">
+                      <div className="absolute inset-0 bg-gradient-to-br from-primary/5 via-transparent to-secondary/5 opacity-0 group-hover/card:opacity-100 transition-opacity duration-500 z-0" />
+                      <div className="relative p-8 flex flex-col justify-between h-full z-10">
+                        <div>
+                          {/* Stars */}
+                          <div className="flex items-center gap-0.5 mb-4">
+                            {Array.from({ length: t.rating }).map((_, si) => (
+                              <Star key={si} className="h-4 w-4 fill-accent text-accent" />
+                            ))}
+                            {Array.from({ length: 5 - t.rating }).map((_, si) => (
+                              <Star key={si} className="h-4 w-4 text-white/10" />
+                            ))}
+                          </div>
+                          <Quote className="h-6 w-6 text-primary/20 mb-3 shrink-0" />
+                          <p className="text-foreground/90 leading-relaxed text-sm md:text-base">"{t.comment}"</p>
+                        </div>
+                        
+                        {/* Author */}
+                        <div className="mt-6 flex items-center gap-3 border-t border-white/5 pt-4">
+                          <Avatar className="h-10 w-10 ring-1 ring-white/10">
+                            <AvatarImage src={t.user.avatar} />
+                            <AvatarFallback>{t.user.name.charAt(0)}</AvatarFallback>
+                          </Avatar>
+                          <div className="min-w-0">
+                            <p className="font-semibold text-sm text-foreground">{t.user.name}</p>
+                            <p className="text-xs text-muted-foreground truncate">
+                              {(t.user.level || 'NEWCOMER').toLowerCase()} · {t.user.university}
+                            </p>
+                          </div>
+                        </div>
+                      </div>
+                    </SpotlightCard>
+                  </div>
+                ))}
+
+                {/* Special trailing "Submit Feedback" Card inside the Carousel */}
+                <div 
+                  className={cn(
+                    "shrink-0 transition-transform duration-300",
+                    cardsToShow === 1 ? "w-full" : "w-[calc(50%-12px)]"
+                  )}
+                >
+                  <div className="h-full rounded-2xl bg-[#0b0c10] border border-primary/20 hover:border-primary/40 flex flex-col items-center justify-center p-8 text-center min-h-[300px] relative overflow-hidden transition-all duration-300 hover:-translate-y-1 shadow-glow-sm shadow-black/60">
+                    <div className="absolute inset-0 bg-gradient-to-br from-primary/5 via-transparent to-secondary/5 opacity-40 z-0" />
+                    <div className="relative z-10 flex flex-col items-center p-4">
+                      <div className="h-14 w-14 rounded-full bg-primary/10 text-primary flex items-center justify-center mb-4">
+                        <Sparkles className="h-6 w-6 animate-pulse" />
+                      </div>
+                      <h4 className="font-bold text-lg text-foreground mb-2">Share Your SkillEX Story!</h4>
+                      <p className="text-sm text-muted-foreground max-w-[240px] mb-6 leading-relaxed">
+                        How has skill trading changed your learning journey? Leave a review and join our showcase!
+                      </p>
+                      
+                      <Button 
+                        onClick={() => setIsDialogOpen(true)}
+                        className="rounded-xl font-bold text-sm h-11 px-6 bg-primary text-primary-foreground hover:bg-primary/90 flex items-center gap-2 group transition-all shadow-glow-sm"
+                      >
+                        <span>Submit Your Feedback</span>
+                      </Button>
+                    </div>
+                  </div>
+                </div>
+              </motion.div>
+            </div>
+
+            {/* Navigation buttons (Floating arrows) */}
+            {isNavigable && (
+              <>
+                <button
+                  onClick={handlePrev}
+                  className="absolute left-[-12px] md:left-0 top-[50%] -translate-y-[50%] z-20 flex h-10 w-10 items-center justify-center rounded-full border border-white/10 bg-black/80 text-foreground/80 backdrop-blur-md transition-all hover:bg-black hover:text-foreground hover:scale-105 active:scale-95 shadow-glow-sm opacity-0 group-hover:opacity-100 focus:opacity-100"
+                  aria-label="Previous testimonials"
+                >
+                  <ChevronLeft className="h-5 w-5" />
+                </button>
+                <button
+                  onClick={handleNext}
+                  className="absolute right-[-12px] md:right-0 top-[50%] -translate-y-[50%] z-20 flex h-10 w-10 items-center justify-center rounded-full border border-white/10 bg-black/80 text-foreground/80 backdrop-blur-md transition-all hover:bg-black hover:text-foreground hover:scale-105 active:scale-95 shadow-glow-sm opacity-0 group-hover:opacity-100 focus:opacity-100"
+                  aria-label="Next testimonials"
+                >
+                  <ChevronRight className="h-5 w-5" />
+                </button>
+              </>
+            )}
+
+            {/* Dot Indicators */}
+            {isNavigable && (
+              <div className="mt-8 flex justify-center gap-1.5">
+                {Array.from({ length: totalSlides - cardsToShow + 1 }).map((_, di) => (
+                  <button
+                    key={di}
+                    onClick={() => setActiveIndex(di)}
+                    className={cn(
+                      "h-1.5 transition-all duration-300 rounded-full",
+                      activeIndex === di ? "w-6 bg-primary" : "w-1.5 bg-white/20 hover:bg-white/40"
+                    )}
+                    aria-label={`Go to slide ${di + 1}`}
+                  />
+                ))}
+              </div>
+            )}
+
+            {/* Always Visible Submit Feedback Button */}
+            <div className="mt-8 flex justify-center">
+              <Button 
+                onClick={() => setIsDialogOpen(true)}
+                className="rounded-2xl bg-primary text-primary-foreground hover:bg-primary/90 flex items-center gap-2 group transition-all duration-300 font-bold px-8 h-12 shadow-glow hover:scale-105 active:scale-95"
+              >
+                <Sparkles className="h-4 w-4 text-primary-foreground group-hover:scale-110 transition-transform" />
+                <span>Submit Your Feedback</span>
+              </Button>
+            </div>
+          </div>
+        )}
       </div>
-    </div>
-  </Section>
-);
+
+      {/* Programmatic Single Dialog Modal (Saves DOM clutter and duplicate markup) */}
+      <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
+        <DialogContent className="rounded-2xl border border-white/10 max-w-md p-6 bg-[#0c0d12] text-foreground">
+          <DialogHeader>
+            <DialogTitle className="text-xl font-bold font-headline flex items-center gap-2">
+              <Sparkles className="h-5 w-5 text-primary animate-pulse" />
+              Share Your Feedback
+            </DialogTitle>
+            <DialogDescription className="text-xs text-muted-foreground">
+              Help us build the best skill-sharing platform for students.
+            </DialogDescription>
+          </DialogHeader>
+
+          {isAuthenticated ? (
+            successMessage ? (
+              <motion.div 
+                initial={{ opacity: 0, scale: 0.95 }}
+                animate={{ opacity: 1, scale: 1 }}
+                className="py-8 px-4 text-center text-emerald-400 flex flex-col items-center gap-3"
+              >
+                <div className="h-12 w-12 rounded-full bg-emerald-500/20 flex items-center justify-center animate-bounce">
+                  <Check className="h-6 w-6 text-emerald-400" />
+                </div>
+                <p className="font-semibold text-sm">{successMessage}</p>
+              </motion.div>
+            ) : (
+              <form onSubmit={handleDialogSubmit} className="space-y-5 mt-3">
+                {/* Rating selection */}
+                <div className="flex flex-col items-center gap-1.5">
+                  <span className="text-xs font-semibold text-foreground/80">Rate your experience</span>
+                  <div className="flex items-center gap-1">
+                    {[1, 2, 3, 4, 5].map((star) => {
+                      const isLit = star <= (hoverRating ?? rating);
+                      return (
+                        <button
+                          key={star}
+                          type="button"
+                          onClick={() => setRating(star)}
+                          onMouseEnter={() => setHoverRating(star)}
+                          onMouseLeave={() => setHoverRating(null)}
+                          className="focus:outline-none transition-transform active:scale-90 duration-100 p-0.5"
+                        >
+                          <Star
+                            className={cn(
+                              "h-7 w-7 transition-all duration-200 cursor-pointer",
+                              isLit ? "fill-accent text-accent filter drop-shadow-[0_0_4px_rgba(251,191,36,0.5)]" : "text-white/20"
+                            )}
+                          />
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
+
+                {/* Comment input */}
+                <div className="space-y-1">
+                  <label className="text-xs font-semibold text-foreground/80 block">Your comments</label>
+                  <textarea
+                    rows={3}
+                    value={comment}
+                    onChange={(e) => setComment(e.target.value)}
+                    placeholder="How has SkillEX helped you? Share your experience..."
+                    maxLength={300}
+                    required
+                    className="w-full rounded-xl bg-background/50 border border-white/10 hover:border-white/20 focus:border-primary/50 focus:ring-1 focus:ring-primary/50 p-3 text-foreground text-sm outline-none transition-all resize-none placeholder:text-muted-foreground/40"
+                  />
+                  <div className="flex justify-between text-[10px] text-muted-foreground/60">
+                    <span>Min 10 characters</span>
+                    <span>{comment.length}/300</span>
+                  </div>
+                </div>
+
+                {errorMessage && (
+                  <p className="text-xs text-destructive font-medium text-center">{errorMessage}</p>
+                )}
+
+                {/* Submit */}
+                <Button
+                  type="submit"
+                  disabled={isSubmitting || comment.trim().length < 10}
+                  className="w-full h-11 rounded-xl font-bold bg-primary text-primary-foreground hover:bg-primary/90 disabled:opacity-50 transition-all flex items-center justify-center gap-2 text-sm shadow-glow-sm"
+                >
+                  {isSubmitting ? (
+                    <>
+                      <RefreshCw className="h-4 w-4 animate-spin" /> Submitting...
+                    </>
+                  ) : (
+                    <>
+                      Submit Review
+                    </>
+                  )}
+                </Button>
+              </form>
+            )
+          ) : (
+            <div className="text-center py-6">
+              <div className="h-12 w-12 rounded-full bg-primary/10 text-primary flex items-center justify-center mx-auto mb-3">
+                <Users className="h-6 w-6" />
+              </div>
+              <h3 className="text-sm font-bold text-foreground mb-1">Registered Users Only</h3>
+              <p className="text-xs text-muted-foreground max-w-[280px] mx-auto mb-5 leading-relaxed">
+                Only registered SkillEX students can submit platform reviews. Join the community to share your journey!
+              </p>
+              <div className="flex justify-center">
+                <Button asChild className="rounded-xl font-bold text-xs h-9 px-6 bg-primary text-primary-foreground hover:bg-primary/90">
+                  <Link to="/login" onClick={() => setIsDialogOpen(false)}>Sign In / Register</Link>
+                </Button>
+              </div>
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
+    </Section>
+  );
+};
 
 /* ══════════════════════════════════════════════════════════════════════════════
    CTA BANNER
 ══════════════════════════════════════════════════════════════════════════════ */
-const CtaBanner = () => {
+interface CtaBannerProps {
+  onFeedbackSubmitted: () => void;
+}
+
+const CtaBanner = ({ onFeedbackSubmitted }: CtaBannerProps) => {
+  const { isAuthenticated } = useAuth();
+  const [rating, setRating] = useState(5);
+  const [hoverRating, setHoverRating] = useState<number | null>(null);
+  const [comment, setComment] = useState('');
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [successMessage, setSuccessMessage] = useState('');
+  const [errorMessage, setErrorMessage] = useState('');
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!comment.trim() || comment.trim().length < 10) return;
+
+    try {
+      setIsSubmitting(true);
+      setErrorMessage('');
+      await FeedbackService.create({ rating, comment });
+      setSuccessMessage('Thank you! Your feedback has been successfully published.');
+      setComment('');
+      setRating(5);
+      onFeedbackSubmitted();
+      setTimeout(() => setSuccessMessage(''), 6000);
+    } catch (err) {
+      const message = err instanceof Error && err.message
+        ? err.message
+        : 'Failed to submit feedback. Please try again.';
+      setErrorMessage(message);
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
   return (
     <Section className="w-full pb-32">
-      <div className="container mx-auto px-4">
-        <SpotlightCard className="rounded-3xl glass-strong border border-primary/20 p-16 text-center text-foreground shadow-glow">
+      <div className="container mx-auto px-4 max-w-4xl">
+        <SpotlightCard className="rounded-3xl glass-strong border border-primary/20 p-10 md:p-16 text-center text-foreground shadow-glow relative overflow-hidden">
           {/* Noise texture */}
           <div className="pointer-events-none absolute inset-0 opacity-[0.06] z-0"
             style={{ backgroundImage: 'url("data:image/svg+xml,%3Csvg viewBox=\'0 0 200 200\' xmlns=\'http://www.w3.org/2000/svg\'%3E%3Cfilter id=\'n\'%3E%3CfeTurbulence type=\'fractalNoise\' baseFrequency=\'0.75\' numOctaves=\'4\' stitchTiles=\'stitch\'/%3E%3C/filter%3E%3Crect width=\'100%25\' height=\'100%25\' filter=\'url(%23n)\'/%3E%3C/svg%3E")' }}
@@ -1118,32 +1495,136 @@ const CtaBanner = () => {
           <div className="animate-blob absolute -top-20 -left-20 h-72 w-72 rounded-full bg-primary/20 blur-3xl opacity-50 z-0" />
           <div className="animate-blob absolute -bottom-20 -right-20 h-72 w-72 rounded-full bg-secondary/20 blur-3xl opacity-50 z-0" style={{ animationDelay: '5s' }} />
 
-          <motion.div variants={item} className="relative z-10 inline-flex items-center gap-2 rounded-full bg-primary/10 border border-primary/20 px-4 py-1.5 text-sm font-medium mb-6 text-primary">
-            <Sparkles className="h-4 w-4" /> Free forever for students
-          </motion.div>
-          <motion.h2 variants={item} className="relative z-10 font-headline text-4xl font-extrabold md:text-5xl text-balance">
-            Ready to start trading skills?
-          </motion.h2>
-          <motion.p variants={item} className="relative z-10 mt-4 max-w-lg mx-auto text-lg text-foreground/80 text-balance">
-            Join thousands of students who are leveling up — completely free.
-          </motion.p>
-          <motion.div variants={item} className="relative z-10 mt-10 flex flex-col items-center gap-4 sm:flex-row sm:justify-center">
-            <Button
-              asChild
-              size="lg"
-              className="h-14 rounded-2xl bg-primary px-8 text-base font-bold text-primary-foreground shadow-glow hover:bg-primary/90 hover:scale-105 transition-all"
-            >
-              <Link to="/login">Join for Free <ArrowRight className="ml-2 h-4 w-4" /></Link>
-            </Button>
-            <Button
-              size="lg"
-              variant="outline"
-              className="h-14 rounded-2xl px-8 text-base font-semibold border-white/10 hover:bg-white/5"
-              onClick={() => { const el = document.getElementById('how-it-works'); if (el) el.scrollIntoView({ behavior: 'smooth', block: 'start' }); }}
-            >
-              See how it works
-            </Button>
-          </motion.div>
+          <div className="relative z-10">
+            {isAuthenticated ? (
+              <div className="max-w-2xl mx-auto text-left">
+                <div className="text-center mb-8">
+                  <motion.div variants={item} className="inline-flex items-center gap-2 rounded-full bg-primary/10 border border-primary/20 px-4 py-1.5 text-sm font-medium mb-4 text-primary">
+                    <Sparkles className="h-4 w-4" /> Share Your SkillEX Journey
+                  </motion.div>
+                  <h2 className="font-headline text-3xl font-extrabold md:text-4xl text-balance text-center">
+                    We'd love to hear your feedback!
+                  </h2>
+                  <p className="mt-2 text-foreground/75 text-sm text-center">
+                    Your review helps us improve and guides other students in the community.
+                  </p>
+                </div>
+
+                {successMessage ? (
+                  <motion.div 
+                    initial={{ opacity: 0, scale: 0.95 }}
+                    animate={{ opacity: 1, scale: 1 }}
+                    className="p-6 rounded-2xl bg-emerald-500/10 border border-emerald-500/20 text-center text-emerald-400 flex flex-col items-center gap-3"
+                  >
+                    <div className="h-12 w-12 rounded-full bg-emerald-500/20 flex items-center justify-center">
+                      <Check className="h-6 w-6 text-emerald-400" />
+                    </div>
+                    <p className="font-medium">{successMessage}</p>
+                  </motion.div>
+                ) : (
+                  <form onSubmit={handleSubmit} className="space-y-6">
+                    {/* Rating selector */}
+                    <div className="flex flex-col items-center gap-2">
+                      <span className="text-sm font-medium text-foreground/80">Rate your experience:</span>
+                      <div className="flex items-center gap-1.5">
+                        {[1, 2, 3, 4, 5].map((star) => {
+                          const isLit = star <= (hoverRating ?? rating);
+                          return (
+                            <button
+                              key={star}
+                              type="button"
+                              onClick={() => setRating(star)}
+                              onMouseEnter={() => setHoverRating(star)}
+                              onMouseLeave={() => setHoverRating(null)}
+                              className="focus:outline-none transition-transform active:scale-95 duration-100"
+                            >
+                              <Star
+                                className={cn(
+                                  "h-9 w-9 transition-colors duration-200 cursor-pointer",
+                                  isLit ? "fill-accent text-accent" : "text-white/20"
+                                )}
+                              />
+                            </button>
+                          );
+                        })}
+                      </div>
+                    </div>
+
+                    {/* Textarea */}
+                    <div className="space-y-2">
+                      <label className="text-sm font-medium text-foreground/80 block">Your Review:</label>
+                      <textarea
+                        rows={4}
+                        value={comment}
+                        onChange={(e) => setComment(e.target.value)}
+                        placeholder="Tell the community how SkillEX has helped you learn, teach, or grow..."
+                        maxLength={500}
+                        required
+                        className="w-full rounded-2xl bg-background/50 border border-white/10 hover:border-white/20 focus:border-primary/50 focus:ring-1 focus:ring-primary/50 p-4 text-foreground text-sm outline-none transition-all resize-none placeholder:text-muted-foreground/50"
+                      />
+                      <div className="flex justify-between text-xs text-muted-foreground">
+                        <span>Min 10 characters</span>
+                        <span>{comment.length}/500</span>
+                      </div>
+                    </div>
+
+                    {errorMessage && (
+                      <p className="text-sm text-destructive font-medium text-center">{errorMessage}</p>
+                    )}
+
+                    {/* Submit button */}
+                    <div className="flex justify-center">
+                      <Button
+                        type="submit"
+                        disabled={isSubmitting || comment.trim().length < 10}
+                        size="lg"
+                        className="h-12 px-8 rounded-xl font-bold bg-primary text-primary-foreground hover:bg-primary/90 disabled:opacity-50 transition-all flex items-center gap-2"
+                      >
+                        {isSubmitting ? (
+                          <>
+                            <RefreshCw className="h-4 w-4 animate-spin" /> Submitting...
+                          </>
+                        ) : (
+                          <>
+                            Publish Review <ArrowRight className="h-4 w-4" />
+                          </>
+                        )}
+                      </Button>
+                    </div>
+                  </form>
+                )}
+              </div>
+            ) : (
+              <>
+                <motion.div variants={item} className="inline-flex items-center gap-2 rounded-full bg-primary/10 border border-primary/20 px-4 py-1.5 text-sm font-medium mb-6 text-primary">
+                  <Sparkles className="h-4 w-4" /> Free forever for students
+                </motion.div>
+                <motion.h2 variants={item} className="font-headline text-4xl font-extrabold md:text-5xl text-balance">
+                  Ready to start trading skills?
+                </motion.h2>
+                <motion.p variants={item} className="mt-4 max-w-lg mx-auto text-lg text-foreground/80 text-balance">
+                  Join thousands of students who are leveling up — completely free. Only registered members can post platform feedback.
+                </motion.p>
+                <motion.div variants={item} className="mt-10 flex flex-col items-center gap-4 sm:flex-row sm:justify-center">
+                  <Button
+                    asChild
+                    size="lg"
+                    className="h-14 rounded-2xl bg-primary px-8 text-base font-bold text-primary-foreground shadow-glow hover:bg-primary/90 hover:scale-105 transition-all"
+                  >
+                    <Link to="/login">Join for Free <ArrowRight className="ml-2 h-4 w-4" /></Link>
+                  </Button>
+                  <Button
+                    size="lg"
+                    variant="outline"
+                    className="h-14 rounded-2xl px-8 text-base font-semibold border-white/10 hover:bg-white/5"
+                    onClick={() => { const el = document.getElementById('how-it-works'); if (el) el.scrollIntoView({ behavior: 'smooth', block: 'start' }); }}
+                  >
+                    See how it works
+                  </Button>
+                </motion.div>
+              </>
+            )}
+          </div>
         </SpotlightCard>
       </div>
     </Section>
@@ -1156,11 +1637,29 @@ const CtaBanner = () => {
 export default function LandingPage() {
   /* Defer Three.js scene so first paint on laptops remains fast */
   const [showScene, setShowScene] = useState(false);
+  const [feedbacks, setFeedbacks] = useState<Feedback[]>([]);
+  const [isLoadingFeedbacks, setIsLoadingFeedbacks] = useState(true);
+
+  const fetchFeedbacks = async () => {
+    try {
+      setIsLoadingFeedbacks(true);
+      const data = await FeedbackService.getAll();
+      setFeedbacks(data);
+    } catch (err) {
+      console.error('Failed to fetch feedbacks', err);
+    } finally {
+      setIsLoadingFeedbacks(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchFeedbacks();
+  }, []);
 
   useEffect(() => {
     const shouldEnableScene = () => {
-      const lowMemory = typeof (navigator as Navigator & { deviceMemory?: number }).deviceMemory === 'number'
-        && (navigator as Navigator & { deviceMemory?: number }).deviceMemory! <= 4;
+      const deviceMemory = (navigator as Navigator & { deviceMemory?: number }).deviceMemory;
+      const lowMemory = typeof deviceMemory === 'number' && deviceMemory <= 4;
       const lowCpu = typeof navigator.hardwareConcurrency === 'number' && navigator.hardwareConcurrency <= 6;
       const prefersReducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
 
@@ -1242,8 +1741,8 @@ export default function LandingPage() {
         <SkillChainSection />
         <StatsSection />
         <FeaturedSkillsSection />
-        <TestimonialsSection />
-        <CtaBanner />
+        <TestimonialsSection feedbacks={feedbacks} isLoading={isLoadingFeedbacks} onFeedbackSubmitted={fetchFeedbacks} />
+        <CtaBanner onFeedbackSubmitted={fetchFeedbacks} />
       </div>
     </MarketingLayout>
   );

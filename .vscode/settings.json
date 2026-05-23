@@ -37,5 +37,6 @@
         "**/backend/bin/**": true,
         "**/backend/build/**": true,
         "**/backend/target/**": true
-    }
+    },
+    "github.copilot.chat.agentDebugLog.fileLogging.enabled": true
 }

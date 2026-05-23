@@ -425,8 +425,13 @@ export default function SettingsPage() {
       await UserService.requestEmailConnectOtp(connectEmail);
       toast({ title: 'OTP Sent', description: 'Please check your email for the OTP.', variant: 'success' });
       setConnectStep('otp');
-    } catch (err: any) {
-      toast({ title: 'Failed to send OTP', description: err.response?.data?.message || err.message || 'Please try again.', variant: 'destructive' });
+    } catch (err) {
+      const message = typeof err === 'object' && err !== null && 'response' in err
+        ? (err as { response?: { data?: { message?: string } } }).response?.data?.message
+        : err instanceof Error
+          ? err.message
+          : undefined;
+      toast({ title: 'Failed to send OTP', description: message || 'Please try again.', variant: 'destructive' });
     } finally {
       setIsRequestingOtp(false);
     }
@@ -445,8 +450,13 @@ export default function SettingsPage() {
       setConnectStep('input');
       setConnectEmail('');
       setConnectOtp('');
-    } catch (err: any) {
-      toast({ title: 'Verification Failed', description: err.response?.data?.message || err.message || 'Please check your OTP and try again.', variant: 'destructive' });
+    } catch (err) {
+      const message = typeof err === 'object' && err !== null && 'response' in err
+        ? (err as { response?: { data?: { message?: string } } }).response?.data?.message
+        : err instanceof Error
+          ? err.message
+          : undefined;
+      toast({ title: 'Verification Failed', description: message || 'Please check your OTP and try again.', variant: 'destructive' });
     } finally {
       setIsVerifyingOtp(false);
     }

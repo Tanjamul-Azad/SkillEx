@@ -37,6 +37,7 @@ import {
 import { cn } from '@/lib/utils';
 import { dashboardNav } from '@/config/navigation.config';
 import { ConfirmDialog } from '@/components/ui/ConfirmDialog';
+import Logo from '@/components/ui/Logo';
 import type { LucideIcon } from 'lucide-react';
 
 /* ── Icon registry (maps string names from navigation.config → components) ── */
@@ -162,25 +163,14 @@ function SidebarContent({
       >
         <Link
           to="/"
-          className="group flex items-center gap-2.5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40 rounded-xl"
+          className="group flex items-center focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40 rounded-xl"
           aria-label="SkillEx — go to home"
         >
-          <div className="relative flex h-8 w-8 shrink-0 items-center justify-center rounded-xl bg-gradient-to-br from-primary to-secondary shadow-sm transition-all duration-300 group-hover:shadow-md group-hover:scale-105">
-            <Zap className="h-4 w-4 text-white transition-transform group-hover:-rotate-12 duration-300" aria-hidden="true" />
-          </div>
-          <AnimatePresence initial={false}>
-            {!collapsed && (
-              <motion.span
-                initial={{ opacity: 0, width: 0 }}
-                animate={{ opacity: 1, width: 'auto' }}
-                exit={{ opacity: 0, width: 0 }}
-                transition={{ duration: 0.18, ease: [0.16, 1, 0.3, 1] }}
-                className="overflow-hidden whitespace-nowrap bg-gradient-to-r from-foreground to-foreground/80 bg-clip-text text-lg font-extrabold font-headline text-transparent"
-              >
-                SkillEx
-              </motion.span>
-            )}
-          </AnimatePresence>
+          {collapsed ? (
+            <Logo short size="lg" />
+          ) : (
+            <Logo size="lg" />
+          )}
         </Link>
       </div>
 

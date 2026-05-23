@@ -5,7 +5,7 @@
   "scripts": {
     "dev": "concurrently --kill-others-on-fail --names backend,frontend --prefix-colors cyan,magenta \"npm run dev:backend\" \"npm run dev:frontend\"",
     "dev:backend": "powershell -NoProfile -ExecutionPolicy Bypass -File .\\scripts\\dev\\run-backend.ps1",
-    "dev:frontend": "cd frontend && npm run dev",
+    "dev:frontend": "powershell -NoProfile -ExecutionPolicy Bypass -File .\\scripts\\dev\\run-frontend.ps1",
     "stop": "powershell -NoProfile -ExecutionPolicy Bypass -File .\\start.ps1 -Stop"
   },
   "devDependencies": {

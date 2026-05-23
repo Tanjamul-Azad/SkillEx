@@ -52,6 +52,25 @@ public class ReviewServiceImpl implements ReviewService {
         Session session = sessionRepository.findById(req.sessionId())
             .orElseThrow(() -> new EntityNotFoundException("Session not found: " + req.sessionId()));
 
+        boolean fromIsTeacher = session.getTeacher().getId().equals(fromUserId);
+        boolean fromIsLearner = session.getLearner().getId().equals(fromUserId);
+        if (!fromIsTeacher && !fromIsLearner) {
+            throw new org.springframework.security.access.AccessDeniedException("You are not a participant of this session.");
+        }
+
+        String expectedRecipientId = fromIsTeacher ? session.getLearner().getId() : session.getTeacher().getId();
+        if (!expectedRecipientId.equals(req.toUserId())) {
+            throw new IllegalArgumentException("Review recipient must be your session partner.");
+        }
+
+        if (!session.getSkill().getId().equals(req.skillId())) {
+            throw new IllegalArgumentException("Review skill must match the completed session skill.");
+        }
+
+        if (session.getStatus() != Session.SessionStatus.COMPLETED) {
+            throw new IllegalStateException("Reviews can only be submitted after a completed session.");
+        }
+
         // Prevent duplicate reviews for the same session from the same user
         if (reviewRepository.existsByFromUserIdAndSessionId(fromUserId, req.sessionId())) {
             throw new IllegalStateException("You have already reviewed this session.");

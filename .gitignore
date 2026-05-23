@@ -5,6 +5,8 @@ node_modules/
 frontend/dist/
 frontend/.env.local
 frontend/.env.*.local
+frontend/vite-dashboard-check*.log
+tmp-dev-logs/
 
 ##──── Backend build output ─────────────────────────
 backend/build/

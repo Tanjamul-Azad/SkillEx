@@ -50,8 +50,9 @@ public class SecurityConfig {
                 .requestMatchers("/ws/**", "/ws/info").permitAll()
                 // Static uploads
                 .requestMatchers("/uploads/**").permitAll()
-                // Public read-only routes — skills catalogue and community browsing
+                // Public read-only routes — skills catalogue, feedbacks and community browsing
                 .requestMatchers(HttpMethod.GET, "/api/skills", "/api/skills/**").permitAll()
+                .requestMatchers(HttpMethod.GET, "/api/feedbacks").permitAll()
                 .requestMatchers(HttpMethod.GET,
                     "/api/community/events",
                     "/api/community/events/**",

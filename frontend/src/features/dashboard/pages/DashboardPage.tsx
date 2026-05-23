@@ -391,12 +391,16 @@ function ExchangeCard({
                         onClick={(e) => {
                           try {
                             e.currentTarget.showPicker();
-                          } catch {}
+                          } catch {
+                            // Some browsers do not expose showPicker for date inputs.
+                          }
                         }}
                         onFocus={(e) => {
                           try {
                             e.currentTarget.showPicker();
-                          } catch {}
+                          } catch {
+                            // Some browsers do not expose showPicker for date inputs.
+                          }
                         }}
                         className="rounded-xl pl-10 bg-background relative z-10 cursor-pointer"
                       />
@@ -414,12 +418,16 @@ function ExchangeCard({
                         onClick={(e) => {
                           try {
                             e.currentTarget.showPicker();
-                          } catch {}
+                          } catch {
+                            // Some browsers do not expose showPicker for time inputs.
+                          }
                         }}
                         onFocus={(e) => {
                           try {
                             e.currentTarget.showPicker();
-                          } catch {}
+                          } catch {
+                            // Some browsers do not expose showPicker for time inputs.
+                          }
                         }}
                         className="rounded-xl pl-10 bg-background relative z-10 cursor-pointer"
                       />
@@ -453,19 +461,28 @@ function ExchangeCard({
                   disabled={!scheduleDate || !scheduleTime}
                   onClick={async () => {
                     try {
-                      const isTeacher = exchange.requester.id === currentUserId;
-                      const teacherId = isTeacher ? currentUserId : partner.id;
-                      const learnerId = isTeacher ? partner.id : currentUserId;
-                      const skillId = isTeacher ? (exchange.offeredSkill?.id || '') : (exchange.wantedSkill?.id || '');
+                      const skillToSchedule = mySkill ?? theirSkill;
+                      if (!skillToSchedule?.id) {
+                        toast({
+                          title: 'No skill selected',
+                          description: 'This exchange does not have a schedulable skill.',
+                          variant: 'destructive',
+                        });
+                        return;
+                      }
+
+                      const teachingMySkill = Boolean(mySkill?.id);
+                      const teacherId = teachingMySkill ? currentUserId : partner.id;
+                      const learnerId = teachingMySkill ? partner.id : currentUserId;
 
                       await SessionService.create({
                         exchangeId: exchange.id,
                         teacherId,
                         learnerId,
-                        skillId,
+                        skillId: skillToSchedule.id,
                         scheduledAt: `${scheduleDate}T${scheduleTime}:00`,
                         durationMins: 60,
-                        meetLink: `https://meet.jit.si/skillex-session-temp`
+                        sessionType: 'VIDEO',
                       });
 
                       setScheduledConfirmed(true);
@@ -473,14 +490,15 @@ function ExchangeCard({
                         await onStatusChanged();
                       }
                       toast({
-                        title: '🎉 Session Scheduled!',
-                        description: `Your classroom session with ${partner.name.split(' ')[0]} has been booked.`,
+                        title: 'Session proposed',
+                        description: `${partner.name.split(' ')[0]} needs to accept this time before the room opens.`,
                         variant: 'success',
                       });
                     } catch (err) {
+                      const message = err instanceof Error ? err.message : 'Please try again or select another slot.';
                       toast({
                         title: 'Failed to schedule session',
-                        description: 'Please try again or select another slot.',
+                        description: message,
                         variant: 'destructive',
                       });
                     }
@@ -1006,12 +1024,75 @@ function UpcomingSessionsSection({
   sessions,
   loading,
   currentUserId,
+  onSessionChanged,
 }: {
   sessions: Session[];
   loading: boolean;
   currentUserId: string;
+  onSessionChanged?: () => Promise<void> | void;
 }) {
   const navigate = useNavigate();
+  const { toast } = useToast();
+  const [busySessionId, setBusySessionId] = React.useState<string | null>(null);
+  const reminderTimersRef = React.useRef<Map<string, number>>(new Map());
+  const remindedRef = React.useRef<Set<string>>(new Set());
+  const upcomingSessions = React.useMemo(() => {
+    const now = Date.now();
+    return sessions
+      .filter((session) => {
+        const status = String(session.status).toLowerCase();
+        if (!['proposed', 'scheduled', 'in_progress'].includes(status)) {
+          return false;
+        }
+        const scheduledAt = new Date(session.scheduledAt).getTime();
+        const durationMs = (session.durationMins || 60) * 60_000;
+        return Number.isFinite(scheduledAt) && scheduledAt + durationMs >= now;
+      })
+      .sort((a, b) => new Date(a.scheduledAt).getTime() - new Date(b.scheduledAt).getTime());
+  }, [sessions]);
+
+  React.useEffect(() => {
+    const MAX_REMINDER_WINDOW_MS = 24 * 60 * 60 * 1000;
+    const reminderTimers = reminderTimersRef.current;
+
+    reminderTimers.forEach((timerId) => window.clearTimeout(timerId));
+    reminderTimers.clear();
+
+    const now = Date.now();
+
+    upcomingSessions.forEach((session) => {
+      const status = String(session.status).toLowerCase();
+      if (status !== 'scheduled') return;
+      if (remindedRef.current.has(session.id)) return;
+
+      const scheduledAtMs = new Date(session.scheduledAt).getTime();
+      if (!Number.isFinite(scheduledAtMs)) return;
+
+      const delay = scheduledAtMs - now;
+      if (delay > MAX_REMINDER_WINDOW_MS || delay < -60_000) return;
+
+      const isTeacher = session.teacher.id === currentUserId;
+      const partner = isTeacher ? session.learner : session.teacher;
+      const skillName = session.skill?.name ?? 'Skill Exchange';
+
+      const timerId = window.setTimeout(() => {
+        if (remindedRef.current.has(session.id)) return;
+        remindedRef.current.add(session.id);
+        toast({
+          title: 'Session starting now',
+          description: `${skillName} with ${partner.name?.split(' ')[0] ?? 'your partner'} is starting now.`,
+          variant: 'success',
+        });
+      }, Math.max(0, delay));
+
+      reminderTimers.set(session.id, timerId);
+    });
+
+    return () => {
+      reminderTimers.forEach((timerId) => window.clearTimeout(timerId));
+      reminderTimers.clear();
+    };
+  }, [currentUserId, toast, upcomingSessions]);
 
   if (loading) {
     return (
@@ -1029,7 +1110,7 @@ function UpcomingSessionsSection({
     );
   }
 
-  if (sessions.length === 0) {
+  if (upcomingSessions.length === 0) {
     return (
       <div className="flex flex-col items-center py-8 text-center">
         <Clock className="h-8 w-8 text-muted-foreground/40 mb-3" />
@@ -1046,11 +1127,29 @@ function UpcomingSessionsSection({
       {/* Timeline line */}
       <div className="absolute left-[17px] top-5 bottom-5 w-px bg-gradient-to-b from-border via-border/40 to-transparent" />
 
-      {sessions.slice(0, 3).map((session, i) => {
+      {upcomingSessions.slice(0, 3).map((session, i) => {
         const isTeacher = session.teacher.id === currentUserId;
         const partner = isTeacher ? session.learner : session.teacher;
         const skill = session.skill;
         const isNext = i === 0;
+        const status = String(session.status).toLowerCase();
+        const isProposal = status === 'proposed';
+        const canAccept = isProposal && session.proposedById !== currentUserId;
+        const isBusy = busySessionId === session.id;
+
+        const handleAccept = async () => {
+          setBusySessionId(session.id);
+          try {
+            await SessionService.acceptProposal(session.id);
+            await onSessionChanged?.();
+            toast({ title: 'Session scheduled', description: 'The room is ready for both participants.', variant: 'success' });
+          } catch (err) {
+            const message = err instanceof Error ? err.message : 'Could not accept this time.';
+            toast({ title: 'Accept failed', description: message, variant: 'destructive' });
+          } finally {
+            setBusySessionId(null);
+          }
+        };
 
         return (
           <motion.div
@@ -1058,7 +1157,7 @@ function UpcomingSessionsSection({
             initial={{ opacity: 0, x: -8 }}
             animate={{ opacity: 1, x: 0 }}
             transition={{ delay: i * 0.08 }}
-            className="relative flex items-center gap-3"
+            className="relative flex items-center gap-3 w-full min-w-0"
           >
             {/* Timeline dot */}
             <div className={cn(
@@ -1072,7 +1171,7 @@ function UpcomingSessionsSection({
 
             {/* Card */}
             <div className={cn(
-              'flex flex-1 items-center gap-3 rounded-xl border px-3 py-2.5 transition-all duration-200',
+              'flex flex-1 items-center gap-3 rounded-xl border px-3 py-2.5 transition-all duration-200 min-w-0',
               isNext
                 ? 'border-primary/20 bg-primary/5 dark:bg-primary/8'
                 : 'border-border/50 bg-muted/20 hover:bg-muted/40'
@@ -1096,13 +1195,35 @@ function UpcomingSessionsSection({
                     : 'Date TBD'}
                 </p>
               </div>
-              <Button
-                size="sm"
-                className="shrink-0 rounded-lg text-xs h-7 px-2.5 bg-primary hover:bg-primary/90 text-primary-foreground"
-                onClick={() => navigate(`/study-room/${session.id}`)}
-              >
-                <Play className="h-3 w-3 mr-1" /> Join
-              </Button>
+              {isProposal ? (
+                canAccept ? (
+                  <Button
+                    size="sm"
+                    className="shrink-0 rounded-lg text-xs h-7 px-2.5 bg-primary hover:bg-primary/90 text-primary-foreground"
+                    onClick={handleAccept}
+                    disabled={isBusy}
+                  >
+                    {isBusy ? 'Accepting' : 'Accept'}
+                  </Button>
+                ) : (
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    className="shrink-0 rounded-lg text-xs h-7 px-2.5"
+                    disabled
+                  >
+                    Pending
+                  </Button>
+                )
+              ) : (
+                <Button
+                  size="sm"
+                  className="shrink-0 rounded-lg text-xs h-7 px-2.5 bg-primary hover:bg-primary/90 text-primary-foreground"
+                  onClick={() => navigate(`/sessions/${session.id}`)}
+                >
+                  <Play className="h-3 w-3 mr-1" /> Join
+                </Button>
+              )}
             </div>
           </motion.div>
         );
@@ -1327,9 +1448,6 @@ export default function DashboardPage() {
   const hasMoreReceivedRequests = incomingPendingExchanges.length > REQUEST_PREVIEW_LIMIT;
   const hasMoreSentRequests = sentPendingExchanges.length > REQUEST_PREVIEW_LIMIT;
   const activeTabHasMore = requestTab === 'received' ? hasMoreReceivedRequests : hasMoreSentRequests;
-  const upcomingSessions = exchanges.filter(
-    e => e.status?.toLowerCase() === 'accepted' && e.sessionDate
-  );
   const activityItems = exchanges
     .slice(0, 6)
     .map(e => activityFromExchange(e, currentUserId))
@@ -1770,7 +1888,7 @@ export default function DashboardPage() {
 
         {/* ══ BENTO ROW 3 (Carousel + Tasks) ═══════════════════════════ */}
         <div className="md:col-span-2 lg:col-span-2 min-h-[140px] flex flex-col">
-          <ScrollReveal animation="fade-up" delay={0.24} className="h-full flex-1 w-full bg-card rounded-3xl border border-white/5 shadow-sm p-4 overflow-hidden shadow-[inset_0_1px_0_0_hsla(0,0%,100%,0.05)]">
+          <ScrollReveal animation="fade-up" delay={0.24} className="h-full flex-1 w-full bg-card rounded-3xl border border-white/5 p-4 overflow-hidden shadow-[inset_0_1px_0_0_hsla(0,0%,100%,0.05)]">
              <SessionCarousel exchanges={exchanges} currentUserId={currentUserId} />
           </ScrollReveal>
         </div>
@@ -1783,7 +1901,7 @@ export default function DashboardPage() {
 
         {/* ══ BENTO ROW 4 (Active Exchanges & Sessions) ═════════════════ */}
         <div className="col-span-1 md:col-span-3 lg:col-span-2 flex flex-col min-h-[300px]">
-          <ScrollReveal animation="fade-up" delay={0.25} className="h-full flex flex-col bg-card rounded-3xl border border-white/5 shadow-sm overflow-hidden p-4 shadow-[inset_0_1px_0_0_hsla(0,0%,100%,0.05)]">
+          <ScrollReveal animation="fade-up" delay={0.25} className="h-full flex flex-col bg-card rounded-3xl border border-white/5 overflow-hidden p-4 shadow-[inset_0_1px_0_0_hsla(0,0%,100%,0.05)]">
              <SectionHeading icon={Zap} action={
                 <Button asChild variant="ghost" size="sm" className="h-7 text-xs font-semibold text-primary hover:bg-primary/10">
                   <Link to="/match">Explore <ArrowRight className="ml-1 h-3 w-3" /></Link>
@@ -1814,10 +1932,15 @@ export default function DashboardPage() {
         </div>
 
         <div className="col-span-1 md:col-span-3 lg:col-span-1 flex flex-col min-h-[300px]">
-           <ScrollReveal animation="fade-up" delay={0.28} className="h-full flex flex-col bg-card rounded-3xl border border-white/5 shadow-sm overflow-hidden p-4 shadow-[inset_0_1px_0_0_hsla(0,0%,100%,0.05)]">
+           <ScrollReveal animation="fade-up" delay={0.28} className="h-full flex flex-col bg-card rounded-3xl border border-white/5 overflow-hidden p-4 shadow-[inset_0_1px_0_0_hsla(0,0%,100%,0.05)]">
              <SectionHeading icon={CalendarDays}>Upcoming</SectionHeading>
-             <div className="flex-1 overflow-y-auto custom-scrollbar -mx-2 px-2">
-               <UpcomingSessionsSection sessions={sessions} loading={sessionsLoading} currentUserId={currentUserId} />
+             <div className="flex-1 overflow-y-auto overflow-x-hidden custom-scrollbar -mx-2 px-2">
+               <UpcomingSessionsSection
+                 sessions={sessions}
+                 loading={sessionsLoading}
+                 currentUserId={currentUserId}
+                 onSessionChanged={fetchSessions}
+               />
              </div>
            </ScrollReveal>
         </div>

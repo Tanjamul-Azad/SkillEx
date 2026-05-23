@@ -137,7 +137,19 @@ export class ApiClient {
     }
 
     if (response.status === 204) return {} as T;
-    const json = await response.json();
+
+    const raw = await response.text();
+    if (!raw || !raw.trim()) {
+      return {} as T;
+    }
+
+    let json: unknown;
+    try {
+      json = JSON.parse(raw);
+    } catch {
+      // Non-JSON successful payloads are uncommon here, but return raw text safely.
+      return raw as T;
+    }
 
     // Unwrap Spring Boot's ApiResponse<T> envelope: { success: boolean, data: T, message?: string }
     if (json !== null && typeof json === 'object' && 'success' in json && 'data' in json) {

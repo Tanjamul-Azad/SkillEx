@@ -2,6 +2,40 @@
 @tailwind components;
 @tailwind utilities;
 
+@layer components {
+  .app-shell {
+    @apply rounded-2xl border border-border/70 bg-card/95 text-card-foreground shadow-card backdrop-blur-xl;
+  }
+
+  .dark .app-shell {
+    @apply border-white/10 bg-card/75 shadow-[0_20px_60px_-28px_rgba(0,0,0,0.85)];
+  }
+
+  .app-card {
+    @apply rounded-2xl border border-border/70 bg-card shadow-card transition-all duration-300;
+  }
+
+  .dark .app-card {
+    @apply border-white/10 bg-card/80 shadow-[inset_0_1px_0_0_hsla(0,0%,100%,0.04)];
+  }
+
+  .app-card-hover {
+    @apply hover:-translate-y-0.5 hover:border-primary/30 hover:shadow-card-hover;
+  }
+
+  .app-kicker {
+    @apply text-[10px] font-extrabold uppercase tracking-[0.18em] text-muted-foreground;
+  }
+
+  .app-media {
+    @apply overflow-hidden rounded-xl border border-border/70 bg-muted;
+  }
+
+  .dark .app-media {
+    @apply border-white/10 bg-white/5;
+  }
+}
+
 @layer base {
   :root {
     /* ── Light mode: Clean Deep Sea / Teal / Coral system ── */

@@ -49,6 +49,7 @@ import { SkillShowcaseViewer } from '@/features/profile/components/SkillShowcase
 import { CommunityService } from '@/services/communityService';
 import { PostCard } from '../../community/components/PostCard';
 import type { Post } from '@/types';
+import { appVisuals } from '@/lib/appVisuals';
 
 const containerVariants = {
   hidden: { opacity: 0 },
@@ -72,13 +73,13 @@ function StatCard({
   color: string;
 }) {
   return (
-    <div className="group relative flex flex-col items-start gap-2 p-5 rounded-[1.5rem] bg-black/40 backdrop-blur-xl border border-white/5 shadow-[inset_0_1px_0_0_hsla(0,0%,100%,0.05)] hover:border-primary/30 transition-all duration-300 overflow-hidden">
-      <div className="absolute top-0 right-0 -mr-6 -mt-6 w-16 h-16 rounded-full bg-white/5 blur-2xl pointer-events-none group-hover:bg-primary/10 transition-colors" />
-      <div className={cn('p-2 rounded-xl transition-transform duration-300 group-hover:scale-105 shadow-[0_0_10px_hsl(var(--primary)/0.1)] border border-white/10 bg-white/5', color)}>
+    <div className="app-card app-card-hover group relative flex flex-col items-start gap-2 overflow-hidden p-4">
+      <div className="absolute top-0 right-0 -mr-6 -mt-6 w-16 h-16 rounded-full bg-primary/5 blur-2xl pointer-events-none group-hover:bg-primary/10 transition-colors" />
+      <div className={cn('p-2 rounded-xl transition-transform duration-300 group-hover:scale-105 border border-border/70 bg-background/70 dark:border-white/10 dark:bg-white/5', color)}>
         <Icon className="w-4 h-4" />
       </div>
       <div>
-        <span className="block text-2xl font-extrabold font-headline leading-none text-white tracking-tight drop-shadow-sm">{value}</span>
+        <span className="block text-2xl font-extrabold font-headline leading-none text-foreground tracking-tight">{value}</span>
         <span className="block text-[9px] font-bold text-muted-foreground uppercase tracking-widest mt-1.5">{label}</span>
       </div>
     </div>
@@ -111,15 +112,15 @@ function SkillSection({
 
   return (
     <motion.div variants={itemVariants}>
-      <Card id={id} className={cn('h-full border border-white/5 bg-black/40 backdrop-blur-xl rounded-[2rem] transition-all duration-300 group hover:border-white/10 shadow-[inset_0_1px_0_0_hsla(0,0%,100%,0.05)] overflow-hidden relative', emphasized && 'ring-1 ring-primary/30 shadow-[0_0_30px_hsl(var(--primary)/0.15)] bg-gradient-to-br from-primary/5 to-transparent')}>
+      <Card id={id} className={cn('app-card app-card-hover h-full overflow-hidden relative', emphasized && 'ring-1 ring-primary/30 bg-gradient-to-br from-primary/5 to-transparent')}>
         <div className={cn("absolute top-0 right-0 -mr-16 -mt-16 w-32 h-32 rounded-full blur-3xl pointer-events-none opacity-20", variant === 'offer' ? 'bg-primary' : 'bg-secondary')} />
-        <CardHeader className="pb-4 border-b border-white/5 relative z-10 px-6 pt-6">
-          <CardTitle className="flex items-center gap-3 text-sm font-bold text-white tracking-wide">
+        <CardHeader className="pb-4 border-b border-border/70 dark:border-white/10 relative z-10 px-5 pt-5">
+          <CardTitle className="flex items-center gap-3 text-sm font-bold text-foreground tracking-wide">
             <div className={cn("p-1.5 rounded-lg border border-white/10 shadow-sm", variant === 'offer' ? 'bg-primary/10 text-primary' : 'bg-secondary/10 text-secondary')}>
               <Icon className="w-4 h-4" />
             </div>
             <span className="uppercase tracking-widest text-[11px]">{title}</span>
-            <Badge variant="secondary" className="ml-auto text-[9px] uppercase font-bold px-2 py-0.5 bg-white/5 text-muted-foreground border border-white/10 rounded-md">
+            <Badge variant="secondary" className="ml-auto text-[9px] uppercase font-bold px-2 py-0.5 bg-muted text-muted-foreground border border-border/70 dark:border-white/10 rounded-md">
               {skills.length}
             </Badge>
             {isOwner && (
@@ -137,16 +138,16 @@ function SkillSection({
         </CardHeader>
         <CardContent className="pt-6 px-6 pb-6 relative z-10">
           {skills.length === 0 ? (
-            <div className="flex flex-col items-center justify-center gap-3 py-10 px-4 text-center rounded-[1rem] bg-black/20 border border-white/5 border-dashed">
-              <div className="w-10 h-10 rounded-full bg-white/5 flex items-center justify-center border border-white/10">
+          <div className="flex flex-col items-center justify-center gap-3 py-10 px-4 text-center rounded-xl bg-background/70 border border-border/70 border-dashed dark:border-white/10 dark:bg-black/20">
+              <div className="w-10 h-10 rounded-xl bg-muted flex items-center justify-center border border-border/70 dark:border-white/10">
                 <Icon className="w-4 h-4 text-muted-foreground/40" />
               </div>
               <div className="space-y-1">
                 <p className="text-xs font-medium text-muted-foreground">{emptyText}</p>
               </div>
               {isOwner && (
-                <Button size="sm" variant="outline" className="mt-2 rounded-lg px-4 text-[9px] uppercase tracking-widest font-bold h-8 border-white/10 bg-white/5 hover:bg-primary/20 hover:border-primary/50 transition-all text-foreground" onClick={onAdd}>
-                  <Plus className="h-3 w-3 mr-1.5" /> Add Data
+                <Button size="sm" variant="outline" className="mt-2 rounded-lg px-4 text-[9px] uppercase tracking-widest font-bold h-8" onClick={onAdd}>
+                  <Plus className="h-3 w-3 mr-1.5" /> Add Skill
                 </Button>
               )}
             </div>
@@ -188,7 +189,7 @@ function ReviewCard({ review }: { review: Review }) {
 
   return (
     <motion.div variants={itemVariants} className="h-full">
-      <div className="h-full p-6 bg-black/40 backdrop-blur-xl border border-white/5 rounded-[2rem] hover:border-white/10 transition-all duration-500 shadow-[inset_0_1px_0_0_hsla(0,0%,100%,0.05)] group relative overflow-hidden">
+      <div className="app-card app-card-hover h-full p-5 group relative overflow-hidden">
         <div className="absolute inset-0 bg-gradient-to-br from-primary/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-700 pointer-events-none" />
         <div className="relative z-10 flex items-start gap-5">
           <Avatar className="w-12 h-12 shrink-0 ring-1 ring-white/10 group-hover:ring-primary/40 transition-all duration-500 shadow-sm bg-black/60">
@@ -199,7 +200,7 @@ function ReviewCard({ review }: { review: Review }) {
             <div className="flex items-center justify-between gap-3 mb-2">
               <Link
                 to={`/profile/${reviewer?.id}`}
-                className="font-headline font-bold text-sm hover:text-primary transition-colors truncate text-white"
+                className="font-headline font-bold text-sm hover:text-primary transition-colors truncate text-foreground"
               >
                 {reviewer?.name ?? 'Anonymous User'}
               </Link>
@@ -509,39 +510,34 @@ export default function ProfilePage() {
 
   return (
     <DashboardLayout>
-      <div className="max-w-5xl mx-auto px-4 py-6 space-y-8">
+      <div className="max-w-5xl mx-auto px-4 py-5 md:py-7 space-y-7">
         {/* ── Premium Profile Header ── */}
         <motion.div
           initial={{ opacity: 0, y: -16 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.5, ease: 'easeOut' }}
         >
-          <div className="relative overflow-hidden rounded-3xl border border-primary/20 shadow-[0_8px_32px_-8px_hsl(var(--primary)/0.25)] bg-card group">
+          <div className="app-shell relative overflow-hidden group">
             {/* Cover banner with glassmorphic layers */}
-            <div 
-              className="relative h-56 sm:h-72 w-full bg-gradient-to-br from-primary/80 via-accent/80 to-secondary/80 overflow-hidden" 
+            <div
+              className="relative h-48 sm:h-60 w-full bg-muted overflow-hidden"
               style={localCover ? { backgroundImage: `url(${localCover})`, backgroundSize: 'cover', backgroundPosition: 'center' } : undefined}
             >
               {!localCover && (
-                <img 
-                  src="https://images.unsplash.com/photo-1550751827-4bd374c3f58b?q=80&w=2000&auto=format&fit=crop" 
-                  alt="Default Cover" 
-                  className="absolute inset-0 w-full h-full object-cover opacity-40 mix-blend-luminosity grayscale group-hover:scale-105 group-hover:grayscale-0 transition-all duration-700" 
+                <img
+                  src={appVisuals.profileShowcase}
+                  alt="Portfolio and skill showcase workspace"
+                  className="absolute inset-0 w-full h-full object-cover group-hover:scale-[1.03] transition-transform duration-700"
                 />
               )}
-              {/* Vibrant abstract blobs and overlays */}
-              <div className="absolute inset-0 bg-background/30 backdrop-blur-[2px] mix-blend-overlay z-10" />
-              <div className="animate-blob absolute -top-20 -left-10 h-72 w-72 rounded-full bg-primary/50 blur-[80px] mix-blend-screen z-10" />
-              <div className="animate-blob absolute -bottom-20 -right-10 h-72 w-72 rounded-full bg-secondary/50 blur-[80px] mix-blend-screen z-10" style={{ animationDelay: '4s' }} />
-              <div className="dot-grid absolute inset-0 opacity-30 mix-blend-overlay z-10" />
-              <div className="absolute inset-0 bg-gradient-to-t from-card via-card/50 to-transparent z-20" />
-              <div className="absolute inset-0 bg-gradient-to-r from-card/80 via-transparent to-transparent z-20" />
+              <div className="absolute inset-0 bg-gradient-to-t from-card via-card/30 to-transparent z-20" />
+              <div className="absolute inset-0 bg-gradient-to-r from-card/85 via-card/20 to-transparent z-20" />
 
               {isOwnProfile && (
                 <Button
                   variant="outline"
                   size="icon"
-                  className="absolute top-4 right-4 z-30 bg-background/50 hover:bg-background/80 backdrop-blur-md border-white/20 shadow-lg text-foreground transition-all duration-300 hover:scale-105"
+                  className="absolute top-4 right-4 z-30 bg-background/70 hover:bg-background backdrop-blur-md"
                   onClick={() => setCoverDialogOpen(true)}
                 >
                   <Camera className="w-4 h-4" />
@@ -549,16 +545,16 @@ export default function ProfilePage() {
               )}
             </div>
 
-            <div className="relative z-30 px-6 sm:px-10 pb-8">
+            <div className="relative z-30 px-5 sm:px-8 pb-7">
               {/* Avatar + Action Buttons Row */}
-              <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-6 -mt-16 sm:-mt-20 mb-6">
+              <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-5 -mt-14 sm:-mt-16 mb-5">
                 <motion.div 
                   initial={{ scale: 0.8, y: 10 }}
                   animate={{ scale: 1, y: 0 }}
                   transition={{ type: "spring", stiffness: 300, damping: 20 }}
                   className="relative group/avatar cursor-pointer shrink-0"
                 >
-                  <Avatar className="w-32 h-32 sm:w-40 sm:h-40 border-[4px] border-card ring-1 ring-white/10 shadow-2xl transition-all duration-500 group-hover/avatar:ring-primary/40 group-hover/avatar:shadow-[0_0_30px_hsl(var(--primary)/0.3)] bg-black/40 backdrop-blur-md">
+                  <Avatar className="w-28 h-28 sm:w-32 sm:h-32 border-[4px] border-card ring-1 ring-border shadow-xl transition-all duration-300 group-hover/avatar:ring-primary/30 bg-card">
                     <AvatarImage
                       src={profileUser.avatar}
                       alt={profileUser.name}
@@ -584,20 +580,20 @@ export default function ProfilePage() {
                 <div className="flex flex-wrap items-center gap-3 w-full sm:w-auto">
                   {isOwnProfile ? (
                     <>
-                      <Button variant="outline" size="sm" className="bg-black/20 backdrop-blur-md border-white/5 hover:bg-white/5 hover:border-white/10 shadow-[inset_0_1px_0_0_hsla(0,0%,100%,0.05)] flex-1 sm:flex-none text-[10px] uppercase tracking-widest font-bold" asChild>
+                      <Button variant="outline" size="sm" className="flex-1 sm:flex-none text-[10px] uppercase tracking-widest font-bold" asChild>
                         <Link to="/settings">
                           <Settings className="w-4 h-4 mr-2 text-muted-foreground group-hover:text-foreground transition-colors" />
                           Settings
                         </Link>
                       </Button>
-                      <Button size="sm" className="bg-primary/20 hover:bg-primary/30 text-primary border border-primary/30 hover:border-primary/50 shadow-[0_0_20px_hsl(var(--primary)/0.2)] flex-1 sm:flex-none text-[10px] uppercase tracking-widest font-bold transition-all" onClick={() => navigate('/settings')}>
+                      <Button size="sm" className="flex-1 sm:flex-none text-[10px] uppercase tracking-widest font-bold" onClick={() => navigate('/settings')}>
                         <Pencil className="w-4 h-4 mr-2" />
                         Edit Profile
                       </Button>
                     </>
                   ) : (
                     <>
-                      <Button variant="outline" size="sm" className="bg-black/20 backdrop-blur-md border-white/5 hover:bg-white/5 hover:border-white/10 shadow-[inset_0_1px_0_0_hsla(0,0%,100%,0.05)] flex-1 sm:flex-none text-[10px] uppercase tracking-widest font-bold" onClick={async () => {
+                      <Button variant="outline" size="sm" className="flex-1 sm:flex-none text-[10px] uppercase tracking-widest font-bold" onClick={async () => {
                         const url = window.location.href;
                         if (navigator.share) {
                           try { await navigator.share({ title: profileUser.name, url }); } catch { /* user cancelled */ }
@@ -609,7 +605,7 @@ export default function ProfilePage() {
                         <Share2 className="w-4 h-4 mr-2 text-muted-foreground transition-colors" />
                         Share
                       </Button>
-                      <Button variant="outline" size="sm" className="bg-black/20 backdrop-blur-md border-white/5 hover:bg-white/5 hover:border-white/10 shadow-[inset_0_1px_0_0_hsla(0,0%,100%,0.05)] flex-1 sm:flex-none text-[10px] uppercase tracking-widest font-bold" onClick={() => navTo(`/messages/${profileUser.id}`)}>
+                      <Button variant="outline" size="sm" className="flex-1 sm:flex-none text-[10px] uppercase tracking-widest font-bold" onClick={() => navTo(`/messages/${profileUser.id}`)}>
                         <MessageSquare className="w-4 h-4 mr-2 text-primary transition-colors" />
                         Message
                       </Button>
@@ -645,22 +641,22 @@ export default function ProfilePage() {
               {/* Name and Meta */}
               <div className="space-y-4">
                 <div className="flex flex-wrap items-center gap-3">
-                  <h1 className="text-3xl sm:text-4xl font-extrabold font-headline tracking-tight text-foreground drop-shadow-sm">
+                  <h1 className="text-3xl sm:text-4xl font-extrabold font-headline tracking-tight text-foreground">
                     {profileUser.name}
                   </h1>
                   <SkillExScoreBadge score={profileUser.skillexScore} />
                 </div>
 
                 <div className="flex flex-wrap items-center gap-y-2 gap-x-5 text-[10px] uppercase font-bold tracking-widest text-muted-foreground">
-                  <span className="flex items-center gap-1.5 bg-white/5 px-4 py-1.5 rounded-full border border-white/10 shadow-[inset_0_1px_0_0_hsla(0,0%,100%,0.05)]">
+                  <span className="flex items-center gap-1.5 bg-background/70 px-4 py-1.5 rounded-full border border-border/70 dark:border-white/10 dark:bg-white/5">
                     <MapPin className="w-4 h-4 text-primary/70" />
                     {profileUser.university}
                   </span>
-                  <span className="flex items-center gap-1.5 bg-white/5 px-4 py-1.5 rounded-full border border-white/10 shadow-[inset_0_1px_0_0_hsla(0,0%,100%,0.05)]">
+                  <span className="flex items-center gap-1.5 bg-background/70 px-4 py-1.5 rounded-full border border-border/70 dark:border-white/10 dark:bg-white/5">
                     <Award className="w-4 h-4 text-warning/70" />
                     {profileUser.level}
                   </span>
-                  <span className="flex items-center gap-1.5 bg-white/5 px-4 py-1.5 rounded-full border border-white/10 shadow-[inset_0_1px_0_0_hsla(0,0%,100%,0.05)]">
+                  <span className="flex items-center gap-1.5 bg-background/70 px-4 py-1.5 rounded-full border border-border/70 dark:border-white/10 dark:bg-white/5">
                     <Clock className="w-4 h-4 text-blue-500/70" />
                     Joined{' '}
                     {new Date(profileUser.joinedAt).toLocaleDateString('en-US', {
@@ -672,7 +668,7 @@ export default function ProfilePage() {
 
                 {profileUser.bio && (
                   <div className="pt-2">
-                    <p className="text-[15px] text-foreground/90 max-w-3xl leading-relaxed bg-black/20 border border-white/5 p-5 rounded-[1.5rem] backdrop-blur-md shadow-[inset_0_1px_0_0_hsla(0,0%,100%,0.05)] border-l-2 border-l-primary relative overflow-hidden">
+                    <p className="text-[15px] text-foreground/90 max-w-3xl leading-relaxed bg-background/70 border border-border/70 p-5 rounded-2xl backdrop-blur-md border-l-2 border-l-primary relative overflow-hidden dark:border-white/10 dark:bg-black/20">
                       <span className="absolute -top-4 -left-2 text-6xl text-primary/10 select-none font-serif z-0">"</span>
                       <span className="relative z-10">{profileUser.bio}</span>
                     </p>
@@ -681,7 +677,7 @@ export default function ProfilePage() {
               </div>
 
               {/* Stats Row */}
-              <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mt-8 pt-6 border-t border-white/5">
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mt-7 pt-5 border-t border-border/70 dark:border-white/10">
                 <StatCard
                   icon={Play}
                   label="Sessions"
@@ -782,10 +778,10 @@ export default function ProfilePage() {
               <motion.div variants={itemVariants} className="h-full">
                 <SkillSection
                   id="skills-offered"
-                  title="Outgoing Payload"
+                  title="Can teach"
                   skills={offeredSkills}
                   icon={CheckCircle}
-                  emptyText="No outgoing modules."
+                  emptyText="Add a skill you can offer."
                   variant="offer"
                   emphasized={emphasizeOfferedSkills}
                   isOwner={isOwnProfile}
@@ -794,10 +790,10 @@ export default function ProfilePage() {
               </motion.div>
               <motion.div variants={itemVariants} className="h-full">
                 <SkillSection
-                  title="Incoming Query"
+                  title="Wants to learn"
                   skills={wantedSkills}
                   icon={BookOpen}
-                  emptyText="No incoming targets."
+                  emptyText="Add a skill you want to learn."
                   variant="want"
                   isOwner={isOwnProfile}
                   onAdd={() => setAddSkillMode('wanted')}
@@ -815,12 +811,12 @@ export default function ProfilePage() {
                       <TrendingUp className="w-5 h-5 text-primary drop-shadow-[0_0_8px_rgba(var(--primary),0.5)]" />
                     </div>
                     <div>
-                      <h3 className="text-sm font-bold font-headline text-white tracking-wide">Evolution Metrics</h3>
+                      <h3 className="text-sm font-bold font-headline text-foreground tracking-wide">Skill Progress</h3>
                       <p className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground mt-0.5">Rank {profileUser.level}</p>
                     </div>
                   </div>
                   <div className="text-right">
-                    <span className="text-2xl font-extrabold font-headline text-white drop-shadow-sm">{profileUser.skillexScore}</span>
+                    <span className="text-2xl font-extrabold font-headline text-foreground">{profileUser.skillexScore}</span>
                     <span className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground ml-1">/ {Math.ceil(profileUser.skillexScore / 500) * 500} XP</span>
                   </div>
                 </div>
@@ -834,7 +830,7 @@ export default function ProfilePage() {
                   />
                 </div>
                 <p className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground mt-4 text-center sm:text-left z-10 relative">
-                  <span className="text-white drop-shadow-sm">{Math.ceil(profileUser.skillexScore / 500) * 500 - profileUser.skillexScore} XP</span> required for next tier.
+                  <span className="text-foreground">{Math.ceil(profileUser.skillexScore / 500) * 500 - profileUser.skillexScore} XP</span> required for next tier.
                 </p>
               </div>
             </motion.div>
@@ -847,11 +843,11 @@ export default function ProfilePage() {
                 <div className="w-16 h-16 mx-auto rounded-full bg-white/5 border border-white/10 flex items-center justify-center mb-4">
                   <Star className="w-8 h-8 text-muted-foreground/30" />
                 </div>
-                <p className="text-[11px] font-bold uppercase tracking-widest text-muted-foreground mb-6">No evaluations recorded.</p>
+                <p className="text-[11px] font-bold uppercase tracking-widest text-muted-foreground mb-6">No reviews yet.</p>
                 {!isOwnProfile && (
                   <Button size="sm" className="rounded-xl px-6 text-[10px] uppercase font-bold tracking-widest bg-primary/20 text-primary border border-primary/30 hover:bg-primary/30 transition-all shadow-[0_0_15px_rgba(var(--primary),0.2)]" onClick={() => setReviewDialogOpen(true)}>
                     <Plus className="w-3.5 h-3.5 mr-2" />
-                    Submit Evaluation
+                    Leave Review
                   </Button>
                 )}
               </div>
@@ -963,35 +959,35 @@ export default function ProfilePage() {
                 <div className="relative z-10 text-center sm:text-left">
                   <h3 className="text-sm font-bold font-headline text-white tracking-wide">
                     {isConnected
-                      ? `Neural link established with ${profileUser.name}`
-                      : `Request link with ${profileUser.name}?`}
+                      ? `You are connected with ${profileUser.name}`
+                      : `Connect with ${profileUser.name}?`}
                   </h3>
                   <p className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground mt-1 max-w-lg leading-relaxed">
                     {isConnected
-                      ? 'Secure channel available for direct communication and coordination.'
+                      ? 'You can message, coordinate, and plan a skill exchange directly.'
                       : isPendingSent
-                        ? 'Handshake request transmitted. Awaiting node authentication.'
+                        ? 'Your connection request is waiting for a response.'
                         : isPendingReceived
-                          ? `${profileUser.name.split(' ')[0]} has transmitted a handshake request.`
-                          : 'Initiate a secure handshake to unlock direct channels and sync parameters.'}
+                          ? `${profileUser.name.split(' ')[0]} sent you a connection request.`
+                          : 'Send a short request to open direct messaging and plan an exchange.'}
                   </p>
                 </div>
                 <div className="relative z-10 shrink-0 w-full sm:w-auto">
                   {connectionLoading ? (
                     <Button disabled className="w-full sm:w-auto rounded-xl text-[10px] font-bold uppercase tracking-widest shadow-none bg-white/5 border border-white/10 text-muted-foreground">Syncing...</Button>
                   ) : isConnected ? (
-                    <Button disabled className="w-full sm:w-auto rounded-xl text-[10px] font-bold uppercase tracking-widest bg-emerald-500/10 text-emerald-500 border border-emerald-500/20 shadow-[0_0_15px_rgba(16,185,129,0.15)]">Link Active</Button>
+                    <Button disabled className="w-full sm:w-auto rounded-xl text-[10px] font-bold uppercase tracking-widest bg-emerald-500/10 text-emerald-500 border border-emerald-500/20 shadow-[0_0_15px_rgba(16,185,129,0.15)]">Connected</Button>
                   ) : isPendingSent ? (
-                    <Button disabled className="w-full sm:w-auto rounded-xl text-[10px] font-bold uppercase tracking-widest bg-white/5 border border-white/10 text-muted-foreground">Transmitting</Button>
+                    <Button disabled className="w-full sm:w-auto rounded-xl text-[10px] font-bold uppercase tracking-widest bg-white/5 border border-white/10 text-muted-foreground">Pending</Button>
                   ) : isPendingReceived ? (
                     <Button className="w-full sm:w-auto rounded-xl text-[10px] font-bold uppercase tracking-widest bg-primary/20 text-primary border border-primary/30 hover:border-primary/50 shadow-[0_0_20px_hsl(var(--primary)/0.2)] transition-all" onClick={handleAcceptIncomingConnection} disabled={connectionBusy}>
                       <UserPlus className="w-4 h-4 mr-2" />
-                      {connectionBusy ? 'Authenticating...' : 'Accept Protocol'}
+                      {connectionBusy ? 'Accepting...' : 'Accept Request'}
                     </Button>
                   ) : (
                     <Button className="w-full sm:w-auto rounded-xl text-[10px] font-bold uppercase tracking-widest bg-primary text-primary-foreground shadow-[0_0_20px_hsl(var(--primary)/0.3)] hover:bg-primary/90 transition-all border-0" onClick={openConnectDialog} disabled={connectionBusy}>
                       <UserPlus className="w-4 h-4 mr-2 drop-shadow-sm" />
-                      Initiate Handshake
+                      Connect
                     </Button>
                   )}
                 </div>

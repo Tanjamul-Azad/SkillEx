@@ -784,7 +784,7 @@ function ConnectionsTab({
 
   if (connections.length === 0) {
     return (
-      <div className="flex flex-col items-center justify-center py-10 text-center p-4">
+      <div className="flex flex-col items-center justify-center p-4 py-6 text-center">
         <Users className="h-8 w-8 text-muted-foreground/40 mb-3" />
         <p className="text-sm font-semibold text-foreground">No quick requests</p>
         <p className="mt-1 text-xs text-muted-foreground">
@@ -802,7 +802,7 @@ function ConnectionsTab({
       <p className="text-[11px] text-muted-foreground">
         Quick actions only. All requests remain in <Link to="/connections" className="text-primary hover:underline">Connections</Link>.
       </p>
-      {connections.slice(0, 4).map((conn, i) => {
+      {connections.slice(0, 3).map((conn, i) => {
         const partner = conn.requester.id === currentUserId ? conn.receiver : conn.requester;
         return (
           <motion.div
@@ -1444,7 +1444,7 @@ export default function DashboardPage() {
   const sentPendingExchanges = exchanges
     .filter((exchange) => exchange.status?.toLowerCase() === 'pending' && exchange.requester.id === currentUserId)
     .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
-  const REQUEST_PREVIEW_LIMIT = 8;
+  const REQUEST_PREVIEW_LIMIT = 2;
   const hasMoreReceivedRequests = incomingPendingExchanges.length > REQUEST_PREVIEW_LIMIT;
   const hasMoreSentRequests = sentPendingExchanges.length > REQUEST_PREVIEW_LIMIT;
   const activeTabHasMore = requestTab === 'received' ? hasMoreReceivedRequests : hasMoreSentRequests;
@@ -1567,28 +1567,28 @@ export default function DashboardPage() {
   const renderReceivedRequestRow = (exchange: Exchange) => {
     const busy = Boolean(incomingExchangeBusy[exchange.id]);
     return (
-      <div key={exchange.id} className="flex items-center gap-3 rounded-lg border border-border/60 bg-muted/20 px-3 py-2.5">
-        <Avatar className="h-8 w-8 ring-1 ring-border">
-          <AvatarImage src={exchange.requester.avatar ?? undefined} />
-          <AvatarFallback className="text-xs font-semibold">
-            {exchange.requester.name.charAt(0)}
-          </AvatarFallback>
-        </Avatar>
-        <div className="min-w-0 flex-1">
-          <button
-            type="button"
-            className="truncate text-left text-sm font-semibold text-foreground hover:text-primary"
-            onClick={() => navigate(`/profile/${exchange.requester.id}`)}
-          >
-            {exchange.requester.name}
-          </button>
-          <div className="flex items-center justify-between gap-2">
+      <div key={exchange.id} className="flex flex-col gap-3 rounded-lg border border-border/60 bg-muted/20 px-3 py-2.5">
+        <div className="flex min-w-0 flex-1 items-center gap-3">
+          <Avatar className="h-8 w-8 shrink-0 ring-1 ring-border">
+            <AvatarImage src={exchange.requester.avatar ?? undefined} />
+            <AvatarFallback className="text-xs font-semibold">
+              {exchange.requester.name.charAt(0)}
+            </AvatarFallback>
+          </Avatar>
+          <div className="min-w-0 flex-1">
+            <button
+              type="button"
+              className="block max-w-full truncate text-left text-sm font-semibold text-foreground hover:text-primary"
+              onClick={() => navigate(`/profile/${exchange.requester.id}`)}
+            >
+              {exchange.requester.name}
+            </button>
             <p className="truncate text-[11px] text-muted-foreground">
               {exchange.offeredSkill ? `Offers ${exchange.offeredSkill.name}` : 'Sent you an exchange request'}
             </p>
           </div>
         </div>
-        <div className="flex items-center gap-2 pl-2">
+        <div className="flex w-full items-center justify-end gap-2">
           <span className="shrink-0 text-[10px] font-semibold uppercase tracking-wide text-muted-foreground/80">
             {formatTimeAgo(exchange.createdAt)}
           </span>
@@ -1617,28 +1617,28 @@ export default function DashboardPage() {
   const renderSentRequestRow = (exchange: Exchange) => {
     const busy = Boolean(incomingExchangeBusy[exchange.id]);
     return (
-      <div key={exchange.id} className="flex items-center gap-3 rounded-lg border border-border/60 bg-muted/20 px-3 py-2.5">
-        <Avatar className="h-8 w-8 ring-1 ring-border">
-          <AvatarImage src={exchange.receiver.avatar ?? undefined} />
-          <AvatarFallback className="text-xs font-semibold">
-            {exchange.receiver.name.charAt(0)}
-          </AvatarFallback>
-        </Avatar>
-        <div className="min-w-0 flex-1">
-          <button
-            type="button"
-            className="truncate text-left text-sm font-semibold text-foreground hover:text-primary"
-            onClick={() => navigate(`/profile/${exchange.receiver.id}`)}
-          >
-            {exchange.receiver.name}
-          </button>
-          <div className="flex items-center justify-between gap-2">
+      <div key={exchange.id} className="flex flex-col gap-3 rounded-lg border border-border/60 bg-muted/20 px-3 py-2.5">
+        <div className="flex min-w-0 flex-1 items-center gap-3">
+          <Avatar className="h-8 w-8 shrink-0 ring-1 ring-border">
+            <AvatarImage src={exchange.receiver.avatar ?? undefined} />
+            <AvatarFallback className="text-xs font-semibold">
+              {exchange.receiver.name.charAt(0)}
+            </AvatarFallback>
+          </Avatar>
+          <div className="min-w-0 flex-1">
+            <button
+              type="button"
+              className="block max-w-full truncate text-left text-sm font-semibold text-foreground hover:text-primary"
+              onClick={() => navigate(`/profile/${exchange.receiver.id}`)}
+            >
+              {exchange.receiver.name}
+            </button>
             <p className="truncate text-[11px] text-muted-foreground">
               {exchange.wantedSkill ? `Requested ${exchange.wantedSkill.name}` : 'Waiting for response'}
             </p>
           </div>
         </div>
-        <div className="flex items-center gap-2 pl-2">
+        <div className="flex w-full items-center justify-end gap-2">
           <span className="shrink-0 text-[10px] font-semibold uppercase tracking-wide text-muted-foreground/80">
             {formatTimeAgo(exchange.createdAt)}
           </span>
@@ -1748,63 +1748,6 @@ export default function DashboardPage() {
           </div>
         )}
 
-        <div id="exchange-requests" className="md:col-span-3 lg:col-span-4">
-          <ScrollReveal animation="fade-up" delay={0.09}>
-            <Card className="border-border/60 bg-card dark:border-white/[0.07]">
-              <CardContent className="p-4">
-                <div className="mb-3 flex items-center justify-between gap-2">
-                  <h3 className="flex items-center gap-2 text-sm font-semibold text-foreground">
-                    <Inbox className="h-4 w-4 text-primary" />
-                    Exchange Requests
-                  </h3>
-                  <div className="flex items-center gap-2">
-                    <Badge variant="secondary" className="text-[10px] rounded-full">
-                      {incomingPendingExchanges.length + sentPendingExchanges.length} total
-                    </Badge>
-                    {activeTabHasMore && (
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        className="h-7 rounded-md px-2 text-[11px] font-semibold text-primary hover:bg-primary/10"
-                        onClick={() => setRequestsModalOpen(true)}
-                      >
-                        See all
-                      </Button>
-                    )}
-                  </div>
-                </div>
-
-                <Tabs value={requestTab} onValueChange={(value) => setRequestTab(value as 'received' | 'sent')} className="w-full">
-                  <TabsList className="h-9 w-full rounded-xl border border-border/50 bg-muted/30 p-1 sm:w-auto">
-                    <TabsTrigger value="received" className="text-[11px] font-semibold">
-                      Received ({incomingPendingExchanges.length})
-                    </TabsTrigger>
-                    <TabsTrigger value="sent" className="text-[11px] font-semibold">
-                      Sent ({sentPendingExchanges.length})
-                    </TabsTrigger>
-                  </TabsList>
-
-                  <TabsContent value="received" className="mt-3 space-y-2">
-                    {incomingPendingExchanges.length === 0 ? (
-                      <p className="rounded-lg border border-dashed border-border/60 px-3 py-4 text-xs text-muted-foreground">
-                        No incoming requests right now.
-                      </p>
-                    ) : incomingPendingExchanges.slice(0, REQUEST_PREVIEW_LIMIT).map(renderReceivedRequestRow)}
-                  </TabsContent>
-
-                  <TabsContent value="sent" className="mt-3 space-y-2">
-                    {sentPendingExchanges.length === 0 ? (
-                      <p className="rounded-lg border border-dashed border-border/60 px-3 py-4 text-xs text-muted-foreground">
-                        You have not sent any pending requests.
-                      </p>
-                    ) : sentPendingExchanges.slice(0, REQUEST_PREVIEW_LIMIT).map(renderSentRequestRow)}
-                  </TabsContent>
-                </Tabs>
-              </CardContent>
-            </Card>
-          </ScrollReveal>
-        </div>
-
         {/* ══ STATS (4 columns) ═════════════════════════════════════════ */}
         {statCards.map((card, i) => (
           <div key={card.title} className="col-span-1">
@@ -1839,15 +1782,20 @@ export default function DashboardPage() {
           </ScrollReveal>
         </div>
 
-        {/* RIGHT COLUMN SIDEBAR TABS (Tall Bento) ═══════════════════════ */}
-        <div className="col-span-1 md:col-span-3 lg:col-span-1 lg:row-span-4 flex flex-col h-[500px] lg:h-auto">
+        {/* Compact network widget */}
+        <div className="col-span-1 md:col-span-1 lg:col-span-1 flex h-[320px] flex-col">
           <ScrollReveal animation="fade-left" delay={0.18} className="h-full flex-1 w-full bg-card rounded-3xl border border-white/5 shadow-sm overflow-hidden flex flex-col">
             <div className="p-4 pb-0 flex items-center justify-between">
               <h2 className="flex items-center gap-2 font-headline text-[13px] font-bold text-foreground uppercase tracking-widest">
                 <Users className="h-4 w-4 text-primary" />
                 Network
               </h2>
-              {pendingConnectionCount > 0 && <Badge className="text-[9px] rounded-full bg-primary/20 text-primary hover:bg-primary/30 border-0">{pendingConnectionCount} pending</Badge>}
+              <div className="flex items-center gap-2">
+                {pendingConnectionCount > 0 && <Badge className="text-[9px] rounded-full bg-primary/20 text-primary hover:bg-primary/30 border-0">{pendingConnectionCount} pending</Badge>}
+                <Button asChild variant="ghost" size="sm" className="h-7 px-2 text-xs text-primary">
+                  <Link to="/connections">Open</Link>
+                </Button>
+              </div>
             </div>
             <Tabs defaultValue="connections" className="flex-1 flex flex-col min-h-0 mt-3">
               <div className="px-4">
@@ -1886,22 +1834,9 @@ export default function DashboardPage() {
           </ScrollReveal>
         </div>
 
-        {/* ══ BENTO ROW 3 (Carousel + Tasks) ═══════════════════════════ */}
-        <div className="md:col-span-2 lg:col-span-2 min-h-[140px] flex flex-col">
-          <ScrollReveal animation="fade-up" delay={0.24} className="h-full flex-1 w-full bg-card rounded-3xl border border-white/5 p-4 overflow-hidden shadow-[inset_0_1px_0_0_hsla(0,0%,100%,0.05)]">
-             <SessionCarousel exchanges={exchanges} currentUserId={currentUserId} />
-          </ScrollReveal>
-        </div>
-        
-        <div className="col-span-1 md:col-span-1 h-full flex flex-col">
-          <ScrollReveal animation="fade-left" delay={0.26} className="h-full flex-1">
-            <TaskProgressWidget />
-          </ScrollReveal>
-        </div>
-
-        {/* ══ BENTO ROW 4 (Active Exchanges & Sessions) ═════════════════ */}
-        <div className="col-span-1 md:col-span-3 lg:col-span-2 flex flex-col min-h-[300px]">
-          <ScrollReveal animation="fade-up" delay={0.25} className="h-full flex flex-col bg-card rounded-3xl border border-white/5 overflow-hidden p-4 shadow-[inset_0_1px_0_0_hsla(0,0%,100%,0.05)]">
+        {/* ══ PRIORITY WORK ROW (Active Exchanges & Sessions) ═════════════ */}
+        <div className="col-span-1 md:col-span-2 lg:col-span-2 flex flex-col min-h-[260px]">
+          <ScrollReveal animation="fade-up" delay={0.08} className="h-full flex flex-col bg-card rounded-3xl border border-white/5 overflow-hidden p-4 shadow-[inset_0_1px_0_0_hsla(0,0%,100%,0.05)]">
              <SectionHeading icon={Zap} action={
                 <Button asChild variant="ghost" size="sm" className="h-7 text-xs font-semibold text-primary hover:bg-primary/10">
                   <Link to="/match">Explore <ArrowRight className="ml-1 h-3 w-3" /></Link>
@@ -1909,7 +1844,7 @@ export default function DashboardPage() {
               }>
                 Active Exchanges
               </SectionHeading>
-              
+
               <div className="flex-1 overflow-y-auto custom-scrollbar -mx-2 px-2 pb-2">
                 {loading ? (
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-3"><ExchangeSkeleton /><ExchangeSkeleton /></div>
@@ -1917,7 +1852,7 @@ export default function DashboardPage() {
                   <EmptyExchanges />
                 ) : (
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                    {activeExchanges.map(ex => (
+                    {activeExchanges.slice(0, 4).map(ex => (
                       <ExchangeCard
                         key={ex.id}
                         exchange={ex}
@@ -1931,8 +1866,8 @@ export default function DashboardPage() {
           </ScrollReveal>
         </div>
 
-        <div className="col-span-1 md:col-span-3 lg:col-span-1 flex flex-col min-h-[300px]">
-           <ScrollReveal animation="fade-up" delay={0.28} className="h-full flex flex-col bg-card rounded-3xl border border-white/5 overflow-hidden p-4 shadow-[inset_0_1px_0_0_hsla(0,0%,100%,0.05)]">
+        <div className="col-span-1 md:col-span-1 lg:col-span-1 flex flex-col min-h-[260px]">
+           <ScrollReveal animation="fade-up" delay={0.1} className="h-full flex flex-col bg-card rounded-3xl border border-white/5 overflow-hidden p-4 shadow-[inset_0_1px_0_0_hsla(0,0%,100%,0.05)]">
              <SectionHeading icon={CalendarDays}>Upcoming</SectionHeading>
              <div className="flex-1 overflow-y-auto overflow-x-hidden custom-scrollbar -mx-2 px-2">
                <UpcomingSessionsSection
@@ -1945,6 +1880,75 @@ export default function DashboardPage() {
            </ScrollReveal>
         </div>
 
+        <div id="exchange-requests" className="col-span-1 md:col-span-3 lg:col-span-1 flex h-[260px] flex-col">
+          <ScrollReveal animation="fade-left" delay={0.12} className="h-full">
+            <Card className="h-full border-border/60 bg-card dark:border-white/[0.07]">
+              <CardContent className="flex h-full flex-col p-3.5">
+                <div className="mb-2.5 flex items-center justify-between gap-2">
+                  <h3 className="flex items-center gap-2 text-sm font-semibold text-foreground">
+                    <Inbox className="h-4 w-4 text-primary" />
+                    Requests
+                  </h3>
+                  <div className="flex items-center gap-2">
+                    <Badge variant="secondary" className="text-[10px] rounded-full">
+                      {incomingPendingExchanges.length + sentPendingExchanges.length} total
+                    </Badge>
+                    {activeTabHasMore && (
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        className="h-7 rounded-md px-2 text-[11px] font-semibold text-primary hover:bg-primary/10"
+                        onClick={() => setRequestsModalOpen(true)}
+                      >
+                        See all
+                      </Button>
+                    )}
+                  </div>
+                </div>
+
+                <Tabs value={requestTab} onValueChange={(value) => setRequestTab(value as 'received' | 'sent')} className="flex min-h-0 w-full flex-1 flex-col">
+                  <TabsList className="h-8 w-full rounded-xl border border-border/50 bg-muted/30 p-1">
+                    <TabsTrigger value="received" className="text-[11px] font-semibold">
+                      Received ({incomingPendingExchanges.length})
+                    </TabsTrigger>
+                    <TabsTrigger value="sent" className="text-[11px] font-semibold">
+                      Sent ({sentPendingExchanges.length})
+                    </TabsTrigger>
+                  </TabsList>
+
+                  <TabsContent value="received" className="mt-2 min-h-0 flex-1 space-y-2 overflow-y-auto pr-1 custom-scrollbar">
+                    {incomingPendingExchanges.length === 0 ? (
+                      <p className="rounded-lg border border-dashed border-border/60 px-3 py-3 text-xs text-muted-foreground">
+                        No incoming requests right now.
+                      </p>
+                    ) : incomingPendingExchanges.slice(0, REQUEST_PREVIEW_LIMIT).map(renderReceivedRequestRow)}
+                  </TabsContent>
+
+                  <TabsContent value="sent" className="mt-2 min-h-0 flex-1 space-y-2 overflow-y-auto pr-1 custom-scrollbar">
+                    {sentPendingExchanges.length === 0 ? (
+                      <p className="rounded-lg border border-dashed border-border/60 px-3 py-3 text-xs text-muted-foreground">
+                        You have not sent any pending requests.
+                      </p>
+                    ) : sentPendingExchanges.slice(0, REQUEST_PREVIEW_LIMIT).map(renderSentRequestRow)}
+                  </TabsContent>
+                </Tabs>
+              </CardContent>
+            </Card>
+          </ScrollReveal>
+        </div>
+
+        {/* ══ BENTO ROW 3 (Carousel + Tasks) ═══════════════════════════ */}
+        <div className="md:col-span-2 lg:col-span-2 min-h-[140px] flex flex-col">
+          <ScrollReveal animation="fade-up" delay={0.24} className="h-full flex-1 w-full bg-card rounded-3xl border border-white/5 p-4 overflow-hidden shadow-[inset_0_1px_0_0_hsla(0,0%,100%,0.05)]">
+             <SessionCarousel exchanges={exchanges} currentUserId={currentUserId} />
+          </ScrollReveal>
+        </div>
+        
+        <div className="col-span-1 md:col-span-1 h-full flex flex-col">
+          <ScrollReveal animation="fade-left" delay={0.26} className="h-full flex-1">
+            <TaskProgressWidget />
+          </ScrollReveal>
+        </div>
       </div>
 
       <Dialog open={requestsModalOpen} onOpenChange={setRequestsModalOpen}>

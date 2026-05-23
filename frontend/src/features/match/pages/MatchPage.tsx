@@ -219,7 +219,7 @@ const FilterSidebar: FC<{
 
   return (
     <>
-      <aside className="hidden w-80 shrink-0 bg-card rounded-3xl border border-white/5 shadow-sm overflow-hidden shadow-[inset_0_1px_0_0_hsla(0,0%,100%,0.05)] md:block h-[calc(100vh-140px)] sticky top-24">
+      <aside className="hidden w-72 shrink-0 app-shell overflow-hidden md:block h-[calc(100vh-120px)] sticky top-20">
         {content}
       </aside>
 
@@ -286,7 +286,7 @@ const AIBestMatchCard: FC<{ match: MatchUser; currentUser: User | null }> = Reac
       <motion.div
         initial={{ opacity: 0, y: 8 }}
         animate={{ opacity: 1, y: 0 }}
-        className="group relative mb-6 overflow-hidden rounded-[2rem] border border-primary/30 shadow-[inset_0_1px_0_0_hsla(0,0%,100%,0.05)] hover:shadow-[0_12px_40px_-12px_hsl(var(--primary)/0.35)] transition-all duration-500 bg-card/80 backdrop-blur-md"
+        className="app-shell group relative mb-5 overflow-hidden transition-all duration-500 hover:border-primary/30"
       >
         {/* Dynamic Cover Image */}
         <div className="absolute inset-0 z-0">
@@ -312,7 +312,7 @@ const AIBestMatchCard: FC<{ match: MatchUser; currentUser: User | null }> = Reac
 
           <div className="grid grid-cols-1 gap-8 md:grid-cols-12 md:items-center">
             <div className="md:col-span-4">
-              <div className="flex items-center gap-4 rounded-3xl border border-white/5 bg-black/20 p-5 backdrop-blur-md shadow-sm">
+              <div className="app-card flex items-center gap-4 p-4">
                 <Avatar className="h-16 w-16 ring-4 ring-primary/20 shadow-[0_0_15px_hsl(var(--primary)/0.3)] bg-card">
                   <AvatarImage src={match.avatar ?? undefined} className="object-cover" />
                   <AvatarFallback className="font-bold text-lg bg-muted text-foreground">{match.name.charAt(0)}</AvatarFallback>
@@ -336,7 +336,7 @@ const AIBestMatchCard: FC<{ match: MatchUser; currentUser: User | null }> = Reac
 
             <div className="space-y-4 md:col-span-8 flex flex-col">
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4 auto-rows-min flex-1">
-                <div className="rounded-3xl border border-white/5 bg-black/20 p-5 backdrop-blur-md shadow-sm h-full">
+                <div className="app-card p-4 h-full">
                   <h4 className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground mb-4">Match Metrics</h4>
                   <div className="space-y-4">
                     <div className="space-y-2">
@@ -356,7 +356,7 @@ const AIBestMatchCard: FC<{ match: MatchUser; currentUser: User | null }> = Reac
                   </div>
                 </div>
 
-                <div className="rounded-3xl border border-white/5 bg-black/20 p-5 backdrop-blur-md shadow-sm flex flex-col justify-center h-full min-h-[140px]">
+                <div className="app-card p-4 flex flex-col justify-center h-full min-h-[140px]">
                   <SkillGraphCard
                     offeredSkills={match.wantsToLearnFromYou ?? []}
                     wantedSkills={match.teachesYou ?? []}
@@ -366,7 +366,7 @@ const AIBestMatchCard: FC<{ match: MatchUser; currentUser: User | null }> = Reac
               </div>
 
               {match.matchReasons.length > 0 && (
-                <div className="rounded-3xl border border-white/5 bg-black/20 p-4 mt-2 backdrop-blur-md shrink-0">
+                <div className="app-card p-4 mt-2 shrink-0">
                   <h4 className="text-[10px] font-bold uppercase tracking-widest text-primary/80 mb-3 flex items-center gap-2">
                     <Zap className="h-3 w-3" /> Why this match?
                   </h4>
@@ -451,7 +451,7 @@ const MatchCard: FC<{ match: MatchUser }> = React.memo(({ match }) => {
 
   return (
     <>
-      <Card className="group relative h-full overflow-hidden border-white/5 bg-card rounded-3xl shadow-[inset_0_1px_0_0_hsla(0,0%,100%,0.05)] transition-all duration-400 ease-snappy hover:-translate-y-1.5 hover:border-primary/30 hover:shadow-[0_12px_40px_-12px_hsl(var(--primary)/0.25)]">
+      <Card className="app-card app-card-hover group relative h-full overflow-hidden rounded-2xl">
         {/* Animated sheen line */}
         <div className="absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-white/20 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500 z-20" />
 
@@ -462,7 +462,7 @@ const MatchCard: FC<{ match: MatchUser }> = React.memo(({ match }) => {
           <div className="absolute inset-0 bg-gradient-to-t from-card via-card/90 to-transparent z-10" />
         </div>
 
-        <CardContent className="relative z-10 p-4 pt-12">
+        <CardContent className="relative z-10 p-4 pt-11">
           <div className="absolute top-10 right-4"><MatchScoreRing score={match.compatibilityScore} size={48} tone="secondary" className="drop-shadow-md"/></div>
           <div className="flex items-center gap-3 pr-14 relative z-20">
             <Avatar className="h-14 w-14 ring-4 ring-card group-hover:ring-primary/30 transition-all shadow-lg bg-card">
@@ -506,7 +506,7 @@ const MatchCard: FC<{ match: MatchUser }> = React.memo(({ match }) => {
             </div>
           )}
         </CardContent>
-        <div className="flex border-t border-white/5 bg-muted/10 h-10 mt-auto">
+        <div className="flex border-t border-border/70 bg-muted/10 h-10 mt-auto dark:border-white/10">
           <Button variant="ghost" className="w-1/2 h-full rounded-none rounded-bl-3xl text-xs font-bold uppercase tracking-wider hover:bg-white/5 transition-colors" asChild>
             <Link to={`/profile/${match.id}`}>Profile</Link>
           </Button>
@@ -1149,12 +1149,12 @@ export default function MatchPage() {
           mobileSheetOpen={mobileSheetOpen}
           setMobileSheetOpen={setMobileSheetOpen}
         />
-        <div className="flex-1 p-4 md:p-8">
+        <div className="flex-1 p-4 md:p-7">
           <div className="mx-auto max-w-7xl">
             <motion.div initial={{ opacity: 0, y: -20 }} animate={{ opacity: 1, y: 0 }}>
-              <h1 className="font-headline text-4xl font-extrabold tracking-tight">Find Your <span className="text-gradient-animated">Skill Match</span></h1>
-              <p className="mt-2 text-muted-foreground">AI-powered recommendations based on your unique skill profile.</p>
-              <div className="relative mt-6"><Search className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground" /><Input placeholder="Search by skill, name, or university..." className="pl-10 text-base" value={filters.search} onChange={(e) => setFilters({ ...filters, search: e.target.value })} /></div>
+              <h1 className="font-headline text-3xl md:text-4xl font-extrabold tracking-tight">Find Your <span className="text-gradient-animated">Skill Match</span></h1>
+              <p className="mt-2 max-w-2xl text-muted-foreground">Recommendations based on what you can offer and what you want to learn next.</p>
+              <div className="relative mt-5"><Search className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground" /><Input placeholder="Search by skill, name, role, city, or interest..." className="pl-10 text-base rounded-2xl" value={filters.search} onChange={(e) => setFilters({ ...filters, search: e.target.value })} /></div>
             </motion.div>
 
             <div className="relative mt-6">
@@ -1183,11 +1183,11 @@ export default function MatchPage() {
                     {activeTab === 'direct' ? (
                       <>
                         {bestMatch && <AIBestMatchCard match={bestMatch} currentUser={user} />}
-                        <div className="my-6 rounded-3xl glass-subtle border border-white/5 p-4 flex flex-col items-start gap-4 md:flex-row md:items-center md:justify-between">
+                        <div className="app-card my-5 p-4 flex flex-col items-start gap-4 md:flex-row md:items-center md:justify-between">
                           <p className="text-xs uppercase tracking-widest font-bold text-muted-foreground ml-2">Showing {otherMatches.length} other matches</p>
                           <div className="flex items-center gap-3">
                             <Select value={sortOption} onValueChange={setSortOption}>
-                              <SelectTrigger className="w-[180px] bg-black/40 border-white/10 rounded-xl h-9 text-xs">
+                              <SelectTrigger className="w-[180px] rounded-xl h-9 text-xs">
                                 <SelectValue placeholder="Sort by" />
                               </SelectTrigger>
                               <SelectContent className="rounded-xl border-white/10 bg-black/80 backdrop-blur-xl">
@@ -1196,7 +1196,7 @@ export default function MatchPage() {
                                 <SelectItem value="sessions" className="text-xs focus:bg-white/10">Sessions</SelectItem>
                               </SelectContent>
                             </Select>
-                            <div className="rounded-xl bg-black/40 border border-white/5 p-1 flex gap-1">
+                            <div className="rounded-xl bg-background/70 border border-border/70 p-1 flex gap-1 dark:border-white/10 dark:bg-black/30">
                               <Button aria-label="Grid view" size="sm" variant={view === 'grid' ? 'secondary' : 'ghost'} onClick={() => setView('grid')} className={cn("h-7 w-7 p-0 rounded-lg", view === 'grid' && "bg-white/10 text-white shadow-sm")}>
                                 <LayoutGrid className="h-3.5 w-3.5" />
                               </Button>

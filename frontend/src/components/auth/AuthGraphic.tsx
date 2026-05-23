@@ -1,179 +1,162 @@
-
 'use client';
+
 import { Link } from 'react-router-dom';
 import { motion } from 'framer-motion';
-import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
-import { Code, Film, Figma, Mic, Music, Camera, Database, GitBranch, ArrowLeftRight } from 'lucide-react';
-import { cn } from '@/lib/utils';
-import React, { Suspense } from 'react';
-import { Canvas } from '@react-three/fiber';
-import { Stars } from '@react-three/drei';
-import Logo from '@/components/ui/Logo';
+import { ArrowLeftRight, CheckCircle2, Code, Mic, Palette, Star, Video } from 'lucide-react';
 
+import Logo from '@/components/ui/Logo';
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
+
+const exchangeCards = [
+  {
+    name: 'Aisha',
+    role: 'Teaches brand design',
+    wants: 'Learns video editing',
+    avatar: 'https://images.unsplash.com/photo-1494790108377-be9c29b29330?auto=format&fit=crop&w=160&q=80',
+    icon: Palette,
+  },
+  {
+    name: 'Rahim',
+    role: 'Teaches editing',
+    wants: 'Learns public speaking',
+    avatar: 'https://images.unsplash.com/photo-1500648767791-00dcc994a43e?auto=format&fit=crop&w=160&q=80',
+    icon: Video,
+  },
+];
 
 const floatingSkills = [
-  { name: 'Guitar', icon: Music, position: 'top-[12%] left-[8%]', delay: '0s' },
-  { name: 'Python', icon: Code, position: 'top-[18%] right-[10%]', delay: '1s' },
-  { name: 'Video Editing', icon: Film, position: 'top-[62%] left-[18%]', delay: '2s' },
-  { name: 'Figma', icon: Figma, position: 'top-[48%] right-[20%]', delay: '0.5s' },
-  { name: 'Photography', icon: Camera, position: 'top-[78%] right-[12%]', delay: '1.5s' },
-  { name: 'Public Speaking', icon: Mic, position: 'top-[82%] left-[6%]', delay: '2.5s' },
-  { name: 'Git & GitHub', icon: GitBranch, position: 'top-[35%] left-[5%]', delay: '3s' },
-  { name: 'Data Science', icon: Database, position: 'top-[30%] right-[6%]', delay: '0.2s' },
+  { label: 'Python', icon: Code, className: 'left-[8%] top-[18%]' },
+  { label: 'Design', icon: Palette, className: 'right-[9%] top-[22%]' },
+  { label: 'Speaking', icon: Mic, className: 'bottom-[22%] left-[10%]' },
 ];
-
-const testimonials = [
-  { quote: "I learned Python and taught guitar. Best decision of my uni life!", avatar: "https://picsum.photos/seed/101/40/40", name: "Nadia R.", color: 'border-primary' },
-  { quote: "Found a partner to practice public speaking with. It was a game-changer.", avatar: "https://picsum.photos/seed/102/40/40", name: "Karim C.", color: 'border-secondary' },
-  { quote: "SkillEx is what higher education should be about — collaborative learning.", avatar: "https://picsum.photos/seed/103/40/40", name: "Fatema A.", color: 'border-accent' },
-];
-
-const ConnectionVisual = () => (
-  <motion.div
-    className="relative flex items-center justify-center gap-6 py-6"
-    initial={{ opacity: 0, scale: 0.8 }}
-    animate={{ opacity: 1, scale: 1 }}
-    transition={{ delay: 0.6, type: 'spring', stiffness: 100 }}
-  >
-    {/* Left user */}
-    <div className="flex flex-col items-center gap-2">
-      <div className="relative">
-        <div className="absolute inset-0 rounded-full bg-primary/30 blur-md animate-breathe" />
-        <Avatar className="relative h-16 w-16 ring-2 ring-primary/50">
-          <AvatarImage src="https://picsum.photos/seed/201/80/80" />
-          <AvatarFallback>A</AvatarFallback>
-        </Avatar>
-      </div>
-      <div className="rounded-full bg-primary/20 px-2 py-0.5 text-[10px] font-semibold text-primary backdrop-blur-sm">
-        Guitar 🎸
-      </div>
-    </div>
-
-    {/* Exchange arrow */}
-    <motion.div
-      className="flex flex-col items-center gap-1"
-      animate={{ scale: [1, 1.15, 1] }}
-      transition={{ duration: 2, repeat: Infinity, ease: 'easeInOut' }}
-    >
-      <div className="rounded-full bg-white/10 p-2 backdrop-blur-sm">
-        <ArrowLeftRight className="h-5 w-5 text-white" />
-      </div>
-      <span className="text-[10px] font-medium text-white/60">exchange</span>
-    </motion.div>
-
-    {/* Right user */}
-    <div className="flex flex-col items-center gap-2">
-      <div className="relative">
-        <div className="absolute inset-0 rounded-full bg-secondary/30 blur-md animate-breathe" style={{ animationDelay: '1s' }} />
-        <Avatar className="relative h-16 w-16 ring-2 ring-secondary/50">
-          <AvatarImage src="https://picsum.photos/seed/202/80/80" />
-          <AvatarFallback>B</AvatarFallback>
-        </Avatar>
-      </div>
-      <div className="rounded-full bg-secondary/20 px-2 py-0.5 text-[10px] font-semibold text-secondary backdrop-blur-sm">
-        Python 🐍
-      </div>
-    </div>
-  </motion.div>
-);
-
-const TestimonialChip = ({ quote, avatar, name, color }: { quote: string; avatar: string; name: string; color: string }) => (
-  <div className={cn(
-    'flex items-center gap-3 rounded-xl bg-black/25 p-3 backdrop-blur-md border-l-4 border border-white/10',
-    color
-  )}>
-    <Avatar className="h-8 w-8 shrink-0">
-      <AvatarImage src={avatar} />
-      <AvatarFallback>{name.charAt(0)}</AvatarFallback>
-    </Avatar>
-    <div>
-      <p className="text-xs font-medium text-white leading-snug">{`"${quote}"`}</p>
-      <p className="mt-0.5 text-[10px] text-white/50">— {name}</p>
-    </div>
-  </div>
-);
 
 export function AuthGraphic() {
   return (
-    <div className="relative hidden min-h-screen select-none bg-background lg:flex lg:flex-col lg:items-center lg:justify-between p-10 lg:p-12">
-      {/* Background 3D Starfield */}
-      <div className="absolute inset-0 z-0">
-        <Canvas camera={{ position: [0, 0, 5], fov: 60 }}>
-          <Suspense fallback={null}>
-            <Stars radius={50} depth={50} count={3000} factor={4} saturation={0} fade speed={0.5} />
-          </Suspense>
-        </Canvas>
-      </div>
+    <aside className="relative hidden min-h-screen overflow-hidden bg-[#07101a] lg:flex lg:flex-col">
+      <img
+        src="https://images.unsplash.com/photo-1552664730-d307ca884978?auto=format&fit=crop&w=1600&q=82"
+        alt=""
+        className="absolute inset-0 h-full w-full object-cover opacity-70"
+      />
+      <div className="absolute inset-0 bg-[linear-gradient(90deg,rgba(4,8,15,0.55),rgba(4,8,15,0.22)),linear-gradient(180deg,rgba(4,8,15,0.16),rgba(4,8,15,0.88))]" />
+      <div className="absolute inset-0 bg-[radial-gradient(circle_at_22%_26%,rgba(0,245,212,0.24),transparent_30%),radial-gradient(circle_at_82%_12%,rgba(255,199,0,0.14),transparent_22%)]" />
+      <div className="absolute inset-0 bg-[url('/noise.png')] opacity-[0.05] mix-blend-overlay" />
 
-      {/* Background layers */}
-      <div className="absolute inset-0 bg-gradient-to-br from-background via-primary/5 to-background opacity-80" />
-      <div className="absolute inset-0 bg-[radial-gradient(ellipse_80%_80%_at_50%_-20%,rgba(120,119,198,0.25),transparent)]" />
-      <div className="absolute inset-0 mesh-gradient opacity-40" />
-      {/* Ambient blobs */}
-      <div className="pointer-events-none absolute top-1/4 left-0 h-64 w-64 rounded-full bg-primary/20 blur-3xl animate-blob opacity-50" />
-      <div className="pointer-events-none absolute bottom-1/4 right-0 h-64 w-64 rounded-full bg-secondary/20 blur-3xl animate-blob opacity-50" style={{ animationDelay: '3s' }} />
+      {floatingSkills.map(({ label, icon: Icon, className }, index) => (
+        <motion.div
+          key={label}
+          initial={{ opacity: 0, y: 10 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.35 + index * 0.12, duration: 0.45 }}
+          className={`absolute ${className} rounded-full border border-white/14 bg-black/30 px-3 py-2 text-xs font-semibold text-white/88 shadow-[0_12px_40px_rgba(0,0,0,0.28)] backdrop-blur-md`}
+        >
+          <span className="flex items-center gap-2">
+            <Icon className="h-3.5 w-3.5 text-primary" />
+            {label}
+          </span>
+        </motion.div>
+      ))}
 
-      {/* Floating skill chips */}
-      <div className="absolute inset-0 overflow-hidden">
-        {floatingSkills.map((skill, i) => (
-          <motion.div
-            key={i}
-            className={cn('absolute glass rounded-full px-3 py-1.5 shadow-lg animate-float', skill.position)}
-            style={{ animationDelay: skill.delay }}
-            initial={{ opacity: 0, scale: 0.4 }}
-            animate={{ opacity: 0.85, scale: 1 }}
-            transition={{ delay: i * 0.15 + 0.4, type: 'spring', stiffness: 160, damping: 20 }}
-          >
-            <div className="flex items-center gap-1.5 text-xs text-white/90">
-              <skill.icon className="h-3.5 w-3.5 text-primary" />
-              <span>{skill.name}</span>
-            </div>
-          </motion.div>
-        ))}
-      </div>
-
-      {/* Logo */}
-      <div className="relative z-10 self-start">
-        <Link to="/" className="block transition-transform hover:scale-105 active:scale-95">
+      <div className="relative z-10 flex h-full flex-col justify-between p-10 xl:p-12">
+        <Link to="/" className="w-fit transition-transform hover:scale-[1.03] active:scale-[0.98]">
           <Logo size="lg" className="[&_span]:text-white" />
         </Link>
-      </div>
 
-      {/* Central visual */}
-      <div className="relative z-10 text-center text-white">
-        <ConnectionVisual />
-        <motion.h2
-          className="mt-2 text-4xl font-bold font-headline leading-tight"
-          initial={{ opacity: 0, y: 12 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.8, type: 'spring', stiffness: 100 }}
-        >
-          Your skills are your currency.
-        </motion.h2>
-        <motion.p
-          className="mt-3 text-base text-white/65 max-w-xs mx-auto leading-relaxed"
-          initial={{ opacity: 0, y: 8 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 1, type: 'spring', stiffness: 100 }}
-        >
-          Join a peer-to-peer community where knowledge is the ultimate capital — not cash.
-        </motion.p>
-      </div>
-
-      {/* Testimonials */}
-      <div className="relative z-10 w-full flex flex-col gap-3">
-        {testimonials.map((t, i) => (
+        <div className="max-w-xl">
           <motion.div
-            key={i}
-            initial={{ opacity: 0, x: -24 }}
-            animate={{ opacity: 1, x: 0 }}
-            transition={{ delay: 1.2 + i * 0.15, type: 'spring', stiffness: 120, damping: 22 }}
+            initial={{ opacity: 0, y: 18 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.55, ease: [0.16, 1, 0.3, 1] }}
+            className="mb-7 inline-flex items-center gap-2 rounded-full border border-primary/25 bg-primary/10 px-3 py-2 text-xs font-bold uppercase tracking-[0.16em] text-primary backdrop-blur"
           >
-            <TestimonialChip {...t} />
+            <ArrowLeftRight className="h-3.5 w-3.5" />
+            Live skill exchange
           </motion.div>
-        ))}
+
+          <motion.h2
+            initial={{ opacity: 0, y: 18 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.08, duration: 0.55, ease: [0.16, 1, 0.3, 1] }}
+            className="max-w-lg font-headline text-5xl font-black leading-[0.96] tracking-tight text-white xl:text-6xl"
+          >
+            Trade what you know for what you want to learn.
+          </motion.h2>
+          <motion.p
+            initial={{ opacity: 0, y: 14 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.16, duration: 0.5, ease: [0.16, 1, 0.3, 1] }}
+            className="mt-5 max-w-md text-base leading-7 text-white/76"
+          >
+            SkillEX works for creators, professionals, mentors, and curious learners who want a fair way to exchange knowledge without turning every lesson into a transaction.
+          </motion.p>
+
+          <motion.div
+            initial={{ opacity: 0, y: 18 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.28, duration: 0.5, ease: [0.16, 1, 0.3, 1] }}
+            className="mt-8 grid max-w-xl gap-3 xl:grid-cols-[1fr_auto_1fr]"
+          >
+            <ExchangeProfileCard {...exchangeCards[0]} label="Creator" />
+            <div className="hidden items-center justify-center xl:flex">
+              <div className="rounded-full border border-white/14 bg-white/10 p-3 text-white shadow-[0_0_36px_rgba(0,245,212,0.25)] backdrop-blur">
+                <ArrowLeftRight className="h-5 w-5" />
+              </div>
+            </div>
+            <ExchangeProfileCard {...exchangeCards[1]} label="Coach" />
+          </motion.div>
+        </div>
+
+        <motion.div
+          initial={{ opacity: 0, y: 18 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.42, duration: 0.5, ease: [0.16, 1, 0.3, 1] }}
+          className="max-w-xl rounded-2xl border border-white/12 bg-black/34 p-4 shadow-[0_18px_60px_rgba(0,0,0,0.24)] backdrop-blur-xl"
+        >
+          <div className="flex items-start gap-3">
+            <div className="mt-1 flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-secondary/15 text-secondary">
+              <Star className="h-4 w-4 fill-secondary" />
+            </div>
+            <div>
+              <p className="text-sm font-semibold leading-6 text-white">
+                “I traded Notion workflow help for camera basics. One hour saved me weeks of guessing.”
+              </p>
+              <p className="mt-2 flex items-center gap-2 text-xs text-white/56">
+                <CheckCircle2 className="h-3.5 w-3.5 text-primary" />
+                Verified exchange story
+              </p>
+            </div>
+          </div>
+        </motion.div>
+      </div>
+    </aside>
+  );
+}
+
+function ExchangeProfileCard({
+  name,
+  role,
+  wants,
+  avatar,
+  icon: Icon,
+  label,
+}: (typeof exchangeCards)[number] & { label: string }) {
+  return (
+    <div className="rounded-2xl border border-white/12 bg-[#06141d]/82 p-4 shadow-[0_18px_60px_rgba(0,0,0,0.28)] backdrop-blur-xl">
+      <div className="flex items-center gap-3">
+        <Avatar className="h-12 w-12 ring-2 ring-primary/35">
+          <AvatarImage src={avatar} alt={name} />
+          <AvatarFallback>{name.charAt(0)}</AvatarFallback>
+        </Avatar>
+        <div className="min-w-0">
+          <p className="truncate font-headline text-base font-bold text-white">{name}</p>
+          <p className="text-xs text-white/56">{label}</p>
+        </div>
+        <Icon className="ml-auto h-4 w-4 text-primary" />
+      </div>
+      <div className="mt-4 space-y-2 text-sm">
+        <p className="text-white/84">{role}</p>
+        <p className="text-secondary">{wants}</p>
       </div>
     </div>
   );
 }
-

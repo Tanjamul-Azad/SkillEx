@@ -149,7 +149,13 @@ function SkillLabel({ label }: { label: string }) {
 }
 
 /* -- Mouse parallax wrapper --------------------------------------- */
-function ParallaxGroup({ children }: { children: React.ReactNode }) {
+function ParallaxGroup({
+  children,
+  position = [0, 0, 0],
+}: {
+  children: React.ReactNode;
+  position?: [number, number, number];
+}) {
   const group = useRef<THREE.Group | null>(null);
   const mouse = useRef({ x: 0, y: 0 });
 
@@ -179,11 +185,14 @@ function ParallaxGroup({ children }: { children: React.ReactNode }) {
       group.current.rotation.x, targetY + Math.sin(t * 0.01) * 0.05, 0.025);
   });
 
-  return <group ref={group}>{children}</group>;
+  return <group ref={group} position={position}>{children}</group>;
 }
 
 /* -- Scene contents ----------------------------------------------- */
 function SceneContents({ lowPower }: { lowPower: boolean }) {
+  const scenePosition: [number, number, number] =
+    typeof window !== 'undefined' && window.innerWidth < 720 ? [1.6, -0.18, 0] : [1.25, -0.08, 0];
+
   return (
     <>
       {/* Lighting - Add colored ambient for 'nebula' feel */}
@@ -192,7 +201,7 @@ function SceneContents({ lowPower }: { lowPower: boolean }) {
       <pointLight position={[-8, -2, -5]} intensity={3.5} color="#00E5C3" distance={20} />
       <pointLight position={[8, -5, 2]} intensity={2.0} color="#8b5cf6" distance={20} /> {/* Purple rim light */}
 
-      <ParallaxGroup>
+      <ParallaxGroup position={scenePosition}>
         <WireframeOrb />
         {RING_DATA.map((r, i) => (
           <OrbitalRing key={i} {...r} />

@@ -33,7 +33,7 @@ public class JwtUtil {
             .claims(Map.of("email", email, "role", role))
             .issuedAt(new Date())
             .expiration(new Date(System.currentTimeMillis() + expirationMs))
-            .signWith(secretKey)
+            .signWith(secretKey, Jwts.SIG.HS256)
             .compact();
     }
 

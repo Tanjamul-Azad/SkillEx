@@ -9,7 +9,6 @@ import com.skillex.repository.ExchangeRepository;
 import com.skillex.repository.SessionNoteRepository;
 import com.skillex.repository.SessionRepository;
 import com.skillex.repository.SessionTranscriptRepository;
-import com.skillex.repository.SkillRepository;
 import com.skillex.repository.UserRepository;
 import com.skillex.service.DtoMapper;
 import com.skillex.service.NotificationService;
@@ -26,6 +25,7 @@ import java.util.List;
 import java.util.Optional;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyCollection;
@@ -39,7 +39,6 @@ class SessionServiceImplTest {
     @Mock private SessionRepository sessionRepository;
     @Mock private ExchangeRepository exchangeRepository;
     @Mock private UserRepository userRepository;
-    @Mock private SkillRepository skillRepository;
     @Mock private SessionTranscriptRepository transcriptRepository;
     @Mock private SessionNoteRepository noteRepository;
     @Mock private DtoMapper mapper;
@@ -54,7 +53,6 @@ class SessionServiceImplTest {
             sessionRepository,
             exchangeRepository,
             userRepository,
-            skillRepository,
             transcriptRepository,
             noteRepository,
             mapper,
@@ -154,6 +152,41 @@ class SessionServiceImplTest {
         assertEquals(Session.SessionStatus.SCHEDULED, session.getStatus());
         assertEquals(scheduledAt, exchange.getSessionDate());
         verify(exchangeRepository).save(exchange);
+    }
+
+    @Test
+    void create_allowsNewSessionWhenOnlyExpiredActiveSessionExists() {
+        User requester = user("requester", "Requester");
+        User receiver = user("receiver", "Receiver");
+        Skill offered = skill("video", "Video Editing");
+        Exchange exchange = acceptedExchange("exchange-1", requester, receiver, offered, null);
+
+        Session expired = new Session();
+        expired.setId("session-expired");
+        expired.setScheduledAt(LocalDateTime.now().minusHours(3));
+        expired.setDurationMins(60);
+        expired.setStatus(Session.SessionStatus.PROPOSED);
+
+        when(exchangeRepository.findById(exchange.getId())).thenReturn(Optional.of(exchange));
+        when(userRepository.findById(requester.getId())).thenReturn(Optional.of(requester));
+        when(sessionRepository.findByExchangeIdAndSkillIdAndStatusIn(eq(exchange.getId()), eq(offered.getId()), anyCollection()))
+            .thenReturn(List.of(expired));
+        when(sessionRepository.findActiveSessionsInWindow(eq(requester.getId()), anyCollection(), any(), any()))
+            .thenReturn(List.of());
+        when(sessionRepository.findActiveSessionsInWindow(eq(receiver.getId()), anyCollection(), any(), any()))
+            .thenReturn(List.of());
+        when(sessionRepository.save(any(Session.class))).thenAnswer(invocation -> invocation.getArgument(0));
+
+        assertDoesNotThrow(() -> service.create(requester.getId(), new CreateSessionRequest(
+            exchange.getId(),
+            requester.getId(),
+            receiver.getId(),
+            offered.getId(),
+            LocalDateTime.now().plusDays(1),
+            60,
+            null,
+            "VIDEO"
+        )));
     }
 
     private static Exchange acceptedExchange(String id, User requester, User receiver, Skill offered, Skill wanted) {

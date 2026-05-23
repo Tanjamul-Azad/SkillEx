@@ -5,6 +5,7 @@ import lombok.*;
 import org.hibernate.annotations.CreationTimestamp;
 
 import java.time.LocalDateTime;
+import java.math.BigDecimal;
 
 /**
  * JPA entity mapping to the `session_transcripts` table.
@@ -38,6 +39,12 @@ public class SessionTranscript {
 
     @Column(name = "spoken_at", nullable = false)
     private LocalDateTime spokenAt;
+
+    @Column(name = "confidence_score")
+    private BigDecimal confidenceScore;
+
+    @Column(name = "detected_language", length = 16)
+    private String detectedLanguage;
 
     @CreationTimestamp
     @Column(name = "created_at", updatable = false)

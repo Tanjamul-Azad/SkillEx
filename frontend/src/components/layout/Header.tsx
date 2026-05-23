@@ -31,6 +31,7 @@ import { emitRealtimeNotification, normalizeNotificationPayload } from '@/lib/re
 import Logo from '@/components/ui/Logo';
 import { ConfirmDialog } from '@/components/ui/ConfirmDialog';
 import GlobalSearch from '@/components/search/GlobalSearch';
+import HeaderMessages from '@/components/layout/HeaderMessages';
 
 const LogoWrapper = () => (
   <Link to="/" className="group lg:hidden">
@@ -318,6 +319,8 @@ export default function Header({
               </motion.div>
             </AnimatePresence>
           </Button>
+
+          <HeaderMessages />
 
           {/* Notifications dropdown */}
           {user && (

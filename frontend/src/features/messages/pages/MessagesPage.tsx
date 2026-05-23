@@ -219,8 +219,8 @@ function ConversationItem({
       className={cn(
         'w-full flex items-center gap-4 p-4 rounded-[1.5rem] text-left transition-all duration-300',
         active
-          ? 'bg-surface-1 dark:bg-black/50 border border-border dark:border-white/10 shadow-[inset_0_1px_0_0_var(--primary)/0.03,0_0_20px_hsl(var(--primary)/0.1)]'
-          : 'bg-primary/[0.02] dark:bg-black/20 border border-border/60 dark:border-white/5 hover:bg-white dark:bg-black/40 hover:border-border dark:border-white/10 shadow-[inset_0_1px_0_0_var(--primary)/0.03]'
+          ? 'bg-surface-1 dark:bg-slate-950/80 border border-border dark:border-white/10 shadow-[inset_0_1px_0_0_var(--primary)/0.03,0_0_20px_hsl(var(--primary)/0.1)]'
+          : 'bg-primary/[0.02] dark:bg-slate-950/45 border border-border/60 dark:border-white/5 hover:bg-white dark:hover:bg-slate-900/80 hover:border-border dark:hover:border-white/10 shadow-[inset_0_1px_0_0_var(--primary)/0.03]'
       )}
     >
       <div className="relative shrink-0">
@@ -236,15 +236,15 @@ function ConversationItem({
       </div>
       <div className="flex-1 min-w-0">
         <div className="flex items-center justify-between gap-2 mb-1">
-          <span className={cn('font-headline font-bold text-sm truncate', active ? 'text-primary drop-shadow-[0_0_8px_var(--primary)]' : 'text-foreground')}>
+          <span className={cn('font-headline font-bold text-sm truncate', active ? 'text-primary drop-shadow-[0_0_8px_var(--primary)]' : 'text-foreground dark:text-slate-100')}>
             {conv.user.name}
           </span>
-          <span className="text-[10px] uppercase tracking-widest font-bold text-muted-foreground shrink-0">
+          <span className="text-[10px] uppercase tracking-widest font-bold text-muted-foreground dark:text-slate-400 shrink-0">
             {formatMessageTime(conv.lastMessageTime)}
           </span>
         </div>
         <div className="flex items-center justify-between gap-2">
-          <p className={cn('text-xs truncate font-medium', active ? 'text-foreground/90' : 'text-muted-foreground')}>
+          <p className={cn('text-xs truncate font-medium', active ? 'text-foreground/90 dark:text-slate-100' : 'text-muted-foreground dark:text-slate-300')}>
             {conv.lastMessage}
           </p>
           {conv.unreadCount > 0 && (
@@ -298,15 +298,15 @@ function MessageBubble({
             className={cn(
               'px-5 py-3 text-[13px] leading-relaxed backdrop-blur-md shadow-[inset_0_1px_0_0_var(--primary)/0.03] border border-border/60 dark:border-white/5',
               isMe
-                ? 'bg-primary text-primary-foreground text-foreground rounded-[1.5rem] rounded-br-sm border-primary/20'
-                : 'bg-primary/[0.04] dark:bg-surface-3 text-foreground rounded-[1.5rem] rounded-bl-sm'
+                ? 'bg-primary text-primary-foreground rounded-[1.5rem] rounded-br-sm border-primary/20'
+                : 'bg-primary/[0.04] dark:bg-slate-900/95 text-foreground dark:text-slate-100 rounded-[1.5rem] rounded-bl-sm'
             )}
           >
             {msg.content}
           </div>
         )}
         <div className={cn('flex items-center gap-1.5 px-1', isMe ? 'flex-row-reverse' : 'flex-row')}>
-          <span className="text-[9px] uppercase tracking-widest font-bold text-muted-foreground/70">{formatTimestamp(msg.timestamp)}</span>
+          <span className="text-[9px] uppercase tracking-widest font-bold text-muted-foreground/80 dark:text-slate-400">{formatTimestamp(msg.timestamp)}</span>
           {isMe && (
             msg.read
               ? <CheckCheck className="h-3.5 w-3.5 text-primary drop-shadow-[0_0_5px_var(--primary)]" />
@@ -605,7 +605,7 @@ export default function MessagesPage() {
                 <Button
                   size="icon"
                   variant="ghost"
-                  className="h-10 w-10 rounded-full border border-border/60 dark:border-white/5 border-border dark:border-white/5 bg-primary/[0.04] dark:bg-white/5 hover:bg-primary text-primary-foreground hover:border-primary/50 text-foreground hover:text-primary transition-all shadow-[inset_0_1px_0_0_var(--primary)/0.03]"
+                  className="h-10 w-10 rounded-full border border-border/60 dark:border-white/10 bg-primary/[0.04] dark:bg-slate-950/70 text-foreground dark:text-slate-100 hover:bg-primary hover:text-primary-foreground hover:border-primary/50 transition-all shadow-[inset_0_1px_0_0_var(--primary)/0.03]"
                   onClick={() => toast({ title: 'New conversation', description: 'Select a user from their profile to start messaging.' })}
                 >
                   <MessageSquarePlus className="h-5 w-5" />
@@ -617,7 +617,7 @@ export default function MessagesPage() {
                   placeholder="Search conversations..."
                   value={search}
                   onChange={e => setSearch(e.target.value)}
-                  className="pl-11 rounded-full h-11 text-[13px] bg-surface-1 dark:bg-black/50 border-border dark:border-white/10 text-foreground placeholder:text-muted-foreground focus-visible:ring-primary/50 shadow-[inset_0_1px_0_0_var(--primary)/0.03]"
+                  className="pl-11 rounded-full h-11 text-[13px] bg-surface-1 dark:bg-slate-950/80 border-border dark:border-white/10 text-foreground dark:text-slate-100 placeholder:text-muted-foreground dark:placeholder:text-slate-400 focus-visible:ring-primary/50 shadow-[inset_0_1px_0_0_var(--primary)/0.03]"
                 />
               </div>
             </div>
@@ -803,7 +803,7 @@ export default function MessagesPage() {
                   )}
                   <form
                     onSubmit={(e) => { e.preventDefault(); handleSend(); }}
-                    className="flex items-end gap-3 bg-surface-1 dark:bg-black/50 border border-border dark:border-white/10 rounded-[1.5rem] p-2 focus-within:border-primary/50 focus-within:ring-1 focus-within:ring-primary/50 shadow-[inset_0_1px_0_0_var(--primary)/0.03] transition-all"
+                    className="flex items-end gap-3 bg-surface-1 dark:bg-slate-950/85 border border-border dark:border-white/10 rounded-[1.5rem] p-2 focus-within:border-primary/50 focus-within:ring-1 focus-within:ring-primary/50 shadow-[inset_0_1px_0_0_var(--primary)/0.03] transition-all"
                   >
                     <input
                       type="file"
@@ -816,7 +816,7 @@ export default function MessagesPage() {
                       type="button"
                       size="icon"
                       variant="ghost"
-                      className="h-11 w-11 shrink-0 rounded-full hover:bg-white/10 hover:text-foreground text-muted-foreground transition-all border border-transparent shadow-[inset_0_1px_0_0_hsla(0,0%,100%,0)] active:scale-95"
+                      className="h-11 w-11 shrink-0 rounded-full hover:bg-white/10 hover:text-foreground dark:hover:text-slate-100 text-muted-foreground dark:text-slate-400 transition-all border border-transparent shadow-[inset_0_1px_0_0_hsla(0,0%,100%,0)] active:scale-95"
                       onClick={() => fileInputRef.current?.click()}
                     >
                       <ImageIcon className="h-5 w-5" />
@@ -827,12 +827,12 @@ export default function MessagesPage() {
                         onChange={e => setNewMessage(e.target.value)}
                         onKeyDown={handleKeyDown}
                         placeholder="Type your message..."
-                        className="min-h-[44px] max-h-32 flex-1 resize-none bg-transparent border-0 focus-visible:ring-0 pl-3 pr-12 py-3 text-[14px] custom-scrollbar placeholder:text-muted-foreground/50 text-foreground"
+                        className="min-h-[44px] max-h-32 flex-1 resize-none bg-transparent border-0 focus-visible:ring-0 pl-3 pr-12 py-3 text-[14px] custom-scrollbar text-foreground dark:text-slate-100 placeholder:text-muted-foreground dark:placeholder:text-slate-400"
                         rows={1}
                       />
                       <Popover open={emojiOpen} onOpenChange={setEmojiOpen}>
                         <PopoverTrigger asChild>
-                          <Button type="button" size="icon" variant="ghost" className="h-9 w-9 shrink-0 rounded-full hover:bg-white/10 hover:text-foreground text-muted-foreground transition-all border border-transparent shadow-[inset_0_1px_0_0_hsla(0,0%,100%,0)] active:scale-95 absolute right-1.5 bottom-1">
+                          <Button type="button" size="icon" variant="ghost" className="h-9 w-9 shrink-0 rounded-full hover:bg-white/10 hover:text-foreground dark:hover:text-slate-100 text-muted-foreground dark:text-slate-400 transition-all border border-transparent shadow-[inset_0_1px_0_0_hsla(0,0%,100%,0)] active:scale-95 absolute right-1.5 bottom-1">
                             <Smile className="h-4 w-4" />
                           </Button>
                         </PopoverTrigger>
@@ -867,7 +867,7 @@ export default function MessagesPage() {
                       type="submit"
                       size="icon"
                       disabled={!newMessage.trim() || sending || !connected}
-                      className="h-11 w-11 shrink-0 rounded-full bg-primary text-primary-foreground text-primary border border-primary/30 hover:bg-primary/30 hover:border-primary/50 disabled:opacity-50 transition-all shadow-[0_0_15px_hsl(var(--primary)/0.2)] active:scale-95"
+                      className="h-11 w-11 shrink-0 rounded-full bg-primary text-primary-foreground border border-primary/30 hover:bg-primary/85 hover:border-primary/50 disabled:opacity-50 transition-all shadow-[0_0_15px_hsl(var(--primary)/0.2)] active:scale-95"
                       onClick={(e) => { e.preventDefault(); handleSend(); }}
                     >
                       {sending ? <Loader2 className="h-5 w-5 animate-spin" /> : <Send className="h-4 w-4 ml-0.5" />}

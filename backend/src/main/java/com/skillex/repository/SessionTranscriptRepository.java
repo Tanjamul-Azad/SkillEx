@@ -17,6 +17,11 @@ public interface SessionTranscriptRepository extends JpaRepository<SessionTransc
         LocalDateTime spokenAt
     );
 
+    List<SessionTranscript> findTop10BySessionIdAndSpokenAtAfterOrderBySpokenAtDesc(
+        String sessionId,
+        LocalDateTime spokenAt
+    );
+
     /** Delete all transcript chunks for a session (used during post-review cleanup) */
     void deleteBySessionId(String sessionId);
 }

@@ -48,4 +48,14 @@ export const MessageService = {
   /** PATCH /api/messages/{peerId}/read — mark all messages from peerId as read */
   markRead: (peerId: string): Promise<void> =>
     api.patch<void>(`/messages/${peerId}/read`, {}),
+
+  sendMessage: (
+    peerId: string,
+    payload: { content: string; type?: 'TEXT' | 'IMAGE'; imageUrl?: string | null },
+  ): Promise<MessageDto> =>
+    api.post<MessageDto>(`/messages/${peerId}`, {
+      content: payload.content,
+      type: payload.type ?? 'TEXT',
+      imageUrl: payload.imageUrl ?? null,
+    }),
 };

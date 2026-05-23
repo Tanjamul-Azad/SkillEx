@@ -33,9 +33,15 @@ public class AgoraTokenService {
         // Hash String UUID deterministically to a positive 32-bit integer for Agora compatibility
         int uid = Math.abs(userId.hashCode());
 
-        if (appId == null || appId.isBlank() || appCertificate == null || appCertificate.isBlank()) {
-            log.warn("[Agora] Agora APP_ID or APP_CERTIFICATE not configured. Generating static developer mock token.");
-            return "mock-agora-rtc-token-for-uid-" + uid + "-channel-" + channelName;
+        if (appId == null || appId.isBlank()) {
+            log.error("[Agora] Agora APP_ID not configured. Unable to generate token.");
+            return null;
+        }
+
+        if (appCertificate == null || appCertificate.isBlank()) {
+            // App certificate disabled in Agora console: token should be null for appId-only join.
+            log.warn("[Agora] Agora APP_CERTIFICATE not configured. Returning null token for appId-only join.");
+            return null;
         }
 
         try {
@@ -55,8 +61,12 @@ public class AgoraTokenService {
             log.info("[Agora] Generated secure RTC token for channel: {}, uid: {}", channelName, uid);
             return token;
         } catch (Exception e) {
-            log.error("[Agora] Failed to generate Agora RTC token. Falling back to mock token.", e);
-            return "fallback-mock-token-for-" + uid;
+            log.error("[Agora] Failed to generate Agora RTC token. Returning null token.", e);
+            return null;
         }
+    }
+
+    public String getAppId() {
+        return appId;
     }
 }

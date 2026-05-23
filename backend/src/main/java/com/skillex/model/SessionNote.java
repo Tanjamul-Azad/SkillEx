@@ -65,6 +65,21 @@ public class SessionNote {
         this.generatedAt = LocalDateTime.now();
     }
 
+    public void replaceGeneratedContent(
+            String keyConcepts,
+            String actionItems,
+            String resourcesMentioned,
+            String summary,
+            String rawTranscript
+    ) {
+        this.keyConcepts = keyConcepts;
+        this.actionItems = actionItems;
+        this.resourcesMentioned = resourcesMentioned;
+        this.summary = summary;
+        this.rawTranscript = rawTranscript;
+        this.generatedAt = LocalDateTime.now();
+    }
+
     // ── Encapsulated Domain Behaviors ──────────────────────────────────────
 
     /**

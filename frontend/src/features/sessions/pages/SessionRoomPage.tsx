@@ -9,7 +9,7 @@ import { TokenStore } from '@/services/http/ApiClient';
 import type { Session } from '@/types';
 import { 
   Video, VideoOff, Mic, MicOff, Monitor, PhoneOff, 
-  FileText, MessageSquare, Sparkles, Loader2, Save, Volume2, Settings
+  FileText, MessageSquare, Sparkles, Loader2, Save, Volume2, Settings, Download
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
@@ -17,8 +17,11 @@ interface ChatMessage {
   id: number;
   speakerUserId: string;
   speakerRole: string;
+  speakerName?: string;
   content: string;
   spokenAt: string;
+  confidenceScore?: number;
+  detectedLanguage?: string;
 }
 
 interface SessionNotes {
@@ -28,6 +31,15 @@ interface SessionNotes {
   resourcesMentioned: string;
   summary: string;
   generatedAt: string;
+}
+
+interface PresencePayload {
+  event: string;
+  sessionId: string;
+  actorUserId: string;
+  participantUserIds: string[];
+  count: number;
+  updatedAt: string;
 }
 
 export default function SessionRoomPage() {
@@ -41,10 +53,12 @@ export default function SessionRoomPage() {
   const [transcript, setTranscript] = useState<ChatMessage[]>([]);
   const [sharedNotesContent, setSharedNotesContent] = useState('');
   const [isTyping, setIsTyping] = useState(false);
+  const [presence, setPresence] = useState<PresencePayload | null>(null);
   
   // AI Notes status
   const [aiNotes, setAiNotes] = useState<SessionNotes | null>(null);
   const [generatingNotes, setGeneratingNotes] = useState(false);
+  const [exportingFormat, setExportingFormat] = useState<'md' | 'pdf' | null>(null);
 
   // WebRTC & Audio capture
   const {
@@ -53,6 +67,8 @@ export default function SessionRoomPage() {
     videoEnabled,
     audioEnabled,
     isScreenSharing,
+    joinError,
+    mediaWarning,
     localVideoTrack,
     localAudioTrack,
     cameras,
@@ -60,6 +76,7 @@ export default function SessionRoomPage() {
     selectedMicrophone,
     selectedCamera,
     joinChannel,
+    setStreamRole,
     leaveChannel,
     toggleVideo,
     toggleAudio,
@@ -69,6 +86,8 @@ export default function SessionRoomPage() {
   } = useAgoraSession(sessionId || '');
 
   const [showSettings, setShowSettings] = useState(false);
+  const [roomError, setRoomError] = useState<string | null>(null);
+  const [endingCall, setEndingCall] = useState(false);
 
   const [speechLanguage, setSpeechLanguage] = useState('en-US');
   const {
@@ -76,6 +95,8 @@ export default function SessionRoomPage() {
     status: speechStatus,
     interimTranscript,
     errorMessage: speechError,
+    detectedLanguage,
+    activeLanguage,
   } = useTranscription(sessionId || '', joined && audioEnabled, speechLanguage);
 
   const [localVolume, setLocalVolume] = useState(0);
@@ -122,7 +143,7 @@ export default function SessionRoomPage() {
   }, [localAudioTrack, hearSelf, audioEnabled]);
 
   // WebSocket connection for real-time collaboration and alerts
-  const { subscribe, send } = useWebSocket(token);
+  const { connected, subscribe, send } = useWebSocket(token);
   const transcriptEndRef = useRef<HTMLDivElement>(null);
 
   const getPeerNameByUid = (uid: string | number) => {
@@ -152,7 +173,7 @@ export default function SessionRoomPage() {
     return `Partner (${uid})`;
   };
 
-  // Fetch initial session info and notes/transcripts
+  // Fetch initial session info and transcript
   useEffect(() => {
     if (!sessionId) return;
     
@@ -171,16 +192,11 @@ export default function SessionRoomPage() {
       })
       .catch(() => {});
 
-    SessionService.getNotes(sessionId)
-      .then((data) => {
-        setAiNotes(data);
-      })
-      .catch(() => {});
-  }, [joinChannel, leaveChannel, sessionId]);
+  }, [sessionId]);
 
   // Subscribe to WebSocket channels
   useEffect(() => {
-    if (!sessionId || !subscribe) return;
+    if (!sessionId || !connected) return;
 
     // 1. Subscribe to Live Transcript channel
     const unsubTranscript = subscribe(`/topic/session/${sessionId}/transcript`, (msg) => {
@@ -212,12 +228,18 @@ export default function SessionRoomPage() {
       }
     });
 
+    const unsubPresence = subscribe(`/topic/session/${sessionId}/presence`, (msg) => {
+      const payload = JSON.parse(msg.body) as PresencePayload;
+      setPresence(payload);
+    });
+
     return () => {
       if (unsubTranscript) unsubTranscript();
       if (unsubNotes) unsubNotes();
       if (unsubAiNotes) unsubAiNotes();
+      if (unsubPresence) unsubPresence();
     };
-  }, [sessionId, subscribe, token]);
+  }, [connected, sessionId, subscribe, token]);
 
   // Auto-scroll transcripts
   useEffect(() => {
@@ -227,19 +249,46 @@ export default function SessionRoomPage() {
   // Auto join Agora room when session is loaded
   useEffect(() => {
     if (!sessionId) return;
-    
-    SessionService.joinRoom(sessionId)
-      .then((res) => {
-        joinChannel(res.token, res.uid);
-      })
-      .catch((err) => {
+    let cancelled = false;
+
+    const bootRoom = async () => {
+      try {
+        setRoomError(null);
+        await setStreamRole('host');
+        const res = await SessionService.joinRoom(sessionId);
+        await joinChannel(res.token, res.uid, res.appId);
+        if (cancelled) return;
+        const snapshot = await SessionService.getPresence(sessionId);
+        if (!cancelled && snapshot) {
+          setPresence(snapshot as PresencePayload);
+        }
+      } catch (err) {
+        if (cancelled) return;
         console.error('Failed to authenticate with Agora room', err);
-      });
+        const message = err instanceof Error ? err.message : 'You cannot join this live room right now.';
+        setRoomError(message);
+      }
+    };
+
+    void bootRoom();
 
     return () => {
-      leaveChannel();
+      cancelled = true;
+      void leaveChannel();
     };
-  }, [joinChannel, leaveChannel, sessionId]);
+  }, [sessionId]);
+
+  useEffect(() => {
+    if (!sessionId) return;
+    const notifyLeave = () => {
+      void SessionService.leaveRoom(sessionId).catch(() => {});
+    };
+    window.addEventListener('beforeunload', notifyLeave);
+    return () => {
+      window.removeEventListener('beforeunload', notifyLeave);
+      notifyLeave();
+    };
+  }, [sessionId]);
 
   // Handle local video element mounting
   useEffect(() => {
@@ -300,19 +349,107 @@ export default function SessionRoomPage() {
   // Terminate call session room
   const handleEndCall = async () => {
     if (!sessionId) return;
-    const confirmEnd = window.confirm('Are you sure you want to end this session call?');
-    if (!confirmEnd) return;
+    const confirmCancel = window.confirm('Cancel this session call? This will mark the session as cancelled.');
+    if (!confirmCancel) return;
 
+    let cancelFailed: unknown = null;
     try {
-      await leaveChannel();
-      await SessionService.endRoom(sessionId);
-      navigate(`/sessions/${sessionId}/review`);
+      setEndingCall(true);
+      try {
+        await SessionService.leaveRoom(sessionId);
+      } catch (err) {
+        console.warn('Leave room API failed during cancel flow', err);
+      }
+
+      try {
+        await leaveChannel();
+      } catch (err) {
+        console.warn('Local media cleanup failed during cancel flow', err);
+      }
+
+      try {
+        await SessionService.cancel(sessionId);
+      } catch (err) {
+        cancelFailed = err;
+      }
+
+      if (cancelFailed) {
+        throw cancelFailed;
+      }
+
+      navigate('/dashboard');
     } catch (err) {
-      console.error('Failed to terminate room', err);
+      console.error('Failed to cancel session', err);
+      alert('Session cancel korte problem hocche. Please refresh diye abar try korun.');
+    } finally {
+      setEndingCall(false);
     }
   };
 
+  const handleExportNotes = async (format: 'md' | 'pdf') => {
+    if (!sessionId || !aiNotes) return;
+    try {
+      setExportingFormat(format);
+      await SessionService.exportNotesDocument(sessionId, format);
+    } catch (error) {
+      console.error(error);
+      alert('Notes export korte problem hocche. Please abar try korun.');
+    } finally {
+      setExportingFormat(null);
+    }
+  };
+
+  const getSpeakerDisplayName = (msg: ChatMessage) => {
+    if (msg.speakerName && msg.speakerName.trim()) {
+      return msg.speakerName.trim();
+    }
+    if (!sessionInfo) {
+      return msg.speakerRole === 'TEACHER' ? 'Teacher' : msg.speakerRole === 'LEARNER' ? 'Learner' : 'Participant';
+    }
+    if (msg.speakerUserId === sessionInfo.teacher.id) {
+      return sessionInfo.teacher.name;
+    }
+    if (msg.speakerUserId === sessionInfo.learner.id) {
+      return sessionInfo.learner.name;
+    }
+    return msg.speakerRole === 'TEACHER' ? 'Teacher' : msg.speakerRole === 'LEARNER' ? 'Learner' : 'Participant';
+  };
+
+  const formatTranscriptTime = (spokenAt: string) => {
+    const time = new Date(spokenAt);
+    if (Number.isNaN(time.getTime())) return '--:--';
+    return time.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+  };
+
+  const formatConfidence = (value?: number) => {
+    if (typeof value !== 'number' || !Number.isFinite(value)) return null;
+    return `${Math.round(Math.max(0, Math.min(1, value)) * 100)}%`;
+  };
+
+  const formatLanguageLabel = (languageCode?: string) => {
+    if (!languageCode) return null;
+    const code = languageCode.toLowerCase();
+    if (code.startsWith('bn')) return 'Bangla';
+    if (code.startsWith('en')) return 'English';
+    return code.toUpperCase();
+  };
+
   const skillName = sessionInfo?.skill?.name || 'Skill Exchange';
+  const currentUserSessionRole =
+    user?.id && sessionInfo
+      ? user.id === sessionInfo.teacher.id
+        ? 'Teacher'
+        : user.id === sessionInfo.learner.id
+          ? 'Learner'
+          : 'Participant'
+      : 'Participant';
+  const effectiveRoomError = roomError || joinError;
+  const participantIds = presence?.participantUserIds ?? [];
+  const partnerConnectedByPresence = Boolean(
+    user?.id &&
+      sessionInfo &&
+      participantIds.some((id) => id !== user.id && (id === sessionInfo.teacher.id || id === sessionInfo.learner.id))
+  );
 
   return (
     <div className="flex flex-col h-screen bg-[#0D1B2A] text-slate-100 overflow-hidden font-sans">
@@ -326,6 +463,14 @@ export default function SessionRoomPage() {
         </div>
         <div className="flex items-center gap-4 text-sm text-slate-400">
           <span>Active Session Code: {sessionId?.substring(0, 8)}</span>
+          <div className="flex items-center gap-2">
+            <span className="text-[10px] uppercase tracking-wider text-slate-500">Your role</span>
+            <div className="flex items-center rounded-full border border-[#00C9C8]/20 bg-[#00C9C8]/10 px-3 py-1">
+              <span className="text-[10px] font-semibold uppercase tracking-wider text-[#00C9C8]">
+                {currentUserSessionRole}
+              </span>
+            </div>
+          </div>
         </div>
       </header>
 
@@ -333,6 +478,16 @@ export default function SessionRoomPage() {
       <div className="flex flex-1 overflow-hidden">
         {/* Left Hand: WebRTC Stream Column */}
         <div className="flex-1 flex flex-col p-6 overflow-hidden">
+          {effectiveRoomError && (
+            <div className="mb-4 rounded-xl border border-red-500/40 bg-red-500/10 px-4 py-3 text-xs text-red-200">
+              {effectiveRoomError}
+            </div>
+          )}
+          {mediaWarning && (
+            <div className="mb-4 rounded-xl border border-amber-400/30 bg-amber-400/10 px-4 py-3 text-xs text-amber-100">
+              {mediaWarning}
+            </div>
+          )}
           {/* Video stream grids */}
           <div className="flex-1 grid grid-cols-1 md:grid-cols-2 gap-4 rounded-3xl overflow-hidden bg-black/30 p-2 border border-white/5">
             {/* Local Feed */}
@@ -353,7 +508,7 @@ export default function SessionRoomPage() {
                 ) : (
                   <span className={cn("w-1.5 h-1.5 rounded-full", audioEnabled ? "bg-green-500" : "bg-red-500")} />
                 )}
-                You (Presenter)
+                You ({currentUserSessionRole})
               </div>
             </div>
 
@@ -381,8 +536,19 @@ export default function SessionRoomPage() {
               ) : (
                 <>
                   <div className="absolute inset-0 flex flex-col items-center justify-center bg-[#1B263B]/80 text-slate-400 gap-3">
-                    <Loader2 className="h-8 w-8 text-[#00C9C8] animate-spin" />
-                    <span className="text-xs text-slate-400 font-medium">Waiting for partner to connect...</span>
+                    {partnerConnectedByPresence ? (
+                      <>
+                        <VideoOff className="h-8 w-8 text-slate-500 animate-pulse" />
+                        <span className="text-xs text-slate-300 font-medium">Partner joined (camera off)</span>
+                      </>
+                    ) : (
+                      <>
+                        <Loader2 className="h-8 w-8 text-[#00C9C8] animate-spin" />
+                        <span className="text-xs text-slate-400 font-medium">
+                          {joined ? 'Waiting for partner to connect...' : 'Connecting to live room...'}
+                        </span>
+                      </>
+                    )}
                   </div>
                   <div className="absolute bottom-4 left-4 bg-black/60 backdrop-blur-md px-3 py-1 rounded-xl text-xs border border-white/10">
                     Partner Stream
@@ -398,7 +564,9 @@ export default function SessionRoomPage() {
               onClick={toggleAudio}
               className={cn(
                 "p-3.5 rounded-full transition-all duration-300 transform hover:scale-105 border border-white/10",
-                audioEnabled ? "bg-white/10 hover:bg-white/20 text-white" : "bg-red-500/20 text-red-400 hover:bg-red-500/30 border-red-500/20"
+                audioEnabled
+                  ? "bg-white/10 hover:bg-white/20 text-white"
+                  : "bg-red-500/20 text-red-400 hover:bg-red-500/30 border-red-500/20"
               )}
               title="Toggle Microphone"
             >
@@ -424,7 +592,9 @@ export default function SessionRoomPage() {
               onClick={toggleVideo}
               className={cn(
                 "p-3.5 rounded-full transition-all duration-300 transform hover:scale-105 border border-white/10",
-                videoEnabled ? "bg-white/10 hover:bg-white/20 text-white" : "bg-red-500/20 text-red-400 hover:bg-red-500/30 border-red-500/20"
+                videoEnabled
+                  ? "bg-white/10 hover:bg-white/20 text-white"
+                  : "bg-red-500/20 text-red-400 hover:bg-red-500/30 border-red-500/20"
               )}
               title="Toggle Camera"
             >
@@ -435,7 +605,9 @@ export default function SessionRoomPage() {
               onClick={toggleScreenShare}
               className={cn(
                 "p-3.5 rounded-full transition-all duration-300 transform hover:scale-105 border border-white/10",
-                isScreenSharing ? "bg-[#00C9C8]/20 text-[#00C9C8] border-[#00C9C8]/30" : "bg-white/10 hover:bg-white/20 text-white"
+                isScreenSharing
+                  ? "bg-[#00C9C8]/20 text-[#00C9C8] border-[#00C9C8]/30"
+                  : "bg-white/10 hover:bg-white/20 text-white"
               )}
               title="Toggle Screenshare"
             >
@@ -454,8 +626,9 @@ export default function SessionRoomPage() {
 
             <button
               onClick={handleEndCall}
+              disabled={endingCall}
               className="p-3.5 bg-red-500/80 hover:bg-red-500 text-white rounded-full transition-all duration-300 transform hover:scale-105 hover:rotate-12 border border-red-500/20 shadow-lg shadow-red-500/10"
-              title="Terminate Call Room"
+              title="Cancel Session"
             >
               <PhoneOff className="h-5 w-5" />
             </button>
@@ -517,9 +690,33 @@ export default function SessionRoomPage() {
                             : "bg-white/5 border-white/5 self-start text-slate-200"
                         )}
                       >
-                        <span className="text-[10px] uppercase tracking-wider font-semibold text-slate-400 mb-1">
-                          {msg.speakerRole === 'TEACHER' ? 'Teacher' : 'Learner'}
-                        </span>
+                        <div className="mb-1 flex flex-wrap items-center gap-1.5">
+                          <span className="text-[10px] uppercase tracking-wider font-semibold text-slate-400">
+                            {getSpeakerDisplayName(msg)}
+                          </span>
+                          <span className="rounded-full border border-white/10 bg-black/25 px-1.5 py-0.5 text-[9px] font-semibold uppercase tracking-wider text-slate-300">
+                            {formatTranscriptTime(msg.spokenAt)}
+                          </span>
+                          {formatLanguageLabel(msg.detectedLanguage) && (
+                            <span className="rounded-full border border-[#00C9C8]/20 bg-[#00C9C8]/10 px-1.5 py-0.5 text-[9px] font-semibold uppercase tracking-wider text-[#78f6f6]">
+                              {formatLanguageLabel(msg.detectedLanguage)}
+                            </span>
+                          )}
+                          {formatConfidence(msg.confidenceScore) && (
+                            <span
+                              className={cn(
+                                "rounded-full px-1.5 py-0.5 text-[9px] font-semibold uppercase tracking-wider",
+                                (msg.confidenceScore ?? 0) >= 0.8
+                                  ? "border border-green-400/25 bg-green-500/10 text-green-300"
+                                  : (msg.confidenceScore ?? 0) >= 0.55
+                                  ? "border border-amber-400/25 bg-amber-500/10 text-amber-300"
+                                  : "border border-red-400/25 bg-red-500/10 text-red-300"
+                              )}
+                            >
+                              {formatConfidence(msg.confidenceScore)}
+                            </span>
+                          )}
+                        </div>
                         <p className="leading-relaxed">{msg.content}</p>
                       </div>
                     ))
@@ -581,7 +778,7 @@ export default function SessionRoomPage() {
                       <>
                         <div className="h-2 w-2 rounded-full bg-slate-500" />
                         <span className="text-[10px] text-slate-400 font-semibold uppercase tracking-wider">
-                          {audioEnabled ? 'Transcriber idle' : 'Mic muted'}
+                          {audioEnabled ? 'Transcriber idle' : 'Your mic muted'}
                         </span>
                       </>
                     )}
@@ -599,9 +796,15 @@ export default function SessionRoomPage() {
                       onChange={(e) => setSpeechLanguage(e.target.value)}
                       className="bg-slate-950 border border-white/10 text-slate-200 text-[10px] rounded-lg px-2 py-1 font-semibold outline-none hover:border-[#00C9C8]/40 transition-all cursor-pointer"
                     >
-                      <option value="en-US">🇬🇧 English (US)</option>
-                      <option value="bn-BD">🇧🇩 Bangla (BD)</option>
+                      <option value="auto">Auto Detect</option>
+                      <option value="en-US">English (US)</option>
+                      <option value="bn-BD">Bangla (BD)</option>
                     </select>
+                    <span className="text-[9px] text-slate-500 uppercase tracking-widest font-bold">
+                      {speechLanguage === 'auto'
+                        ? `Detected: ${formatLanguageLabel(detectedLanguage) ?? 'English'}`
+                        : `Using: ${formatLanguageLabel(activeLanguage) ?? 'English'}`}
+                    </span>
                   </div>
                 </div>
               </div>
@@ -634,6 +837,26 @@ export default function SessionRoomPage() {
             {/* TAB 3: Ollama Gemma AI summary boards */}
             {activeTab === 'ai-notes' && (
               <div className="flex-1 flex flex-col overflow-hidden p-4">
+                {aiNotes && (
+                  <div className="mb-3 flex items-center justify-end gap-2">
+                    <button
+                      onClick={() => void handleExportNotes('md')}
+                      disabled={exportingFormat !== null}
+                      className="inline-flex items-center gap-1.5 rounded-lg border border-[#00C9C8]/20 bg-[#00C9C8]/10 px-2.5 py-1 text-[11px] font-semibold text-[#7ef5f4] transition hover:bg-[#00C9C8]/20 disabled:cursor-not-allowed disabled:opacity-50"
+                    >
+                      {exportingFormat === 'md' ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Download className="h-3.5 w-3.5" />}
+                      Export Markdown
+                    </button>
+                    <button
+                      onClick={() => void handleExportNotes('pdf')}
+                      disabled={exportingFormat !== null}
+                      className="inline-flex items-center gap-1.5 rounded-lg border border-[#00C9C8]/20 bg-[#00C9C8]/10 px-2.5 py-1 text-[11px] font-semibold text-[#7ef5f4] transition hover:bg-[#00C9C8]/20 disabled:cursor-not-allowed disabled:opacity-50"
+                    >
+                      {exportingFormat === 'pdf' ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Download className="h-3.5 w-3.5" />}
+                      Export PDF
+                    </button>
+                  </div>
+                )}
                 <div className="flex-1 overflow-y-auto custom-scrollbar space-y-4 pr-1">
                   {aiNotes ? (
                     <div className="space-y-4">

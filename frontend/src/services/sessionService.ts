@@ -1,5 +1,6 @@
 import type { Session } from '@/types';
 import { api } from './api';
+import { TokenStore } from './http/ApiClient';
 
 export interface PagedResponse<T> {
   content: T[];
@@ -7,6 +8,20 @@ export interface PagedResponse<T> {
   totalPages: number;
   number: number;
   size: number;
+}
+
+export interface SessionPresenceSnapshot {
+  event: 'JOINED' | 'LEFT' | 'SNAPSHOT' | string;
+  sessionId: string;
+  actorUserId: string;
+  participantUserIds: string[];
+  count: number;
+  updatedAt: string;
+}
+
+export interface TranscriptQualityMetadata {
+  confidenceScore?: number;
+  detectedLanguage?: string;
 }
 
 const normalizeSession = (session: Session): Session => ({
@@ -84,7 +99,7 @@ export const SessionService = {
   },
 
   /** POST /api/sessions/{id}/join — retrieve Agora access token and transition status */
-  joinRoom: async (sessionId: string): Promise<{ token: string; uid: number; channelName: string }> => {
+  joinRoom: async (sessionId: string): Promise<{ token: string | null; uid: number; channelName: string; appId: string }> => {
     return api.post(`/sessions/${sessionId}/join`, {});
   },
 
@@ -98,20 +113,37 @@ export const SessionService = {
     return api.post(`/sessions/${sessionId}/end`, {});
   },
 
+  /** POST /api/sessions/{id}/leave — update live presence when user exits room */
+  leaveRoom: async (sessionId: string): Promise<void> => {
+    return api.post(`/sessions/${sessionId}/leave`, {});
+  },
+
+  /** GET /api/sessions/{id}/presence — fetch current participant presence snapshot */
+  getPresence: async (sessionId: string): Promise<SessionPresenceSnapshot> => {
+    return api.get(`/sessions/${sessionId}/presence`);
+  },
+
   /** POST /api/sessions/{id}/transcribe — send speech chunk */
   transcribeAudio: async (sessionId: string, audioBlob: Blob): Promise<void> => {
     const formData = new FormData();
     formData.append('audio', audioBlob, 'chunk.webm');
-    return api.post(`/sessions/${sessionId}/transcribe`, formData, {
-      headers: {
-        'Content-Type': 'multipart/form-data',
-      },
-    });
+    return api.post(`/sessions/${sessionId}/transcribe`, formData);
   },
 
   /** POST /api/sessions/{id}/transcribe/text — send pre-transcribed text directly */
-  transcribeText: async (sessionId: string, text: string): Promise<void> => {
-    return api.post(`/sessions/${sessionId}/transcribe/text`, { text });
+  transcribeText: async (
+    sessionId: string,
+    text: string,
+    metadata?: TranscriptQualityMetadata
+  ): Promise<void> => {
+    const payload: { text: string; confidenceScore?: number; detectedLanguage?: string } = { text };
+    if (typeof metadata?.confidenceScore === 'number') {
+      payload.confidenceScore = metadata.confidenceScore;
+    }
+    if (metadata?.detectedLanguage) {
+      payload.detectedLanguage = metadata.detectedLanguage;
+    }
+    return api.post(`/sessions/${sessionId}/transcribe/text`, payload);
   },
 
   /** POST /api/sessions/{id}/notes/generate — request background AI summary */
@@ -131,13 +163,50 @@ export const SessionService = {
     return api.get(`/sessions/${sessionId}/notes`);
   },
 
+  /** GET /api/sessions/{id}/notes/export?format=md|pdf — download polished notes document */
+  exportNotesDocument: async (sessionId: string, format: 'md' | 'pdf'): Promise<void> => {
+    const token = TokenStore.get();
+    const response = await fetch(`/api/sessions/${sessionId}/notes/export?format=${format}`, {
+      method: 'GET',
+      headers: token ? { Authorization: `Bearer ${token}` } : undefined,
+    });
+
+    if (!response.ok) {
+      let message = 'Failed to export notes document.';
+      try {
+        const data = await response.json();
+        if (data?.message) message = String(data.message);
+      } catch {
+        // keep fallback message
+      }
+      throw new Error(message);
+    }
+
+    const blob = await response.blob();
+    const url = window.URL.createObjectURL(blob);
+    const disposition = response.headers.get('content-disposition') ?? '';
+    const matchedFile = disposition.match(/filename=\"?([^\";]+)\"?/i);
+    const filename = matchedFile?.[1] || `session-notes.${format}`;
+
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = filename;
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    window.URL.revokeObjectURL(url);
+  },
+
   /** GET /api/sessions/{id}/transcript — retrieve full conversation log */
   getTranscript: async (sessionId: string): Promise<Array<{
     id: number;
     speakerUserId: string;
     speakerRole: string;
+    speakerName?: string;
     content: string;
     spokenAt: string;
+    confidenceScore?: number;
+    detectedLanguage?: string;
   }>> => {
     return api.get(`/sessions/${sessionId}/transcript`);
   },

@@ -11,7 +11,6 @@ import com.skillex.repository.ExchangeRepository;
 import com.skillex.repository.SessionNoteRepository;
 import com.skillex.repository.SessionRepository;
 import com.skillex.repository.SessionTranscriptRepository;
-import com.skillex.repository.SkillRepository;
 import com.skillex.repository.UserRepository;
 import com.skillex.service.DtoMapper;
 import com.skillex.service.SessionService;
@@ -37,6 +36,7 @@ import java.util.Set;
 public class SessionServiceImpl implements SessionService {
 
     private static final int MAX_SESSION_DURATION_MINS = 240;
+    private static final int ACCEPT_PAST_GRACE_MINS = 10;
     private static final Collection<Session.SessionStatus> ACTIVE_STATUSES = Set.of(
         Session.SessionStatus.PROPOSED,
         Session.SessionStatus.SCHEDULED,
@@ -46,7 +46,6 @@ public class SessionServiceImpl implements SessionService {
     private final SessionRepository sessionRepository;
     private final ExchangeRepository exchangeRepository;
     private final UserRepository userRepository;
-    private final SkillRepository skillRepository;
     private final SessionTranscriptRepository transcriptRepository;
     private final SessionNoteRepository noteRepository;
     private final DtoMapper mapper;
@@ -141,7 +140,8 @@ public class SessionServiceImpl implements SessionService {
             session.getLearner(),
             session.getScheduledAt(),
             session.getDurationMins(),
-            session.getId()
+            session.getId(),
+            ACCEPT_PAST_GRACE_MINS
         );
 
         session.setStatus(Session.SessionStatus.SCHEDULED);
@@ -350,7 +350,14 @@ public class SessionServiceImpl implements SessionService {
     }
 
     private void assertNoActiveSessionForExchangeSkill(String exchangeId, String skillId) {
-        if (!sessionRepository.findByExchangeIdAndSkillIdAndStatusIn(exchangeId, skillId, ACTIVE_STATUSES).isEmpty()) {
+        LocalDateTime now = LocalDateTime.now();
+        boolean hasBlockingSession = sessionRepository
+            .findByExchangeIdAndSkillIdAndStatusIn(exchangeId, skillId, ACTIVE_STATUSES)
+            .stream()
+            .anyMatch(session -> session.getScheduledAt() != null
+                && session.getScheduledAt().plusMinutes(Math.max(session.getDurationMins(), 0)).isAfter(now));
+
+        if (hasBlockingSession) {
             throw new IllegalStateException("This exchange already has an active session for that skill.");
         }
     }
@@ -362,7 +369,18 @@ public class SessionServiceImpl implements SessionService {
         int durationMins,
         String excludedSessionId
     ) {
-        assertScheduleInput(scheduledAt, durationMins);
+        assertNoScheduleOverlap(teacher, learner, scheduledAt, durationMins, excludedSessionId, 0);
+    }
+
+    private void assertNoScheduleOverlap(
+        User teacher,
+        User learner,
+        LocalDateTime scheduledAt,
+        int durationMins,
+        String excludedSessionId,
+        int pastGraceMins
+    ) {
+        assertScheduleInput(scheduledAt, durationMins, pastGraceMins);
 
         LocalDateTime start = scheduledAt;
         LocalDateTime end = scheduledAt.plusMinutes(durationMins);
@@ -382,7 +400,13 @@ public class SessionServiceImpl implements SessionService {
     }
 
     private void assertScheduleInput(LocalDateTime scheduledAt, int durationMins) {
-        if (scheduledAt == null || !scheduledAt.isAfter(LocalDateTime.now())) {
+        assertScheduleInput(scheduledAt, durationMins, 0);
+    }
+
+    private void assertScheduleInput(LocalDateTime scheduledAt, int durationMins, int pastGraceMins) {
+        LocalDateTime now = LocalDateTime.now();
+        LocalDateTime min = pastGraceMins > 0 ? now.minusMinutes(pastGraceMins) : now;
+        if (scheduledAt == null || !scheduledAt.isAfter(min)) {
             throw new IllegalArgumentException("Session time must be in the future.");
         }
         if (durationMins < 15 || durationMins > MAX_SESSION_DURATION_MINS) {

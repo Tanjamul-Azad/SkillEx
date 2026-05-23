@@ -2,7 +2,7 @@
 
 import React, { useState, useRef, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { X, Volume2, VolumeX, Play, Pause, ChevronLeft, ChevronRight } from 'lucide-react';
+import { X, Volume2, VolumeX, Play, ChevronLeft, ChevronRight } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 
 interface ShowcaseVideo {

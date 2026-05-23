@@ -51,6 +51,8 @@ type SpeechWindow = Window & {
 
 const MIN_FINAL_CHARS = 2;
 const DUPLICATE_WINDOW_MS = 8_000;
+const DEFAULT_LANGUAGE = 'en-US';
+const BENGALI_PATTERN = /[\u0980-\u09FF]/g;
 
 const cleanTranscript = (value: string) =>
   value
@@ -58,16 +60,49 @@ const cleanTranscript = (value: string) =>
     .replace(/\s+([?.!,])/g, '$1')
     .trim();
 
+const normalizeLanguageCode = (value: string | undefined | null): string | null => {
+  if (!value) return null;
+  const trimmed = value.trim();
+  if (!trimmed) return null;
+  return trimmed.toLowerCase();
+};
+
+const chooseRecognitionLanguage = (selectedLanguage: string, detectedLanguage: string | null): string => {
+  if (selectedLanguage !== 'auto') {
+    return selectedLanguage || DEFAULT_LANGUAGE;
+  }
+  if (!detectedLanguage) {
+    return DEFAULT_LANGUAGE;
+  }
+  return detectedLanguage.startsWith('bn') ? 'bn-BD' : DEFAULT_LANGUAGE;
+};
+
+const detectLanguageFromText = (text: string): string => {
+  const cleaned = cleanTranscript(text);
+  if (!cleaned) return 'en-us';
+
+  const banglaMatches = cleaned.match(BENGALI_PATTERN)?.length ?? 0;
+  const latinMatches = cleaned.match(/[A-Za-z]/g)?.length ?? 0;
+
+  if (banglaMatches > 0 && banglaMatches >= latinMatches * 0.2) {
+    return 'bn-bd';
+  }
+  return 'en-us';
+};
+
 export const useTranscription = (sessionId: string, active: boolean, language = 'en-US') => {
   const [recording, setRecording] = useState(false);
   const [status, setStatus] = useState<SpeechStatus>('idle');
   const [interimTranscript, setInterimTranscript] = useState('');
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
+  const [detectedLanguage, setDetectedLanguage] = useState<string>('en-us');
+  const [activeLanguage, setActiveLanguage] = useState<string>(chooseRecognitionLanguage(language, 'en-us'));
 
   const recognitionRef = useRef<SpeechRecognitionLike | null>(null);
   const activeRef = useRef(false);
   const intentionalStopRef = useRef(false);
   const restartTimerRef = useRef<number | null>(null);
+  const detectedLanguageRef = useRef<string>('en-us');
   const lastSentRef = useRef<{ text: string; sentAt: number }>({ text: '', sentAt: 0 });
 
   const stopSpeechRecognition = useCallback(() => {
@@ -103,7 +138,10 @@ export const useTranscription = (sessionId: string, active: boolean, language = 
     setStatus('idle');
   }, []);
 
-  const sendFinalTranscript = useCallback(async (text: string) => {
+  const sendFinalTranscript = useCallback(async (
+    text: string,
+    metadata?: { confidenceScore?: number; detectedLanguage?: string }
+  ) => {
     const cleaned = cleanTranscript(text);
     if (!sessionId || cleaned.length < MIN_FINAL_CHARS) return;
 
@@ -114,7 +152,7 @@ export const useTranscription = (sessionId: string, active: boolean, language = 
     }
 
     lastSentRef.current = { text: cleaned, sentAt: now };
-    await SessionService.transcribeText(sessionId, cleaned);
+    await SessionService.transcribeText(sessionId, cleaned, metadata);
   }, [sessionId]);
 
   const startSpeechRecognition = useCallback(() => {
@@ -137,7 +175,8 @@ export const useTranscription = (sessionId: string, active: boolean, language = 
     recognition.continuous = true;
     recognition.interimResults = true;
     recognition.maxAlternatives = 1;
-    recognition.lang = language;
+    recognition.lang = chooseRecognitionLanguage(language, detectedLanguageRef.current);
+    setActiveLanguage(recognition.lang);
 
     recognition.onstart = () => {
       setRecording(true);
@@ -148,14 +187,25 @@ export const useTranscription = (sessionId: string, active: boolean, language = 
     recognition.onresult = (event) => {
       let interim = '';
       const finalChunks: string[] = [];
+      let confidenceTotal = 0;
+      let confidenceCount = 0;
 
       for (let i = event.resultIndex; i < event.results.length; i += 1) {
         const result = event.results[i];
-        const transcript = cleanTranscript(result[0]?.transcript ?? '');
+        const alternative = result[0];
+        const transcript = cleanTranscript(alternative?.transcript ?? '');
         if (!transcript) continue;
 
         if (result.isFinal) {
           finalChunks.push(transcript);
+          if (
+            typeof alternative?.confidence === 'number' &&
+            Number.isFinite(alternative.confidence) &&
+            alternative.confidence > 0
+          ) {
+            confidenceTotal += alternative.confidence;
+            confidenceCount += 1;
+          }
         } else {
           interim = cleanTranscript(`${interim} ${transcript}`);
         }
@@ -165,7 +215,30 @@ export const useTranscription = (sessionId: string, active: boolean, language = 
 
       if (finalChunks.length > 0) {
         const finalText = cleanTranscript(finalChunks.join(' '));
-        void sendFinalTranscript(finalText).catch((error) => {
+        const autoDetectedLanguage = detectLanguageFromText(finalText);
+        const selectedOrDetectedLanguage =
+          language === 'auto'
+            ? autoDetectedLanguage
+            : normalizeLanguageCode(language) ?? 'en-us';
+
+        if (language === 'auto') {
+          detectedLanguageRef.current = autoDetectedLanguage;
+          setDetectedLanguage(autoDetectedLanguage);
+
+          const nextRecognitionLanguage = chooseRecognitionLanguage(language, autoDetectedLanguage);
+          if (recognition.lang !== nextRecognitionLanguage) {
+            recognition.lang = nextRecognitionLanguage;
+            setActiveLanguage(nextRecognitionLanguage);
+          }
+        }
+
+        const confidenceScore =
+          confidenceCount > 0 ? Math.max(0, Math.min(1, confidenceTotal / confidenceCount)) : undefined;
+
+        void sendFinalTranscript(finalText, {
+          confidenceScore,
+          detectedLanguage: selectedOrDetectedLanguage,
+        }).catch((error) => {
           setStatus('error');
           setErrorMessage(error instanceof Error ? error.message : 'Could not save transcript text.');
         });
@@ -204,6 +277,9 @@ export const useTranscription = (sessionId: string, active: boolean, language = 
         if (!activeRef.current || !recognitionRef.current) return;
 
         try {
+          const refreshedLanguage = chooseRecognitionLanguage(language, detectedLanguageRef.current);
+          recognitionRef.current.lang = refreshedLanguage;
+          setActiveLanguage(refreshedLanguage);
           recognitionRef.current.start();
         } catch {
           setStatus('error');
@@ -240,5 +316,7 @@ export const useTranscription = (sessionId: string, active: boolean, language = 
     interimTranscript,
     errorMessage,
     isSupported: status !== 'unsupported',
+    detectedLanguage,
+    activeLanguage,
   };
 };

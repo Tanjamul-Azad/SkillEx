@@ -1034,6 +1034,8 @@ function UpcomingSessionsSection({
   const navigate = useNavigate();
   const { toast } = useToast();
   const [busySessionId, setBusySessionId] = React.useState<string | null>(null);
+  const reminderTimersRef = React.useRef<Map<string, number>>(new Map());
+  const remindedRef = React.useRef<Set<string>>(new Set());
   const upcomingSessions = React.useMemo(() => {
     const now = Date.now();
     return sessions
@@ -1048,6 +1050,49 @@ function UpcomingSessionsSection({
       })
       .sort((a, b) => new Date(a.scheduledAt).getTime() - new Date(b.scheduledAt).getTime());
   }, [sessions]);
+
+  React.useEffect(() => {
+    const MAX_REMINDER_WINDOW_MS = 24 * 60 * 60 * 1000;
+    const reminderTimers = reminderTimersRef.current;
+
+    reminderTimers.forEach((timerId) => window.clearTimeout(timerId));
+    reminderTimers.clear();
+
+    const now = Date.now();
+
+    upcomingSessions.forEach((session) => {
+      const status = String(session.status).toLowerCase();
+      if (status !== 'scheduled') return;
+      if (remindedRef.current.has(session.id)) return;
+
+      const scheduledAtMs = new Date(session.scheduledAt).getTime();
+      if (!Number.isFinite(scheduledAtMs)) return;
+
+      const delay = scheduledAtMs - now;
+      if (delay > MAX_REMINDER_WINDOW_MS || delay < -60_000) return;
+
+      const isTeacher = session.teacher.id === currentUserId;
+      const partner = isTeacher ? session.learner : session.teacher;
+      const skillName = session.skill?.name ?? 'Skill Exchange';
+
+      const timerId = window.setTimeout(() => {
+        if (remindedRef.current.has(session.id)) return;
+        remindedRef.current.add(session.id);
+        toast({
+          title: 'Session starting now',
+          description: `${skillName} with ${partner.name?.split(' ')[0] ?? 'your partner'} is starting now.`,
+          variant: 'success',
+        });
+      }, Math.max(0, delay));
+
+      reminderTimers.set(session.id, timerId);
+    });
+
+    return () => {
+      reminderTimers.forEach((timerId) => window.clearTimeout(timerId));
+      reminderTimers.clear();
+    };
+  }, [currentUserId, toast, upcomingSessions]);
 
   if (loading) {
     return (
@@ -1843,7 +1888,7 @@ export default function DashboardPage() {
 
         {/* ══ BENTO ROW 3 (Carousel + Tasks) ═══════════════════════════ */}
         <div className="md:col-span-2 lg:col-span-2 min-h-[140px] flex flex-col">
-          <ScrollReveal animation="fade-up" delay={0.24} className="h-full flex-1 w-full bg-card rounded-3xl border border-white/5 shadow-sm p-4 overflow-hidden shadow-[inset_0_1px_0_0_hsla(0,0%,100%,0.05)]">
+          <ScrollReveal animation="fade-up" delay={0.24} className="h-full flex-1 w-full bg-card rounded-3xl border border-white/5 p-4 overflow-hidden shadow-[inset_0_1px_0_0_hsla(0,0%,100%,0.05)]">
              <SessionCarousel exchanges={exchanges} currentUserId={currentUserId} />
           </ScrollReveal>
         </div>
@@ -1856,7 +1901,7 @@ export default function DashboardPage() {
 
         {/* ══ BENTO ROW 4 (Active Exchanges & Sessions) ═════════════════ */}
         <div className="col-span-1 md:col-span-3 lg:col-span-2 flex flex-col min-h-[300px]">
-          <ScrollReveal animation="fade-up" delay={0.25} className="h-full flex flex-col bg-card rounded-3xl border border-white/5 shadow-sm overflow-hidden p-4 shadow-[inset_0_1px_0_0_hsla(0,0%,100%,0.05)]">
+          <ScrollReveal animation="fade-up" delay={0.25} className="h-full flex flex-col bg-card rounded-3xl border border-white/5 overflow-hidden p-4 shadow-[inset_0_1px_0_0_hsla(0,0%,100%,0.05)]">
              <SectionHeading icon={Zap} action={
                 <Button asChild variant="ghost" size="sm" className="h-7 text-xs font-semibold text-primary hover:bg-primary/10">
                   <Link to="/match">Explore <ArrowRight className="ml-1 h-3 w-3" /></Link>
@@ -1887,7 +1932,7 @@ export default function DashboardPage() {
         </div>
 
         <div className="col-span-1 md:col-span-3 lg:col-span-1 flex flex-col min-h-[300px]">
-           <ScrollReveal animation="fade-up" delay={0.28} className="h-full flex flex-col bg-card rounded-3xl border border-white/5 shadow-sm overflow-hidden p-4 shadow-[inset_0_1px_0_0_hsla(0,0%,100%,0.05)]">
+           <ScrollReveal animation="fade-up" delay={0.28} className="h-full flex flex-col bg-card rounded-3xl border border-white/5 overflow-hidden p-4 shadow-[inset_0_1px_0_0_hsla(0,0%,100%,0.05)]">
              <SectionHeading icon={CalendarDays}>Upcoming</SectionHeading>
              <div className="flex-1 overflow-y-auto overflow-x-hidden custom-scrollbar -mx-2 px-2">
                <UpcomingSessionsSection

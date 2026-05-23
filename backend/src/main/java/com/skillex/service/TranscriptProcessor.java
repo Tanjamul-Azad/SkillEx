@@ -15,6 +15,7 @@ import java.net.URI;
 import java.net.http.HttpClient;
 import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
+import java.util.LinkedHashMap;
 import java.util.Map;
 
 @Service
@@ -50,16 +51,34 @@ public class TranscriptProcessor {
         if (transcribedText != null && !transcribedText.isBlank()) {
             // Save chunk to database
             SessionTranscript saved = transcriptService.saveTranscriptChunk(sessionId, speakerUserId, role, transcribedText);
+            String speakerName = sessionRepository.findById(sessionId)
+                    .map(session -> {
+                        if (session.getTeacher() != null && saved.getSpeakerUserId().equals(session.getTeacher().getId())) {
+                            return session.getTeacher().getName();
+                        }
+                        if (session.getLearner() != null && saved.getSpeakerUserId().equals(session.getLearner().getId())) {
+                            return session.getLearner().getName();
+                        }
+                        return saved.getSpeakerRole() == SpeakerRole.TEACHER ? "Teacher" : "Learner";
+                    })
+                    .orElse(saved.getSpeakerRole() == SpeakerRole.TEACHER ? "Teacher" : "Learner");
 
             // Broadcast real-time transcript payload over WS
             String destination = "/topic/session/" + sessionId + "/transcript";
-            messagingTemplate.convertAndSend(destination, Map.of(
-                "id", saved.getId(),
-                "speakerUserId", saved.getSpeakerUserId(),
-                "speakerRole", saved.getSpeakerRole().toString(),
-                "content", saved.getContent(),
-                "spokenAt", saved.getSpokenAt().toString()
-            ));
+            Map<String, Object> payload = new LinkedHashMap<>();
+            payload.put("id", saved.getId());
+            payload.put("speakerUserId", saved.getSpeakerUserId());
+            payload.put("speakerRole", saved.getSpeakerRole().toString());
+            payload.put("speakerName", speakerName);
+            payload.put("content", saved.getContent());
+            payload.put("spokenAt", saved.getSpokenAt().toString());
+            if (saved.getConfidenceScore() != null) {
+                payload.put("confidenceScore", saved.getConfidenceScore());
+            }
+            if (saved.getDetectedLanguage() != null && !saved.getDetectedLanguage().isBlank()) {
+                payload.put("detectedLanguage", saved.getDetectedLanguage());
+            }
+            messagingTemplate.convertAndSend(destination, payload);
             log.info("[Transcript] Successfully broadcasted transcribed chunk over WebSockets to {}", destination);
         }
     }
@@ -67,10 +86,18 @@ public class TranscriptProcessor {
     private String callWhisperApi(MultipartFile audioFile) {
         try {
             byte[] bytes = audioFile.getBytes();
+            String filename = audioFile.getOriginalFilename();
+            if (filename == null || filename.isBlank()) {
+                filename = "audio.webm";
+            }
+            String contentType = audioFile.getContentType();
+            if (contentType == null || contentType.isBlank()) {
+                contentType = "application/octet-stream";
+            }
             String boundary = "Boundary-" + System.currentTimeMillis();
             
             // Construct HTTP Multipart Form Body
-            byte[] multipartBody = createMultipartBody(bytes, audioFile.getOriginalFilename(), boundary);
+            byte[] multipartBody = createMultipartBody(bytes, filename, contentType, boundary);
 
             HttpClient client = HttpClient.newHttpClient();
             HttpRequest request = HttpRequest.newBuilder()
@@ -101,7 +128,7 @@ public class TranscriptProcessor {
         }
     }
 
-    private byte[] createMultipartBody(byte[] fileBytes, String filename, String boundary) throws Exception {
+    private byte[] createMultipartBody(byte[] fileBytes, String filename, String contentType, String boundary) throws Exception {
         String CRLF = "\r\n";
         java.io.ByteArrayOutputStream bos = new java.io.ByteArrayOutputStream();
         
@@ -113,7 +140,7 @@ public class TranscriptProcessor {
         // Write file field
         bos.write(("--" + boundary + CRLF).getBytes());
         bos.write(("Content-Disposition: form-data; name=\"file\"; filename=\"" + filename + "\"" + CRLF).getBytes());
-        bos.write(("Content-Type: audio/mpeg" + CRLF + CRLF).getBytes());
+        bos.write(("Content-Type: " + contentType + CRLF + CRLF).getBytes());
         bos.write(fileBytes);
         bos.write(CRLF.getBytes());
         

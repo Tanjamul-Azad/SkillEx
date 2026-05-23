@@ -1,7 +1,7 @@
 
 import React, { useRef, lazy, Suspense, useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
-import { motion, useMotionValue, useReducedMotion, useSpring, useTransform, AnimatePresence } from 'framer-motion';
+import { motion, useMotionValue, useReducedMotion, useSpring, useTransform } from 'framer-motion';
 import {
   Zap, Code, Film, Music, Figma, Camera, Mic, Database, ArrowRight,
   Pencil, Bot, RefreshCw, Star, Quote, Users, Sparkles, TrendingUp,
@@ -13,7 +13,6 @@ import {
   DialogDescription,
   DialogHeader,
   DialogTitle,
-  DialogTrigger,
 } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -1129,8 +1128,11 @@ const TestimonialsSection = ({ feedbacks, isLoading, onFeedbackSubmitted }: Test
         setIsDialogOpen(false);
         setSuccessMessage('');
       }, 2000);
-    } catch (err: any) {
-      setErrorMessage(err?.message || 'Failed to submit feedback. Please try again.');
+    } catch (err) {
+      const message = err instanceof Error && err.message
+        ? err.message
+        : 'Failed to submit feedback. Please try again.';
+      setErrorMessage(message);
     } finally {
       setIsSubmitting(false);
     }
@@ -1450,7 +1452,7 @@ interface CtaBannerProps {
 }
 
 const CtaBanner = ({ onFeedbackSubmitted }: CtaBannerProps) => {
-  const { isAuthenticated, user } = useAuth();
+  const { isAuthenticated } = useAuth();
   const [rating, setRating] = useState(5);
   const [hoverRating, setHoverRating] = useState<number | null>(null);
   const [comment, setComment] = useState('');
@@ -1471,8 +1473,11 @@ const CtaBanner = ({ onFeedbackSubmitted }: CtaBannerProps) => {
       setRating(5);
       onFeedbackSubmitted();
       setTimeout(() => setSuccessMessage(''), 6000);
-    } catch (err: any) {
-      setErrorMessage(err?.message || 'Failed to submit feedback. Please try again.');
+    } catch (err) {
+      const message = err instanceof Error && err.message
+        ? err.message
+        : 'Failed to submit feedback. Please try again.';
+      setErrorMessage(message);
     } finally {
       setIsSubmitting(false);
     }
@@ -1653,8 +1658,8 @@ export default function LandingPage() {
 
   useEffect(() => {
     const shouldEnableScene = () => {
-      const lowMemory = typeof (navigator as Navigator & { deviceMemory?: number }).deviceMemory === 'number'
-        && (navigator as Navigator & { deviceMemory?: number }).deviceMemory! <= 4;
+      const deviceMemory = (navigator as Navigator & { deviceMemory?: number }).deviceMemory;
+      const lowMemory = typeof deviceMemory === 'number' && deviceMemory <= 4;
       const lowCpu = typeof navigator.hardwareConcurrency === 'number' && navigator.hardwareConcurrency <= 6;
       const prefersReducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
 

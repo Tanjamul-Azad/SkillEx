@@ -10,7 +10,6 @@ import {
   Trash2, 
   Send,
   Play,
-  Pause,
   Tag
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -345,7 +344,7 @@ export const PostCard = React.memo(({ post, onDelete }: PostCardProps) => {
 
 PostCard.displayName = 'PostCard';
 
-function Loader2(props: any) {
+function Loader2(props: React.SVGProps<SVGSVGElement>) {
   return (
     <svg
       xmlns="http://www.w3.org/2000/svg"

@@ -13,7 +13,7 @@ interface Props {
 const SkillPill: FC<{ label: string; variant: 'teach' | 'learn' }> = ({ label, variant }) => (
   <span
     className={cn(
-      'inline-flex items-center gap-1 rounded-full px-2.5 py-1 text-xs font-semibold border',
+      'inline-flex min-w-0 items-center gap-1 rounded-full border px-2.5 py-1 text-xs font-semibold',
       variant === 'teach'
         ? 'bg-primary/10 text-primary border-primary/20'
         : 'bg-secondary/10 text-secondary border-secondary/20'
@@ -47,7 +47,7 @@ export const SkillGraphCard: FC<Props> = ({
   if (!hasAny) return null;
 
   return (
-    <div className={cn('rounded-xl bg-background border border-primary/20 p-4 space-y-3 shadow-sm', className)}>
+    <div className={cn('space-y-3 rounded-xl border border-primary/20 bg-background/70 p-3 shadow-sm', className)}>
       <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Skill Flow</p>
 
       {teaches.length > 0 && (
@@ -55,7 +55,7 @@ export const SkillGraphCard: FC<Props> = ({
           {teaches.map((skill, i) => (
             <motion.div
               key={skill}
-              className="flex items-center gap-2 text-xs"
+              className="grid grid-cols-[auto_auto_minmax(0,1fr)] items-center gap-2 text-xs"
               initial={{ opacity: 0, x: -8 }}
               animate={{ opacity: 1, x: 0 }}
               transition={{ delay: i * 0.06 }}
@@ -63,8 +63,6 @@ export const SkillGraphCard: FC<Props> = ({
               <span className="font-semibold text-foreground/70 shrink-0">{userName}</span>
               <ArrowRight className="h-3 w-3 text-primary shrink-0" />
               <SkillPill label={skill} variant="teach" />
-              <ArrowRight className="h-3 w-3 text-muted-foreground shrink-0" />
-              <span className="text-muted-foreground">learners seeking this</span>
             </motion.div>
           ))}
         </div>
@@ -79,7 +77,7 @@ export const SkillGraphCard: FC<Props> = ({
           {learns.map((skill, i) => (
             <motion.div
               key={skill}
-              className="flex items-center gap-2 text-xs"
+              className="grid grid-cols-[auto_auto_minmax(0,1fr)] items-center gap-2 text-xs"
               initial={{ opacity: 0, x: -8 }}
               animate={{ opacity: 1, x: 0 }}
               transition={{ delay: teaches.length * 0.06 + i * 0.06 }}
@@ -87,8 +85,6 @@ export const SkillGraphCard: FC<Props> = ({
               <span className="font-semibold text-foreground/70 shrink-0">{userName}</span>
               <ArrowRight className="h-3 w-3 text-secondary shrink-0" />
               <SkillPill label={skill} variant="learn" />
-              <ArrowRight className="h-3 w-3 text-muted-foreground shrink-0" />
-              <span className="text-muted-foreground">teachers who offer this</span>
             </motion.div>
           ))}
         </div>

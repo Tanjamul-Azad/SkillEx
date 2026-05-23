@@ -29,6 +29,7 @@ import { PostComposer } from '../components/PostComposer';
 import { StoryCircle } from '../components/StoryCircle';
 import { CommunityService } from '@/services/communityService';
 import type { Post, Story, TrendingSkill, SuggestedUser, Discussion, Event, SkillCircle } from '@/types';
+import { appVisuals } from '@/lib/appVisuals';
 
 const tabs = [
   { id: 'feed', label: 'Feed', icon: Rss },
@@ -143,7 +144,7 @@ const FeedTab = ({ intentFilter, onlineCount }: { intentFilter?: string; onlineC
   };
 
   return (
-    <div className="flex justify-center gap-8 max-w-7xl mx-auto">
+    <div className="flex justify-center gap-6 max-w-7xl mx-auto">
       {/* Main Feed Column */}
       <div className="flex-1 max-w-[680px] space-y-6">
         {intentFilter && intentFilter.trim().length >= 2 && (
@@ -164,7 +165,7 @@ const FeedTab = ({ intentFilter, onlineCount }: { intentFilter?: string; onlineC
         )}
 
         {/* Stories */}
-        <div className="rounded-2xl border border-primary/15 bg-card shadow-sm p-4">
+        <div className="app-card p-4">
           <div className="flex gap-4 overflow-x-auto pb-2 custom-scrollbar">
             <StoryCircle isSelf selfUser={user} />
             {stories.map(story => <StoryCircle key={story.id} story={story} />)}
@@ -196,7 +197,7 @@ const FeedTab = ({ intentFilter, onlineCount }: { intentFilter?: string; onlineC
 
       {/* Right Sidebar - Hidden on smaller screens */}
       <aside className="hidden lg:block w-[320px] space-y-6">
-        <div className="rounded-2xl border border-primary/15 bg-card shadow-sm">
+        <div className="app-card">
           <div className="p-6 border-b border-primary/10 flex items-center justify-between">
              <h3 className="font-headline text-lg font-bold text-foreground tracking-wide">Trending Skills</h3>
              <div className="flex items-center gap-1.5">
@@ -225,7 +226,7 @@ const FeedTab = ({ intentFilter, onlineCount }: { intentFilter?: string; onlineC
           </div>
         </div>
 
-        <div className="rounded-2xl border border-primary/15 bg-card shadow-sm">
+        <div className="app-card">
           <div className="p-6 border-b border-primary/10">
              <h3 className="font-headline text-lg font-bold text-foreground tracking-wide">Suggested To Follow</h3>
           </div>
@@ -772,13 +773,16 @@ export default function CommunityPage() {
 
   return (
     <DashboardLayout>
-      <div className="container mx-auto p-4 md:p-8 space-y-8">
-        <div className="rounded-2xl border border-primary/20 bg-card shadow-sm p-6 md:p-8 relative overflow-hidden">
-          <div className="absolute inset-0 bg-gradient-to-br from-primary/10 via-transparent to-emerald-50/70 pointer-events-none" />
+      <div className="container mx-auto p-4 md:p-7 space-y-7">
+        <div className="app-shell relative overflow-hidden p-5 md:p-7">
+          <div className="absolute inset-y-0 right-0 hidden w-[42%] md:block">
+            <img src={appVisuals.communityCollaboration} alt="Members collaborating on skill exchange sessions" className="h-full w-full object-cover" loading="eager" />
+            <div className="absolute inset-0 bg-gradient-to-r from-card via-card/65 to-transparent" />
+          </div>
           <div className="flex flex-col md:flex-row md:items-start md:justify-between gap-6 relative z-10">
-            <div>
+            <div className="max-w-xl">
               <h1 className="font-headline text-3xl md:text-4xl font-extrabold tracking-tight text-foreground">Community Hub</h1>
-              <p className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground mt-2">Join discussions, attend events, and connect with other learners.</p>
+              <p className="mt-3 text-sm leading-relaxed text-muted-foreground">Join discussions, attend sessions, and connect with people trading skills across design, tech, language, business, and creative work.</p>
             </div>
             <div className="flex items-center gap-2 px-4 py-2 rounded-xl bg-background border border-primary/20 shadow-[0_8px_22px_-18px_hsl(var(--primary)/0.5)]">
               <Circle className="h-2 w-2 fill-green-500 text-green-500 drop-shadow-[0_0_5px_rgba(34,197,94,0.8)] animate-pulse" />

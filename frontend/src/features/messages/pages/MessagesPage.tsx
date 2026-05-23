@@ -41,6 +41,7 @@ import { TokenStore } from '@/services/http/ApiClient';
 import { MessageService } from '@/services/messageService';
 import type { MessageDto, ConversationDto } from '@/services/messageService';
 import { UserService } from '@/services/userService';
+import { appVisuals } from '@/lib/appVisuals';
 
 /* ── Types ──────────────────────────────────────────────────────────── */
 interface Message {
@@ -590,22 +591,25 @@ export default function MessagesPage() {
 
   return (
     <DashboardLayout>
-      <div className="h-[calc(100vh-4rem)] flex flex-col p-4 sm:p-6 lg:p-8">
-        <div className="flex-1 flex overflow-hidden rounded-[2rem] border border-border/60 dark:border-white/5 bg-white dark:bg-black/40 backdrop-blur-md shadow-[inset_0_1px_0_0_var(--primary)/0.03,0_8px_32px_var(--primary)/0.08]">
+      <div className="h-[calc(100vh-4rem)] flex flex-col p-3 sm:p-5 lg:p-6">
+        <div className="app-shell flex-1 flex overflow-hidden">
 
           {/* ── Sidebar ── */}
           <div className={cn(
-            'w-full md:w-80 xl:w-96 flex-col border-r border-border/60 dark:border-white/5 bg-white dark:bg-black/40 backdrop-blur-md',
+            'w-full md:w-[340px] xl:w-[380px] flex-col border-r border-border/70 bg-card/90 backdrop-blur-md dark:border-white/10 dark:bg-card/65',
             mobileShowChat ? 'hidden md:flex' : 'flex'
           )}>
             {/* Header */}
-            <div className="p-6 border-b border-border/60 dark:border-white/5">
-              <div className="flex items-center justify-between mb-5">
-                <h1 className="text-2xl font-extrabold font-headline text-foreground drop-shadow-sm">Messages</h1>
+            <div className="p-5 border-b border-border/70 dark:border-white/10">
+              <div className="flex items-center justify-between mb-4">
+                <div>
+                  <h1 className="text-2xl font-extrabold font-headline text-foreground">Messages</h1>
+                  <p className="mt-1 text-xs text-muted-foreground">Plan exchanges without leaving the product.</p>
+                </div>
                 <Button
                   size="icon"
                   variant="ghost"
-                  className="h-10 w-10 rounded-full border border-border/60 dark:border-white/10 bg-primary/[0.04] dark:bg-slate-950/70 text-foreground dark:text-slate-100 hover:bg-primary hover:text-primary-foreground hover:border-primary/50 transition-all shadow-[inset_0_1px_0_0_var(--primary)/0.03]"
+                  className="h-10 w-10 rounded-xl border border-border/70 bg-background/70 text-foreground hover:bg-primary hover:text-primary-foreground dark:border-white/10 dark:bg-white/5"
                   onClick={() => toast({ title: 'New conversation', description: 'Select a user from their profile to start messaging.' })}
                 >
                   <MessageSquarePlus className="h-5 w-5" />
@@ -617,7 +621,7 @@ export default function MessagesPage() {
                   placeholder="Search conversations..."
                   value={search}
                   onChange={e => setSearch(e.target.value)}
-                  className="pl-11 rounded-full h-11 text-[13px] bg-surface-1 dark:bg-slate-950/80 border-border dark:border-white/10 text-foreground dark:text-slate-100 placeholder:text-muted-foreground dark:placeholder:text-slate-400 focus-visible:ring-primary/50 shadow-[inset_0_1px_0_0_var(--primary)/0.03]"
+                  className="pl-11 rounded-xl h-11 text-[13px] bg-background/70 border-border text-foreground placeholder:text-muted-foreground focus-visible:ring-primary/50 dark:border-white/10 dark:bg-slate-950/70"
                 />
               </div>
             </div>
@@ -639,12 +643,15 @@ export default function MessagesPage() {
               ) : (
                 <AnimatePresence>
                   {filteredConvs.length === 0 ? (
-                    <div className="flex flex-col items-center justify-center h-full py-12 text-center px-6">
-                      <div className="w-20 h-20 rounded-full bg-surface-1 dark:bg-black/50 border border-border/60 dark:border-white/5 flex items-center justify-center mb-6">
-                        <MessageSquarePlus className="h-8 w-8 text-primary/40" />
+                    <div className="flex flex-col items-center justify-center h-full py-10 text-center px-5">
+                      <div className="app-media mb-5 aspect-[16/10] w-full max-w-[260px]">
+                        <img src={appVisuals.messagesSession} alt="Preparing a skill session conversation" className="h-full w-full object-cover" loading="lazy" />
+                      </div>
+                      <div className="w-12 h-12 rounded-xl bg-primary/10 border border-primary/20 flex items-center justify-center mb-4">
+                        <MessageSquarePlus className="h-6 w-6 text-primary/60" />
                       </div>
                       <p className="text-sm font-bold text-foreground/80 mb-2">No conversations yet</p>
-                      <p className="text-[10px] uppercase font-bold tracking-widest text-primary/60 text-balance">Exchange matches will appear here</p>
+                      <p className="text-xs text-muted-foreground text-balance">Open a profile or match to start planning a skill exchange.</p>
                     </div>
                   ) : (
                     filteredConvs.map(conv => (
@@ -670,16 +677,16 @@ export default function MessagesPage() {
                 animate={{ opacity: 1 }}
                 exit={{ opacity: 0 }}
                 className={cn(
-                  'flex-1 flex flex-col min-w-0 bg-primary/[0.02] dark:bg-black/20',
+                  'flex-1 flex flex-col min-w-0 bg-background/50 dark:bg-black/20',
                   !mobileShowChat && 'hidden md:flex'
                 )}
               >
                 {/* Chat header */}
-                <div className="flex items-center gap-4 px-6 py-4 border-b border-border/60 dark:border-white/5 bg-surface-1 dark:bg-black/50 backdrop-blur-md shadow-[0_4px_30px_var(--primary)/0.03]">
+                <div className="flex items-center gap-4 px-5 py-4 border-b border-border/70 bg-card/95 backdrop-blur-md dark:border-white/10 dark:bg-black/35">
                   <Button
                     size="icon"
                     variant="ghost"
-                    className="md:hidden h-10 w-10 border border-border/60 dark:border-white/5 border-border dark:border-white/5 bg-primary/[0.04] dark:bg-white/5"
+                    className="md:hidden h-10 w-10 border border-border/70 bg-background/70 dark:border-white/10 dark:bg-white/5"
                     onClick={() => setMobileShowChat(false)}
                   >
                     <ArrowLeft className="h-5 w-5" />
@@ -705,7 +712,7 @@ export default function MessagesPage() {
                     <Button
                       size="icon"
                       variant="ghost"
-                      className="h-10 w-10 rounded-full border border-border/60 dark:border-white/5 border-border dark:border-white/5 bg-primary/[0.04] dark:bg-white/5 hover:bg-white/10 shadow-[inset_0_1px_0_0_var(--primary)/0.03]"
+                      className="h-10 w-10 rounded-xl border border-border/70 bg-background/70 hover:bg-primary/10 dark:border-white/10 dark:bg-white/5"
                       onClick={() => toast({ title: 'Voice call', description: 'Voice calls coming soon.' })}
                     >
                       <Phone className="h-4 w-4 text-muted-foreground" />
@@ -713,14 +720,14 @@ export default function MessagesPage() {
                     <Button
                       size="icon"
                       variant="ghost"
-                      className="h-10 w-10 rounded-full border border-border/60 dark:border-white/5 border-border dark:border-white/5 bg-primary/[0.04] dark:bg-white/5 hover:bg-white/10 shadow-[inset_0_1px_0_0_var(--primary)/0.03]"
+                      className="h-10 w-10 rounded-xl border border-border/70 bg-background/70 hover:bg-primary/10 dark:border-white/10 dark:bg-white/5"
                       onClick={() => toast({ title: 'Video call', description: 'Video calls coming soon.' })}
                     >
                       <Video className="h-4 w-4 text-muted-foreground" />
                     </Button>
                     <DropdownMenu>
                       <DropdownMenuTrigger asChild>
-                        <Button size="icon" variant="ghost" className="h-10 w-10 rounded-full border border-border/60 dark:border-white/5 border-border dark:border-white/5 bg-primary/[0.04] dark:bg-white/5 hover:bg-white/10 shadow-[inset_0_1px_0_0_var(--primary)/0.03]">
+                        <Button size="icon" variant="ghost" className="h-10 w-10 rounded-xl border border-border/70 bg-background/70 hover:bg-primary/10 dark:border-white/10 dark:bg-white/5">
                           <MoreVertical className="h-4 w-4 text-muted-foreground" />
                         </Button>
                       </DropdownMenuTrigger>
@@ -752,20 +759,23 @@ export default function MessagesPage() {
                       <Loader2 className="h-8 w-8 animate-spin text-primary" />
                     </div>
                   ) : groupedMessages.length === 0 ? (
-                    <div className="flex flex-col items-center justify-center h-full text-center gap-4 py-16">
-                      <div className="p-5 rounded-full bg-primary/10 border border-primary/20 shadow-[0_0_30px_hsl(var(--primary)/0.2)]">
-                        <MessageSquarePlus className="h-10 w-10 text-primary" />
+                    <div className="flex flex-col items-center justify-center h-full text-center gap-4 py-12 px-6">
+                      <div className="app-media aspect-[16/9] w-full max-w-md">
+                        <img src={appVisuals.messagesSession} alt="Skill session conversation setup" className="h-full w-full object-cover" loading="lazy" />
+                      </div>
+                      <div className="p-4 rounded-2xl bg-primary/10 border border-primary/20">
+                        <MessageSquarePlus className="h-8 w-8 text-primary" />
                       </div>
                       <div className="space-y-1">
                         <p className="text-base font-headline font-bold text-foreground">Start the conversation</p>
-                        <p className="text-[10px] uppercase font-bold tracking-widest text-muted-foreground">Send a message to {activeConv.user.name}</p>
+                        <p className="text-sm text-muted-foreground">Send a note to {activeConv.user.name} and agree on the first exchange session.</p>
                       </div>
                     </div>
                   ) : (
                     groupedMessages.map((group) => (
                       <div key={group.date} className="relative z-10">
                         <div className="flex justify-center mb-6 mt-4">
-                          <span className="text-[9px] uppercase tracking-[0.2em] font-extrabold text-primary/60 bg-surface-1 dark:bg-black/50 px-4 py-1.5 rounded-full border border-border/60 dark:border-white/5 shadow-[inset_0_1px_0_0_var(--primary)/0.03] backdrop-blur-md">
+                          <span className="text-[9px] uppercase tracking-[0.2em] font-extrabold text-primary/70 bg-card/90 px-4 py-1.5 rounded-full border border-border/70 dark:border-white/10 dark:bg-black/50 backdrop-blur-md">
                             {group.date}
                           </span>
                         </div>
@@ -792,7 +802,7 @@ export default function MessagesPage() {
                 </div>
 
                 {/* Input area */}
-                <div className="p-6 border-t border-border/60 dark:border-white/5 bg-surface-1 dark:bg-black/50 backdrop-blur-md z-20 shadow-[0_-4px_30px_var(--primary)/0.03] relative">
+                <div className="p-4 border-t border-border/70 bg-card/95 backdrop-blur-md z-20 relative dark:border-white/10 dark:bg-black/35">
                   {!connected && (
                     <div className="absolute -top-10 left-1/2 -translate-x-1/2">
                       <span className="text-[10px] uppercase font-bold tracking-widest text-warning flex items-center gap-2 bg-warning/10 px-4 py-1.5 rounded-full border border-warning/20 shadow-[inset_0_1px_0_0_var(--primary)/0.03]">
@@ -803,7 +813,7 @@ export default function MessagesPage() {
                   )}
                   <form
                     onSubmit={(e) => { e.preventDefault(); handleSend(); }}
-                    className="flex items-end gap-3 bg-surface-1 dark:bg-slate-950/85 border border-border dark:border-white/10 rounded-[1.5rem] p-2 focus-within:border-primary/50 focus-within:ring-1 focus-within:ring-primary/50 shadow-[inset_0_1px_0_0_var(--primary)/0.03] transition-all"
+                    className="flex items-end gap-3 bg-background/80 border border-border rounded-2xl p-2 focus-within:border-primary/50 focus-within:ring-1 focus-within:ring-primary/50 transition-all dark:border-white/10 dark:bg-slate-950/85"
                   >
                     <input
                       type="file"
@@ -880,15 +890,15 @@ export default function MessagesPage() {
                 initial={{ opacity: 0 }}
                 animate={{ opacity: 1 }}
                 exit={{ opacity: 0 }}
-                className="hidden md:flex flex-1 flex-col items-center justify-center text-center p-8 bg-primary/[0.02] dark:bg-black/20 relative overflow-hidden"
+                className="hidden md:flex flex-1 flex-col items-center justify-center text-center p-8 bg-background/50 dark:bg-black/20 relative overflow-hidden"
               >
                 <div className="absolute inset-0 dot-grid opacity-20 pointer-events-none mix-blend-overlay" />
-                <div className="p-6 rounded-full bg-surface-1 dark:bg-black/50 border border-border/60 dark:border-white/5 shadow-[0_0_40px_rgba(0,0,0,0.3),inset_0_1px_0_0_var(--primary)/0.03] text-primary backdrop-blur-md relative z-10 mb-8 group transition-transform duration-500 hover:scale-105 hover:shadow-[0_0_60px_hsl(var(--primary)/0.15)]">
-                  <MessageSquarePlus className="h-16 w-16 text-primary drop-shadow-[0_0_15px_var(--primary)] transition-transform duration-500 group-hover:scale-110" />
+                <div className="app-media relative z-10 mb-7 aspect-[16/9] w-full max-w-lg">
+                  <img src={appVisuals.messagesSession} alt="Modern skill session chat" className="h-full w-full object-cover" loading="lazy" />
                 </div>
-                <h2 className="text-3xl font-extrabold font-headline text-foreground relative z-10 mb-3 drop-shadow-md">SkillEx Messages</h2>
-                <p className="text-[12px] uppercase tracking-widest font-bold text-muted-foreground max-w-sm relative z-10 text-balance leading-relaxed">
-                  Select a conversation from the sidebar or start a new chat from a user's profile to discuss your next skill exchange!
+                <h2 className="text-3xl font-extrabold font-headline text-foreground relative z-10 mb-3">SkillEX Messages</h2>
+                <p className="text-sm text-muted-foreground max-w-sm relative z-10 text-balance leading-relaxed">
+                  Select a conversation or start from a profile to plan your next skill exchange.
                 </p>
               </motion.div>
             )}

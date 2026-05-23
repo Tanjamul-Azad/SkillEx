@@ -7,18 +7,20 @@ import { ChevronLeft, ChevronRight, Play } from 'lucide-react';
 import { motion } from 'framer-motion';
 import { Progress } from '@/components/ui/progress';
 import type { Exchange } from '@/services/exchangeService';
+import { appVisuals } from '@/lib/appVisuals';
 
 interface SessionCarouselProps {
   exchanges: Exchange[];
   currentUserId: string;
 }
 
-// Map abstract placeholder images for skills (random unsplash tech/design)
 const SKILL_IMAGES = [
-  'https://images.unsplash.com/photo-1542831371-29b0f74f9713?q=80&w=600&auto=format&fit=crop', // Code
-  'https://images.unsplash.com/photo-1579546929518-9e396f3cc809?q=80&w=600&auto=format&fit=crop', // Abstract Gradient
-  'https://images.unsplash.com/photo-1611162617474-5b21e879e113?q=80&w=600&auto=format&fit=crop', // UI/UX
+  appVisuals.learningCodeSession,
+  appVisuals.learningDesignReview,
+  appVisuals.learningSpeakingSession,
 ];
+
+const PLACEHOLDER_PROGRESS = [34, 48, 62];
 
 export function SessionCarousel({ exchanges, currentUserId }: SessionCarouselProps) {
   const [emblaRef, emblaApi] = useEmblaCarousel({
@@ -49,8 +51,8 @@ export function SessionCarousel({ exchanges, currentUserId }: SessionCarouselPro
   const items = exchanges.length > 0 ? exchanges : Array(3).fill(null).map((_, i) => ({
     id: `placeholder-${i}`,
     title: i === 0 ? 'React Essentials' : i === 1 ? 'Advanced Django' : 'UI/UX Fundamentals',
-    partner: 'Placeholder',
-    progress: Math.floor(Math.random() * 60) + 10,
+    partner: 'Skill partner',
+    progress: PLACEHOLDER_PROGRESS[i % PLACEHOLDER_PROGRESS.length],
     image: SKILL_IMAGES[i % SKILL_IMAGES.length],
     placeholder: true
   }));
@@ -105,7 +107,9 @@ export function SessionCarousel({ exchanges, currentUserId }: SessionCarouselPro
                   <div className="relative h-32 w-full overflow-hidden">
                     <img 
                       src={imgSrc} 
-                      alt="Course thumbnail" 
+                      alt="" 
+                      loading="lazy"
+                      decoding="async"
                       className="h-full w-full object-cover transition-transform duration-700 group-hover:scale-105" 
                     />
                     <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-black/10 to-transparent" />
@@ -125,7 +129,7 @@ export function SessionCarousel({ exchanges, currentUserId }: SessionCarouselPro
                   
                   <CardContent className="p-3">
                     <div className="flex items-center justify-between text-[10px] font-medium text-muted-foreground mb-1.5">
-                      <span>Course Progress</span>
+                      <span>Session Progress</span>
                       <span>{progress}%</span>
                     </div>
                     <Progress value={progress} className="h-1.5 rounded-full bg-muted" indicatorClassName="bg-primary" />

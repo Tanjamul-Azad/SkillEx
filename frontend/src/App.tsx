@@ -52,17 +52,21 @@ const PageLoader = () => (
   </div>
 );
 
+const SPLASH_STORAGE_KEY = 'skillex_preloader_seen_v2';
+
 /* ── Splash screen shown once per session ──────────────────────────────── */
 function SplashScreen({ onDone }: { onDone: () => void }) {
   useEffect(() => {
-    // Preload the chunk immediately when splash mounts
     preloadCurrentRoute();
 
     const prefersReducedMotion =
       typeof window !== 'undefined' &&
       window.matchMedia('(prefers-reduced-motion: reduce)').matches;
 
-    const t = setTimeout(onDone, prefersReducedMotion ? 900 : 1600);
+    const t = setTimeout(() => {
+      localStorage.setItem(SPLASH_STORAGE_KEY, '1');
+      onDone();
+    }, prefersReducedMotion ? 900 : 1600);
     return () => clearTimeout(t);
   }, [onDone]);
 
@@ -147,7 +151,7 @@ function AppShell() {
 }
 
 export default function App() {
-  const [splashDone, setSplashDone] = useState(false);
+  const [splashDone, setSplashDone] = useState(() => localStorage.getItem(SPLASH_STORAGE_KEY) === '1');
 
   return (
     <BrowserRouter future={{ v7_startTransition: true, v7_relativeSplatPath: true }}>
@@ -161,7 +165,7 @@ export default function App() {
                 )}
               </AnimatePresence>
 
-              {splashDone && <AppShell />}
+              <AppShell />
             </RadixToastProvider>
           </ToastStateProvider>
         </AuthProvider>

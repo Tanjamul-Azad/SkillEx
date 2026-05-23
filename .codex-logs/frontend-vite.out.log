@@ -1,0 +1,25 @@
+
+> skillex@0.1.0 dev
+> vite --host 127.0.0.1
+
+
+  [32m[1mVITE[22m v5.4.21[39m  [2mready in [0m[1m226[22m[2m[0m ms[22m
+
+  [32m➜[39m  [1mLocal[22m:   [36mhttp://127.0.0.1:[1m3000[22m/[39m
+[2m1:37:23 AM[22m [36m[1m[vite][22m[39m [32mpage reload [39m[2msrc/features/dashboard/components/BoostBanner.tsx[22m
+[2m1:37:45 AM[22m [36m[1m[vite][22m[39m [32mpage reload [39m[2msrc/features/dashboard/components/SessionCarousel.tsx[22m
+[2m1:50:32 AM[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/styles/globals.css, /src/features/messages/pages/MessagesPage.tsx, /src/features/connections/pages/ConnectionsPage.tsx, /src/features/community/pages/CommunityPage.tsx[22m
+[2m1:50:46 AM[22m [36m[1m[vite][22m[39m [32mpage reload [39m[2msrc/features/dashboard/components/BoostBanner.tsx[22m
+[2m1:51:01 AM[22m [36m[1m[vite][22m[39m [32mpage reload [39m[2msrc/features/dashboard/components/SessionCarousel.tsx[22m
+[2m2:09:09 AM[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/styles/globals.css, /src/features/messages/pages/MessagesPage.tsx, /src/features/connections/pages/ConnectionsPage.tsx, /src/features/community/pages/CommunityPage.tsx[22m
+[2m2:09:23 AM[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/features/match/pages/MatchPage.tsx, /src/styles/globals.css[22m
+[2m2:09:51 AM[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/features/match/pages/MatchPage.tsx, /src/styles/globals.css[22m
+[2m2:12:31 AM[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/features/match/pages/MatchPage.tsx, /src/styles/globals.css[22m
+[2m2:14:48 AM[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/features/match/pages/MatchPage.tsx, /src/styles/globals.css[22m
+[2m2:15:23 AM[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/features/match/pages/MatchPage.tsx, /src/styles/globals.css[22m
+[2m2:15:46 AM[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/features/match/pages/MatchPage.tsx, /src/styles/globals.css[22m
+[2m2:16:05 AM[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/features/match/pages/MatchPage.tsx, /src/styles/globals.css[22m
+[2m2:16:45 AM[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/features/match/pages/MatchPage.tsx, /src/styles/globals.css[22m
+[2m2:17:16 AM[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/features/match/pages/MatchPage.tsx, /src/styles/globals.css[22m
+[2m2:17:38 AM[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/features/match/pages/MatchPage.tsx, /src/styles/globals.css[22m
+[2m2:17:58 AM[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/features/match/components/SkillGraphCard.tsx, /src/styles/globals.css[22m

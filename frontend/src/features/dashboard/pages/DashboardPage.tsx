@@ -84,6 +84,118 @@ interface StatCardProps {
   index: number;
 }
 
+function StatPattern({ index }: { index: number }) {
+  return (
+    <div className="pointer-events-none absolute inset-x-4 bottom-4 h-9 overflow-hidden opacity-55 transition-opacity duration-300 group-hover:opacity-85">
+      <div className="absolute inset-0 rounded-xl bg-[radial-gradient(circle_at_18px_10px,hsl(var(--primary)/0.14)_1px,transparent_1px)] [background-size:18px_18px] opacity-25" />
+
+      {index === 0 && (
+        <div className="absolute inset-0">
+          <div className="absolute left-1 top-4 h-1.5 w-1.5 rounded-full bg-primary shadow-[0_0_8px_var(--primary)]" />
+          <div className="absolute left-[38%] top-3 h-1.5 w-1.5 rounded-full bg-primary shadow-[0_0_8px_var(--primary)]" />
+          <div className="absolute right-2 top-5 h-1.5 w-1.5 rounded-full bg-primary shadow-[0_0_8px_var(--primary)]" />
+          <svg viewBox="0 0 120 40" className="absolute inset-0 h-full w-full" preserveAspectRatio="none">
+            <motion.path
+              d="M8 22 C28 12 44 16 58 14 C78 12 92 23 114 17"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="2"
+              strokeLinecap="round"
+              className="text-primary drop-shadow-[0_0_5px_var(--primary)]"
+              initial={{ pathLength: 0 }}
+              animate={{ pathLength: 1 }}
+              transition={{ duration: 1.4, delay: 0.2, ease: 'easeOut' }}
+            />
+          </svg>
+        </div>
+      )}
+
+      {index === 1 && (
+        <div className="absolute inset-0">
+          <motion.div
+            className="absolute left-1 top-3 flex h-6 w-6 items-center justify-center rounded-full border border-primary/20 bg-primary/10"
+          >
+            <Users className="h-3 w-3 text-primary" />
+          </motion.div>
+          <motion.div
+            className="absolute right-1 top-3 flex h-6 w-6 items-center justify-center rounded-full border border-primary/20 bg-primary/10"
+          >
+            <BookOpen className="h-3 w-3 text-primary" />
+          </motion.div>
+          <svg viewBox="0 0 120 40" className="absolute inset-0 h-full w-full" preserveAspectRatio="none">
+            <motion.path
+              d="M31 16 H88 M88 16 L81 11 M88 16 L81 21 M90 27 H32 M32 27 L39 22 M32 27 L39 32"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="2"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              className="text-primary drop-shadow-[0_0_5px_var(--primary)]"
+              initial={{ pathLength: 0 }}
+              animate={{ pathLength: 1 }}
+              transition={{ duration: 1.4, delay: 0.3, ease: 'easeOut' }}
+            />
+          </svg>
+        </div>
+      )}
+
+      {index === 2 && (
+        <div className="absolute inset-0">
+          <svg viewBox="0 0 120 40" className="absolute inset-0 h-full w-full">
+            <circle cx="25" cy="20" r="11" className="fill-none stroke-primary/15" strokeWidth="4" />
+            <motion.circle
+              cx="25"
+              cy="20"
+              r="11"
+              className="fill-none stroke-primary drop-shadow-[0_0_5px_var(--primary)]"
+              strokeWidth="4"
+              strokeLinecap="round"
+              strokeDasharray="69"
+              initial={{ strokeDashoffset: 69 }}
+              animate={{ strokeDashoffset: 18 }}
+              transition={{ duration: 1.4, delay: 0.2, ease: 'easeOut' }}
+              transform="rotate(-90 25 20)"
+            />
+            <motion.path
+              d="M52 26 L63 15 L72 23 L86 9 L106 9"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="2"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              className="text-primary"
+              initial={{ pathLength: 0 }}
+              animate={{ pathLength: 1 }}
+              transition={{ duration: 1.4, delay: 0.3, ease: 'easeOut' }}
+            />
+          </svg>
+          <CheckCircle className="absolute left-[18px] top-[13px] h-3.5 w-3.5 text-primary" />
+        </div>
+      )}
+
+      {index === 3 && (
+        <div className="absolute inset-0">
+          <div className="absolute left-1 top-3 flex h-6 w-6 items-center justify-center rounded-full border border-primary/20 bg-primary/10">
+            <Star className="h-3.5 w-3.5 text-primary" />
+          </div>
+          <div className="absolute left-10 right-2 top-4 space-y-1.5">
+            {[74, 58, 88].map((width, i) => (
+              <div key={width} className="h-1.5 overflow-hidden rounded-full bg-primary/10">
+                <motion.div
+                  className="h-full rounded-full bg-primary"
+                  initial={{ width: 0 }}
+                  animate={{ width: `${width}%` }}
+                  transition={{ duration: 1.2, delay: 0.2 + i * 0.12, ease: 'easeOut' }}
+                />
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
 /* ─── Consistent stat card ────────────────────────────────────── */
 const StatCard = React.memo(({ icon: Icon, title, value, footnote, index }: StatCardProps) => {
   const { ref } = useCounter(value, { duration: 1.6 });
@@ -95,13 +207,14 @@ const StatCard = React.memo(({ icon: Icon, title, value, footnote, index }: Stat
         visible: { opacity: 1, y: 0 },
       }}
       transition={{ delay: index * 0.07, type: 'spring', stiffness: 220, damping: 22 }}
-      className="h-full"
+      className="h-full min-h-[136px]"
     >
       <Card className="group relative h-full w-full overflow-hidden border-white/5 bg-card/80 backdrop-blur-md transition-all duration-300 hover:border-white/10 hover:shadow-glow-sm shadow-[inset_0_1px_0_0_hsla(0,0%,100%,0.05)]">
         {/* Consistent left-edge accent — always primary color */}
+        <div className="absolute -right-10 -top-12 h-28 w-28 rounded-full bg-primary/10 blur-2xl transition-opacity duration-300 group-hover:opacity-80" />
         <div className="absolute left-0 top-0 bottom-0 w-[4px] bg-primary opacity-0 group-hover:opacity-100 transition-opacity duration-300 shadow-[0_0_10px_var(--primary)]" />
 
-        <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2 pt-4 px-4">
+        <CardHeader className="relative z-10 flex flex-row items-center justify-between space-y-0 pb-2 pt-4 px-4">
           <CardTitle className="text-[11px] font-bold uppercase tracking-wider text-muted-foreground">
             {title}
           </CardTitle>
@@ -110,30 +223,15 @@ const StatCard = React.memo(({ icon: Icon, title, value, footnote, index }: Stat
           </div>
         </CardHeader>
 
-        <CardContent className="px-4 pb-4 pt-0">
+        <CardContent className="relative z-10 px-4 pb-14 pt-0">
           <div
             ref={ref}
             className="font-headline text-[32px] font-bold tabular-nums tracking-tight text-foreground leading-none"
           />
           <p className="mt-1 text-[11px] text-muted-foreground">{footnote}</p>
 
-          {/* Animated sparkline */}
-          <div className="mt-4 h-6 w-full opacity-40 group-hover:opacity-100 transition-opacity duration-300 drop-shadow-[0_0_4px_var(--primary)]">
-            <svg viewBox="0 0 120 28" className="h-full w-full" preserveAspectRatio="none">
-              <motion.path
-                d="M0,24 Q20,20 35,13 T70,10 T100,6 T120,2"
-                fill="none"
-                stroke="currentColor"
-                strokeWidth="2.5"
-                strokeLinecap="round"
-                className="text-primary"
-                initial={{ pathLength: 0 }}
-                animate={{ pathLength: 1 }}
-                transition={{ duration: 1.8, delay: 0.2 + index * 0.12, ease: 'easeOut' }}
-              />
-            </svg>
-          </div>
         </CardContent>
+        <StatPattern index={index} />
       </Card>
     </motion.div>
   );

@@ -771,17 +771,6 @@ public class NoteGenerationService {
         }
     }
 
-    private SessionNote generateStaticNotes(Session session) {
-        return new SessionNote(
-                session,
-                "No transcripts recorded to synthesize technical concepts.",
-                "Explore the platform, join more swap session rooms, and speak in call microphones.",
-                "SkillEX platform documentation",
-                "The session was held, but no speech audio was captured to generate custom summaries.",
-                "[System Empty Transcript]"
-        );
-    }
-
     private String resolveSpeakerName(Session session, SessionTranscript transcript) {
         if (session.getTeacher() != null && transcript.getSpeakerUserId().equals(session.getTeacher().getId())) {
             return session.getTeacher().getName();

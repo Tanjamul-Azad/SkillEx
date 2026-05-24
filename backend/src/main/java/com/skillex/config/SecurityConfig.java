@@ -53,6 +53,8 @@ public class SecurityConfig {
                 // Public read-only routes — skills catalogue, feedbacks and community browsing
                 .requestMatchers(HttpMethod.GET, "/api/skills", "/api/skills/**").permitAll()
                 .requestMatchers(HttpMethod.GET, "/api/feedbacks").permitAll()
+                .requestMatchers(HttpMethod.GET, "/api/public/**").permitAll()
+                .requestMatchers(HttpMethod.GET, "/api/users/*/certificates", "/api/users/*/badges").permitAll()
                 .requestMatchers(HttpMethod.GET,
                     "/api/community/events",
                     "/api/community/events/**",

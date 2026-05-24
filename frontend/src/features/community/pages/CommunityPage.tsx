@@ -28,6 +28,7 @@ import { PostCard } from '../components/PostCard';
 import { PostComposer } from '../components/PostComposer';
 import { StoryCircle } from '../components/StoryCircle';
 import { CommunityService } from '@/services/communityService';
+import { connectionService } from '@/services/connectionService';
 import type { Post, Story, TrendingSkill, SuggestedUser, Discussion, Event, SkillCircle } from '@/types';
 import { appVisuals } from '@/lib/appVisuals';
 
@@ -53,22 +54,70 @@ const itemVariants = {
 
 // --- FEED TAB COMPONENTS ---
 
-// --- FEED TAB COMPONENTS ---
-
-
-
-
 const FeedTab = ({ intentFilter, onlineCount }: { intentFilter?: string; onlineCount: number }) => {
   const { user } = useAuth();
+  const { toast } = useToast();
   const navigate = useNavigate();
   const [localPosts, setLocalPosts] = useState<Post[]>([]);
   const [stories, setStories] = useState<Story[]>([]);
   const [trendingSkills, setTrendingSkills] = useState<TrendingSkill[]>([]);
   const [suggestions, setSuggestions] = useState<SuggestedUser[]>([]);
   const [followedUsers, setFollowedUsers] = useState<Set<string>>(new Set());
+  const [relationshipStatuses, setRelationshipStatuses] = useState<Record<string, string>>({});
   const [currentPage, setCurrentPage] = useState(0);
   const [hasMore, setHasMore] = useState(true);
   const [loadingMore, setLoadingMore] = useState(false);
+
+  useEffect(() => {
+    if (suggestions.length > 0) {
+      suggestions.forEach(u => {
+        connectionService.getRelationship(u.id)
+          .then(rel => {
+            setRelationshipStatuses(prev => ({
+              ...prev,
+              [u.id]: rel.status // 'NONE', 'PENDING_SENT', 'PENDING_RECEIVED', 'CONNECTED'
+            }));
+          })
+          .catch(() => {});
+      });
+    }
+  }, [suggestions]);
+
+  const handleConnect = async (uId: string) => {
+    try {
+      const relStatus = relationshipStatuses[uId];
+      if (relStatus === 'NONE' || !relStatus) {
+        await connectionService.create({ receiverId: uId, message: "Hi! I saw your profile on the SkillEX Community Hub and would love to exchange skills!" });
+        setRelationshipStatuses(prev => ({
+          ...prev,
+          [uId]: 'PENDING_SENT'
+        }));
+        toast({
+          title: "Connection Request Sent",
+          description: "We've sent a professional connection invitation.",
+        });
+      } else if (relStatus === 'PENDING_RECEIVED') {
+        const rel = await connectionService.getRelationship(uId);
+        if (rel.connectionId) {
+          await connectionService.updateStatus(rel.connectionId, 'accepted');
+          setRelationshipStatuses(prev => ({
+            ...prev,
+            [uId]: 'CONNECTED'
+          }));
+          toast({
+            title: "Connected!",
+            description: "You are now connected for skill exchange.",
+          });
+        }
+      }
+    } catch (err) {
+      toast({
+        title: "Connection Failed",
+        description: err instanceof Error ? err.message : "Failed to update connection.",
+        variant: "destructive",
+      });
+    }
+  };
 
   useEffect(() => {
     const normalizedIntentFilter = intentFilter?.trim() ?? '';
@@ -241,25 +290,43 @@ const FeedTab = ({ intentFilter, onlineCount }: { intentFilter?: string; onlineC
                     <p className="font-bold text-sm text-foreground truncate hover:text-primary transition-colors cursor-pointer" onClick={() => navigate(`/profile/${u.id}`)}>{u.name}</p>
                     <p className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground truncate">{u.reason}</p>
                   </div>
-                  <Button
-                    size="sm"
-                    variant={followedUsers.has(u.id) ? 'default' : 'outline'}
-                    className={cn(
-                      'rounded-xl text-[10px] font-bold uppercase tracking-widest transition-all px-4',
-                      followedUsers.has(u.id) 
-                        ? 'bg-primary text-primary-foreground hover:bg-primary/90 shadow-[0_0_15px_hsl(var(--primary)/0.2)]'
-                        : 'border-primary/20 hover:bg-primary/5 hover:text-primary text-muted-foreground'
-                    )}
-                    onClick={() =>
-                      setFollowedUsers(prev => {
-                        const next = new Set(prev);
-                        if (next.has(u.id)) { next.delete(u.id); } else { next.add(u.id); }
-                        return next;
-                      })
-                    }
-                  >
-                    {followedUsers.has(u.id) ? 'Following' : 'Follow'}
-                  </Button>
+                  {relationshipStatuses[u.id] === 'CONNECTED' ? (
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      className="rounded-xl text-[10px] font-bold uppercase tracking-widest transition-all px-4 bg-green-500/10 hover:bg-green-500/20 text-green-500 hover:text-green-600 border border-green-500/20"
+                      onClick={() => navigate(`/profile/${u.id}`)}
+                    >
+                      Connected
+                    </Button>
+                  ) : relationshipStatuses[u.id] === 'PENDING_SENT' ? (
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      disabled
+                      className="rounded-xl text-[10px] font-bold uppercase tracking-widest transition-all px-4 border-primary/20 text-muted-foreground bg-primary/5 opacity-75"
+                    >
+                      Sent
+                    </Button>
+                  ) : relationshipStatuses[u.id] === 'PENDING_RECEIVED' ? (
+                    <Button
+                      size="sm"
+                      variant="default"
+                      className="rounded-xl text-[10px] font-bold uppercase tracking-widest transition-all px-4 bg-[#22c55e] text-white hover:bg-[#1ebd53] shadow-[0_0_15px_rgba(34,197,94,0.3)]"
+                      onClick={() => handleConnect(u.id)}
+                    >
+                      Accept
+                    </Button>
+                  ) : (
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      className="rounded-xl text-[10px] font-bold uppercase tracking-widest transition-all px-4 border-primary/20 hover:bg-primary/5 hover:text-primary text-muted-foreground"
+                      onClick={() => handleConnect(u.id)}
+                    >
+                      + Connect
+                    </Button>
+                  )}
                 </div>
               ))}
               {suggestions.length === 0 && (

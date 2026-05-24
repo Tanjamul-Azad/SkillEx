@@ -51,6 +51,15 @@ public class Exchange {
     private String message;
 
     @Enumerated(EnumType.STRING)
+    @Column(name = "exchange_mode", nullable = false, length = 30)
+    @Builder.Default
+    private ExchangeMode exchangeMode = ExchangeMode.DIRECT_SWAP;
+
+    @Column(name = "credit_cost", nullable = false)
+    @Builder.Default
+    private Integer creditCost = 0;
+
+    @Enumerated(EnumType.STRING)
     @Column(nullable = false, length = 10)
     @Builder.Default
     private ExchangeStatus status = ExchangeStatus.PENDING;
@@ -69,4 +78,6 @@ public class Exchange {
 
     // Enum names must match DB ENUM values exactly (DECLINED not REJECTED)
     public enum ExchangeStatus { PENDING, ACCEPTED, DECLINED, COMPLETED, CANCELLED }
+
+    public enum ExchangeMode { DIRECT_SWAP, CREDIT_PAYMENT, CHAIN_SWAP, TEST_MEETING }
 }

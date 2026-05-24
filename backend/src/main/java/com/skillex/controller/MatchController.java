@@ -1,8 +1,10 @@
 package com.skillex.controller;
 
 import com.skillex.dto.common.ApiResponse;
+import com.skillex.dto.match.MatchExplanationDto;
 import com.skillex.dto.user.MatchCompatibilityDto;
 import com.skillex.dto.user.MatchUserDto;
+import com.skillex.service.MatchExplanationService;
 import com.skillex.service.MatchService;
 import com.skillex.service.match.graph.ExchangeChain;
 import com.skillex.service.match.graph.ExchangeCycle;
@@ -24,6 +26,7 @@ import java.util.List;
 public class MatchController {
 
     private final MatchService matchService;
+    private final MatchExplanationService matchExplanationService;
 
     /** GET /api/match/users?limit=20 — ranked compatible users */
     @GetMapping("/users")
@@ -53,6 +56,17 @@ public class MatchController {
     ) {
         return ResponseEntity.ok(ApiResponse.ok(
             matchService.getCompatibility(userId(auth), targetUserId)
+        ));
+    }
+
+    /** GET /api/match/explain/{targetUserId} â€” transparent production-grade match explanation */
+    @GetMapping("/explain/{targetUserId:[0-9a-fA-F\\-]{36}}")
+    public ResponseEntity<ApiResponse<MatchExplanationDto>> explain(
+        Authentication auth,
+        @PathVariable String targetUserId
+    ) {
+        return ResponseEntity.ok(ApiResponse.ok(
+            matchExplanationService.explain(userId(auth), targetUserId)
         ));
     }
 

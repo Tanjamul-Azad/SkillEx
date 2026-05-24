@@ -87,6 +87,8 @@ public class DtoMapper {
             e.getOfferedSkill() == null ? null : toSkillRef(e.getOfferedSkill()),
             e.getWantedSkill()  == null ? null : toSkillRef(e.getWantedSkill()),
             e.getMessage(),
+            e.getExchangeMode() == null ? "DIRECT_SWAP" : e.getExchangeMode().name(),
+            e.getCreditCost() == null ? 0 : e.getCreditCost(),
             e.getStatus().name(),
             e.getSessionDate(),
             e.getCreatedAt()
@@ -188,12 +190,18 @@ public class DtoMapper {
      * Maps a Post entity to PostDto WITH viewer context for isLikedByViewer.
      */
     public CommunityDtos.PostDto toPost(Post p, boolean isLikedByViewer) {
+        return toPost(p, isLikedByViewer, null, 0);
+    }
+
+    public CommunityDtos.PostDto toPost(Post p, boolean isLikedByViewer, String feedReason, int feedScore) {
         return new CommunityDtos.PostDto(
             p.getId(), p.getType().name(),
             toSummary(p.getAuthor()), p.getContent(),
             p.getSkill() == null ? null : toSkillRefCommunity(p.getSkill()),
             p.getBadge(), p.getMediaUrl(), p.getLikes(), p.getComments(), p.getShares(),
             isLikedByViewer,
+            feedReason,
+            feedScore,
             p.getCreatedAt()
         );
     }

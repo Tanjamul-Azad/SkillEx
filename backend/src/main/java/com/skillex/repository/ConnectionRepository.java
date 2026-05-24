@@ -35,6 +35,14 @@ public interface ConnectionRepository extends JpaRepository<Connection, String> 
     long countByReceiverIdAndStatus(String receiverId, ConnectionStatus status);
 
     @Query("""
+        SELECT CASE WHEN c.requester.id = :userId THEN c.receiver.id ELSE c.requester.id END
+        FROM Connection c
+        WHERE (c.requester.id = :userId OR c.receiver.id = :userId)
+          AND c.status = :status
+        """)
+    List<String> findConnectedUserIds(@Param("userId") String userId, @Param("status") ConnectionStatus status);
+
+    @Query("""
         SELECT c FROM Connection c
         WHERE ((c.requester.id = :userA AND c.receiver.id = :userB)
             OR (c.requester.id = :userB AND c.receiver.id = :userA))

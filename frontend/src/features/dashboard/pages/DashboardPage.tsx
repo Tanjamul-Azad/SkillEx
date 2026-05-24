@@ -29,6 +29,7 @@ import {
   BarChart3,
   Play,
   X,
+  Coins,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -62,6 +63,7 @@ import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
 import type { Skill, Session } from '@/types';
+import { creditService, type CreditTransaction, type CreditWallet } from '@/services/creditService';
 
 /* ─────────────────────────────────────────────────────────────
    SHNEIDERMAN DESIGN PRINCIPLES APPLIED:
@@ -889,7 +891,7 @@ function ConnectionsTab({
           Open Connections for your full request history.
         </p>
         <Button asChild variant="link" size="sm" className="mt-1 h-auto p-0 text-xs text-primary">
-          <Link to="/connections">Go to Connections</Link>
+          <Link to="/connections?tab=received">Go to Connections</Link>
         </Button>
       </div>
     );
@@ -898,7 +900,7 @@ function ConnectionsTab({
   return (
     <div className="space-y-2 p-4">
       <p className="text-[11px] text-muted-foreground">
-        Quick actions only. All requests remain in <Link to="/connections" className="text-primary hover:underline">Connections</Link>.
+        Quick actions only. All requests remain in <Link to="/connections?tab=received" className="text-primary hover:underline">Connections</Link>.
       </p>
       {connections.slice(0, 3).map((conn, i) => {
         const partner = conn.requester.id === currentUserId ? conn.receiver : conn.requester;
@@ -1354,12 +1356,16 @@ export default function DashboardPage() {
   const [dismissedConnectionIds, setDismissedConnectionIds] = useState<Set<string>>(new Set());
   const [requestTab, setRequestTab] = useState<'received' | 'sent'>('received');
   const [requestsModalOpen, setRequestsModalOpen] = useState(false);
+  const [creditDialogOpen, setCreditDialogOpen] = useState(false);
   const [serverStats, setServerStats] = React.useState<{
     sessionsCompleted?: number;
     skillexScore?: number;
     activeExchanges?: number;
     pendingConnections?: number;
   } | null>(null);
+  const [creditWallet, setCreditWallet] = React.useState<CreditWallet | null>(null);
+  const [creditTransactions, setCreditTransactions] = React.useState<CreditTransaction[]>([]);
+  const [creditHistoryLoading, setCreditHistoryLoading] = React.useState(false);
 
   const [sessions, setSessions] = useState<Session[]>([]);
   const [sessionsLoading, setSessionsLoading] = useState(false);
@@ -1396,8 +1402,29 @@ export default function DashboardPage() {
     refreshDashboardStats();
     if (user?.id) {
       fetchSessions();
+      creditService.wallet().then(setCreditWallet).catch(() => setCreditWallet(null));
     }
   }, [refreshDashboardStats, fetchSessions, user?.id]);
+
+  React.useEffect(() => {
+    if (!creditDialogOpen) {
+      return;
+    }
+
+    setCreditHistoryLoading(true);
+    Promise.all([
+      creditService.wallet(),
+      creditService.transactions(0, 20),
+    ])
+      .then(([wallet, transactions]) => {
+        setCreditWallet(wallet);
+        setCreditTransactions(transactions.content ?? []);
+      })
+      .catch(() => {
+        setCreditTransactions([]);
+      })
+      .finally(() => setCreditHistoryLoading(false));
+  }, [creditDialogOpen]);
 
   const currentUserId = user?.id ?? '';
   const dismissedConnectionsStorageKey = currentUserId
@@ -1763,6 +1790,10 @@ export default function DashboardPage() {
   };
 
   const skillexScore = serverStats?.skillexScore ?? user?.skillexScore ?? 0;
+  const creditBalance = creditWallet?.balance ?? 0;
+  const creditEarned = creditWallet?.lifetimeEarned ?? 0;
+  const creditSpent = creditWallet?.lifetimeSpent ?? 0;
+  const formatCreditType = (type?: string) => (type ?? 'CREDIT').split('_').join(' ');
 
   const statCards: StatCardProps[] = [
     {
@@ -1828,6 +1859,17 @@ export default function DashboardPage() {
                 </div>
               </div>
               <motion.div className="flex flex-wrap gap-2.5 shrink-0">
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  className="rounded-xl border-primary/25 bg-primary/10 px-3 font-bold text-primary hover:bg-primary/15"
+                  onClick={() => setCreditDialogOpen(true)}
+                  title="View credit wallet"
+                >
+                  <Coins className="mr-2 h-3.5 w-3.5" />
+                  {creditBalance}
+                </Button>
                 <Button asChild size="sm" className="rounded-xl font-semibold bg-primary text-primary-foreground shadow-glow-sm hover:brightness-110 border-0">
                   <Link to="/match"><Search className="mr-2 h-3.5 w-3.5" /> Find a Match</Link>
                 </Button>
@@ -2048,6 +2090,108 @@ export default function DashboardPage() {
           </ScrollReveal>
         </div>
       </div>
+
+      <Dialog open={creditDialogOpen} onOpenChange={setCreditDialogOpen}>
+        <DialogContent className="sm:max-w-2xl max-h-[85vh] overflow-hidden">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Coins className="h-5 w-5 text-primary" />
+              SkillEX Credits
+            </DialogTitle>
+            <DialogDescription>
+              Credits let you learn one-way when a direct skill swap is not available.
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="grid gap-3 sm:grid-cols-3">
+            <div className="rounded-2xl border border-primary/20 bg-primary/10 p-4">
+              <p className="text-[10px] font-bold uppercase tracking-widest text-primary">Balance</p>
+              <p className="mt-2 font-headline text-3xl font-extrabold">{creditBalance}</p>
+            </div>
+            <div className="rounded-2xl border border-border/60 bg-muted/20 p-4">
+              <p className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">Earned</p>
+              <p className="mt-2 font-headline text-2xl font-extrabold text-emerald-500">{creditEarned}</p>
+            </div>
+            <div className="rounded-2xl border border-border/60 bg-muted/20 p-4">
+              <p className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">Spent</p>
+              <p className="mt-2 font-headline text-2xl font-extrabold text-amber-500">{creditSpent}</p>
+            </div>
+          </div>
+
+          <Tabs defaultValue="history" className="min-h-0">
+            <TabsList className="h-9 rounded-xl border border-border/50 bg-muted/30 p-1">
+              <TabsTrigger value="history" className="text-[11px] font-semibold">History</TabsTrigger>
+              <TabsTrigger value="rules" className="text-[11px] font-semibold">How It Works</TabsTrigger>
+            </TabsList>
+
+            <TabsContent value="history" className="mt-3">
+              <div className="max-h-[42vh] space-y-2 overflow-y-auto pr-1 custom-scrollbar">
+                {creditHistoryLoading ? (
+                  <p className="rounded-lg border border-dashed border-border/60 px-3 py-4 text-xs text-muted-foreground">
+                    Loading credit history...
+                  </p>
+                ) : creditTransactions.length === 0 ? (
+                  <p className="rounded-lg border border-dashed border-border/60 px-3 py-4 text-xs text-muted-foreground">
+                    No credit activity yet. Teach a session or request a credit exchange to start.
+                  </p>
+                ) : creditTransactions.map((tx) => (
+                  <div key={tx.id} className="flex items-center justify-between gap-3 rounded-xl border border-border/60 bg-muted/20 px-3 py-2.5">
+                    <div className="min-w-0">
+                      <p className="truncate text-sm font-semibold">{tx.description || tx.reason || formatCreditType(tx.transactionType ?? tx.type)}</p>
+                      <p className="mt-0.5 text-[10px] font-semibold uppercase tracking-widest text-muted-foreground">
+                        {formatCreditType(tx.transactionType ?? tx.type)} · {new Date(tx.createdAt).toLocaleDateString()}
+                      </p>
+                    </div>
+                    <div className="shrink-0 text-right">
+                      <Badge
+                        variant="outline"
+                        className={cn(
+                          'rounded-full font-bold',
+                          tx.amount >= 0
+                            ? 'border-emerald-500/30 text-emerald-500'
+                            : 'border-amber-500/30 text-amber-500'
+                        )}
+                      >
+                        {tx.amount >= 0 ? '+' : '-'}{Math.abs(tx.amount)}
+                      </Badge>
+                      <p className="mt-1 text-[10px] text-muted-foreground">Bal {tx.balanceAfter}</p>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </TabsContent>
+
+            <TabsContent value="rules" className="mt-3">
+              <div className="grid gap-3 sm:grid-cols-2">
+                <div className="rounded-2xl border border-border/60 bg-muted/20 p-4">
+                  <p className="text-sm font-bold text-foreground">Earn credits</p>
+                  <ul className="mt-3 space-y-2 text-xs leading-relaxed text-muted-foreground">
+                    <li>+20 starter credits when your wallet is first created.</li>
+                    <li>+10 when someone learns from you through a credit-paid session.</li>
+                    <li>+2 after both people complete feedback for a skill check meeting.</li>
+                    <li>Admin can manually reward credits for helpful community behavior.</li>
+                  </ul>
+                </div>
+                <div className="rounded-2xl border border-border/60 bg-muted/20 p-4">
+                  <p className="text-sm font-bold text-foreground">Spend credits</p>
+                  <ul className="mt-3 space-y-2 text-xs leading-relaxed text-muted-foreground">
+                    <li>Direct swaps cost 0 credits.</li>
+                    <li>Credit payment requests spend 10 credits by default.</li>
+                    <li>High-trust mentors may be recommended at 15 credits.</li>
+                    <li>If a credit request is declined or cancelled, the learner is refunded.</li>
+                  </ul>
+                </div>
+              </div>
+            </TabsContent>
+          </Tabs>
+
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setCreditDialogOpen(false)}>
+              Close
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
       <Dialog open={requestsModalOpen} onOpenChange={setRequestsModalOpen}>
         <DialogContent className="sm:max-w-2xl max-h-[85vh] overflow-hidden">

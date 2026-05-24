@@ -28,6 +28,7 @@ export interface User {
   name: string;
   username?: string;
   email: string;
+  role?: 'STUDENT' | 'ADMIN' | string;
   avatar: string;
   university: string;
   location?: string;
@@ -177,6 +178,8 @@ export interface Post {
   mediaUrl?: string;
   /** Whether the currently logged-in user has liked this post */
   isLikedByViewer?: boolean;
+  feedReason?: string | null;
+  feedScore?: number;
 }
 
 /** Persisted comment on a post */

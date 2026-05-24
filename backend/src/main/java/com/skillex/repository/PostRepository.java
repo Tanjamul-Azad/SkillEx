@@ -7,6 +7,7 @@ import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.stereotype.Repository;
 
 import java.util.Collection;
+import java.util.List;
 
 @Repository
 public interface PostRepository extends JpaRepository<Post, String> {
@@ -16,6 +17,8 @@ public interface PostRepository extends JpaRepository<Post, String> {
     Page<Post> findByAuthorId(String authorId, Pageable pageable);
 
     Page<Post> findByType(Post.PostType type, Pageable pageable);
+
+    Page<Post> findBySkillIdOrderByCreatedAtDesc(String skillId, Pageable pageable);
 
     Page<Post> findByContentContainingIgnoreCaseOrderByCreatedAtDesc(String content, Pageable pageable);
 
@@ -28,4 +31,6 @@ public interface PostRepository extends JpaRepository<Post, String> {
     long countByAuthorId(String authorId);
 
     long countBySkillId(String skillId);
+
+    List<Post> findTop200ByOrderByCreatedAtDesc();
 }

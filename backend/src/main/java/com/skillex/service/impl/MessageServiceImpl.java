@@ -7,6 +7,7 @@ import com.skillex.model.Message;
 import com.skillex.model.User;
 import com.skillex.repository.MessageRepository;
 import com.skillex.repository.UserRepository;
+import com.skillex.service.AccountRestrictionService;
 import com.skillex.service.MessageService;
 import jakarta.persistence.EntityNotFoundException;
 import lombok.RequiredArgsConstructor;
@@ -25,6 +26,7 @@ public class MessageServiceImpl implements MessageService {
 
     private final MessageRepository messageRepository;
     private final UserRepository    userRepository;
+    private final AccountRestrictionService restrictionService;
 
     // ── Queries ──────────────────────────────────────────────────────────────
 
@@ -73,6 +75,7 @@ public class MessageServiceImpl implements MessageService {
     @Override
     @Transactional
     public MessageDto sendMessage(String senderId, String receiverId, String content, String type, String imageUrl) {
+        restrictionService.assertCanUseAccount(senderId, "MESSAGING");
         User sender   = userRepository.findById(senderId)
             .orElseThrow(() -> new EntityNotFoundException("Sender not found: " + senderId));
         User receiver = userRepository.findById(receiverId)

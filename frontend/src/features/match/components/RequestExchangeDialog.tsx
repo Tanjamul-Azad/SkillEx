@@ -16,12 +16,16 @@ import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/hooks/useAuth';
-import { CheckCircle2, ArrowLeftRight, BookOpen, Zap } from 'lucide-react';
+import { cn } from '@/lib/utils';
+import { CheckCircle2, ArrowLeftRight, BookOpen, Zap, Sparkles, Coins, ShieldCheck } from 'lucide-react';
 import type { User, Skill } from '@/types';
 import { exchangeService } from '@/services/exchangeService';
+import { matchExplanationService, type MatchExplanation } from '@/services/matchExplanationService';
+import { creditService, type CreditWallet } from '@/services/creditService';
+import { skillCheckService } from '@/services/skillCheckService';
 
 const schema = z.object({
-  offeredSkillId: z.string().min(1, 'Choose a skill you want to offer.'),
+  offeredSkillId: z.string().optional(),
   wantedSkillId: z.string().optional(),
   message: z.string().max(400, 'Max 400 characters.').optional(),
 });
@@ -31,6 +35,8 @@ type FormData = z.infer<typeof schema>;
 const UUID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 
 const isPersistedSkillId = (skillId?: string): boolean => Boolean(skillId && UUID_PATTERN.test(skillId));
+
+type ExchangeMode = 'DIRECT_SWAP' | 'CREDIT_PAYMENT' | 'TEST_MEETING';
 
 interface Props {
   open: boolean;
@@ -44,6 +50,10 @@ export function RequestExchangeDialog({ open, onClose, targetUser, onSuccess }: 
   const { toast } = useToast();
   const [step, setStep] = useState<'form' | 'success'>('form');
   const [submitting, setSubmitting] = useState(false);
+  const [explanation, setExplanation] = useState<MatchExplanation | null>(null);
+  const [loadingExplanation, setLoadingExplanation] = useState(false);
+  const [wallet, setWallet] = useState<CreditWallet | null>(null);
+  const [mode, setMode] = useState<ExchangeMode>('DIRECT_SWAP');
 
   const form = useForm<FormData>({
     resolver: zodResolver(schema),
@@ -52,6 +62,8 @@ export function RequestExchangeDialog({ open, onClose, targetUser, onSuccess }: 
 
   const mySkills: Skill[] = useMemo(() => user?.skillsOffered ?? [], [user?.skillsOffered]);
   const charCount = form.watch('message')?.length ?? 0;
+  const creditCost = explanation?.creditCost && explanation.creditCost > 0 ? explanation.creditCost : 10;
+  const canPayWithCredits = !wallet || wallet.balance >= creditCost;
 
   useEffect(() => {
     if (!open) return;
@@ -68,6 +80,25 @@ export function RequestExchangeDialog({ open, onClose, targetUser, onSuccess }: 
     }
   }, [form, mySkills, open, targetUser.skillsOffered]);
 
+  useEffect(() => {
+    if (!open || !targetUser.id) return;
+
+    setLoadingExplanation(true);
+    matchExplanationService.explain(targetUser.id)
+      .then((result) => {
+        setExplanation(result);
+        if (['DIRECT_SWAP', 'CREDIT_PAYMENT', 'TEST_MEETING'].includes(result.recommendedMode)) {
+          setMode(result.recommendedMode as ExchangeMode);
+        }
+        if (!form.getValues('message') && result.suggestedOpeningMessage) {
+          form.setValue('message', result.suggestedOpeningMessage.slice(0, 400), { shouldValidate: true });
+        }
+      })
+      .catch(() => setExplanation(null))
+      .finally(() => setLoadingExplanation(false));
+    creditService.wallet().then(setWallet).catch(() => setWallet(null));
+  }, [form, open, targetUser.id]);
+
   const handleSubmit = async (data: FormData) => {
     setSubmitting(true);
     try {
@@ -75,12 +106,30 @@ export function RequestExchangeDialog({ open, onClose, targetUser, onSuccess }: 
       const wantedSkill = targetUser.skillsOffered?.find((s) => s.id === data.wantedSkillId)
         ?? targetUser.skillsOffered?.[0];
       const wantedSkillId = isPersistedSkillId(wantedSkill?.id) ? wantedSkill?.id : undefined;
-      await exchangeService.create({
-        receiverId: targetUser.id,
-        offeredSkillId: offeredSkill?.id,
-        wantedSkillId,
-        message: data.message,
-      });
+      if (!wantedSkillId) {
+        throw new Error('Choose a skill you want to learn first.');
+      }
+      if (mode === 'DIRECT_SWAP' && !offeredSkill?.id) {
+        throw new Error('Choose a skill to offer for a direct swap.');
+      }
+      if (mode === 'CREDIT_PAYMENT' && wallet && wallet.balance < (explanation?.creditCost ?? 10)) {
+        throw new Error('You need more SkillEX credits for this request.');
+      }
+      if (mode === 'TEST_MEETING') {
+        await skillCheckService.create({
+          targetUserId: targetUser.id,
+          skillId: wantedSkillId,
+          message: data.message,
+        });
+      } else {
+        await exchangeService.create({
+          receiverId: targetUser.id,
+          offeredSkillId: mode === 'DIRECT_SWAP' ? offeredSkill?.id : undefined,
+          wantedSkillId,
+          message: data.message,
+          mode,
+        });
+      }
       setStep('success');
       if (onSuccess) onSuccess();
     } catch (err) {
@@ -103,6 +152,7 @@ export function RequestExchangeDialog({ open, onClose, targetUser, onSuccess }: 
         : undefined,
       message: '',
     });
+    setMode('DIRECT_SWAP');
     onClose();
   };
 
@@ -161,10 +211,95 @@ export function RequestExchangeDialog({ open, onClose, targetUser, onSuccess }: 
                 </div>
               </div>
 
+              <div className="mt-4 rounded-xl border border-primary/20 bg-primary/5 p-4">
+                <div className="flex items-start gap-3">
+                  <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-primary/10 text-primary">
+                    <Sparkles className="h-4 w-4" />
+                  </div>
+                  <div className="min-w-0 flex-1">
+                    <div className="flex flex-wrap items-center gap-2">
+                      <p className="text-sm font-bold">AI match explanation</p>
+                      {explanation && (
+                        <Badge variant="outline" className="rounded-full text-[10px]">
+                          {Math.round(explanation.finalScore)}% fit
+                        </Badge>
+                      )}
+                    </div>
+                    {loadingExplanation ? (
+                      <p className="mt-1 text-xs text-muted-foreground">Checking skill fit, reliability, balance, and safety signals...</p>
+                    ) : explanation ? (
+                      <>
+                        <p className="mt-2 text-xs text-foreground/80">{explanation.whyLearnFromThisUser}</p>
+                        <div className="mt-3 grid grid-cols-2 gap-2 text-[11px] text-muted-foreground sm:grid-cols-4">
+                          <span>Skill {Math.round(explanation.directSkillFit)}</span>
+                          <span>Intent {Math.round(explanation.intentFit)}</span>
+                          <span>Trust {Math.round(explanation.skillTrustScore)}</span>
+                          <span>Safety {Math.round(explanation.safetyFit)}</span>
+                        </div>
+                        <div className="mt-3 flex flex-wrap gap-2">
+                          <Badge variant="secondary" className="rounded-full text-[10px]">
+                            {explanation.recommendedMode.replace('_', ' ')}
+                          </Badge>
+                          <Badge variant="outline" className="rounded-full text-[10px]">
+                            Capability {Math.round(explanation.teacherCapabilityScore)}%
+                          </Badge>
+                          {explanation.testMeetingRecommended && (
+                            <Badge variant="outline" className="rounded-full border-amber-500/40 text-[10px] text-amber-600">
+                              Test meeting suggested
+                            </Badge>
+                          )}
+                        </div>
+                        <ul className="mt-3 space-y-1 text-xs text-muted-foreground">
+                          {explanation.reasons.slice(0, 3).map((signal) => (
+                            <li key={signal}>+ {signal}</li>
+                          ))}
+                        </ul>
+                      </>
+                    ) : (
+                      <p className="mt-1 text-xs text-muted-foreground">AI explanation is unavailable, but you can still send a request.</p>
+                    )}
+                  </div>
+                </div>
+              </div>
+
               <Form {...form}>
                 <form onSubmit={form.handleSubmit(handleSubmit)} className="mt-4 space-y-4">
+                  <div className="space-y-2">
+                    <p className="text-sm font-semibold">Request path</p>
+                    <div className="grid gap-2 sm:grid-cols-3">
+                      {[
+                        { id: 'DIRECT_SWAP' as const, label: 'Direct swap', icon: ArrowLeftRight, note: 'Trade skills both ways' },
+                        { id: 'CREDIT_PAYMENT' as const, label: 'Spend credits', icon: Coins, note: `${creditCost} credits` },
+                        { id: 'TEST_MEETING' as const, label: 'Skill check', icon: ShieldCheck, note: 'Short fit check' },
+                      ].map((option) => (
+                        <button
+                          key={option.id}
+                          type="button"
+                          onClick={() => setMode(option.id)}
+                          className={cn(
+                            'rounded-xl border p-3 text-left transition-colors',
+                            mode === option.id
+                              ? 'border-primary bg-primary/10 text-foreground'
+                              : 'border-border/50 bg-background hover:border-primary/40'
+                          )}
+                        >
+                          <span className="flex items-center gap-2 text-xs font-bold">
+                            <option.icon className="h-4 w-4 text-primary" />
+                            {option.label}
+                          </span>
+                          <span className="mt-1 block text-[10px] text-muted-foreground">{option.note}</span>
+                        </button>
+                      ))}
+                    </div>
+                    {mode === 'CREDIT_PAYMENT' && (
+                      <p className={cn('text-xs', canPayWithCredits ? 'text-muted-foreground' : 'text-destructive')}>
+                        Credit balance: {wallet?.balance ?? '--'} / cost: {creditCost}.
+                      </p>
+                    )}
+                  </div>
+
                   {/* Your skill selection */}
-                  <FormField control={form.control} name="offeredSkillId" render={({ field }) => (
+                  {mode === 'DIRECT_SWAP' && <FormField control={form.control} name="offeredSkillId" render={({ field }) => (
                     <FormItem>
                       <FormLabel className="flex items-center gap-1">
                         <Zap className="h-3.5 w-3.5 text-accent" /> What skill will you offer?
@@ -205,12 +340,23 @@ export function RequestExchangeDialog({ open, onClose, targetUser, onSuccess }: 
                       </FormControl>
                       <FormMessage />
                     </FormItem>
-                  )} />
+                  )} />}
 
                   {/* Message */}
                   <FormField control={form.control} name="message" render={({ field }) => (
                     <FormItem>
                       <FormLabel>Message <span className="text-muted-foreground font-normal">(optional)</span></FormLabel>
+                      {explanation?.suggestedOpeningMessage && (
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          size="sm"
+                          className="mb-2 h-8 rounded-lg px-2 text-xs"
+                          onClick={() => form.setValue('message', explanation.suggestedOpeningMessage.slice(0, 400), { shouldValidate: true })}
+                        >
+                          Use AI draft
+                        </Button>
+                      )}
                       <FormControl>
                         <Textarea
                           {...field}
@@ -234,10 +380,10 @@ export function RequestExchangeDialog({ open, onClose, targetUser, onSuccess }: 
                     <Button
                       type="submit"
                       variant="gradient"
-                      disabled={submitting || mySkills.length === 0}
+                      disabled={submitting || (mode === 'DIRECT_SWAP' && mySkills.length === 0) || (mode === 'CREDIT_PAYMENT' && !canPayWithCredits)}
                       className="flex-1"
                     >
-                      {submitting ? 'Sending...' : 'Send Request'}
+                      {submitting ? 'Sending...' : mode === 'TEST_MEETING' ? 'Request Check' : 'Send Request'}
                     </Button>
                   </div>
                 </form>

@@ -12,6 +12,9 @@ import com.skillex.repository.SessionTranscriptRepository;
 import com.skillex.repository.UserRepository;
 import com.skillex.service.DtoMapper;
 import com.skillex.service.NotificationService;
+import com.skillex.service.AccountRestrictionService;
+import com.skillex.service.CertificateService;
+import com.skillex.service.CreditService;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -44,6 +47,9 @@ class SessionServiceImplTest {
     @Mock private DtoMapper mapper;
     @Mock private ApplicationEventPublisher eventPublisher;
     @Mock private NotificationService notificationService;
+    @Mock private AccountRestrictionService restrictionService;
+    @Mock private CreditService creditService;
+    @Mock private CertificateService certificateService;
 
     private SessionServiceImpl service;
 
@@ -57,7 +63,10 @@ class SessionServiceImplTest {
             noteRepository,
             mapper,
             eventPublisher,
-            notificationService
+            notificationService,
+            restrictionService,
+            creditService,
+            certificateService
         );
     }
 

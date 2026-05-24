@@ -6,7 +6,9 @@ import com.skillex.dto.skill.SkillSearchResultDto;
 import com.skillex.model.*;
 import com.skillex.repository.*;
 import com.skillex.service.CommunityService;
+import com.skillex.service.CreditService;
 import com.skillex.service.DtoMapper;
+import com.skillex.service.AccountRestrictionService;
 import com.skillex.service.SkillService;
 import com.skillex.service.reputation.ReputationUpdateEvent;
 import jakarta.persistence.EntityNotFoundException;
@@ -18,6 +20,8 @@ import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.time.Duration;
+import java.time.LocalDateTime;
 import java.util.*;
 import java.util.stream.Collectors;
 
@@ -34,10 +38,13 @@ public class CommunityServiceImpl implements CommunityService {
     private final SkillRepository skillRepository;
     private final PostLikeRepository postLikeRepository;
     private final CommentRepository commentRepository;
+    private final ConnectionRepository connectionRepository;
     private final UserSkillOfferedRepository offeredRepo;
     private final SkillService skillService;
     private final DtoMapper mapper;
     private final ApplicationEventPublisher eventPublisher;
+    private final AccountRestrictionService restrictionService;
+    private final CreditService creditService;
 
     // ── Events ──────────────────────────────────────────────────────────────
 
@@ -51,6 +58,7 @@ public class CommunityServiceImpl implements CommunityService {
     @Override
     @Transactional
     public CommunityDtos.EventDto createEvent(String organizerId, CreateEventRequest req) {
+        restrictionService.assertCanUseAccount(organizerId, "COMMUNITY");
         User organizer = findUser(organizerId);
         Event event = new Event();
         event.setHost(organizer);
@@ -91,6 +99,7 @@ public class CommunityServiceImpl implements CommunityService {
     @Override
     @Transactional
     public CommunityDtos.DiscussionDto createDiscussion(String authorId, CreateDiscussionRequest req) {
+        restrictionService.assertCanUseAccount(authorId, "POSTING");
         User author = findUser(authorId);
         Discussion discussion = new Discussion();
         discussion.setAuthor(author);
@@ -130,6 +139,57 @@ public class CommunityServiceImpl implements CommunityService {
 
     @Override
     @Transactional(readOnly = true)
+    public PagedResponse<CommunityDtos.PostDto> getFeed(String viewerId, String mode, String skillId, int page, int size) {
+        String normalizedMode = mode == null || mode.isBlank() ? "for-you" : mode.toLowerCase(Locale.ROOT);
+        if (viewerId == null || viewerId.isBlank()) {
+            return getPosts(null, page, size);
+        }
+
+        if ("skill".equals(normalizedMode) && skillId != null && !skillId.isBlank()) {
+            Skill skill = skillRepository.findById(skillId).orElse(null);
+            String reason = skill == null ? "Dedicated skill feed" : "Dedicated " + skill.getName() + " feed";
+            return mapPostsWithReason(postRepository.findBySkillIdOrderByCreatedAtDesc(
+                skillId, PageRequest.of(page, size)), viewerId, reason, 90);
+        }
+
+        User viewer = findUser(viewerId);
+        Set<String> wantedSkillIds = viewer.getSkillsWanted().stream().map(Skill::getId).collect(Collectors.toSet());
+        Set<String> offeredSkillIds = viewer.getSkillsOffered().stream().map(Skill::getId).collect(Collectors.toSet());
+        Set<String> connectedUserIds = new HashSet<>(connectionRepository.findConnectedUserIds(
+            viewerId, Connection.ConnectionStatus.ACCEPTED));
+
+        List<Post> source = postRepository.findTop200ByOrderByCreatedAtDesc().stream()
+            .filter(post -> !post.getAuthor().getId().equals(viewerId))
+            .toList();
+
+        List<ScoredPost> scored = switch (normalizedMode) {
+            case "following" -> source.stream()
+                .filter(post -> connectedUserIds.contains(post.getAuthor().getId()))
+                .map(post -> new ScoredPost(post, baseEngagementScore(post) + 80, "From someone you are connected with"))
+                .toList();
+            case "trending" -> source.stream()
+                .map(post -> new ScoredPost(post, baseEngagementScore(post) + post.getLikes() * 3 + post.getComments() * 5,
+                    post.getSkill() == null ? "Trending in the community" : "Trending around " + post.getSkill().getName()))
+                .sorted(scoredPostComparator())
+                .toList();
+            case "random" -> {
+                List<Post> shuffled = new ArrayList<>(source);
+                Collections.shuffle(shuffled, new Random(Objects.hash(viewerId, page, LocalDateTime.now().getDayOfYear())));
+                yield shuffled.stream()
+                    .map(post -> new ScoredPost(post, 20, "Random discovery outside your usual feed"))
+                    .toList();
+            }
+            default -> source.stream()
+                .map(post -> scoreForYou(post, wantedSkillIds, offeredSkillIds, connectedUserIds))
+                .sorted(scoredPostComparator())
+                .toList();
+        };
+
+        return toPagedPosts(scored, viewerId, page, size);
+    }
+
+    @Override
+    @Transactional(readOnly = true)
     public PagedResponse<CommunityDtos.PostDto> searchPostsByIntent(String viewerId, String intent, int page, int size) {
         var pageable = PageRequest.of(page, size, Sort.by("createdAt").descending());
 
@@ -160,6 +220,7 @@ public class CommunityServiceImpl implements CommunityService {
     @Override
     @Transactional
     public CommunityDtos.PostDto createPost(String authorId, CreatePostRequest req) {
+        restrictionService.assertCanUseAccount(authorId, "POSTING");
         User author = findUser(authorId);
         Post post = new Post();
         post.setAuthor(author);
@@ -210,8 +271,22 @@ public class CommunityServiceImpl implements CommunityService {
             postLikeRepository.save(like);
             post.setLikes(post.getLikes() + 1);
             postRepository.save(post);
+            rewardCommunityContributionIfEligible(post);
             return mapper.toPost(post, true);
         }
+    }
+
+    private void rewardCommunityContributionIfEligible(Post post) {
+        if (Boolean.TRUE.equals(post.getCreditRewarded())) return;
+        if (post.getSkill() == null) return;
+        if (post.getLikes() < 10) return;
+        post.setCreditRewarded(true);
+        postRepository.save(post);
+        creditService.rewardCommunityContribution(
+            post.getAuthor().getId(),
+            5,
+            "Earned credits because a skill-tagged community contribution reached 10 upvotes."
+        );
     }
 
     @Override
@@ -246,6 +321,7 @@ public class CommunityServiceImpl implements CommunityService {
     @Override
     @Transactional
     public CommentDto addComment(String userId, String postId, CreateCommentRequest req) {
+        restrictionService.assertCanUseAccount(userId, "COMMENTING");
         Post post = postRepository.findById(postId)
             .orElseThrow(() -> new EntityNotFoundException("Post not found: " + postId));
         User author = findUser(userId);
@@ -269,6 +345,7 @@ public class CommunityServiceImpl implements CommunityService {
 
     // ── Stories ──────────────────────────────────────────────────────────────
 
+
     @Override
     @Transactional(readOnly = true)
     public List<CommunityDtos.StoryDto> getStories() {
@@ -288,6 +365,7 @@ public class CommunityServiceImpl implements CommunityService {
     @Override
     @Transactional
     public CommunityDtos.SkillCircleDto createSkillCircle(String creatorId, CreateSkillCircleRequest req) {
+        restrictionService.assertCanUseAccount(creatorId, "COMMUNITY");
         User creator = findUser(creatorId);
         SkillCircle circle = new SkillCircle();
         circle.setName(req.name());
@@ -359,15 +437,21 @@ public class CommunityServiceImpl implements CommunityService {
             .map(Skill::getId).collect(Collectors.toSet());
 
         if (viewerWantedIds.isEmpty() && viewerOfferedIds.isEmpty()) {
-            // No skills configured — return top-rated users
             return userRepository.findTopMentors(PageRequest.of(0, 5)).stream()
                 .filter(u -> !u.getId().equals(userId))
-                .limit(3)
-                .map(u -> new CommunityDtos.SuggestedUserDto(
-                    u.getId(), u.getName(), u.getUsername(), u.getAvatar(),
-                    u.getUniversity(), u.getSkillexScore(), u.getIsOnline(),
-                    List.of(), "Top mentor on SkillEx"
-                ))
+                .limit(4)
+                .map(candidate -> {
+                    List<String> offeredSkills = candidate.getSkillsOffered().stream().map(Skill::getName).limit(2).toList();
+                    String reason = offeredSkills.isEmpty() 
+                        ? "Top mentor on SkillEx" 
+                        : "Offers " + String.join(", ", offeredSkills);
+                    return new CommunityDtos.SuggestedUserDto(
+                        candidate.getId(), candidate.getName(), candidate.getUsername(),
+                        candidate.getAvatar(), candidate.getUniversity(),
+                        candidate.getSkillexScore(), candidate.getIsOnline(),
+                        offeredSkills, reason
+                    );
+                })
                 .toList();
         }
 
@@ -386,7 +470,22 @@ public class CommunityServiceImpl implements CommunityService {
         allCandidateIds.remove(userId);
 
         if (allCandidateIds.isEmpty()) {
-            return List.of();
+            return userRepository.findTopMentors(PageRequest.of(0, 5)).stream()
+                .filter(u -> !u.getId().equals(userId))
+                .limit(4)
+                .map(candidate -> {
+                    List<String> offeredSkills = candidate.getSkillsOffered().stream().map(Skill::getName).limit(2).toList();
+                    String reason = offeredSkills.isEmpty() 
+                        ? "Top mentor on SkillEx" 
+                        : "Offers " + String.join(", ", offeredSkills);
+                    return new CommunityDtos.SuggestedUserDto(
+                        candidate.getId(), candidate.getName(), candidate.getUsername(),
+                        candidate.getAvatar(), candidate.getUniversity(),
+                        candidate.getSkillexScore(), candidate.getIsOnline(),
+                        offeredSkills, reason
+                    );
+                })
+                .toList();
         }
 
         List<User> candidates = userRepository.findAllById(allCandidateIds);
@@ -425,8 +524,6 @@ public class CommunityServiceImpl implements CommunityService {
         return userRepository.countByIsOnlineTrue();
     }
 
-    // ── helpers ──────────────────────────────────────────────────────────────
-
     private User findUser(String id) {
         return userRepository.findById(id)
             .orElseThrow(() -> new EntityNotFoundException("User not found: " + id));
@@ -461,4 +558,92 @@ public class CommunityServiceImpl implements CommunityService {
             postPage.isLast()
         );
     }
+
+    private PagedResponse<CommunityDtos.PostDto> mapPostsWithReason(Page<Post> postPage, String viewerId, String reason, int score) {
+        List<ScoredPost> scored = postPage.getContent().stream()
+            .map(post -> new ScoredPost(post, score, reason))
+            .toList();
+        Set<String> likedPostIds = likedPostIds(viewerId, postPage.getContent());
+        List<CommunityDtos.PostDto> content = scored.stream()
+            .map(item -> mapper.toPost(item.post(), likedPostIds.contains(item.post().getId()), item.reason(), item.score()))
+            .toList();
+        return new PagedResponse<>(
+            content,
+            postPage.getNumber(),
+            postPage.getSize(),
+            postPage.getTotalElements(),
+            postPage.getTotalPages(),
+            postPage.isLast()
+        );
+    }
+
+    private PagedResponse<CommunityDtos.PostDto> toPagedPosts(List<ScoredPost> scored, String viewerId, int page, int size) {
+        int safePage = Math.max(0, page);
+        int safeSize = Math.max(1, size);
+        int from = Math.min(safePage * safeSize, scored.size());
+        int to = Math.min(from + safeSize, scored.size());
+        List<ScoredPost> slice = scored.subList(from, to);
+        List<Post> posts = slice.stream().map(ScoredPost::post).toList();
+        Set<String> likedPostIds = likedPostIds(viewerId, posts);
+        List<CommunityDtos.PostDto> content = slice.stream()
+            .map(item -> mapper.toPost(item.post(), likedPostIds.contains(item.post().getId()), item.reason(), item.score()))
+            .toList();
+        int totalPages = scored.isEmpty() ? 0 : (int) Math.ceil(scored.size() / (double) safeSize);
+        return new PagedResponse<>(
+            content,
+            safePage,
+            safeSize,
+            scored.size(),
+            totalPages,
+            safePage + 1 >= totalPages
+        );
+    }
+
+    private Set<String> likedPostIds(String viewerId, List<Post> posts) {
+        if (viewerId == null || viewerId.isBlank() || posts.isEmpty()) {
+            return Set.of();
+        }
+        List<String> postIds = posts.stream().map(Post::getId).toList();
+        return new HashSet<>(postLikeRepository.findLikedPostIdsByUser(viewerId, postIds));
+    }
+
+    private ScoredPost scoreForYou(Post post, Set<String> wantedSkillIds, Set<String> offeredSkillIds, Set<String> connectedUserIds) {
+        int score = baseEngagementScore(post);
+        List<String> reasons = new ArrayList<>();
+        String skillId = post.getSkill() == null ? null : post.getSkill().getId();
+        String skillName = post.getSkill() == null ? "this topic" : post.getSkill().getName();
+        if (skillId != null && wantedSkillIds.contains(skillId)) {
+            score += 60;
+            reasons.add("matches a skill you want to learn");
+        }
+        if (skillId != null && offeredSkillIds.contains(skillId)) {
+            score += 25;
+            reasons.add("lets you help with " + skillName);
+        }
+        if (connectedUserIds.contains(post.getAuthor().getId())) {
+            score += 30;
+            reasons.add("from your network");
+        }
+        int safetyPenalty = Math.max(0, 100 - restrictionService.safetyScore(post.getAuthor().getId()));
+        score -= safetyPenalty;
+        if (reasons.isEmpty()) {
+            reasons.add(post.getSkill() == null ? "fresh community activity" : "active discussion around " + skillName);
+        }
+        return new ScoredPost(post, Math.max(0, score), "Shown because it " + String.join(", ", reasons));
+    }
+
+    private int baseEngagementScore(Post post) {
+        long ageDays = post.getCreatedAt() == null
+            ? 30
+            : Math.max(0, Duration.between(post.getCreatedAt(), LocalDateTime.now()).toDays());
+        int freshness = (int) Math.max(0, 30 - ageDays);
+        return freshness + post.getLikes() * 2 + post.getComments() * 3 + post.getShares() * 4;
+    }
+
+    private Comparator<ScoredPost> scoredPostComparator() {
+        return Comparator.comparingInt(ScoredPost::score).reversed()
+            .thenComparing(item -> item.post().getCreatedAt(), Comparator.nullsLast(Comparator.reverseOrder()));
+    }
+
+    private record ScoredPost(Post post, int score, String reason) {}
 }

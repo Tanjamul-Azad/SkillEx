@@ -23,4 +23,9 @@ public interface ReviewRepository extends JpaRepository<Review, String> {
     Double findAverageRatingByToUserId(@Param("userId") String userId);
 
     long countByToUserId(String toUserId);
+
+    long countByToUserIdAndSkillId(String toUserId, String skillId);
+
+    @Query("SELECT AVG(r.rating) FROM Review r WHERE r.toUser.id = :userId AND r.skill.id = :skillId")
+    Double findAverageRatingByToUserIdAndSkillId(@Param("userId") String userId, @Param("skillId") String skillId);
 }

@@ -33,6 +33,12 @@ export const CommunityService = {
   getPosts: (page = 0, size = 20): Promise<PagedResponse<Post>> =>
     api.get<PagedResponse<Post>>(`/community/posts?page=${page}&size=${size}`),
 
+  getFeed: (mode = 'for-you', skillId?: string, page = 0, size = 20): Promise<PagedResponse<Post>> => {
+    const params = new URLSearchParams({ mode, page: String(page), size: String(size) });
+    if (skillId) params.set('skillId', skillId);
+    return api.get<PagedResponse<Post>>(`/community/feed?${params.toString()}`);
+  },
+
   searchPosts: (intent: string, page = 0, size = 20): Promise<PagedResponse<Post>> =>
     api.get<PagedResponse<Post>>(`/community/posts/search?intent=${encodeURIComponent(intent)}&page=${page}&size=${size}`),
 

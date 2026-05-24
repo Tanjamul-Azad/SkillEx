@@ -32,9 +32,40 @@ export default function SessionReviewPage() {
       .then(setSessionInfo)
       .catch(() => {});
 
-    SessionService.getNotes(sessionId)
-      .then(setAiNotes)
-      .catch(() => {});
+    let pollAttempts = 0;
+    const maxPolls = 20; // Up to 80 seconds of polling
+    let intervalId: any;
+
+    const checkNotes = async () => {
+      try {
+        const notes = await SessionService.getNotes(sessionId);
+        if (notes && notes.summary && notes.summary.trim()) {
+          setAiNotes(notes);
+          if (intervalId) clearInterval(intervalId);
+          return true;
+        }
+      } catch (err) {
+        console.warn('Note fetch failed or notes not ready yet', err);
+      }
+      return false;
+    };
+
+    // First attempt immediately
+    checkNotes().then((done) => {
+      if (done) return;
+
+      intervalId = setInterval(async () => {
+        pollAttempts++;
+        const donePoll = await checkNotes();
+        if (donePoll || pollAttempts >= maxPolls) {
+          clearInterval(intervalId);
+        }
+      }, 4000);
+    });
+
+    return () => {
+      if (intervalId) clearInterval(intervalId);
+    };
   }, [sessionId]);
 
   const handleSubmitReview = async (e: React.FormEvent) => {

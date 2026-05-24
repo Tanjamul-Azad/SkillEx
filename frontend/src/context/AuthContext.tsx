@@ -10,8 +10,8 @@ interface AuthContextType {
   user: User | null;
   isAuthenticated: boolean;
   isLoading: boolean;
-  login: (email: string, password: string) => Promise<{ success: boolean; error?: string }>;
-  loginWithGoogle: () => Promise<{ success: boolean; error?: string }>;
+  login: (email: string, password: string) => Promise<{ success: boolean; user?: User; error?: string }>;
+  loginWithGoogle: () => Promise<{ success: boolean; user?: User; error?: string }>;
   logout: () => void;
   register: (data: { name: string; email: string; password: string; university?: string; skillToTeach?: string; skillToLearn?: string; level?: string }) => Promise<{ success: boolean; needsEmailConfirmation?: boolean; error?: string }>;
   refreshUser: () => Promise<void>;
@@ -90,13 +90,13 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   const login = useCallback(async (
     email: string, password: string
-  ): Promise<{ success: boolean; error?: string }> => {
+  ): Promise<{ success: boolean; user?: User; error?: string }> => {
     try {
       // login now returns the full profile including skillsOffered / skillsWanted
       const { user } = await AuthService.login(email, password);
       setUser(user);
       writeCachedUser(user);
-      return { success: true };
+      return { success: true, user };
     } catch (error) {
       const message = error instanceof Error ? error.message : 'Login failed';
       console.warn('[auth] Login failed:', message);
@@ -104,7 +104,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
   }, []);
 
-  const loginWithGoogle = useCallback(async (): Promise<{ success: boolean; error?: string }> => {
+  const loginWithGoogle = useCallback(async (): Promise<{ success: boolean; user?: User; error?: string }> => {
     try {
       const result = await AuthService.loginWithGoogle();
 
@@ -115,7 +115,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
       setUser(result.user);
       writeCachedUser(result.user);
-      return { success: true };
+      return { success: true, user: result.user };
     } catch (error) {
       const message = error instanceof Error ? error.message : 'Google login failed';
       console.warn('[auth] Google login failed:', message);

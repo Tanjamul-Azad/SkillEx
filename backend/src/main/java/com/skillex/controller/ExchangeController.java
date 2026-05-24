@@ -32,6 +32,15 @@ public class ExchangeController {
         return ResponseEntity.status(HttpStatus.CREATED).body(ApiResponse.ok(dto));
     }
 
+    /** POST /api/exchanges/request - explicit request endpoint used by smart exchange flows */
+    @PostMapping("/request")
+    public ResponseEntity<ApiResponse<ExchangeDto>> createRequest(
+        Authentication auth,
+        @Valid @RequestBody CreateExchangeRequest req
+    ) {
+        return create(auth, req);
+    }
+
     /** GET /api/exchanges?status=&page=0&size=20 */
     @GetMapping
     public ResponseEntity<ApiResponse<PagedResponse<ExchangeDto>>> list(

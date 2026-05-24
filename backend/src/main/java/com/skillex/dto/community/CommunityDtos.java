@@ -49,6 +49,8 @@ public final class CommunityDtos {
         int comments,
         int shares,
         boolean isLikedByViewer,
+        String feedReason,
+        int feedScore,
         LocalDateTime createdAt
     ) {}
 

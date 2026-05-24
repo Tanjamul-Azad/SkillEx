@@ -20,7 +20,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import {
   Sun, Moon, LogOut, User as UserIcon, Settings,
   LayoutDashboard, Bell, ChevronDown, CheckCheck,
-  ArrowLeftRight, Star, Calendar, MessageSquare, Menu, UserPlus, Command,
+  ArrowLeftRight, Star, Calendar, MessageSquare, Menu, UserPlus, Command, Coins,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { NotificationService } from '@/services/notificationService';
@@ -32,6 +32,7 @@ import Logo from '@/components/ui/Logo';
 import { ConfirmDialog } from '@/components/ui/ConfirmDialog';
 import GlobalSearch from '@/components/search/GlobalSearch';
 import HeaderMessages from '@/components/layout/HeaderMessages';
+import { creditService, type CreditTransaction, type CreditWallet } from '@/services/creditService';
 
 const LogoWrapper = () => (
   <Link to="/" className="group lg:hidden">
@@ -110,6 +111,9 @@ export default function Header({
   const [notifLoading, setNotifLoading] = useState(false);
   const [notifError, setNotifError] = useState<string | null>(null);
   const [showAllNotifications, setShowAllNotifications] = useState(false);
+  const [wallet, setWallet] = useState<CreditWallet | null>(null);
+  const [creditTransactions, setCreditTransactions] = useState<CreditTransaction[]>([]);
+  const [walletLoading, setWalletLoading] = useState(false);
 
   const fetchAllNotifications = useCallback(async () => {
     if (!user) return;
@@ -250,6 +254,35 @@ export default function Header({
     navigate(getNotificationRoute(notification));
   };
 
+  const fetchWallet = useCallback(async () => {
+    if (!user) return;
+    setWalletLoading(true);
+    try {
+      const [walletData, txData] = await Promise.all([
+        creditService.wallet(),
+        creditService.transactions(0, 8),
+      ]);
+      setWallet(walletData);
+      setCreditTransactions(txData.content ?? []);
+    } finally {
+      setWalletLoading(false);
+    }
+  }, [user]);
+
+  useEffect(() => {
+    if (!user) {
+      setWallet(null);
+      setCreditTransactions([]);
+      return;
+    }
+    void fetchWallet();
+  }, [fetchWallet, user]);
+
+  const formatCreditType = (tx: CreditTransaction) => (tx.transactionType ?? tx.type ?? 'CREDIT')
+    .split('_')
+    .join(' ')
+    .toLowerCase();
+
   return (
     <header
       className="sticky top-0 z-50 w-full"
@@ -321,6 +354,64 @@ export default function Header({
           </Button>
 
           <HeaderMessages />
+
+          {user && (
+            <DropdownMenu onOpenChange={(open) => open && void fetchWallet()}>
+              <DropdownMenuTrigger asChild>
+                <Button
+                  variant="ghost"
+                  className="h-9 rounded-full border border-primary/20 bg-primary/10 px-3 text-primary hover:bg-primary/15 hover:text-primary"
+                  aria-label="Open credit wallet"
+                >
+                  <Coins className="mr-1.5 h-4 w-4" />
+                  <span className="font-bold">{wallet?.balance ?? 0}</span>
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent className="w-80 rounded-2xl border-border/50 bg-background/95 p-0 shadow-xl backdrop-blur-2xl" align="end" forceMount>
+                <div className="border-b border-border/50 p-4">
+                  <p className="text-xs font-bold uppercase tracking-widest text-muted-foreground">SkillEX Credits</p>
+                  <div className="mt-2 flex items-end justify-between">
+                    <div>
+                      <p className="text-3xl font-black text-foreground">{walletLoading ? '...' : wallet?.balance ?? 0}</p>
+                      <p className="text-xs text-muted-foreground">Spend to learn one-way</p>
+                    </div>
+                    <Coins className="h-8 w-8 text-primary" />
+                  </div>
+                  <div className="mt-4 grid grid-cols-2 gap-2 text-xs">
+                    <div className="rounded-xl bg-muted/60 p-3">
+                      <p className="text-muted-foreground">Earned</p>
+                      <p className="font-bold text-foreground">{wallet?.lifetimeEarned ?? 0}</p>
+                    </div>
+                    <div className="rounded-xl bg-muted/60 p-3">
+                      <p className="text-muted-foreground">Spent</p>
+                      <p className="font-bold text-foreground">{wallet?.lifetimeSpent ?? 0}</p>
+                    </div>
+                  </div>
+                </div>
+                <div className="p-4">
+                  <p className="mb-2 text-xs font-bold uppercase tracking-widest text-muted-foreground">Recent history</p>
+                  <div className="max-h-48 space-y-2 overflow-y-auto pr-1">
+                    {creditTransactions.length === 0 ? (
+                      <p className="rounded-xl bg-muted/40 p-3 text-xs text-muted-foreground">No credit activity yet.</p>
+                    ) : creditTransactions.map((tx) => (
+                      <div key={tx.id} className="rounded-xl border border-border/50 bg-muted/30 p-3">
+                        <div className="flex items-center justify-between gap-3">
+                          <p className="text-xs font-bold capitalize text-foreground">{formatCreditType(tx)}</p>
+                          <span className={cn('text-sm font-black', tx.amount >= 0 ? 'text-emerald-500' : 'text-red-500')}>
+                            {tx.amount >= 0 ? '+' : ''}{tx.amount}
+                          </span>
+                        </div>
+                        <p className="mt-1 line-clamp-2 text-[11px] text-muted-foreground">{tx.reason ?? tx.description}</p>
+                      </div>
+                    ))}
+                  </div>
+                  <div className="mt-3 rounded-xl bg-primary/10 p-3 text-[11px] leading-relaxed text-primary">
+                    Earn 15 by teaching, spend 10 for normal one-way learning, spend 15 for high-trust mentors. Community posts earn 5 after 10 upvotes.
+                  </div>
+                </div>
+              </DropdownMenuContent>
+            </DropdownMenu>
+          )}
 
           {/* Notifications dropdown */}
           {user && (

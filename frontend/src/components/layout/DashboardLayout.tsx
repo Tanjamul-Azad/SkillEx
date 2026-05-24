@@ -25,6 +25,7 @@ import { useEffect, useState } from 'react';
 import ProtectedRouteWrapper from '@/components/auth/ProtectedRouteWrapper';
 import { AppSidebar, MobileSidebar } from '@/components/layout/AppSidebar';
 import Header from '@/components/layout/Header';
+import { RestrictionBanner } from '@/components/moderation/RestrictionBanner';
 import { SidebarProvider, useSidebar } from '@/context/SidebarContext';
 import { cn } from '@/lib/utils';
 
@@ -109,6 +110,7 @@ function MainArea({ children }: { children: React.ReactNode }) {
           style={{ willChange: 'transform, opacity' }}
           tabIndex={-1}
         >
+          <RestrictionBanner className="mx-4 mt-4 sm:mx-6 lg:mx-8" />
           {children}
         </motion.main>
       </AnimatePresence>

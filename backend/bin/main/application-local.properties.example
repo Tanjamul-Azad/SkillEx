@@ -56,3 +56,21 @@ CATALOG_AUTO_PROMOTE_ENABLED=true
 CATALOG_AUTO_PROMOTE_MIN_OCCURRENCES=3
 CATALOG_AUTO_PROMOTE_MIN_CONFIDENCE=70
 CATALOG_PENDING_LIST_DEFAULT_LIMIT=50
+
+# ── Local AI / Ollama / Gemma (Offline) ──────────────────────────
+# Select your AI provider for session note summaries:
+# - 'gemma'   : Uses local offline Ollama models (default)
+# - 'gemini'  : Uses cloud-based Google Gemini (highly optimized)
+# - 'fallback': Uses smart local offline extractive NLP summarization (needs no setup)
+app.ai.notes.provider=gemma
+
+# Local Ollama connection params (Ensure Ollama is running and model is pulled: 'ollama run gemma2:2b')
+app.ai.gemma.url=http://localhost:11434/api/generate
+app.ai.gemma.model=gemma2:2b
+
+# ── Agora Video/Audio Call Room Credentials ──────────────────────
+# Sign up at https://console.agora.io to get your App ID and App Certificate.
+# These enable real-time WebRTC audio/video call streaming rooms.
+app.agora.app-id=bf8f5464ba264a64b2c1fe2ccb7a87c3
+app.agora.app-certificate=c3218a61f792462d884d0c0b035d353e
+

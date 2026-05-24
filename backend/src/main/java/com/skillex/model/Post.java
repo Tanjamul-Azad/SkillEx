@@ -62,6 +62,10 @@ public class Post {
     @Builder.Default
     private Integer shares = 0;
 
+    @Column(name = "credit_rewarded", nullable = false)
+    @Builder.Default
+    private Boolean creditRewarded = false;
+
     @CreationTimestamp
     @Column(name = "created_at", updatable = false)
     private LocalDateTime createdAt;

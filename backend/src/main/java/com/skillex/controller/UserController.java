@@ -2,7 +2,10 @@ package com.skillex.controller;
 
 import com.skillex.dto.common.ApiResponse;
 import com.skillex.dto.common.PagedResponse;
+import com.skillex.dto.moderation.UserRestrictionDto;
 import com.skillex.dto.user.*;
+import com.skillex.service.AccountRestrictionService;
+import com.skillex.service.SkillTrustService;
 import com.skillex.service.UserService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
@@ -20,11 +23,19 @@ import org.springframework.web.bind.annotation.*;
 public class UserController {
 
     private final UserService userService;
+    private final AccountRestrictionService restrictionService;
+    private final SkillTrustService skillTrustService;
 
     /** GET /api/users/me — currently authenticated user's full profile */
     @GetMapping("/me")
     public ResponseEntity<ApiResponse<UserProfileDto>> myProfile(Authentication auth) {
         return ResponseEntity.ok(ApiResponse.ok(userService.getProfile(userId(auth))));
+    }
+
+    /** GET /api/users/me/restrictions â€” active warning/restriction state for current user */
+    @GetMapping("/me/restrictions")
+    public ResponseEntity<ApiResponse<java.util.List<UserRestrictionDto>>> myRestrictions(Authentication auth) {
+        return ResponseEntity.ok(ApiResponse.ok(restrictionService.getActiveRestrictionDtos(userId(auth))));
     }
 
     /** GET /api/users/{id} — public profile */
@@ -55,6 +66,15 @@ public class UserController {
     @GetMapping("/{id}/skills")
     public ResponseEntity<ApiResponse<UserSkillsDto>> getUserSkills(@PathVariable String id) {
         return ResponseEntity.ok(ApiResponse.ok(userService.getSkills(id)));
+    }
+
+    /** GET /api/users/{userId}/skills/{skillId}/trust */
+    @GetMapping("/{userId}/skills/{skillId}/trust")
+    public ResponseEntity<ApiResponse<com.skillex.dto.trust.SkillTrustDto>> getSkillTrust(
+        @PathVariable String userId,
+        @PathVariable String skillId
+    ) {
+        return ResponseEntity.ok(ApiResponse.ok(skillTrustService.getTrust(userId, skillId)));
     }
 
     /** POST /api/users/me/change-password */

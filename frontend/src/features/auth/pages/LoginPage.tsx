@@ -6,7 +6,7 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { Link } from 'react-router-dom';
-import { Eye, EyeOff, Lock, Mail, User, CheckCircle2 } from 'lucide-react';
+import { AlertTriangle, Eye, EyeOff, Lock, Mail, User, CheckCircle2 } from 'lucide-react';
 import { useAuth } from '@/hooks/useAuth';
 import { useToast } from '@/hooks/use-toast';
 import { cn } from '@/lib/utils';
@@ -61,14 +61,14 @@ function AuthPage() {
   const [searchParams] = useSearchParams();
   const initialTab = searchParams.get('tab') === 'register' ? 'register' : 'login';
   const [formType, setFormType] = React.useState<'login' | 'register'>(initialTab);
-  const { isAuthenticated, isLoading: isAuthLoading } = useAuth();
+  const { user, isAuthenticated, isLoading: isAuthLoading } = useAuth();
   const navigate = useNavigate();
 
   React.useEffect(() => {
     if (!isAuthLoading && isAuthenticated) {
-      navigate('/dashboard');
+      navigate(user?.role === 'ADMIN' ? '/admin' : '/dashboard');
     }
-  }, [isAuthenticated, isAuthLoading, navigate]);
+  }, [isAuthenticated, isAuthLoading, navigate, user?.role]);
 
   if (isAuthLoading || (!isAuthLoading && isAuthenticated)) {
     return (
@@ -163,6 +163,7 @@ function LoginForm() {
   const [isForgotMode, setIsForgotMode] = React.useState(false);
   const [resetSent, setResetSent] = React.useState(false);
   const [resetEmail, setResetEmail] = React.useState('');
+  const [backendReachable, setBackendReachable] = React.useState<boolean | null>(null);
 
   const form = useForm<LoginFormData>({
     resolver: zodResolver(loginSchema),
@@ -173,16 +174,40 @@ function LoginForm() {
     },
   });
 
+  React.useEffect(() => {
+    let active = true;
+    const controller = new AbortController();
+
+    const timer = window.setTimeout(() => controller.abort(), 3500);
+    fetch('/api/feedbacks', { signal: controller.signal })
+      .then((response) => {
+        if (active) setBackendReachable(response.ok);
+      })
+      .catch(() => {
+        if (active) setBackendReachable(false);
+      })
+      .finally(() => window.clearTimeout(timer));
+
+    return () => {
+      active = false;
+      controller.abort();
+      window.clearTimeout(timer);
+    };
+  }, []);
+
   const onSubmit = async (data: LoginFormData) => {
     setIsLoading(true);
     const result = await login(data.email, data.password);
     if (result.success) {
+      const destination = result.user?.role === 'ADMIN' ? '/admin' : '/dashboard';
       toast({
         title: 'Login Successful',
-        description: 'Welcome back! Redirecting to your dashboard.',
+        description: result.user?.role === 'ADMIN'
+          ? 'Welcome back. Redirecting to the admin console.'
+          : 'Welcome back! Redirecting to your dashboard.',
         variant: 'success'
       });
-      navigate('/dashboard');
+      navigate(destination);
     } else {
       const isUnconfirmed = result.error?.toLowerCase().includes('email not confirmed');
       const isWrongCreds = result.error?.toLowerCase().includes('invalid email or password');
@@ -249,6 +274,16 @@ function LoginForm() {
         <h1 className="font-headline text-3xl font-extrabold tracking-tight text-white lg:text-4xl">Welcome back</h1>
         <p className="mt-3 text-[10px] font-bold uppercase tracking-widest text-muted-foreground">Continue exchanging skills with people who match your goals.</p>
       </div>
+
+      {backendReachable === false && (
+        <div className="mt-6 flex items-start gap-3 rounded-xl border border-amber-400/30 bg-amber-400/10 p-3 text-amber-100">
+          <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0" />
+          <div>
+            <p className="text-xs font-bold uppercase tracking-widest">Backend server is not reachable</p>
+            <p className="mt-1 text-xs text-amber-100/80">Start the Spring Boot backend on port 8080, then try signing in again.</p>
+          </div>
+        </div>
+      )}
 
       <Form {...form}>
         <form onSubmit={form.handleSubmit(onSubmit)} className="mt-8 space-y-5 relative">
@@ -331,12 +366,15 @@ function LoginForm() {
           const result = await loginWithGoogle();
 
           if (result.success) {
+            const destination = result.user?.role === 'ADMIN' ? '/admin' : '/dashboard';
             toast({
               title: 'Google login successful',
-              description: 'Redirecting to your dashboard.',
+              description: result.user?.role === 'ADMIN'
+                ? 'Redirecting to the admin console.'
+                : 'Redirecting to your dashboard.',
               variant: 'success',
             });
-            navigate('/dashboard');
+            navigate(destination);
             return;
           }
 

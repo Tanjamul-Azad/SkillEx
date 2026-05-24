@@ -15,6 +15,9 @@ import com.skillex.repository.UserRepository;
 import com.skillex.service.DtoMapper;
 import com.skillex.service.SessionService;
 import com.skillex.service.NotificationService;
+import com.skillex.service.AccountRestrictionService;
+import com.skillex.service.CertificateService;
+import com.skillex.service.CreditService;
 import com.skillex.service.reputation.ReputationUpdateEvent;
 import jakarta.persistence.EntityNotFoundException;
 import lombok.RequiredArgsConstructor;
@@ -51,6 +54,9 @@ public class SessionServiceImpl implements SessionService {
     private final DtoMapper mapper;
     private final ApplicationEventPublisher eventPublisher;
     private final NotificationService notificationService;
+    private final AccountRestrictionService restrictionService;
+    private final CreditService creditService;
+    private final CertificateService certificateService;
 
     @Override
     @Transactional(readOnly = true)
@@ -71,6 +77,7 @@ public class SessionServiceImpl implements SessionService {
     @Override
     @Transactional
     public SessionDto create(String requestingUserId, CreateSessionRequest req) {
+        restrictionService.assertCanUseAccount(requestingUserId, "SESSION");
         Exchange exchange = exchangeRepository.findById(req.exchangeId())
             .orElseThrow(() -> new EntityNotFoundException("Exchange not found: " + req.exchangeId()));
         assertExchangeParticipant(exchange, requestingUserId);
@@ -211,6 +218,7 @@ public class SessionServiceImpl implements SessionService {
     public SessionDto markCompleted(String sessionId, String requestingUserId) {
         Session session = findSession(sessionId);
         assertParticipant(session, requestingUserId);
+        boolean wasCompleted = session.getStatus() == Session.SessionStatus.COMPLETED;
         session.setStatus(Session.SessionStatus.COMPLETED);
         SessionDto result = mapper.toSession(sessionRepository.save(session));
 
@@ -219,6 +227,21 @@ public class SessionServiceImpl implements SessionService {
             session.getTeacher().getId(), ReputationUpdateEvent.Trigger.SESSION_COMPLETED));
         eventPublisher.publishEvent(new ReputationUpdateEvent(
             session.getLearner().getId(), ReputationUpdateEvent.Trigger.SESSION_COMPLETED));
+
+        try {
+            if (wasCompleted) {
+                return result;
+            }
+            creditService.rewardTeachingSession(
+                session.getTeacher().getId(),
+                session.getExchange(),
+                15,
+                "Earned credits for completing a teaching session in " + session.getSkill().getName() + "."
+            );
+            certificateService.evaluateAfterSession(session.getId());
+        } catch (Exception e) {
+            log.warn("[Session] Failed to process credits or credentials for completed session {}", sessionId, e);
+        }
 
         return result;
     }
@@ -244,6 +267,7 @@ public class SessionServiceImpl implements SessionService {
     @Override
     @Transactional
     public void joinSession(String sessionId, String requestingUserId) {
+        restrictionService.assertCanUseAccount(requestingUserId, "SESSION");
         Session session = findSession(sessionId);
         assertParticipant(session, requestingUserId);
         assertJoinable(session);

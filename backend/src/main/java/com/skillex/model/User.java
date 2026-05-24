@@ -97,6 +97,10 @@ public class User {
     @Builder.Default
     private Boolean connectionsPublic = true;
 
+    @Column(name = "email_verified", nullable = false)
+    @Builder.Default
+    private Boolean emailVerified = true;
+
     // DB column is `joined_at` (not created_at)
     @CreationTimestamp
     @Column(name = "joined_at", updatable = false)

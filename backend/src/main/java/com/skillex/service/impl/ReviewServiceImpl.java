@@ -10,6 +10,8 @@ import com.skillex.repository.SkillRepository;
 import com.skillex.repository.ReviewRepository;
 import com.skillex.repository.SessionRepository;
 import com.skillex.repository.UserRepository;
+import com.skillex.service.AccountRestrictionService;
+import com.skillex.service.CertificateService;
 import com.skillex.service.DtoMapper;
 import com.skillex.service.ReviewService;
 import com.skillex.service.reputation.ReputationUpdateEvent;
@@ -33,6 +35,8 @@ public class ReviewServiceImpl implements ReviewService {
     private final UserRepository userRepository;
     private final DtoMapper mapper;
     private final ApplicationEventPublisher eventPublisher;
+    private final AccountRestrictionService restrictionService;
+    private final CertificateService certificateService;
 
     @Override
     @Transactional(readOnly = true)
@@ -45,6 +49,7 @@ public class ReviewServiceImpl implements ReviewService {
     @Override
     @Transactional
     public ReviewDto create(String fromUserId, CreateReviewRequest req) {
+        restrictionService.assertCanUseAccount(fromUserId, "REVIEW");
         User fromUser = findUser(fromUserId);
         User toUser   = findUser(req.toUserId());
         Skill skill = skillRepository.findById(req.skillId())
@@ -94,6 +99,7 @@ public class ReviewServiceImpl implements ReviewService {
 
         // Publish reputation update event — ReputationServiceImpl will recompute skillexScore
         eventPublisher.publishEvent(new ReputationUpdateEvent(req.toUserId(), ReputationUpdateEvent.Trigger.REVIEW_ADDED));
+        certificateService.evaluateUserSkill(req.toUserId(), req.skillId());
 
         return mapper.toReview(saved);
     }

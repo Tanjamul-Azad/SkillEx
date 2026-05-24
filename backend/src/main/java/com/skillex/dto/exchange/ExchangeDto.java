@@ -12,6 +12,8 @@ public record ExchangeDto(
     SkillRef offeredSkill,
     SkillRef wantedSkill,
     String message,
+    String mode,
+    int creditCost,
     String status,
     LocalDateTime sessionDate,
     LocalDateTime createdAt

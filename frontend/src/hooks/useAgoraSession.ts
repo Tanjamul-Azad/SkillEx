@@ -50,6 +50,21 @@ export const useAgoraSession = (sessionId: string) => {
   const screenTrackRef = useRef<ILocalVideoTrack | null>(null);
   const streamRoleRef = useRef<StreamRole>('host');
 
+  // Keep refs of values used in stable callbacks to prevent recreating those callbacks on state changes
+  const joinedRef = useRef(false);
+  useEffect(() => {
+    joinedRef.current = joined;
+  }, [joined]);
+
+  const selectedMicrophoneRef = useRef(selectedMicrophone);
+  const selectedCameraRef = useRef(selectedCamera);
+  useEffect(() => {
+    selectedMicrophoneRef.current = selectedMicrophone;
+  }, [selectedMicrophone]);
+  useEffect(() => {
+    selectedCameraRef.current = selectedCamera;
+  }, [selectedCamera]);
+
   const stopLocalTracks = useCallback(async () => {
     const client = clientRef.current;
     const tracksToUnpublish: Array<IMicrophoneAudioTrack | ICameraVideoTrack | ILocalVideoTrack> = [];
@@ -164,7 +179,7 @@ export const useAgoraSession = (sessionId: string) => {
   }, [streamRole]);
 
   // Decoupled hardware device list loading function
-  const loadDevices = async () => {
+  const loadDevices = useCallback(async () => {
     try {
       const devices = await AgoraRTC.getDevices();
       const videoDevices = devices.filter((d) => d.kind === 'videoinput');
@@ -186,7 +201,7 @@ export const useAgoraSession = (sessionId: string) => {
     } catch (err) {
       console.warn('[Agora-Client] Failed to list physical devices', err);
     }
-  };
+  }, []);
 
   // Load and listen to active hardware devices
   useEffect(() => {
@@ -197,9 +212,9 @@ export const useAgoraSession = (sessionId: string) => {
     return () => {
       navigator.mediaDevices?.removeEventListener?.('devicechange', loadDevices);
     };
-  }, []);
+  }, [loadDevices]);
 
-  const resolvePreferredDeviceId = async (
+  const resolvePreferredDeviceId = useCallback(async (
     kind: MediaDeviceKind,
     preferredDeviceId: string,
     storageKey: string,
@@ -225,16 +240,16 @@ export const useAgoraSession = (sessionId: string) => {
       console.warn('[Agora-Client] Could not refresh media devices before starting tracks.', err);
       return preferredDeviceId || null;
     }
-  };
+  }, []);
 
-  const startLocalTracks = async () => {
+  const startLocalTracks = useCallback(async () => {
     let audioTrack: IMicrophoneAudioTrack | null = null;
     let videoTrack: ICameraVideoTrack | null = null;
     const warnings: string[] = [];
 
     // Read most up-to-date chosen hardware device IDs from memory or localStorage
-    const preferredMicId = localStorage.getItem('skillex_selected_microphone') || selectedMicrophone;
-    const preferredCamId = localStorage.getItem('skillex_selected_camera') || selectedCamera;
+    const preferredMicId = localStorage.getItem('skillex_selected_microphone') || selectedMicrophoneRef.current;
+    const preferredCamId = localStorage.getItem('skillex_selected_camera') || selectedCameraRef.current;
     const activeMicId = await resolvePreferredDeviceId(
       'audioinput',
       preferredMicId,
@@ -293,11 +308,11 @@ export const useAgoraSession = (sessionId: string) => {
     }
 
     setMediaWarning(warnings.length > 0 ? warnings.join(' ') : null);
-  };
+  }, [resolvePreferredDeviceId]);
 
-  const joinChannel = async (token: string | null, uid: number, appId?: string) => {
+  const joinChannel = useCallback(async (token: string | null, uid: number, appId?: string) => {
     if (!clientRef.current) return;
-    if (joiningRef.current || joined) return;
+    if (joiningRef.current || joinedRef.current) return;
     joiningRef.current = true;
     try {
       setJoinError(null);
@@ -327,14 +342,14 @@ export const useAgoraSession = (sessionId: string) => {
     } finally {
       joiningRef.current = false;
     }
-  };
+  }, [sessionId, startLocalTracks, stopLocalTracks, loadDevices]);
 
-  const setStreamRole = async (nextRole: StreamRole) => {
+  const setStreamRole = useCallback(async (nextRole: StreamRole) => {
     if (streamRoleRef.current === nextRole) return;
     streamRoleRef.current = nextRole;
     setStreamRoleState(nextRole);
 
-    if (!clientRef.current || !joined) return;
+    if (!clientRef.current || !joinedRef.current) return;
 
     if (nextRole === 'audience') {
       await stopLocalTracks();
@@ -342,9 +357,9 @@ export const useAgoraSession = (sessionId: string) => {
     }
 
     await startLocalTracks();
-  };
+  }, [startLocalTracks, stopLocalTracks]);
 
-  const toggleVideo = async () => {
+  const toggleVideo = useCallback(async () => {
     if (streamRoleRef.current === 'audience') return;
     if (localVideoTrackRef.current) {
       const nextState = !videoEnabled;
@@ -352,7 +367,7 @@ export const useAgoraSession = (sessionId: string) => {
       setVideoEnabled(nextState);
     } else {
       try {
-        const preferredCamId = localStorage.getItem('skillex_selected_camera') || selectedCamera;
+        const preferredCamId = localStorage.getItem('skillex_selected_camera') || selectedCameraRef.current;
         const activeCamId = await resolvePreferredDeviceId(
           'videoinput',
           preferredCamId,
@@ -365,7 +380,7 @@ export const useAgoraSession = (sessionId: string) => {
         const videoTrack = await AgoraRTC.createCameraVideoTrack({ cameraId: activeCamId });
         localVideoTrackRef.current = videoTrack;
         setLocalVideoTrack(videoTrack);
-        if (clientRef.current && joined) {
+        if (clientRef.current && joinedRef.current) {
           await clientRef.current.publish(videoTrack);
         }
         setVideoEnabled(true);
@@ -375,9 +390,9 @@ export const useAgoraSession = (sessionId: string) => {
         setMediaWarning('Camera is unavailable, busy, or permission was denied.');
       }
     }
-  };
+  }, [videoEnabled, resolvePreferredDeviceId]);
 
-  const toggleAudio = async () => {
+  const toggleAudio = useCallback(async () => {
     if (streamRoleRef.current === 'audience') return;
     if (localAudioTrackRef.current) {
       const nextState = !audioEnabled;
@@ -385,7 +400,7 @@ export const useAgoraSession = (sessionId: string) => {
       setAudioEnabled(nextState);
     } else {
       try {
-        const preferredMicId = localStorage.getItem('skillex_selected_microphone') || selectedMicrophone;
+        const preferredMicId = localStorage.getItem('skillex_selected_microphone') || selectedMicrophoneRef.current;
         const activeMicId = await resolvePreferredDeviceId(
           'audioinput',
           preferredMicId,
@@ -398,7 +413,7 @@ export const useAgoraSession = (sessionId: string) => {
         const audioTrack = await AgoraRTC.createMicrophoneAudioTrack({ microphoneId: activeMicId });
         localAudioTrackRef.current = audioTrack;
         setLocalAudioTrack(audioTrack);
-        if (clientRef.current && joined) {
+        if (clientRef.current && joinedRef.current) {
           await clientRef.current.publish(audioTrack);
         }
         setAudioEnabled(true);
@@ -408,7 +423,7 @@ export const useAgoraSession = (sessionId: string) => {
         setMediaWarning('Microphone is unavailable or permission was denied.');
       }
     }
-  };
+  }, [audioEnabled, resolvePreferredDeviceId]);
 
   const stopScreenShare = useCallback(async () => {
     if (!clientRef.current || !screenTrackRef.current) return;
@@ -434,9 +449,9 @@ export const useAgoraSession = (sessionId: string) => {
     setIsScreenSharing(false);
   }, []);
 
-  const toggleScreenShare = async () => {
+  const toggleScreenShare = useCallback(async () => {
     if (streamRoleRef.current === 'audience') return;
-    if (!clientRef.current || !joined) return;
+    if (!clientRef.current || !joinedRef.current) return;
 
     if (isScreenSharing) {
       await stopScreenShare();
@@ -462,10 +477,10 @@ export const useAgoraSession = (sessionId: string) => {
         setJoinError('Screen sharing failed. Check browser permission for screen capture.');
       }
     }
-  };
+  }, [isScreenSharing, stopScreenShare]);
 
   // Switch camera hardware device dynamically
-  const changeCamera = async (deviceId: string) => {
+  const changeCamera = useCallback(async (deviceId: string) => {
     setSelectedCamera(deviceId);
     localStorage.setItem('skillex_selected_camera', deviceId);
     if (localVideoTrackRef.current) {
@@ -475,10 +490,10 @@ export const useAgoraSession = (sessionId: string) => {
         console.error('[Agora-Client] Error switching camera device', err);
       }
     }
-  };
+  }, []);
 
   // Switch microphone hardware device dynamically
-  const changeMicrophone = async (deviceId: string) => {
+  const changeMicrophone = useCallback(async (deviceId: string) => {
     setSelectedMicrophone(deviceId);
     localStorage.setItem('skillex_selected_microphone', deviceId);
     if (localAudioTrackRef.current) {
@@ -488,7 +503,7 @@ export const useAgoraSession = (sessionId: string) => {
         console.error('[Agora-Client] Error switching microphone device', err);
       }
     }
-  };
+  }, []);
 
   return {
     joined,

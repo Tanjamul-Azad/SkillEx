@@ -108,6 +108,19 @@ public class CommunityController {
         return ResponseEntity.ok(ApiResponse.ok(communityService.getPosts(viewerId, page, size)));
     }
 
+    @GetMapping("/feed")
+    public ResponseEntity<ApiResponse<PagedResponse<CommunityDtos.PostDto>>> getFeed(
+        HttpServletRequest request,
+        @RequestParam(defaultValue = "for-you") String mode,
+        @RequestParam(required = false) String skillId,
+        @RequestParam(defaultValue = "0") int page,
+        @RequestParam(defaultValue = "20") int size
+    ) {
+        String viewerId = currentUserId(request);
+        return ResponseEntity.ok(ApiResponse.ok(
+            communityService.getFeed(viewerId, mode, skillId, page, size)));
+    }
+
     @GetMapping("/posts/search")
     public ResponseEntity<ApiResponse<PagedResponse<CommunityDtos.PostDto>>> searchPosts(
         HttpServletRequest request,

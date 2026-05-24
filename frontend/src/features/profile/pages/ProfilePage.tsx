@@ -50,6 +50,9 @@ import { CommunityService } from '@/services/communityService';
 import { PostCard } from '../../community/components/PostCard';
 import type { Post } from '@/types';
 import { appVisuals } from '@/lib/appVisuals';
+import { skillTrustService, type SkillTrust } from '@/services/skillTrustService';
+import { skillCheckService } from '@/services/skillCheckService';
+import { certificateService, type SkillCertificate, type UserBadge } from '@/services/certificateService';
 
 const containerVariants = {
   hidden: { opacity: 0 },
@@ -86,6 +89,25 @@ function StatCard({
   );
 }
 
+function SkillTrustBadge({ userId, skillId }: { userId?: string; skillId: string }) {
+  const [trust, setTrust] = useState<SkillTrust | null>(null);
+
+  useEffect(() => {
+    if (!userId || !skillId) return;
+    skillTrustService.get(userId, skillId)
+      .then(setTrust)
+      .catch(() => setTrust(null));
+  }, [skillId, userId]);
+
+  if (!trust) return null;
+
+  return (
+    <span className="rounded-full border border-primary/15 bg-primary/5 px-2 py-0.5 text-[9px] font-bold uppercase tracking-widest text-primary">
+      Trust {trust.score}%
+    </span>
+  );
+}
+
 function SkillSection({
   title,
   skills,
@@ -96,6 +118,7 @@ function SkillSection({
   onAdd,
   id,
   emphasized,
+  profileUserId,
 }: {
   title: string;
   skills: Skill[];
@@ -106,9 +129,25 @@ function SkillSection({
   onAdd?: () => void;
   id?: string;
   emphasized?: boolean;
+  profileUserId?: string;
 }) {
   const [showAll, setShowAll] = useState(false);
   const displayed = showAll ? skills : skills.slice(0, 4);
+  const { toast } = useToast();
+
+  const requestSkillCheck = async (skill: Skill) => {
+    if (!profileUserId) return;
+    try {
+      await skillCheckService.create({ targetUserId: profileUserId, skillId: skill.id, message: `I'd like a short skill check for ${skill.name}.` });
+      toast({ title: 'Skill check requested', description: `${skill.name} capability check sent.` });
+    } catch (error) {
+      toast({
+        variant: 'destructive',
+        title: 'Could not request skill check',
+        description: error instanceof Error ? error.message : 'Please try again.',
+      });
+    }
+  };
 
   return (
     <motion.div variants={itemVariants}>
@@ -155,7 +194,23 @@ function SkillSection({
             <div className="space-y-5">
               <div className="flex flex-wrap gap-2">
                 {displayed.map((skill) => (
-                  <SkillBadge key={skill.id} skill={skill} />
+                  <div key={skill.id} className="flex flex-col gap-1 rounded-xl border border-border/60 bg-background/60 p-2">
+                    <div className="flex flex-wrap items-center gap-2">
+                      <SkillBadge skill={skill} />
+                      {variant === 'offer' && <SkillTrustBadge userId={profileUserId} skillId={skill.id} />}
+                    </div>
+                    {variant === 'offer' && !isOwner && profileUserId && (
+                      <Button
+                        type="button"
+                        size="sm"
+                        variant="ghost"
+                        className="h-7 justify-start rounded-lg px-2 text-[9px] font-bold uppercase tracking-widest text-muted-foreground hover:text-primary"
+                        onClick={() => requestSkillCheck(skill)}
+                      >
+                        Skill Check
+                      </Button>
+                    )}
+                  </div>
                 ))}
               </div>
               <AnimatePresence>
@@ -279,20 +334,22 @@ export default function ProfilePage() {
   const [reviewComment, setReviewComment] = useState('');
   const [reviewSubmitted, setReviewSubmitted] = useState(false);
   const [userPosts, setUserPosts] = useState<Post[]>([]);
+  const [certificates, setCertificates] = useState<SkillCertificate[]>([]);
+  const [badges, setBadges] = useState<UserBadge[]>([]);
   
   const [showcaseOpen, setShowcaseOpen] = useState(false);
   const [showcaseIndex, setShowcaseIndex] = useState(0);
 
   const tabParam = searchParams.get('tab');
   const focusParam = searchParams.get('focus');
-  const resolvedInitialTab = tabParam === 'reviews' || tabParam === 'activity' || tabParam === 'skills'
+  const resolvedInitialTab = tabParam === 'reviews' || tabParam === 'activity' || tabParam === 'skills' || tabParam === 'credentials'
     ? tabParam
     : 'skills';
-  const [activeTab, setActiveTab] = useState<'skills' | 'reviews' | 'activity'>(resolvedInitialTab);
+  const [activeTab, setActiveTab] = useState<'skills' | 'reviews' | 'activity' | 'credentials'>(resolvedInitialTab);
 
   useEffect(() => {
     const next = searchParams.get('tab');
-    if (next === 'skills' || next === 'reviews' || next === 'activity') {
+    if (next === 'skills' || next === 'reviews' || next === 'activity' || next === 'credentials') {
       setActiveTab(next);
     }
   }, [searchParams]);
@@ -304,9 +361,11 @@ export default function ProfilePage() {
     Promise.all([
       UserService.getById(userId),
       ReviewService.getForUser(userId),
-      CommunityService.getUserPosts(userId)
+      CommunityService.getUserPosts(userId),
+      certificateService.userCertificates(userId),
+      certificateService.userBadges(userId)
     ])
-      .then(([userResult, reviewsResult, postsResult]) => {
+      .then(([userResult, reviewsResult, postsResult, certificateResult, badgeResult]) => {
         const u = userResult as User;
         setProfileUser(u);
         setOfferedSkills(u.skillsOffered ?? []);
@@ -314,6 +373,8 @@ export default function ProfilePage() {
         const reviews = (reviewsResult as unknown as { content?: Review[] }).content ?? (reviewsResult as unknown as Review[]) ?? [];
         setUserReviews(reviews);
         setUserPosts(postsResult.content ?? []);
+        setCertificates(certificateResult ?? []);
+        setBadges(badgeResult ?? []);
       })
       .catch(() => setNotFound(true))
       .finally(() => setLoading(false));
@@ -368,7 +429,7 @@ export default function ProfilePage() {
   const isPendingReceived = relationshipStatus === 'PENDING_RECEIVED';
   const emphasizeOfferedSkills = activeTab === 'skills' && focusParam === 'offered';
   const handleTabChange = (next: string) => {
-    if (next !== 'skills' && next !== 'reviews' && next !== 'activity') return;
+    if (next !== 'skills' && next !== 'reviews' && next !== 'activity' && next !== 'credentials') return;
     setActiveTab(next);
 
     const nextParams = new URLSearchParams(searchParams);
@@ -747,7 +808,7 @@ export default function ProfilePage() {
 
         {/* ── Main Content ── */}
         <Tabs value={activeTab} onValueChange={handleTabChange} className="w-full">
-          <TabsList className="grid w-full sm:w-auto grid-cols-3 sm:max-w-[400px] mb-8 bg-black/40 backdrop-blur-xl border border-white/5 shadow-[inset_0_1px_0_0_hsla(0,0%,100%,0.05)] rounded-[1.5rem] p-1.5 h-auto">
+          <TabsList className="grid w-full sm:w-auto grid-cols-4 sm:max-w-[540px] mb-8 bg-black/40 backdrop-blur-xl border border-white/5 shadow-[inset_0_1px_0_0_hsla(0,0%,100%,0.05)] rounded-[1.5rem] p-1.5 h-auto">
             <TabsTrigger value="skills" className="rounded-xl py-2.5 text-[10px] uppercase font-bold tracking-widest data-[state=active]:bg-white/10 data-[state=active]:text-white data-[state=active]:shadow-[0_0_15px_rgba(255,255,255,0.05)] transition-all">
               <BookOpen className="w-3.5 h-3.5 mr-2 opacity-70" />
               Skills
@@ -764,6 +825,10 @@ export default function ProfilePage() {
             <TabsTrigger value="activity" className="rounded-xl py-2.5 text-[10px] uppercase font-bold tracking-widest data-[state=active]:bg-white/10 data-[state=active]:text-white data-[state=active]:shadow-[0_0_15px_rgba(255,255,255,0.05)] transition-all">
               <Zap className="w-3.5 h-3.5 mr-2 opacity-70" />
               Activity
+            </TabsTrigger>
+            <TabsTrigger value="credentials" className="rounded-xl py-2.5 text-[10px] uppercase font-bold tracking-widest data-[state=active]:bg-white/10 data-[state=active]:text-white data-[state=active]:shadow-[0_0_15px_rgba(255,255,255,0.05)] transition-all">
+              <Award className="w-3.5 h-3.5 mr-2 opacity-70" />
+              Proof
             </TabsTrigger>
           </TabsList>
 
@@ -786,6 +851,7 @@ export default function ProfilePage() {
                   emphasized={emphasizeOfferedSkills}
                   isOwner={isOwnProfile}
                   onAdd={() => setAddSkillMode('offered')}
+                  profileUserId={profileUser.id}
                 />
               </motion.div>
               <motion.div variants={itemVariants} className="h-full">
@@ -797,6 +863,7 @@ export default function ProfilePage() {
                   variant="want"
                   isOwner={isOwnProfile}
                   onAdd={() => setAddSkillMode('wanted')}
+                  profileUserId={profileUser.id}
                 />
               </motion.div>
             </motion.div>
@@ -941,6 +1008,86 @@ export default function ProfilePage() {
                   ))}
                 </div>
               )}
+            </div>
+          </TabsContent>
+
+          <TabsContent value="credentials" className="mt-6">
+            <div className="grid gap-6 lg:grid-cols-[1.1fr_0.9fr]">
+              <Card className="app-card overflow-hidden">
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2 text-sm uppercase tracking-widest">
+                    <Award className="h-4 w-4 text-primary" />
+                    Certificates
+                  </CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-3">
+                  {certificates.length === 0 ? (
+                    <div className="rounded-2xl border border-white/10 bg-white/[0.03] p-6 text-sm text-muted-foreground">
+                      Career certificates unlock automatically after real sessions, reviews, trust score, and safety checks.
+                    </div>
+                  ) : certificates.map((certificate) => (
+                    <div key={certificate.id} className="rounded-2xl border border-white/10 bg-white/[0.04] p-4">
+                      <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+                        <div>
+                          <div className="flex items-center gap-2">
+                            <p className="font-bold text-foreground">{certificate.title}</p>
+                            <Badge className={cn('rounded-full text-[10px]', certificate.status === 'ACTIVE' ? 'bg-emerald-500/15 text-emerald-300' : 'bg-red-500/15 text-red-300')}>
+                              {certificate.status}
+                            </Badge>
+                          </div>
+                          <p className="mt-1 text-xs text-muted-foreground">
+                            {certificate.levelLabel} · Trust {certificate.trustScoreSnapshot}% · {certificate.sessionCountSnapshot} sessions
+                          </p>
+                        </div>
+                        <div className="flex gap-2">
+                          <Button size="sm" variant="outline" className="rounded-full" onClick={() => window.open(certificate.verificationUrl, '_blank')}>
+                            Verify
+                          </Button>
+                          <Button
+                            size="sm"
+                            className="rounded-full"
+                            onClick={async () => {
+                              await navigator.clipboard.writeText(certificate.githubBadgeMarkdown);
+                              toast({ title: 'GitHub badge copied', variant: 'success' });
+                            }}
+                          >
+                            GitHub
+                          </Button>
+                        </div>
+                      </div>
+                      {certificate.status !== 'ACTIVE' && certificate.revokedReason && (
+                        <p className="mt-3 rounded-xl bg-red-500/10 p-3 text-xs text-red-200">{certificate.revokedReason}</p>
+                      )}
+                    </div>
+                  ))}
+                </CardContent>
+              </Card>
+
+              <Card className="app-card overflow-hidden">
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2 text-sm uppercase tracking-widest">
+                    <CheckCircle className="h-4 w-4 text-primary" />
+                    Badges
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  {badges.length === 0 ? (
+                    <div className="rounded-2xl border border-white/10 bg-white/[0.03] p-6 text-sm text-muted-foreground">
+                      Badges appear after proof upload, reliable sessions, strong reviews, community help, or verified skills.
+                    </div>
+                  ) : (
+                    <div className="grid gap-3 sm:grid-cols-2">
+                      {badges.map((badge) => (
+                        <div key={badge.id} className="rounded-2xl border border-white/10 bg-white/[0.04] p-4">
+                          <p className="font-bold text-foreground">{badge.name}</p>
+                          <p className="mt-1 text-xs text-muted-foreground">{badge.skillName ?? badge.category}</p>
+                          <p className="mt-3 line-clamp-2 text-xs text-muted-foreground">{badge.description}</p>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </CardContent>
+              </Card>
             </div>
           </TabsContent>
         </Tabs>

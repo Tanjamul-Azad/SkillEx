@@ -33,6 +33,7 @@ import {
 } from '@/components/ui/dialog';
 import { useAuth } from '@/hooks/useAuth';
 import { useToast } from '@/hooks/use-toast';
+import { ReportDialog } from '@/components/moderation/ReportDialog';
 import { cn, timeAgo } from '@/lib/utils';
 import { CommunityService } from '@/services/communityService';
 import type { Post, Comment } from '@/types';
@@ -56,6 +57,7 @@ export const PostCard = React.memo(({ post, onDelete }: PostCardProps) => {
   const [submittingComment, setSubmittingComment] = useState(false);
   const [localCommentCount, setLocalCommentCount] = useState(post.comments);
   const [videoPlaying, setVideoPlaying] = useState(false);
+  const [reportOpen, setReportOpen] = useState(false);
   const videoRef = useRef<HTMLVideoElement>(null);
   const { toast } = useToast();
   const { user } = useAuth();
@@ -144,7 +146,7 @@ export const PostCard = React.memo(({ post, onDelete }: PostCardProps) => {
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end" className="w-40 rounded-xl border border-primary/20 bg-popover shadow-lg p-1">
                 <DropdownMenuItem
-                  onClick={() => toast({ title: 'Post reported', description: 'Thanks for helping keep SkillEx safe.' })}
+                  onClick={() => setReportOpen(true)}
                   className="gap-2 cursor-pointer text-[10px] font-bold uppercase tracking-widest rounded-lg hover:bg-primary/10 focus:bg-primary/10 focus:text-primary text-muted-foreground hover:text-primary"
                 >
                   <Flag className="h-3.5 w-3.5" /> Report
@@ -177,6 +179,12 @@ export const PostCard = React.memo(({ post, onDelete }: PostCardProps) => {
               <Badge variant="secondary" className="bg-primary/10 text-primary border-primary/20 text-[9px] font-bold uppercase tracking-widest px-2 py-0.5 rounded-md">
                 <Tag className="h-2.5 w-2.5 mr-1" /> {post.skill.name}
               </Badge>
+            </div>
+          )}
+
+          {post.feedReason && (
+            <div className="mt-3 rounded-xl border border-primary/10 bg-primary/5 px-3 py-2 text-[11px] font-medium text-muted-foreground">
+              {post.feedReason}
             </div>
           )}
 
@@ -338,6 +346,14 @@ export const PostCard = React.memo(({ post, onDelete }: PostCardProps) => {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      <ReportDialog
+        open={reportOpen}
+        onOpenChange={setReportOpen}
+        targetType="POST"
+        targetId={post.id}
+        targetUserId={post.author.id}
+      />
     </>
   );
 });

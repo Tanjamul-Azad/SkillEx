@@ -44,4 +44,14 @@ public interface SkillRepository extends JpaRepository<Skill, String> {
         ) DESC
         """)
     List<Skill> findMostTaughtSkills(Pageable pageable);
+
+    @Query("""
+        SELECT COUNT(u) FROM User u JOIN u.skillsWanted sw WHERE sw.id = :skillId
+        """)
+    long countWantedUsers(String skillId);
+
+    @Query("""
+        SELECT COUNT(u) FROM User u JOIN u.skillsOffered so WHERE so.id = :skillId
+        """)
+    long countOfferedUsers(String skillId);
 }

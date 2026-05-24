@@ -185,7 +185,7 @@ export const SessionService = {
     const blob = await response.blob();
     const url = window.URL.createObjectURL(blob);
     const disposition = response.headers.get('content-disposition') ?? '';
-    const matchedFile = disposition.match(/filename=\"?([^\";]+)\"?/i);
+    const matchedFile = disposition.match(/filename="?([^";]+)"?/i);
     const filename = matchedFile?.[1] || `session-notes.${format}`;
 
     const a = document.createElement('a');

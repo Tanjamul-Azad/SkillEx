@@ -10,6 +10,7 @@ export interface NavItem {
   icon?: string;          // Lucide icon name
   badge?: string;         // Optional badge text (e.g. "New", "Beta")
   requiresAuth?: boolean;
+  requiresAdmin?: boolean;
 }
 
 export interface NavGroup {
@@ -35,6 +36,7 @@ export const dashboardNav: NavGroup[] = [
       { label: 'Connections',href: '/connections', icon: 'UserPlus',        requiresAuth: true },
       { label: 'Community',  href: '/community',   icon: 'Users',           requiresAuth: true },
       { label: 'Messages',   href: '/messages',    icon: 'MessageSquare',   requiresAuth: true },
+      { label: 'Admin',      href: '/admin',       icon: 'Shield',          requiresAuth: true, requiresAdmin: true },
     ],
   },
   {

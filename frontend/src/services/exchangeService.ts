@@ -28,6 +28,8 @@ export interface Exchange {
   offeredSkill: ExchangeSkillRef | null;
   wantedSkill: ExchangeSkillRef | null;
   message: string | null;
+  mode: 'DIRECT_SWAP' | 'CREDIT_PAYMENT' | 'CHAIN_SWAP' | 'TEST_MEETING' | string;
+  creditCost: number;
   /** Uppercase from backend: PENDING | ACCEPTED | DECLINED | COMPLETED | CANCELLED */
   status: string;
   sessionDate: string | null;
@@ -55,8 +57,9 @@ export const exchangeService = {
     offeredSkillId?: string;
     wantedSkillId?: string;
     message?: string;
+    mode?: 'DIRECT_SWAP' | 'CREDIT_PAYMENT' | 'CHAIN_SWAP' | 'TEST_MEETING' | string;
   }): Promise<Exchange> {
-    return api.post<Exchange>('/exchanges', data);
+    return api.post<Exchange>('/exchanges/request', data);
   },
 
   /** PATCH /api/exchanges/{id}/status — accept / decline / complete */

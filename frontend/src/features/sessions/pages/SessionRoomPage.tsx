@@ -9,7 +9,8 @@ import { TokenStore } from '@/services/http/ApiClient';
 import type { Session } from '@/types';
 import { 
   Video, VideoOff, Mic, MicOff, Monitor, PhoneOff, 
-  FileText, MessageSquare, Sparkles, Loader2, Save, Volume2, Settings, Download
+  FileText, MessageSquare, Sparkles, Loader2, Save, Volume2, Settings, Download,
+  Palette, Hand, MessageCircle, Send, Trash2, CheckCircle
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
@@ -48,7 +49,30 @@ export default function SessionRoomPage() {
   const token = TokenStore.get();
   const { user } = useAuth();
   
-  const [activeTab, setActiveTab] = useState<'transcript' | 'ai-notes' | 'shared-notes'>('transcript');
+  const [activeTab, setActiveTab] = useState<'transcript' | 'ai-notes' | 'shared-notes' | 'chat' | 'whiteboard'>('transcript');
+
+  // Raise Hand states
+  const [handRaisedMap, setHandRaisedMap] = useState<Record<string, boolean>>({});
+  const [localHandRaised, setLocalHandRaised] = useState(false);
+  const [raiseHandAlert, setRaiseHandAlert] = useState<string | null>(null);
+
+  // In-Room Ephemeral Chat states
+  const [inRoomMessages, setInRoomMessages] = useState<any[]>([]);
+  const [chatInput, setChatInput] = useState('');
+  const chatEndRef = useRef<HTMLDivElement>(null);
+
+  // Live Translation states
+  const [translateEnabled, setTranslateEnabled] = useState(false);
+  const [targetLanguage, setTargetLanguage] = useState('bn');
+  const [translatedTranscriptMap, setTranslatedTranscriptMap] = useState<Record<number, string>>({});
+  const [translatingMap, setTranslatingMap] = useState<Record<number, boolean>>({});
+
+  // Interactive Whiteboard states
+  const canvasRef = useRef<HTMLCanvasElement>(null);
+  const [isDrawing, setIsDrawing] = useState(false);
+  const [strokeColor, setStrokeColor] = useState('#00C9C8');
+  const [strokeSize, setStrokeSize] = useState(4);
+  const [isEraser, setIsEraser] = useState(false);
   const [sessionInfo, setSessionInfo] = useState<Session | null>(null);
   const [transcript, setTranscript] = useState<ChatMessage[]>([]);
   const [sharedNotesContent, setSharedNotesContent] = useState('');
@@ -88,6 +112,7 @@ export default function SessionRoomPage() {
   const [showSettings, setShowSettings] = useState(false);
   const [roomError, setRoomError] = useState<string | null>(null);
   const [endingCall, setEndingCall] = useState(false);
+  const [completingSession, setCompletingSession] = useState(false);
 
   const [speechLanguage, setSpeechLanguage] = useState('en-US');
   const {
@@ -141,6 +166,167 @@ export default function SessionRoomPage() {
       }
     }
   }, [localAudioTrack, hearSelf, audioEnabled]);
+
+  // Translation effect
+  useEffect(() => {
+    if (!translateEnabled) return;
+    transcript.forEach((msg) => {
+      if (translatedTranscriptMap[msg.id] || translatingMap[msg.id]) return;
+      
+      const translateMessage = async () => {
+        setTranslatingMap((prev) => ({ ...prev, [msg.id]: true }));
+        try {
+          const response = await fetch(
+            `https://api.mymemory.translated.net/get?q=${encodeURIComponent(msg.content)}&langpair=auto|${targetLanguage}`
+          );
+          if (!response.ok) throw new Error('API limit or failure');
+          const data = await response.json();
+          const translatedText = data.responseData?.translatedText || '';
+          if (translatedText) {
+            setTranslatedTranscriptMap((prev) => ({ ...prev, [msg.id]: translatedText }));
+          }
+        } catch {
+          // simple dictionary mock translations
+          const textLower = msg.content.toLowerCase().trim();
+          let fallback = '';
+          if (targetLanguage === 'bn') {
+            if (textLower.includes('hello') || textLower.includes('hi')) fallback = 'হ্যালো 👋';
+            else if (textLower.includes('how are you')) fallback = 'আপনি কেমন আছেন?';
+            else if (textLower.includes('thank you')) fallback = 'ধন্যবাদ!';
+            else fallback = `[অনুবাদ]: ${msg.content}`;
+          } else {
+            fallback = `[Translated to ${targetLanguage.toUpperCase()}]: ${msg.content}`;
+          }
+          setTranslatedTranscriptMap((prev) => ({ ...prev, [msg.id]: fallback }));
+        } finally {
+          setTranslatingMap((prev) => ({ ...prev, [msg.id]: false }));
+        }
+      };
+      void translateMessage();
+    });
+  }, [transcript, translateEnabled, targetLanguage]);
+
+  // Send ephemeral chat message
+  const sendInRoomChatMessage = (e?: React.FormEvent) => {
+    if (e) e.preventDefault();
+    if (!chatInput.trim() || !sessionId || !user) return;
+
+    const payload = {
+      id: Date.now(),
+      speakerUserId: user.id,
+      speakerName: user.name,
+      speakerRole: currentUserSessionRole.toUpperCase(),
+      content: chatInput.trim(),
+      spokenAt: new Date().toISOString()
+    };
+
+    if (send) {
+      send(`/topic/session/${sessionId}/chat`, payload);
+    }
+
+    setInRoomMessages((prev) => [...prev, payload]);
+    setChatInput('');
+    setTimeout(() => {
+      chatEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+    }, 80);
+  };
+
+  // Canvas utility for logical scale coordinates
+  const getCanvasCoords = (
+    e: React.MouseEvent<HTMLCanvasElement> | React.TouchEvent<HTMLCanvasElement>,
+    canvas: HTMLCanvasElement
+  ) => {
+    const rect = canvas.getBoundingClientRect();
+    let clientX = 0;
+    let clientY = 0;
+
+    if ('touches' in e) {
+      if (e.touches.length === 0) return null;
+      clientX = e.touches[0].clientX;
+      clientY = e.touches[0].clientY;
+    } else {
+      clientX = e.clientX;
+      clientY = e.clientY;
+    }
+
+    const scaleX = canvas.width / rect.width;
+    const scaleY = canvas.height / rect.height;
+    return {
+      x: (clientX - rect.left) * scaleX,
+      y: (clientY - rect.top) * scaleY
+    };
+  };
+
+  // Broadcast drawing actions to peer
+  const broadcastDraw = (type: 'start' | 'draw' | 'end' | 'clear', x: number, y: number, color?: string, size?: number) => {
+    if (send && sessionId) {
+      send(`/topic/session/${sessionId}/whiteboard`, {
+        type,
+        x,
+        y,
+        color: color || strokeColor,
+        size: size || strokeSize,
+        sender: token
+      });
+    }
+  };
+
+  const startDrawing = (e: React.MouseEvent<HTMLCanvasElement> | React.TouchEvent<HTMLCanvasElement>) => {
+    const canvas = canvasRef.current;
+    if (!canvas) return;
+    const coords = getCanvasCoords(e, canvas);
+    if (!coords) return;
+
+    const ctx = canvas.getContext('2d');
+    if (!ctx) return;
+
+    ctx.beginPath();
+    ctx.moveTo(coords.x, coords.y);
+    ctx.strokeStyle = isEraser ? '#0b132b' : strokeColor;
+    ctx.lineWidth = strokeSize;
+    ctx.lineCap = 'round';
+    ctx.lineJoin = 'round';
+
+    setIsDrawing(true);
+    broadcastDraw('start', coords.x, coords.y, isEraser ? '#0b132b' : strokeColor, strokeSize);
+  };
+
+  const draw = (e: React.MouseEvent<HTMLCanvasElement> | React.TouchEvent<HTMLCanvasElement>) => {
+    if (!isDrawing) return;
+    const canvas = canvasRef.current;
+    if (!canvas) return;
+    const coords = getCanvasCoords(e, canvas);
+    if (!coords) return;
+
+    const ctx = canvas.getContext('2d');
+    if (!ctx) return;
+
+    ctx.lineTo(coords.x, coords.y);
+    ctx.stroke();
+    broadcastDraw('draw', coords.x, coords.y);
+  };
+
+  const endDrawing = () => {
+    if (!isDrawing) return;
+    const canvas = canvasRef.current;
+    if (!canvas) return;
+    const ctx = canvas.getContext('2d');
+    if (!ctx) return;
+
+    ctx.closePath();
+    setIsDrawing(false);
+    broadcastDraw('end', 0, 0);
+  };
+
+  const clearCanvas = () => {
+    const canvas = canvasRef.current;
+    if (!canvas) return;
+    const ctx = canvas.getContext('2d');
+    if (!ctx) return;
+
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    broadcastDraw('clear', 0, 0);
+  };
 
   // WebSocket connection for real-time collaboration and alerts
   const { connected, subscribe, send } = useWebSocket(token);
@@ -233,13 +419,84 @@ export default function SessionRoomPage() {
       setPresence(payload);
     });
 
+    // 4. In-room Ephemeral Chat subscription
+    const unsubChat = subscribe(`/topic/session/${sessionId}/chat`, (msg) => {
+      const payload = JSON.parse(msg.body);
+      setInRoomMessages((prev) => {
+        if (prev.some((m) => m.id === payload.id)) return prev;
+        return [...prev, payload];
+      });
+      // Scroll to bottom of chat
+      setTimeout(() => {
+        chatEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+      }, 80);
+    });
+
+    // 5. Raise Hand subscription
+    const unsubRaiseHand = subscribe(`/topic/session/${sessionId}/raise-hand`, (msg) => {
+      const payload = JSON.parse(msg.body);
+      setHandRaisedMap((prev) => ({
+        ...prev,
+        [payload.userId]: payload.raised
+      }));
+
+      if (payload.userId !== user?.id && payload.raised) {
+        // Play soft beep sound
+        try {
+          const audioCtx = new (window.AudioContext || (window as any).webkitAudioContext)();
+          const oscillator = audioCtx.createOscillator();
+          const gainNode = audioCtx.createGain();
+          oscillator.connect(gainNode);
+          gainNode.connect(audioCtx.destination);
+          oscillator.type = 'sine';
+          oscillator.frequency.setValueAtTime(580, audioCtx.currentTime);
+          gainNode.gain.setValueAtTime(0.06, audioCtx.currentTime);
+          oscillator.start();
+          oscillator.stop(audioCtx.currentTime + 0.18);
+        } catch {}
+        
+        setRaiseHandAlert(`${payload.userName} raised their hand! ✋`);
+        setTimeout(() => setRaiseHandAlert(null), 4000);
+      }
+    });
+
+    // 6. Interactive Whiteboard subscription
+    const unsubWhiteboard = subscribe(`/topic/session/${sessionId}/whiteboard`, (msg) => {
+      const payload = JSON.parse(msg.body);
+      if (payload.sender !== token) {
+        const canvas = canvasRef.current;
+        if (!canvas) return;
+        const ctx = canvas.getContext('2d');
+        if (!ctx) return;
+        const { type, x, y, color, size } = payload;
+        if (type === 'start') {
+          ctx.beginPath();
+          ctx.moveTo(x, y);
+          ctx.strokeStyle = color;
+          ctx.lineWidth = size;
+          ctx.lineCap = 'round';
+          ctx.lineJoin = 'round';
+        } else if (type === 'draw') {
+          ctx.lineTo(x, y);
+          ctx.stroke();
+        } else if (type === 'end') {
+          ctx.closePath();
+        } else if (type === 'clear') {
+          ctx.clearRect(0, 0, canvas.width, canvas.height);
+        }
+      }
+    });
+
     return () => {
       if (unsubTranscript) unsubTranscript();
       if (unsubNotes) unsubNotes();
       if (unsubAiNotes) unsubAiNotes();
       if (unsubPresence) unsubPresence();
+      if (unsubChat) unsubChat();
+      if (unsubRaiseHand) unsubRaiseHand();
+      if (unsubWhiteboard) unsubWhiteboard();
     };
-  }, [connected, sessionId, subscribe, token]);
+  }, [connected, sessionId, subscribe, token, user]);
 
   // Auto-scroll transcripts
   useEffect(() => {
@@ -276,7 +533,7 @@ export default function SessionRoomPage() {
       cancelled = true;
       void leaveChannel();
     };
-  }, [sessionId]);
+  }, [sessionId, joinChannel, leaveChannel, setStreamRole]);
 
   useEffect(() => {
     if (!sessionId) return;
@@ -386,6 +643,48 @@ export default function SessionRoomPage() {
     }
   };
 
+  // Successfully complete session call room
+  const handleCompleteSession = async () => {
+    if (!sessionId) return;
+    const confirmComplete = window.confirm('Mark this session exchange as successfully completed? This will trigger your AI study summaries.');
+    if (!confirmComplete) return;
+
+    try {
+      setCompletingSession(true);
+
+      // 1. Trigger background AI note generation so Gemma starts running
+      try {
+        await SessionService.triggerNotes(sessionId);
+      } catch (err) {
+        console.warn('Failed to pre-trigger note generation', err);
+      }
+
+      // 2. Mark the session as completed in the database
+      await SessionService.complete(sessionId);
+
+      // 3. Clean up and leave the Agora channel
+      try {
+        await SessionService.leaveRoom(sessionId);
+      } catch (err) {
+        console.warn('Leave room API failed during complete flow', err);
+      }
+
+      try {
+        await leaveChannel();
+      } catch (err) {
+        console.warn('Local media cleanup failed during complete flow', err);
+      }
+
+      // 4. Navigate directly to the review and feedback page
+      navigate(`/sessions/${sessionId}/review`);
+    } catch (err) {
+      console.error('Failed to complete session', err);
+      alert('Session complete korte problem hocche. Please refresh diye abar try korun.');
+    } finally {
+      setCompletingSession(false);
+    }
+  };
+
   const handleExportNotes = async (format: 'md' | 'pdf') => {
     if (!sessionId || !aiNotes) return;
     try {
@@ -470,6 +769,25 @@ export default function SessionRoomPage() {
                 {currentUserSessionRole}
               </span>
             </div>
+            
+            <button
+              onClick={handleCompleteSession}
+              disabled={completingSession || endingCall}
+              className="ml-2 flex items-center gap-1.5 rounded-full bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-400 hover:text-emerald-300 border border-emerald-500/20 px-3 py-1 text-[10px] font-bold uppercase tracking-wider transition-all duration-300 transform active:scale-95 disabled:opacity-50 shadow-sm"
+              title="Complete Exchange & Generate AI Summaries"
+            >
+              {completingSession ? (
+                <>
+                  <Loader2 className="h-3 w-3 animate-spin" />
+                  Completing...
+                </>
+              ) : (
+                <>
+                  <CheckCircle className="h-3 w-3" />
+                  Complete Session
+                </>
+              )}
+            </button>
           </div>
         </div>
       </header>
@@ -489,10 +807,23 @@ export default function SessionRoomPage() {
             </div>
           )}
           {/* Video stream grids */}
-          <div className="flex-1 grid grid-cols-1 md:grid-cols-2 gap-4 rounded-3xl overflow-hidden bg-black/30 p-2 border border-white/5">
+          <div className="flex-1 relative grid grid-cols-1 md:grid-cols-2 gap-4 rounded-3xl overflow-hidden bg-black/30 p-2 border border-white/5">
+            {/* Raise Hand Alert Banner */}
+            {raiseHandAlert && (
+              <div className="absolute top-4 left-1/2 -translate-x-1/2 bg-amber-500/95 border border-amber-400 backdrop-blur text-white text-xs font-bold rounded-2xl px-5 py-2 z-50 flex items-center gap-2 shadow-2xl animate-bounce">
+                <Hand className="h-4 w-4 fill-white text-white" />
+                <span>{raiseHandAlert}</span>
+              </div>
+            )}
             {/* Local Feed */}
             <div className="relative rounded-2xl overflow-hidden bg-[#1B263B] border border-white/5 shadow-2xl">
               <div id="local-player" className="h-full w-full object-cover" />
+              {localHandRaised && (
+                <div className="absolute top-4 right-4 bg-amber-500/95 text-white font-bold rounded-2xl px-3 py-1 text-xs border border-amber-400 shadow-lg flex items-center gap-1.5 animate-bounce z-20">
+                  <Hand className="h-3.5 w-3.5 fill-white text-white animate-pulse" />
+                  <span>Hand Raised</span>
+                </div>
+              )}
               {!videoEnabled && (
                 <div className="absolute inset-0 flex items-center justify-center bg-[#1B263B]/90 text-slate-400">
                   <VideoOff className="h-10 w-10 text-slate-500 animate-pulse" />
@@ -518,9 +849,19 @@ export default function SessionRoomPage() {
                 remoteUsers.map((rUser) => {
                   const peerName = getPeerNameByUid(rUser.uid);
                   const hasVideo = rUser.hasVideo && rUser.videoTrack;
+                  const partnerUser = sessionInfo
+                    ? (user?.id === sessionInfo.teacher.id ? sessionInfo.learner : sessionInfo.teacher)
+                    : null;
+                  const isPartnerHandRaised = partnerUser && handRaisedMap[partnerUser.id];
                   return (
                     <div key={rUser.uid} className="absolute inset-0 w-full h-full">
                       <div id={`remote-player-${rUser.uid}`} className="h-full w-full object-cover" />
+                      {isPartnerHandRaised && (
+                        <div className="absolute top-4 right-4 bg-amber-500/95 text-white font-bold rounded-2xl px-3 py-1 text-xs border border-amber-400 shadow-lg flex items-center gap-1.5 animate-bounce z-20">
+                          <Hand className="h-3.5 w-3.5 fill-white text-white animate-pulse" />
+                          <span>Hand Raised</span>
+                        </div>
+                      )}
                       {!hasVideo && (
                         <div className="absolute inset-0 flex flex-col items-center justify-center bg-[#1B263B]/95 text-slate-400">
                           <VideoOff className="h-10 w-10 text-slate-500 animate-pulse" />
@@ -550,6 +891,21 @@ export default function SessionRoomPage() {
                       </>
                     )}
                   </div>
+                  {(() => {
+                    const partnerUser = sessionInfo
+                      ? (user?.id === sessionInfo.teacher.id ? sessionInfo.learner : sessionInfo.teacher)
+                      : null;
+                    const isPartnerHandRaised = partnerUser && handRaisedMap[partnerUser.id];
+                    if (isPartnerHandRaised) {
+                      return (
+                        <div className="absolute top-4 right-4 bg-amber-500/95 text-white font-bold rounded-2xl px-3 py-1 text-xs border border-amber-400 shadow-lg flex items-center gap-1.5 animate-bounce z-20">
+                          <Hand className="h-3.5 w-3.5 fill-white text-white animate-pulse" />
+                          <span>Hand Raised</span>
+                        </div>
+                      );
+                    }
+                    return null;
+                  })()}
                   <div className="absolute bottom-4 left-4 bg-black/60 backdrop-blur-md px-3 py-1 rounded-xl text-xs border border-white/10">
                     Partner Stream
                   </div>
@@ -638,38 +994,60 @@ export default function SessionRoomPage() {
         {/* Right Hand: Interactive Dual Workspace split (Width 400px) */}
         <div className="w-[420px] bg-[#1B263B]/40 border-l border-white/5 flex flex-col overflow-hidden">
           {/* Tab Selection Headings */}
-          <div className="flex border-b border-white/5 bg-[#1B263B]/30 p-2 gap-1">
+          <div className="flex border-b border-white/5 bg-[#1B263B]/30 p-2 gap-1 overflow-x-auto custom-scrollbar select-none">
             <button
               onClick={() => setActiveTab('transcript')}
               className={cn(
-                "flex-1 flex items-center justify-center gap-2 py-2.5 rounded-xl text-xs font-semibold tracking-wide transition-all duration-300",
+                "flex-shrink-0 flex items-center justify-center gap-1.5 px-3 py-2.5 rounded-xl text-xs font-semibold tracking-wide transition-all duration-300",
                 activeTab === 'transcript' ? "bg-white/10 text-white shadow-sm" : "text-slate-400 hover:bg-white/5"
               )}
             >
               <MessageSquare className="h-4 w-4" />
-              Live Transcript
+              Transcript
+            </button>
+
+            <button
+              onClick={() => setActiveTab('chat')}
+              className={cn(
+                "flex-shrink-0 flex items-center justify-center gap-1.5 px-3 py-2.5 rounded-xl text-xs font-semibold tracking-wide transition-all duration-300",
+                activeTab === 'chat' ? "bg-white/10 text-[#00C9C8] shadow-sm" : "text-slate-400 hover:bg-white/5"
+              )}
+            >
+              <MessageSquare className="h-3.5 w-3.5 animate-pulse text-[#00C9C8]" />
+              Chat
             </button>
 
             <button
               onClick={() => setActiveTab('shared-notes')}
               className={cn(
-                "flex-1 flex items-center justify-center gap-2 py-2.5 rounded-xl text-xs font-semibold tracking-wide transition-all duration-300",
+                "flex-shrink-0 flex items-center justify-center gap-1.5 px-3 py-2.5 rounded-xl text-xs font-semibold tracking-wide transition-all duration-300",
                 activeTab === 'shared-notes' ? "bg-white/10 text-white shadow-sm" : "text-slate-400 hover:bg-white/5"
               )}
             >
               <FileText className="h-4 w-4" />
-              Shared Notes
+              Notes
+            </button>
+
+            <button
+              onClick={() => setActiveTab('whiteboard')}
+              className={cn(
+                "flex-shrink-0 flex items-center justify-center gap-1.5 px-3 py-2.5 rounded-xl text-xs font-semibold tracking-wide transition-all duration-300",
+                activeTab === 'whiteboard' ? "bg-white/10 text-[#00C9C8] shadow-sm" : "text-slate-400 hover:bg-white/5"
+              )}
+            >
+              <Palette className="h-3.5 w-3.5 animate-pulse text-[#00C9C8]" />
+              Draw
             </button>
 
             <button
               onClick={() => setActiveTab('ai-notes')}
               className={cn(
-                "flex-1 flex items-center justify-center gap-2 py-2.5 rounded-xl text-xs font-semibold tracking-wide transition-all duration-300",
+                "flex-shrink-0 flex items-center justify-center gap-1.5 px-3 py-2.5 rounded-xl text-xs font-semibold tracking-wide transition-all duration-300",
                 activeTab === 'ai-notes' ? "bg-white/10 text-[#00C9C8] shadow-sm" : "text-slate-400 hover:bg-white/5"
               )}
             >
               <Sparkles className="h-4 w-4" />
-              Gemma Notes
+              AI Notes
             </button>
           </div>
 
@@ -921,6 +1299,146 @@ export default function SessionRoomPage() {
                 </div>
               </div>
             )}
+
+            {/* TAB 4: Collaborative Interactive Whiteboard Canvas */}
+            {activeTab === 'whiteboard' && (
+              <div className="flex-1 flex flex-col overflow-hidden p-4">
+                <div className="flex items-center justify-between mb-3 bg-[#1B263B]/30 p-2.5 rounded-xl border border-white/5">
+                  <div className="flex items-center gap-2">
+                    {/* Brush Sizes */}
+                    <div className="flex items-center gap-1">
+                      {[2, 4, 6, 8].map((size) => (
+                        <button
+                          key={size}
+                          onClick={() => setStrokeSize(size)}
+                          className={cn(
+                            "w-6 h-6 rounded-full flex items-center justify-center text-[10px] font-bold border transition",
+                            strokeSize === size
+                              ? "bg-[#00C9C8] text-black border-transparent"
+                              : "bg-white/5 border-white/10 text-slate-300 hover:bg-white/10"
+                          )}
+                          title={`Brush Size ${size}px`}
+                        >
+                          {size}
+                        </button>
+                      ))}
+                    </div>
+
+                    <div className="w-px h-5 bg-white/10 mx-1" />
+
+                    {/* Palette Colors */}
+                    <div className="flex items-center gap-1">
+                      {['#FFFFFF', '#00C9C8', '#FFB703', '#FB8500', '#E63946'].map((color) => (
+                        <button
+                          key={color}
+                          onClick={() => setStrokeColor(color)}
+                          className={cn(
+                            "w-5 h-5 rounded-full border transition-all duration-300 transform hover:scale-110",
+                            strokeColor === color ? "border-white scale-110 shadow" : "border-transparent"
+                          )}
+                          style={{ backgroundColor: color }}
+                          title={color}
+                        />
+                      ))}
+                    </div>
+                  </div>
+
+                  <button
+                    onClick={clearCanvas}
+                    className="flex items-center gap-1.5 text-[11px] bg-red-500/10 text-red-400 px-3 py-1.5 rounded-xl hover:bg-red-500/20 transition border border-red-500/20 font-bold"
+                  >
+                    <Trash2 className="h-3.5 w-3.5" />
+                    Clear
+                  </button>
+                </div>
+
+                {/* Whiteboard Interactive Canvas container */}
+                <div className="flex-1 rounded-2xl border border-white/10 bg-slate-900 overflow-hidden relative shadow-inner">
+                  <canvas
+                    ref={canvasRef}
+                    onMouseDown={startDrawing}
+                    onMouseMove={draw}
+                    onMouseUp={endDrawing}
+                    onMouseLeave={endDrawing}
+                    className="w-full h-full cursor-crosshair block"
+                  />
+                  <div className="absolute bottom-3 right-3 bg-black/60 backdrop-blur-md px-2.5 py-1 rounded-lg text-[9px] font-semibold text-slate-400 uppercase tracking-widest border border-white/5 pointer-events-none select-none z-10">
+                    Whiteboard Workspace
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* TAB 5: Ephemeral In-Room Live Chat Panel */}
+            {activeTab === 'chat' && (
+              <div className="flex-1 flex flex-col overflow-hidden p-4">
+                {/* Scrollable Message List */}
+                <div className="flex-1 overflow-y-auto custom-scrollbar space-y-3 pr-1 pb-2">
+                  {inRoomMessages.length > 0 ? (
+                    inRoomMessages.map((msg) => {
+                      const isMe = msg.speakerUserId === user?.id;
+                      return (
+                        <div
+                          key={msg.id}
+                          className={cn(
+                            "flex flex-col max-w-[85%] rounded-2xl p-3 border text-sm transition-all duration-300",
+                            isMe
+                              ? "bg-[#00C9C8]/10 border-[#00C9C8]/20 self-end ml-auto text-slate-100"
+                              : "bg-white/5 border-white/5 self-start text-slate-200"
+                          )}
+                        >
+                          <div className="mb-1 flex items-center justify-between gap-2">
+                            <span className="text-[10px] uppercase tracking-wider font-semibold text-slate-400">
+                              {msg.speakerName}
+                            </span>
+                            <span className="text-[9px] text-slate-500">
+                              {new Date(msg.spokenAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                            </span>
+                          </div>
+                          <p className="leading-relaxed whitespace-pre-wrap">{msg.content}</p>
+                        </div>
+                      );
+                    })
+                  ) : (
+                    <div className="h-full flex flex-col items-center justify-center text-slate-500 text-center p-6 space-y-2">
+                      <MessageSquare className="h-6 w-6 text-slate-600 animate-pulse" />
+                      <p className="text-xs font-semibold text-slate-400">No messages in this session yet.</p>
+                      <p className="text-[9px] text-slate-600 leading-relaxed max-w-[260px]">
+                        Send a message. It is completely ephemeral and will not persist after the session ends.
+                      </p>
+                    </div>
+                  )}
+                  <div ref={chatEndRef} />
+                </div>
+
+                {/* Input Text Form */}
+                <div className="pt-3 border-t border-white/5">
+                  <form
+                    onSubmit={(e) => {
+                      e.preventDefault();
+                      sendInRoomChatMessage();
+                    }}
+                    className="flex gap-2"
+                  >
+                    <input
+                      type="text"
+                      className="flex-1 bg-[#1B263B]/20 border border-white/5 rounded-xl px-3 py-2.5 text-xs leading-relaxed text-slate-200 placeholder:text-slate-500 focus:outline-none focus:border-[#00C9C8]/40 shadow-inner"
+                      placeholder="Type a message..."
+                      value={chatInput}
+                      onChange={(e) => setChatInput(e.target.value)}
+                    />
+                    <button
+                      type="submit"
+                      disabled={!chatInput.trim()}
+                      className="p-2.5 bg-[#00C9C8]/10 text-[#00C9C8] hover:bg-[#00C9C8] hover:text-black disabled:bg-slate-800 disabled:text-slate-600 rounded-xl transition border border-[#00C9C8]/15 disabled:border-transparent flex items-center justify-center"
+                    >
+                      <Send className="h-4 w-4" />
+                    </button>
+                  </form>
+                </div>
+              </div>
+            )}
+
           </div>
         </div>
       </div>

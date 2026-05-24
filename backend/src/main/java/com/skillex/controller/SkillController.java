@@ -12,6 +12,7 @@ import com.skillex.model.Skill;
 import com.skillex.service.SkillCatalogGovernanceService;
 import com.skillex.service.SkillIntentService;
 import com.skillex.service.SkillService;
+import com.skillex.service.AccountRestrictionService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
@@ -32,6 +33,7 @@ public class SkillController {
     private final SkillService skillService;
     private final SkillIntentService skillIntentService;
     private final SkillCatalogGovernanceService governanceService;
+    private final AccountRestrictionService restrictionService;
 
     /** GET /api/skills */
     @GetMapping
@@ -79,6 +81,7 @@ public class SkillController {
         Authentication auth,
         @Valid @RequestBody SuggestSkillRequest req
     ) {
+        restrictionService.assertCanUseAccount(userId(auth), "SKILL");
         AddSkillRequest addSkillRequest = new AddSkillRequest(
             null,
             req.skillName(),

@@ -31,6 +31,8 @@ public interface CommunityService {
 
     PagedResponse<CommunityDtos.PostDto> getPosts(String viewerId, int page, int size);
 
+    PagedResponse<CommunityDtos.PostDto> getFeed(String viewerId, String mode, String skillId, int page, int size);
+
     PagedResponse<CommunityDtos.PostDto> searchPostsByIntent(String viewerId, String intent, int page, int size);
 
     PagedResponse<CommunityDtos.PostDto> getUserPosts(String userId, int page, int size);

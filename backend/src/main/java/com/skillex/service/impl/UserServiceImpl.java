@@ -8,6 +8,7 @@ import com.skillex.model.UserSkillOffered;
 import com.skillex.model.UserSkillWanted;
 import com.skillex.repository.*;
 import com.skillex.service.DtoMapper;
+import com.skillex.service.AccountRestrictionService;
 import com.skillex.service.SkillCatalogGovernanceService;
 import com.skillex.service.UserService;
 import jakarta.persistence.EntityNotFoundException;
@@ -48,6 +49,7 @@ public class UserServiceImpl implements UserService {
     private final DtoMapper mapper;
     private final SkillCatalogGovernanceService skillCatalogGovernanceService;
     private final com.skillex.service.OtpService otpService;
+    private final AccountRestrictionService restrictionService;
 
     @Override
     @Transactional(readOnly = true)
@@ -66,6 +68,7 @@ public class UserServiceImpl implements UserService {
     @Override
     @Transactional
     public UserProfileDto updateProfile(String userId, UpdateProfileRequest req) {
+        restrictionService.assertCanUseAccount(userId, "PROFILE");
         User user = findUserById(userId);
         if (req.name()       != null) user.setName(req.name());
         if (req.username() != null) {
@@ -111,6 +114,7 @@ public class UserServiceImpl implements UserService {
     @Override
     @Transactional
     public AddSkillResult addSkill(String userId, AddSkillRequest req) {
+        restrictionService.assertCanUseAccount(userId, "SKILL");
         User user = findUserById(userId);
         UserSkillOffered.SkillProficiency level =
             UserSkillOffered.SkillProficiency.valueOf(req.level());

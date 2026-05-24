@@ -19,4 +19,6 @@ public interface PendingSkillRepository extends JpaRepository<PendingSkill, Stri
     List<PendingSkill> findByStatusOrderByLastSeen(@Param("status") PendingSkill.Status status, Pageable pageable);
 
     List<PendingSkill> findByStatus(PendingSkill.Status status);
+
+    long countByStatus(PendingSkill.Status status);
 }

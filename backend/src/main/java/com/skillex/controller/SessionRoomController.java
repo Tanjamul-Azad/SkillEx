@@ -10,6 +10,7 @@ import com.skillex.model.SessionTranscript;
 import com.skillex.model.SessionTranscript.SpeakerRole;
 import com.skillex.repository.SessionRepository;
 import com.skillex.service.AgoraTokenService;
+import com.skillex.service.AccountRestrictionService;
 import com.skillex.service.NoteGenerationProcessor;
 import com.skillex.service.NoteGenerationService;
 import com.skillex.service.SessionPresenceService;
@@ -54,6 +55,7 @@ public class SessionRoomController {
     private final NoteGenerationService noteGenerationService;
     private final NoteGenerationProcessor noteGenerationProcessor;
     private final SimpMessagingTemplate messagingTemplate;
+    private final AccountRestrictionService restrictionService;
 
     /**
      * POST /api/sessions/{sessionId}/join
@@ -65,6 +67,7 @@ public class SessionRoomController {
             @PathVariable String sessionId
     ) {
         String userId = userId(auth);
+        restrictionService.assertCanUseAccount(userId, "SESSION");
         log.info("[SessionRoom] User {} requested joining room {}", userId, sessionId);
 
         Session session = findRoomSession(sessionId);

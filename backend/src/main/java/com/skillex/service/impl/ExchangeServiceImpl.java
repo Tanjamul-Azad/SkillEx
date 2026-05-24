@@ -12,6 +12,9 @@ import com.skillex.repository.ConnectionRepository;
 import com.skillex.service.DtoMapper;
 import com.skillex.service.ExchangeService;
 import com.skillex.service.NotificationService;
+import com.skillex.service.AccountRestrictionService;
+import com.skillex.service.CreditService;
+import com.skillex.service.SkillTrustService;
 import jakarta.persistence.EntityNotFoundException;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.PageRequest;
@@ -30,10 +33,14 @@ public class ExchangeServiceImpl implements ExchangeService {
     private final ConnectionRepository connectionRepository;
     private final DtoMapper mapper;
     private final NotificationService notificationService;
+    private final AccountRestrictionService restrictionService;
+    private final CreditService creditService;
+    private final SkillTrustService skillTrustService;
 
     @Override
     @Transactional
     public ExchangeDto create(String requesterId, CreateExchangeRequest req) {
+        restrictionService.assertCanUseAccount(requesterId, "EXCHANGE");
         User requester = findUser(requesterId);
         User receiver  = findUser(req.receiverId());
 
@@ -57,6 +64,8 @@ public class ExchangeServiceImpl implements ExchangeService {
             ? skillRepository.findById(req.wantedSkillId())
                 .orElseThrow(() -> new EntityNotFoundException("Skill not found: " + req.wantedSkillId()))
             : null;
+        Exchange.ExchangeMode mode = parseMode(req.mode(), offeredSkill, wantedSkill);
+        int creditCost = calculateCreditCost(receiver.getId(), wantedSkill, mode);
 
         Exchange exchange = new Exchange();
         exchange.setRequester(requester);
@@ -64,8 +73,14 @@ public class ExchangeServiceImpl implements ExchangeService {
         exchange.setOfferedSkill(offeredSkill);
         exchange.setWantedSkill(wantedSkill);
         exchange.setMessage(req.message());
+        exchange.setExchangeMode(mode);
+        exchange.setCreditCost(creditCost);
         exchange.setStatus(Exchange.ExchangeStatus.PENDING);
         Exchange saved = exchangeRepository.save(exchange);
+
+        if (mode == Exchange.ExchangeMode.CREDIT_PAYMENT) {
+            creditService.chargeForCreditExchange(requester.getId(), receiver.getId(), saved, creditCost);
+        }
 
         notificationService.create(
             receiver.getId(),
@@ -144,6 +159,9 @@ public class ExchangeServiceImpl implements ExchangeService {
                 // Ignore silent errors during auto-connection sync
             }
         } else if (next == Exchange.ExchangeStatus.DECLINED) {
+            if (saved.getExchangeMode() == Exchange.ExchangeMode.CREDIT_PAYMENT) {
+                creditService.refundCreditExchange(saved);
+            }
             notificationService.create(
                 saved.getRequester().getId(),
                 saved.getReceiver().getId(),
@@ -161,7 +179,10 @@ public class ExchangeServiceImpl implements ExchangeService {
         Exchange ex = findExchange(exchangeId);
         assertParticipant(ex, requestingUserId);
         ex.setStatus(Exchange.ExchangeStatus.CANCELLED);
-        exchangeRepository.save(ex);
+        Exchange saved = exchangeRepository.save(ex);
+        if (saved.getExchangeMode() == Exchange.ExchangeMode.CREDIT_PAYMENT) {
+            creditService.refundCreditExchange(saved);
+        }
     }
 
     @Override
@@ -205,6 +226,27 @@ public class ExchangeServiceImpl implements ExchangeService {
     private User findUser(String id) {
         return userRepository.findById(id)
             .orElseThrow(() -> new EntityNotFoundException("User not found: " + id));
+    }
+
+    private Exchange.ExchangeMode parseMode(String requestedMode, Skill offeredSkill, Skill wantedSkill) {
+        if (requestedMode != null && !requestedMode.isBlank()) {
+            return Exchange.ExchangeMode.valueOf(requestedMode.toUpperCase());
+        }
+        if (offeredSkill == null && wantedSkill != null) {
+            return Exchange.ExchangeMode.CREDIT_PAYMENT;
+        }
+        return Exchange.ExchangeMode.DIRECT_SWAP;
+    }
+
+    private int calculateCreditCost(String teacherId, Skill wantedSkill, Exchange.ExchangeMode mode) {
+        if (mode != Exchange.ExchangeMode.CREDIT_PAYMENT) {
+            return 0;
+        }
+        if (wantedSkill == null) {
+            return CreditService.STANDARD_SESSION_COST;
+        }
+        int trustScore = skillTrustService.getTrust(teacherId, wantedSkill.getId()).score();
+        return trustScore >= 80 ? 15 : CreditService.STANDARD_SESSION_COST;
     }
 
     private void assertParticipant(Exchange ex, String userId) {

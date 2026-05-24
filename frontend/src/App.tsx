@@ -30,6 +30,13 @@ const PrivacyPage = React.lazy(() => import('./features/marketing/pages/PrivacyP
 const TrustPage = React.lazy(() => import('./features/marketing/pages/TrustPage'));
 const SessionRoomPage = React.lazy(() => import('./features/sessions/pages/SessionRoomPage'));
 const SessionReviewPage = React.lazy(() => import('./features/sessions/pages/SessionReviewPage'));
+const AdminDashboardPage = React.lazy(() => import('./features/admin/pages/AdminDashboardPage'));
+const AdminReportsPage = React.lazy(() => import('./features/admin/pages/AdminReportsPage'));
+const AdminRulesPage = React.lazy(() => import('./features/admin/pages/AdminRulesPage'));
+const AdminUserPage = React.lazy(() => import('./features/admin/pages/AdminUserPage'));
+const AdminSkillsPendingPage = React.lazy(() => import('./features/admin/pages/AdminSkillsPendingPage'));
+const AdminAuditPage = React.lazy(() => import('./features/admin/pages/AdminAuditPage'));
+const CertificateVerifyPage = React.lazy(() => import('./features/certificates/pages/CertificateVerifyPage'));
 
 
 // Helper for preloading the current route chunk
@@ -44,6 +51,7 @@ const preloadCurrentRoute = () => {
   else if (path.startsWith('/profile/')) import('./features/profile/pages/ProfilePage');
   else if (path === '/settings') import('./features/settings/pages/SettingsPage');
   else if (path === '/onboarding') import('./features/onboarding/pages/OnboardingPage');
+  else if (path.startsWith('/admin')) import('./features/admin/pages/AdminDashboardPage');
 };
 
 const PageLoader = () => (
@@ -138,6 +146,14 @@ function AppShell() {
           <Route path="/terms" element={<TermsPage />} />
           <Route path="/privacy" element={<PrivacyPage />} />
           <Route path="/trust" element={<TrustPage />} />
+          <Route path="/verify/certificate/:code" element={<CertificateVerifyPage />} />
+          <Route path="/admin" element={<AdminDashboardPage />} />
+          <Route path="/admin/reports" element={<AdminReportsPage />} />
+          <Route path="/admin/cases/:caseId" element={<AdminReportsPage />} />
+          <Route path="/admin/rules" element={<AdminRulesPage />} />
+          <Route path="/admin/users/:userId" element={<AdminUserPage />} />
+          <Route path="/admin/skills/pending" element={<AdminSkillsPendingPage />} />
+          <Route path="/admin/audit" element={<AdminAuditPage />} />
           <Route path="*" element={<NotFoundPage />} />
         </Routes>
       </Suspense>

@@ -35,6 +35,7 @@ function normalizeUser(raw: Record<string, unknown>): User {
     ...(raw as unknown as User),
     // Spring Boot returns avatarUrl; frontend expects avatar
     avatar: (raw.avatarUrl as string) ?? (raw.avatar as string) ?? '',
+    role: typeof raw.role === 'string' ? raw.role.toUpperCase() : raw.role as User['role'],
     skillsOffered: mapSkills(raw.skillsOffered),
     skillsWanted:  mapSkills(raw.skillsWanted),
   };

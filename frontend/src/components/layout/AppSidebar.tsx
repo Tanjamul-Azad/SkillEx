@@ -32,7 +32,7 @@ import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/comp
 import {
   LayoutDashboard, Zap, Users, User, Settings, LogOut,
   ChevronLeft, ChevronRight, X, MessageSquare,
-  UserPlus,
+  UserPlus, Shield,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { dashboardNav } from '@/config/navigation.config';
@@ -49,6 +49,7 @@ const ICON_MAP: Record<string, LucideIcon> = {
   UserPlus,
   Settings,
   MessageSquare,
+  Shield,
 };
 
 /* ── Constants ─────────────────────────────────────────────────────────────── */
@@ -176,7 +177,11 @@ function SidebarContent({
 
       {/* Nav groups */}
       <div className="flex-1 overflow-y-auto overflow-x-hidden py-4 px-3 space-y-6">
-        {dashboardNav.map((group) => (
+        {dashboardNav.map((group) => {
+          const visibleItems = group.items.filter((item) => !item.requiresAdmin || user?.role === 'ADMIN');
+          if (visibleItems.length === 0) return null;
+
+          return (
           <div key={group.label ?? 'ungrouped'}>
             {/* Group label */}
             <AnimatePresence initial={false}>
@@ -195,7 +200,7 @@ function SidebarContent({
 
             {/* Items */}
             <ul role="list" className="space-y-0.5">
-              {group.items.map((item) => (
+              {visibleItems.map((item) => (
                 <li key={item.href}>
                   <NavItem
                     href={item.label === 'Profile' ? `/profile/${user?.id ?? ''}` : item.href}
@@ -208,7 +213,8 @@ function SidebarContent({
               ))}
             </ul>
           </div>
-        ))}
+          );
+        })}
       </div>
 
       {/* User profile footer */}

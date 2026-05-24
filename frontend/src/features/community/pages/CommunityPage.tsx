@@ -54,11 +54,6 @@ const itemVariants = {
 
 // --- FEED TAB COMPONENTS ---
 
-// --- FEED TAB COMPONENTS ---
-
-
-
-
 const FeedTab = ({ intentFilter, onlineCount }: { intentFilter?: string; onlineCount: number }) => {
   const { user } = useAuth();
   const { toast } = useToast();

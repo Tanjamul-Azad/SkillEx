@@ -54,6 +54,7 @@ import { RequestExchangeDialog } from '@/features/match/components/RequestExchan
 import { useToast } from '@/hooks/use-toast';
 import { UserService } from '@/services/userService';
 import { exchangeService, type ExchangeRelationship } from '@/services/exchangeService';
+import { connectionService } from '@/services/connectionService';
 import { MarketplaceCard } from '@/features/match/components/MarketplaceCard';
 import { appVisuals } from '@/lib/appVisuals';
 
@@ -287,47 +288,37 @@ const AIBestMatchCard: FC<{ match: MatchUser; currentUser: User | null }> = Reac
       <motion.div
         initial={{ opacity: 0, y: 8 }}
         animate={{ opacity: 1, y: 0 }}
-        className="group relative mb-5 overflow-hidden rounded-3xl border border-border/70 bg-card/85 shadow-[0_18px_60px_-34px_hsl(var(--primary)/0.35)] transition-all duration-500 hover:border-primary/30"
+        className="group relative mb-4 overflow-hidden rounded-2xl border border-border/70 bg-card/90 shadow-sm transition-colors duration-300 hover:border-primary/30"
       >
-        <div className="absolute inset-0 z-0">
-          <img
-            src={appVisuals.matchProductFlow}
-            alt=""
-            loading="eager"
-            decoding="async"
-            className="absolute inset-y-0 right-0 hidden h-full w-[48%] object-cover opacity-45 saturate-90 transition-transform duration-700 group-hover:scale-[1.03] lg:block"
-          />
-          <div className="absolute inset-0 bg-[radial-gradient(circle_at_18%_10%,hsl(var(--primary)/0.12),transparent_34%),linear-gradient(90deg,hsl(var(--card))_0%,hsl(var(--card)/0.98)_48%,hsl(var(--card)/0.70)_100%)]" />
-          <div className="absolute inset-0 bg-gradient-to-t from-card via-transparent to-transparent" />
-        </div>
+        <div className="pointer-events-none absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-primary/50 to-transparent opacity-70" />
 
-        <div className="relative z-20 p-5 md:p-6">
-          <div className="mb-5 flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
-            <div>
-              <Badge className="mb-3 gap-1.5 border border-primary/25 bg-primary/15 px-3 py-1 text-primary hover:bg-primary/20">
+        <div className="relative z-20 p-4 md:p-5">
+          <div className="mb-4 flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
+            <div className="min-w-0">
+              <Badge className="mb-2 gap-1.5 border border-primary/25 bg-primary/10 px-2.5 py-1 text-primary hover:bg-primary/15">
                 <Sparkles className="h-3.5 w-3.5" />
-                <span className="text-[11px] font-bold tracking-wide">Recommended Exchange</span>
+                <span className="text-[10px] font-bold uppercase tracking-wide">Recommended</span>
               </Badge>
-              <h2 className="font-headline text-2xl font-extrabold tracking-tight text-foreground md:text-3xl">Best two-way skill fit</h2>
-              <p className="mt-1 max-w-2xl text-sm text-muted-foreground">Clear trade fit based on what you can teach and what they can offer back.</p>
+              <h2 className="truncate font-headline text-xl font-extrabold text-foreground">Best match: {match.name}</h2>
+              <p className="mt-1 text-sm text-muted-foreground">Trade fit based on teach/learn overlap and reliability signals.</p>
             </div>
-            <div className="flex items-center gap-3 rounded-2xl border border-border/70 bg-background/60 px-3 py-2 backdrop-blur">
-              <span className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">Compatibility</span>
-              <MatchScoreRing score={score} size={48} tone="secondary" className="drop-shadow-md" />
+            <div className="flex shrink-0 items-center gap-2 rounded-xl border border-border/60 bg-background/60 px-3 py-2">
+              <span className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">Fit</span>
+              <MatchScoreRing score={score} size={42} tone="secondary" />
             </div>
           </div>
 
-          <div className="grid grid-cols-1 gap-4 lg:grid-cols-[minmax(260px,0.9fr)_minmax(420px,1.4fr)]">
-            <div className="rounded-2xl border border-border/70 bg-background/62 p-4 backdrop-blur">
-              <div className="flex items-center gap-4">
-                <Avatar className="h-14 w-14 bg-card ring-4 ring-primary/15 shadow-[0_0_15px_hsl(var(--primary)/0.22)]">
+          <div className="grid grid-cols-1 gap-3 lg:grid-cols-[minmax(240px,0.8fr)_minmax(0,1.2fr)]">
+            <div className="rounded-xl border border-border/60 bg-muted/15 p-3">
+              <div className="flex items-center gap-3">
+                <Avatar className="h-12 w-12 bg-card ring-2 ring-primary/15">
                   <AvatarImage src={match.avatar ?? undefined} className="object-cover" />
-                  <AvatarFallback className="font-bold text-lg bg-muted text-foreground">{match.name.charAt(0)}</AvatarFallback>
+                  <AvatarFallback className="bg-muted text-base font-bold text-foreground">{match.name.charAt(0)}</AvatarFallback>
                 </Avatar>
                 <div className="min-w-0">
-                  <h3 className="truncate font-headline text-xl font-extrabold">{match.name}</h3>
-                  <p className="truncate text-sm font-medium text-muted-foreground">{match.university || 'SkillEX member'}</p>
-                  <div className="mt-2 flex flex-wrap items-center gap-2 text-xs font-semibold text-muted-foreground">
+                  <h3 className="truncate font-headline text-lg font-extrabold">{match.name}</h3>
+                  <p className="truncate text-xs font-medium text-muted-foreground">{match.university || 'SkillEX member'}</p>
+                  <div className="mt-1.5 flex flex-wrap items-center gap-2 text-xs font-semibold text-muted-foreground">
                     <span className="flex items-center gap-1">
                       <Star className="h-3.5 w-3.5 fill-warning text-warning" />
                       {typeof match.rating === 'number' ? match.rating.toFixed(1) : '–'}
@@ -339,41 +330,41 @@ const AIBestMatchCard: FC<{ match: MatchUser; currentUser: User | null }> = Reac
                   </div>
                 </div>
               </div>
-              <div className="mt-4 grid grid-cols-2 gap-2 text-xs">
-                <div className="rounded-xl border border-primary/15 bg-primary/10 p-3">
+              <div className="mt-3 grid grid-cols-2 gap-2 text-xs">
+                <div className="min-w-0 rounded-lg border border-primary/15 bg-primary/10 px-3 py-2">
                   <p className="text-[10px] font-bold uppercase tracking-widest text-primary/85">They teach</p>
                   <p className="mt-1 truncate font-bold text-foreground">{match.teachesYou?.[0] ?? 'Open skill'}</p>
                 </div>
-                <div className="rounded-xl border border-border/70 bg-muted/20 p-3">
+                <div className="min-w-0 rounded-lg border border-border/70 bg-background/45 px-3 py-2">
                   <p className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">They want</p>
                   <p className="mt-1 truncate font-bold text-foreground">{match.wantsToLearnFromYou?.[0] ?? 'Exchange'}</p>
                 </div>
               </div>
             </div>
 
-            <div className="flex flex-col">
+            <div className="grid gap-3">
               <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
-                <div className="rounded-2xl border border-border/70 bg-background/62 p-4 backdrop-blur">
-                  <h4 className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground mb-4">Match Metrics</h4>
-                  <div className="space-y-3">
-                    <div className="space-y-2">
-                      <div className="flex items-center justify-between text-xs font-bold uppercase tracking-wider">
+                <div className="rounded-xl border border-border/60 bg-muted/15 p-3">
+                  <h4 className="mb-3 text-[10px] font-bold uppercase tracking-widest text-muted-foreground">Match Metrics</h4>
+                  <div className="space-y-2.5">
+                    <div className="space-y-1.5">
+                      <div className="flex items-center justify-between text-xs font-bold uppercase tracking-wide">
                          <span>Skill Similarity</span>
                          <span className="text-primary">{match.semanticSimilarity}%</span>
                       </div>
-                      <Progress value={match.semanticSimilarity} className="h-1.5 bg-primary/10" indicatorClassName="bg-primary shadow-[0_0_10px_hsl(var(--primary)/0.35)]" />
+                      <Progress value={match.semanticSimilarity} className="h-1.5 bg-primary/10" indicatorClassName="bg-primary" />
                     </div>
-                    <div className="space-y-2">
-                      <div className="flex items-center justify-between text-xs font-bold uppercase tracking-wider">
+                    <div className="space-y-1.5">
+                      <div className="flex items-center justify-between text-xs font-bold uppercase tracking-wide">
                          <span>Rating</span>
                          <span className="text-warning">{typeof match.rating === 'number' ? match.rating.toFixed(1) : '–'}</span>
                       </div>
-                      <Progress value={typeof match.rating === 'number' ? Math.round((match.rating / 5) * 100) : 0} className="h-1.5 bg-warning/10" indicatorClassName="bg-warning shadow-[0_0_10px_hsl(var(--warning)/0.35)]" />
+                      <Progress value={typeof match.rating === 'number' ? Math.round((match.rating / 5) * 100) : 0} className="h-1.5 bg-warning/10" indicatorClassName="bg-warning" />
                     </div>
                   </div>
                 </div>
 
-                <div className="min-h-[132px] rounded-2xl border border-border/70 bg-background/62 p-3 backdrop-blur">
+                <div className="min-h-[104px] rounded-xl border border-border/60 bg-muted/15 p-3">
                   <SkillGraphCard
                     offeredSkills={match.wantsToLearnFromYou ?? []}
                     wantedSkills={match.teachesYou ?? []}
@@ -383,13 +374,13 @@ const AIBestMatchCard: FC<{ match: MatchUser; currentUser: User | null }> = Reac
               </div>
 
               {match.matchReasons.length > 0 && (
-                <div className="mt-4 rounded-2xl border border-border/70 bg-background/62 p-4 backdrop-blur">
-                  <h4 className="text-[10px] font-bold uppercase tracking-widest text-primary/80 mb-3 flex items-center gap-2">
+                <div className="rounded-xl border border-border/60 bg-muted/15 p-3">
+                  <h4 className="mb-2 flex items-center gap-2 text-[10px] font-bold uppercase tracking-widest text-primary/80">
                     <Zap className="h-3 w-3" /> Why this match?
                   </h4>
                   <div className="flex flex-wrap gap-2">
-                    {match.matchReasons.slice(0, 3).map((reason: string) => (
-                      <Badge key={reason} variant="secondary" className="border-primary/20 bg-primary/10 px-2.5 py-1 text-[10px] font-bold uppercase tracking-wide text-primary">
+                    {match.matchReasons.slice(0, 2).map((reason: string) => (
+                      <Badge key={reason} variant="secondary" className="max-w-full truncate border-primary/20 bg-primary/10 px-2.5 py-1 text-[10px] font-bold uppercase tracking-wide text-primary">
                         {reason}
                       </Badge>
                     ))}
@@ -397,29 +388,29 @@ const AIBestMatchCard: FC<{ match: MatchUser; currentUser: User | null }> = Reac
                 </div>
               )}
 
-              <div className="mt-4 flex flex-col gap-3 sm:flex-row">
+              <div className="grid gap-2 sm:grid-cols-2">
                 {exchangeRelation?.status === 'ACCEPTED' ? (
-                  <Button variant="outline" className="h-10 flex-1 rounded-xl border-emerald-500/30 bg-emerald-500/10 text-xs font-bold uppercase tracking-wider text-emerald-600 hover:bg-emerald-500/10 disabled:opacity-100 dark:text-emerald-400" disabled>
-                    Exchanging
+                  <Button asChild variant="gradient" className="h-9 rounded-xl text-xs font-bold uppercase tracking-wider">
+                    <Link to="/dashboard#active-exchanges">Arrange Meeting</Link>
                   </Button>
                 ) : exchangeRelation?.status === 'DECLINED' ? (
-                  <Button variant="outline" className="h-10 flex-1 rounded-xl border-rose-500/30 bg-rose-500/10 text-xs font-bold uppercase tracking-wider text-rose-600 hover:bg-rose-500/10 disabled:opacity-100 dark:text-rose-400" disabled>
+                  <Button variant="outline" className="h-9 rounded-xl border-rose-500/30 bg-rose-500/10 text-xs font-bold uppercase tracking-wider text-rose-600 hover:bg-rose-500/10 disabled:opacity-100 dark:text-rose-400" disabled>
                     Rejected
                   </Button>
                 ) : exchangeRelation?.status === 'PENDING_SENT' ? (
-                  <Button variant="outline" className="h-10 flex-1 rounded-xl border-primary/20 bg-primary/10 text-xs font-bold uppercase tracking-wider text-primary disabled:opacity-100" disabled>
+                  <Button variant="outline" className="h-9 rounded-xl border-primary/20 bg-primary/10 text-xs font-bold uppercase tracking-wider text-primary disabled:opacity-100" disabled>
                     Request Sent
                   </Button>
                 ) : exchangeRelation?.status === 'PENDING_RECEIVED' ? (
-                  <Button variant="outline" className="h-10 flex-1 rounded-xl border-amber-500/30 bg-amber-500/10 text-xs font-bold uppercase tracking-wider text-amber-600 disabled:opacity-100" disabled>
+                  <Button variant="outline" className="h-9 rounded-xl border-amber-500/30 bg-amber-500/10 text-xs font-bold uppercase tracking-wider text-amber-600 disabled:opacity-100" disabled>
                     Incoming Request
                   </Button>
                 ) : (
-                  <Button variant="gradient" className="h-10 flex-1 rounded-xl text-xs font-bold uppercase tracking-wider shadow-[0_0_20px_hsl(var(--primary)/0.22)] hover:shadow-[0_0_30px_hsl(var(--primary)/0.34)]" onClick={() => setRequestOpen(true)}>
+                  <Button variant="gradient" className="h-9 rounded-xl text-xs font-bold uppercase tracking-wider shadow-none" onClick={() => setRequestOpen(true)}>
                     Request Exchange
                   </Button>
                 )}
-                <Button variant="outline" className="h-10 flex-1 rounded-xl border-border/70 bg-background/60 text-xs font-bold uppercase tracking-wider hover:bg-muted/40" asChild>
+                <Button variant="outline" className="h-9 rounded-xl border-border/70 bg-background/60 text-xs font-bold uppercase tracking-wider hover:bg-muted/40" asChild>
                   <Link to={`/profile/${match.id}`}>View Profile</Link>
                 </Button>
               </div>
@@ -517,39 +508,42 @@ const MatchCard: FC<{ match: MatchUser }> = React.memo(({ match }) => {
             </div>
           )}
         </CardContent>
-        <div className="mt-auto flex h-10 border-t border-border/70 bg-muted/10 dark:border-white/10">
-          <Button variant="ghost" className="h-full w-1/2 rounded-none rounded-bl-2xl text-xs font-bold uppercase tracking-wider transition-colors hover:bg-primary/10" asChild>
+        <div className="mt-auto grid grid-cols-2 gap-2 border-t border-border/60 bg-muted/10 p-3 dark:border-white/10">
+          <Button variant="outline" size="sm" className="h-9 rounded-xl text-xs font-bold uppercase tracking-wider" asChild>
             <Link to={`/profile/${match.id}`}>Profile</Link>
           </Button>
-          <div className="h-full w-px bg-border/70" />
           {exchangeRelation?.status === 'ACCEPTED' ? (
             <Button
-              variant="ghost"
-              className="h-full w-1/2 rounded-none rounded-br-2xl text-xs font-bold uppercase tracking-wider text-emerald-600 hover:bg-emerald-500/10 dark:text-emerald-400"
-              disabled
+              asChild
+              size="sm"
+              variant="gradient"
+              className="h-9 rounded-xl text-xs font-bold uppercase tracking-wider shadow-none"
             >
-              Exchanging
+              <Link to="/dashboard#active-exchanges">Meeting</Link>
             </Button>
           ) : exchangeRelation?.status === 'DECLINED' ? (
             <Button
-              variant="ghost"
-              className="h-full w-1/2 rounded-none rounded-br-2xl text-xs font-bold uppercase tracking-wider text-rose-600 hover:bg-rose-500/10 dark:text-rose-400"
+              size="sm"
+              variant="outline"
+              className="h-9 rounded-xl text-xs font-bold uppercase tracking-wider text-rose-600 dark:text-rose-400"
               disabled
             >
               Rejected
             </Button>
           ) : exchangeRelation?.status === 'PENDING_SENT' ? (
             <Button
-              variant="ghost"
-              className="h-full w-1/2 rounded-none rounded-br-2xl text-xs font-bold uppercase tracking-wider text-primary hover:bg-primary/10"
+              size="sm"
+              variant="outline"
+              className="h-9 rounded-xl text-xs font-bold uppercase tracking-wider text-primary"
               disabled
             >
               Sent
             </Button>
           ) : exchangeRelation?.status === 'PENDING_RECEIVED' ? (
             <Button
-              variant="ghost"
-              className="h-full w-1/2 rounded-none rounded-br-2xl text-xs font-bold uppercase tracking-wider text-amber-600 hover:bg-amber-500/10"
+              size="sm"
+              variant="outline"
+              className="h-9 rounded-xl text-xs font-bold uppercase tracking-wider text-amber-600"
               disabled
             >
               Incoming
@@ -557,8 +551,9 @@ const MatchCard: FC<{ match: MatchUser }> = React.memo(({ match }) => {
           ) : (
             <Button
               onClick={() => setRequestOpen(true)}
-              variant="ghost"
-              className="h-full w-1/2 rounded-none rounded-br-2xl text-xs font-bold uppercase tracking-wider text-primary transition-colors hover:bg-primary/10 hover:text-primary"
+              size="sm"
+              variant="gradient"
+              className="h-9 rounded-xl text-xs font-bold uppercase tracking-wider shadow-none"
             >
               Request
             </Button>
@@ -638,7 +633,7 @@ const SkillChainCard: FC<{ chain: SkillChain }> = React.memo(({ chain }) => {
   return (
     <motion.div
       layout
-      className="rounded-[2rem] bg-card/80 backdrop-blur-md border border-white/5 p-5 shadow-[inset_0_1px_0_0_hsla(0,0%,100%,0.05)] hover:border-primary/30 transition-colors duration-300"
+      className="rounded-2xl border border-border/70 bg-card/90 p-4 shadow-sm transition-colors duration-300 hover:border-primary/30"
       initial={{ opacity: 0, y: 16 }}
       animate={{ opacity: 1, y: 0 }}
     >
@@ -767,9 +762,9 @@ const SkillChainsTab = () => {
   return (
     <div className="space-y-5">
       {/* ── How It Works explainer ── */}
-      <div className="rounded-[2rem] bg-card/80 backdrop-blur-md border border-white/5 p-6 shadow-[inset_0_1px_0_0_hsla(0,0%,100%,0.05)]">
+      <div className="rounded-2xl border border-border/70 bg-card/90 p-4 shadow-sm">
         <div className="flex items-start gap-4">
-          <div className="p-3 bg-primary/20 rounded-full shrink-0 border border-primary/20 shadow-[0_0_12px_hsl(var(--primary)/0.3)] mt-0.5">
+          <div className="mt-0.5 shrink-0 rounded-xl border border-primary/20 bg-primary/10 p-3">
             <GitMerge className="h-5 w-5 text-primary" />
           </div>
           <div className="flex-1 min-w-0">
@@ -820,10 +815,10 @@ const SkillChainsTab = () => {
             { icon: <Users className="h-5 w-5 text-purple-400" />, label: 'Participants', value: totalParticipants },
             { icon: <CheckCircle2 className="h-5 w-5 text-warning" />, label: 'Your Chains', value: myChainCount },
           ].map(stat => (
-            <div key={stat.label} className="rounded-3xl border border-white/5 bg-black/20 p-5 backdrop-blur-md shadow-[inset_0_1px_0_0_hsla(0,0%,100%,0.05)] flex items-center justify-center flex-col text-center">
-              <div className="p-3 rounded-full bg-white/5 shrink-0 mb-3">{stat.icon}</div>
+            <div key={stat.label} className="flex flex-col items-center justify-center rounded-2xl border border-border/70 bg-card/90 p-4 text-center shadow-sm">
+              <div className="mb-3 shrink-0 rounded-xl bg-muted/40 p-3">{stat.icon}</div>
               <div>
-                <div className="text-3xl font-headline font-extrabold tabular-nums leading-none mb-1 text-primary drop-shadow-[0_0_8px_var(--primary)]">{stat.value}</div>
+                <div className="mb-1 font-headline text-2xl font-extrabold leading-none text-primary tabular-nums">{stat.value}</div>
                 <div className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">{stat.label}</div>
               </div>
             </div>
@@ -834,11 +829,11 @@ const SkillChainsTab = () => {
       {/* ── Loading ── */}
       {loading ? (
         <div className="grid grid-cols-1 gap-4 lg:grid-cols-2 auto-rows-min">
-          {[...Array(4)].map((_, i) => <Skeleton key={i} variant="card" className="rounded-[2rem] h-[300px]" />)}
+          {[...Array(4)].map((_, i) => <Skeleton key={i} variant="card" className="h-[260px] rounded-2xl" />)}
         </div>
       ) : cycles.length === 0 ? (
-        <div className="flex flex-col items-center justify-center rounded-[2rem] bg-card/80 backdrop-blur-md py-20 text-center border border-white/5 shadow-[inset_0_1px_0_0_hsla(0,0%,100%,0.05)]">
-          <div className="p-5 bg-white/5 rounded-full border border-white/10">
+        <div className="flex flex-col items-center justify-center rounded-2xl border border-border/70 bg-card/90 py-16 text-center shadow-sm">
+          <div className="rounded-2xl border border-border/70 bg-muted/30 p-5">
             <GitMerge className="h-12 w-12 text-muted-foreground/50" />
           </div>
           <p className="mt-6 text-lg font-headline font-bold">No exchange chains detected yet</p>
@@ -846,7 +841,7 @@ const SkillChainsTab = () => {
             Add offered and wanted skills to your profile. The AI automatically detects
             2-way swaps and multi-person rings system-wide.
           </p>
-          <Button variant="outline" size="sm" className="mt-8 gap-2 rounded-2xl glass-subtle border border-white/10 hover:bg-white/10 font-bold uppercase tracking-wider text-xs px-6 py-5" onClick={refetch}>
+          <Button variant="outline" size="sm" className="mt-8 gap-2 rounded-xl px-6 text-xs font-bold uppercase tracking-wider" onClick={refetch}>
             <RefreshCw className="h-4 w-4" /> Retry Detection
           </Button>
         </div>
@@ -968,8 +963,42 @@ export default function MatchPage() {
   const [marketplacePage, setMarketplacePage] = useState(1);
   const [marketplacePageSize, setMarketplacePageSize] = useState<number>(MARKETPLACE_PAGE_SIZE);
   const [marketplaceCategory, setMarketplaceCategory] = useState('all');
+  const [connectedUserIds, setConnectedUserIds] = useState<Set<string>>(new Set());
 
   const { users, loading } = useMatchUsers({ search: filters.search, limit: 50 });
+
+  useEffect(() => {
+    if (!user?.id) {
+      setConnectedUserIds(new Set());
+      return;
+    }
+
+    let active = true;
+    Promise.all([
+      connectionService.list('ACCEPTED', 'all', 0, 100),
+      exchangeService.list('ACCEPTED', 0, 100),
+    ])
+      .then(([connectionResult, exchangeResult]) => {
+        if (!active) return;
+        const ids = new Set<string>();
+        (connectionResult.content ?? []).forEach((connection) => {
+          const partner = connection.requester.id === user.id ? connection.receiver : connection.requester;
+          ids.add(partner.id);
+        });
+        (exchangeResult.content ?? []).forEach((exchange) => {
+          const partner = exchange.requester.id === user.id ? exchange.receiver : exchange.requester;
+          ids.add(partner.id);
+        });
+        setConnectedUserIds(ids);
+      })
+      .catch(() => {
+        if (active) setConnectedUserIds(new Set());
+      });
+
+    return () => {
+      active = false;
+    };
+  }, [user?.id]);
 
   const loadMarketplaceUsers = useCallback(async () => {
     setMarketplaceLoading(true);
@@ -993,13 +1022,13 @@ export default function MatchPage() {
       }
 
       const uniqueUsers = Array.from(new Map(all.map((u) => [u.id, u])).values());
-      setMarketplaceUsers(uniqueUsers.filter((u) => u.id !== user?.id));
+      setMarketplaceUsers(uniqueUsers.filter((u) => u.id !== user?.id && !connectedUserIds.has(u.id)));
     } catch {
       setMarketplaceError('Could not load the marketplace right now. Please try again.');
     } finally {
       setMarketplaceLoading(false);
     }
-  }, [user?.id]);
+  }, [connectedUserIds, user?.id]);
 
   useEffect(() => {
     if (activeTab === 'marketplace' && marketplaceUsers.length === 0 && !marketplaceLoading && !marketplaceError) {
@@ -1009,6 +1038,7 @@ export default function MatchPage() {
 
   const filteredMatches = useMemo(() => {
     return users.filter((u) => {
+      if (connectedUserIds.has(u.id)) return false;
       // category / level: not available per-skill in MatchUserDto — skip unless no filter set
       const matchesCategory = filters.categories.length === 0;
       const matchesLevel = filters.levels.length === 0
@@ -1023,7 +1053,7 @@ export default function MatchPage() {
         default: return b.compatibilityScore - a.compatibilityScore;
       }
     });
-  }, [users, filters, sortOption]);
+  }, [users, filters, sortOption, connectedUserIds]);
 
   const bestMatch = useMemo(() => (activeTab === 'direct' && filteredMatches.length > 0) ? filteredMatches[0] : null, [filteredMatches, activeTab]);
   const otherMatches = useMemo(() => (activeTab === 'direct' && filteredMatches.length > 0) ? filteredMatches.slice(1) : [], [filteredMatches, activeTab]);
@@ -1035,10 +1065,10 @@ export default function MatchPage() {
     );
 
     if (marketplaceUsers.length > 0 && hasDirectorySkills) {
-      return marketplaceUsers;
+      return marketplaceUsers.filter((u) => !connectedUserIds.has(u.id));
     }
 
-    return users.map((u) => {
+    return users.filter((u) => !connectedUserIds.has(u.id)).map((u) => {
       const offeredNames = Array.from(new Set(u.teachesYou ?? []));
       const wantedNames = Array.from(new Set(u.wantsToLearnFromYou ?? []));
       const fallbackLevel = 'beginner';
@@ -1074,7 +1104,7 @@ export default function MatchPage() {
         joinedAt: new Date().toISOString(),
       };
     });
-  }, [marketplaceUsers, users]);
+  }, [marketplaceUsers, users, connectedUserIds]);
 
   const marketplaceCategories = useMemo(() => {
     const fromUsers = marketplaceSourceUsers.flatMap((u) => [...(u.skillsOffered ?? []), ...(u.skillsWanted ?? [])]);
@@ -1166,44 +1196,35 @@ export default function MatchPage() {
             <motion.div
               initial={{ opacity: 0, y: -14 }}
               animate={{ opacity: 1, y: 0 }}
-              className="relative overflow-hidden rounded-3xl border border-border/70 bg-card/85 p-5 shadow-[0_18px_60px_-36px_hsl(var(--primary)/0.28)] md:p-6"
+              className="relative overflow-hidden rounded-2xl border border-border/70 bg-card/90 p-4 shadow-sm md:p-5"
             >
-              <div className="absolute inset-y-0 right-0 hidden w-[34%] overflow-hidden md:block">
-                <img
-                  src={appVisuals.matchProductFlow}
-                  alt=""
-                  loading="eager"
-                  decoding="async"
-                  className="h-full w-full object-cover opacity-45 saturate-90"
-                />
-                <div className="absolute inset-0 bg-gradient-to-r from-card via-card/85 to-card/30" />
-              </div>
+              <div className="pointer-events-none absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-primary/50 to-transparent opacity-70" />
               <div className="relative z-10">
                 <div className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
                   <div>
-                    <h1 className="font-headline text-3xl font-extrabold tracking-tight md:text-4xl">Find Your <span className="text-gradient-animated">Skill Match</span></h1>
-                    <p className="mt-2 max-w-2xl text-sm text-muted-foreground md:text-base">Compare real exchange fit: what you can offer, what you want next, and who can trade fairly with you.</p>
+                    <h1 className="font-headline text-2xl font-extrabold tracking-tight md:text-3xl">Find Your <span className="text-primary">Skill Match</span></h1>
+                    <p className="mt-2 max-w-2xl text-sm text-muted-foreground">Compare real exchange fit: what you can offer, what you want next, and who can trade fairly with you.</p>
                   </div>
                   <div className="grid grid-cols-3 gap-2 text-center text-xs">
-                    <div className="rounded-2xl border border-border/70 bg-background/60 px-3 py-2">
+                    <div className="rounded-xl border border-border/70 bg-background/60 px-3 py-2">
                       <p className="font-headline text-lg font-bold text-foreground">{filteredMatches.length}</p>
                       <p className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">Matches</p>
                     </div>
-                    <div className="rounded-2xl border border-border/70 bg-background/60 px-3 py-2">
+                    <div className="rounded-xl border border-border/70 bg-background/60 px-3 py-2">
                       <p className="font-headline text-lg font-bold text-primary">{bestMatch?.compatibilityScore ?? 0}%</p>
                       <p className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">Best</p>
                     </div>
-                    <div className="rounded-2xl border border-border/70 bg-background/60 px-3 py-2">
+                    <div className="rounded-xl border border-border/70 bg-background/60 px-3 py-2">
                       <p className="font-headline text-lg font-bold text-foreground">{activeFilterCount}</p>
                       <p className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">Filters</p>
                     </div>
                   </div>
                 </div>
-                <div className="relative mt-5 max-w-4xl">
+                <div className="relative mt-4 max-w-4xl">
                   <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
                   <Input
                     placeholder="Search by skill, name, role, city, or interest..."
-                    className="h-11 rounded-2xl border-border/70 bg-background/70 pl-10 text-sm"
+                    className="h-10 rounded-xl border-border/70 bg-background/70 pl-10 text-sm"
                     value={filters.search}
                     onChange={(e) => setFilters({ ...filters, search: e.target.value })}
                   />
@@ -1234,6 +1255,22 @@ export default function MatchPage() {
                 </p>
               </div>
             </div>
+
+            {activeTab === 'direct' && connectedUserIds.size > 0 && (
+              <div className="mt-4 flex flex-col gap-3 rounded-2xl border border-border/60 bg-muted/20 p-4 text-sm md:flex-row md:items-center md:justify-between dark:border-white/10 dark:bg-white/[0.03]">
+                <p className="text-muted-foreground">
+                  Already accepted people are moved out of fresh matches. Find them in Connections, then schedule sessions from accepted exchanges on Dashboard.
+                </p>
+                <div className="flex shrink-0 flex-wrap gap-2">
+                  <Button asChild size="sm" variant="outline" className="rounded-xl">
+                    <Link to="/connections?tab=accepted">Current connections</Link>
+                  </Button>
+                  <Button asChild size="sm" className="rounded-xl">
+                    <Link to="/dashboard#active-exchanges">Schedule sessions</Link>
+                  </Button>
+                </div>
+              </div>
+            )}
 
             <AnimatePresence mode="wait">
               <motion.div key={activeTab} initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -10 }} transition={{ duration: 0.2 }} className="mt-6">

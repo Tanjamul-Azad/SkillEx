@@ -216,22 +216,17 @@ export default function SettingsPage() {
       return;
     }
 
-    if (!catalogSkillId) {
-      toast({
-        variant: 'destructive',
-        title: 'No catalog match',
-        description: 'Please choose one of the retrieved catalog skills from suggestions.',
-      });
-      return;
-    }
-
     setAddingSkill(true);
     try {
-      await UserService.addSkill(catalogSkillId, type, 'MODERATE');
+      if (catalogSkillId) {
+        await UserService.addSkill(catalogSkillId, type, 'MODERATE');
+      } else {
+        await UserService.addCustomSkill(suggestion.skillName, suggestion.category || 'Other', type, 'MODERATE', undefined, undefined, true);
+      }
       await refreshUser();
       toast({
         title: `"${suggestion.skillName}" added!`,
-        description: 'Added from existing catalog.',
+        description: catalogSkillId ? 'Added from existing catalog.' : 'Added as a new AI-detected skill.',
         variant: 'success',
       });
     } catch (err) {

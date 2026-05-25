@@ -2,7 +2,7 @@ import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { useDocumentTitle } from '@/hooks/useDocumentTitle';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
-import { Users, Send, Inbox, MessageSquare, UserCheck, Clock } from 'lucide-react';
+import { CalendarDays, Users, Send, Inbox, MessageSquare, UserCheck, Clock } from 'lucide-react';
 import DashboardLayout from '@/components/layout/DashboardLayout';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
@@ -131,7 +131,7 @@ export default function ConnectionsPage() {
 
   return (
     <DashboardLayout>
-      <div className="container mx-auto max-w-5xl px-4 py-5 md:px-8 md:py-7 space-y-5">
+      <div className="container mx-auto max-w-6xl px-4 py-5 md:px-8 md:py-7 space-y-5">
         <motion.div
           initial={{ opacity: 0, y: -10 }}
           animate={{ opacity: 1, y: 0 }}
@@ -159,8 +159,8 @@ export default function ConnectionsPage() {
           </TabsList>
         </Tabs>
 
-        <Card className="app-shell p-2">
-          <CardHeader className="pb-4">
+        <Card className="app-shell overflow-hidden">
+          <CardHeader className="border-b border-border/60 pb-4 dark:border-white/10">
             <CardTitle className="flex items-center gap-3 text-base font-headline font-bold">
               {activeTab === 'accepted' ? <div className="rounded-xl border border-primary/20 bg-primary/10 p-2"><UserCheck className="h-4 w-4 text-primary" /></div> : <div className="rounded-xl border border-primary/20 bg-primary/10 p-2"><Clock className="h-4 w-4 text-primary" /></div>}
               {activeTab === 'accepted' ? 'Accepted Connections' : activeTab === 'sent' ? 'Sent Requests' : 'Received Requests'}
@@ -168,7 +168,25 @@ export default function ConnectionsPage() {
             </CardTitle>
           </CardHeader>
 
-          <CardContent>
+          <CardContent className="p-5 md:p-6">
+            {activeTab === 'accepted' && connections.length > 0 && (
+              <div className="mb-5 flex flex-col gap-4 rounded-2xl border border-border/60 bg-muted/20 p-4 md:flex-row md:items-center md:justify-between dark:border-white/10 dark:bg-white/[0.03]">
+                <div className="flex min-w-0 items-start gap-3">
+                  <div className="rounded-xl border border-primary/20 bg-primary/10 p-2">
+                    <CalendarDays className="h-4 w-4 text-primary" />
+                  </div>
+                  <div>
+                    <p className="text-sm font-semibold text-foreground">Ready to meet?</p>
+                    <p className="mt-1 max-w-2xl text-sm leading-relaxed text-muted-foreground">
+                      Arrange a learning session from an accepted exchange on the Dashboard.
+                    </p>
+                  </div>
+                </div>
+                <Button size="sm" className="h-9 shrink-0 rounded-xl px-4 text-xs font-bold" onClick={() => navigate('/dashboard#active-exchanges')}>
+                  Arrange meeting
+                </Button>
+              </div>
+            )}
             {loading ? (
               <div className="space-y-3">
                 {[0, 1, 2].map((idx) => (
@@ -205,8 +223,8 @@ export default function ConnectionsPage() {
                 </div>
               </div>
             ) : (
-              <motion.div 
-                className="grid gap-4 sm:grid-cols-2 md:grid-cols-2 xl:grid-cols-3 auto-rows-min"
+              <motion.div
+                className="grid auto-rows-fr grid-cols-1 gap-4 lg:grid-cols-2"
                 initial="hidden"
                 animate="visible"
                 variants={{
@@ -222,14 +240,14 @@ export default function ConnectionsPage() {
                         hidden: { opacity: 0, y: 20 },
                         visible: { opacity: 1, y: 0, transition: { type: 'spring', stiffness: 100 } }
                       }}
-                      className="app-card app-card-hover group relative overflow-hidden flex flex-col"
+                      className="app-card app-card-hover group relative flex min-h-[190px] flex-col overflow-hidden"
                     >
-                      <div className="absolute inset-0 bg-gradient-to-r from-primary/10 via-transparent to-primary/5 opacity-0 transition-opacity duration-500 group-hover:opacity-100 mix-blend-overlay" />
+                      <div className="pointer-events-none absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-primary/45 to-transparent opacity-0 transition-opacity duration-500 group-hover:opacity-100" />
                       
-                      <div className="relative z-10 flex flex-col p-5 flex-1">
-                        <div className="flex items-start gap-4">
+                      <div className="relative z-10 flex flex-1 flex-col p-5">
+                        <div className="flex items-center gap-4">
                           <div className="relative shrink-0">
-                            <Avatar className="h-14 w-14 ring-2 ring-primary/10 transition-all duration-300 group-hover:ring-primary/30 group-hover:scale-105 bg-card">
+                            <Avatar className="h-14 w-14 bg-card ring-2 ring-primary/10 transition-all duration-300 group-hover:ring-primary/30">
                               <AvatarImage src={partner.avatar ?? undefined} alt={partner.name} className="object-cover" />
                               <AvatarFallback className="bg-muted text-xl font-bold">{partner.name.charAt(0)}</AvatarFallback>
                             </Avatar>
@@ -239,14 +257,15 @@ export default function ConnectionsPage() {
                             )}
                           </div>
                           
-                          <div className="flex flex-col flex-1 min-w-0 pt-1">
-                            <span 
-                              className="text-lg font-headline font-extrabold leading-tight cursor-pointer hover:text-primary transition-colors truncate drop-shadow-sm"
+                          <div className="flex min-w-0 flex-1 flex-col">
+                            <button
+                              type="button"
+                              className="truncate text-left font-headline text-lg font-extrabold leading-tight text-foreground transition-colors hover:text-primary"
                               onClick={() => navigate(`/profile/${partner.id}`)}
                             >
                               {partner.name}
-                            </span>
-                            <span className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground mt-1">
+                            </button>
+                            <span className="mt-1 text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
                               @{partner.username ?? 'user'}
                             </span>
                             {connection.message && activeTab !== 'accepted' && (
@@ -257,21 +276,29 @@ export default function ConnectionsPage() {
                           </div>
                         </div>
 
-                        <div className="flex flex-wrap items-end gap-2 mt-auto pt-5">
+                        <div className="mt-auto pt-5">
                           {activeTab === 'accepted' && (
-                            <div className="flex w-full gap-2 mt-2 border-t border-border/70 pt-4 dark:border-white/10">
-                              <Button 
-                                size="sm" 
-                                variant="outline" 
-                                className="flex-1 rounded-2xl border-white/10 glass-subtle hover:bg-white/10 transition-all text-[10px] font-bold uppercase tracking-wider py-4 h-auto"
+                            <div className="grid w-full grid-cols-2 gap-2 border-t border-border/60 pt-4 sm:grid-cols-3 dark:border-white/10">
+                              <Button
+                                size="sm"
+                                variant="outline"
+                                className="h-9 min-w-0 rounded-xl text-xs font-bold"
                                 onClick={() => navigate(`/profile/${partner.id}`)}
                               >
                                 Profile
                               </Button>
-                              <Button 
-                                size="sm" 
+                              <Button
+                                size="sm"
+                                variant="outline"
+                                className="h-9 min-w-0 rounded-xl text-xs font-bold"
+                                onClick={() => navigate('/dashboard#active-exchanges')}
+                              >
+                                Meeting
+                              </Button>
+                              <Button
+                                size="sm"
                                 variant="gradient"
-                                className="flex-1 rounded-2xl shadow-[0_0_15px_hsl(var(--primary)/0.3)] hover:shadow-[0_0_25px_hsl(var(--primary)/0.5)] transition-all text-[10px] font-bold uppercase tracking-wider py-4 h-auto"
+                                className="col-span-2 h-9 min-w-0 rounded-xl text-xs font-bold shadow-none sm:col-span-1"
                                 onClick={() => navigate(`/messages/${partner.id}`)}
                               >
                                 <MessageSquare className="mr-1.5 h-3.5 w-3.5" />
@@ -284,7 +311,7 @@ export default function ConnectionsPage() {
                             <Button
                               size="sm"
                               variant="outline"
-                              className="w-full mt-4 rounded-2xl border-destructive/30 text-destructive text-[10px] font-bold uppercase tracking-wider hover:bg-destructive/10 transition-colors py-4 h-auto glass-subtle"
+                              className="mt-4 h-9 w-full rounded-xl border-destructive/30 text-xs font-bold text-destructive hover:bg-destructive/10"
                               onClick={() => updateConnectionStatus(connection.id, 'cancelled')}
                               disabled={actionBusy[connection.id]}
                             >
@@ -293,11 +320,11 @@ export default function ConnectionsPage() {
                           )}
 
                           {activeTab === 'received' && (
-                            <div className="flex w-full gap-2 mt-4">
+                            <div className="mt-4 grid w-full grid-cols-2 gap-2">
                               <Button
                                 size="sm"
                                 variant="outline"
-                                className="flex-1 rounded-2xl border-destructive/40 text-destructive text-[10px] font-bold uppercase tracking-wider hover:bg-destructive/10 transition-colors h-auto py-4 glass-subtle"
+                                className="h-9 rounded-xl border-destructive/40 text-xs font-bold text-destructive hover:bg-destructive/10"
                                 onClick={() => updateConnectionStatus(connection.id, 'declined')}
                                 disabled={actionBusy[connection.id]}
                               >
@@ -306,7 +333,7 @@ export default function ConnectionsPage() {
                               <Button
                                 size="sm"
                                 variant="gradient"
-                                className="flex-1 rounded-2xl shadow-[0_0_15px_hsl(var(--primary)/0.3)] hover:shadow-[0_0_25px_hsl(var(--primary)/0.5)] transition-all text-[10px] font-bold uppercase tracking-wider border-none h-auto py-4"
+                                className="h-9 rounded-xl border-none text-xs font-bold shadow-none"
                                 onClick={() => updateConnectionStatus(connection.id, 'accepted')}
                                 disabled={actionBusy[connection.id]}
                               >

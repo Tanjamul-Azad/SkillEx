@@ -39,7 +39,7 @@ export const MarketplaceCard: FC<{ profile: User }> = React.memo(({ profile }) =
 
   return (
     <>
-      <Card className="group relative h-full overflow-hidden border-border/70 bg-gradient-to-b from-card to-card/95 transition-all duration-400 ease-snappy hover:-translate-y-1.5 hover:border-primary/40 hover:shadow-[0_12px_40px_-12px_hsl(var(--primary)/0.25),0_4px_12px_hsl(220_20%_40%/0.1)]">
+      <Card className="group relative flex h-full flex-col overflow-hidden border-border/70 bg-gradient-to-b from-card to-card/95 transition-all duration-300 hover:-translate-y-0.5 hover:border-primary/35 hover:shadow-[0_18px_45px_-30px_hsl(var(--primary)/0.45)]">
         <div className="absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-white/40 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500 z-20" />
 
         {/* Personalized visual header with real avatar when available */}
@@ -66,7 +66,7 @@ export const MarketplaceCard: FC<{ profile: User }> = React.memo(({ profile }) =
           </div>
         </div>
 
-        <CardContent className="relative z-10 p-5 pt-14">
+        <CardContent className="relative z-10 flex flex-1 flex-col p-5 pt-14">
           <div className="flex items-start justify-between gap-3 relative z-20">
             <div className="flex items-center gap-3">
               <Avatar className="h-14 w-14 ring-4 ring-card group-hover:ring-primary/30 transition-all shadow-lg bg-card">
@@ -162,41 +162,45 @@ export const MarketplaceCard: FC<{ profile: User }> = React.memo(({ profile }) =
           </div>
         </CardContent>
 
-        <div className="grid grid-cols-3 border-t border-primary/20 dark:border-primary/15">
-          <Button variant="ghost" className="rounded-none rounded-bl-2xl text-sm hover:bg-primary/10" asChild>
+        <div className="mt-auto grid grid-cols-2 gap-2 border-t border-border/60 p-3 dark:border-white/10">
+          <Button variant="outline" size="sm" className="h-9 rounded-xl text-xs font-bold" asChild>
             <Link to={`/profile/${profile.id}`}>View Profile</Link>
           </Button>
-          <Button variant="ghost" className="rounded-none text-sm hover:bg-primary/10" asChild>
+          <Button variant="outline" size="sm" className="h-9 rounded-xl text-xs font-bold" asChild>
             <Link to={`/profile/${profile.id}?tab=skills&focus=offered#skills-offered`}>Skill Shop</Link>
           </Button>
           {exchangeRelation?.status === 'ACCEPTED' ? (
             <Button
-              variant="ghost"
-              className="rounded-none rounded-br-2xl text-sm text-emerald-600 dark:text-emerald-400 hover:bg-emerald-500/10 cursor-default"
-              disabled
+              asChild
+              size="sm"
+              variant="gradient"
+              className="col-span-2 h-9 rounded-xl text-xs font-bold shadow-none"
             >
-              Exchanging
+              <Link to="/dashboard#active-exchanges">Meeting</Link>
             </Button>
           ) : exchangeRelation?.status === 'DECLINED' ? (
             <Button
-              variant="ghost"
-              className="rounded-none rounded-br-2xl text-sm text-rose-600 dark:text-rose-400 hover:bg-rose-500/10 cursor-default"
+              size="sm"
+              variant="outline"
+              className="col-span-2 h-9 rounded-xl text-xs font-bold text-rose-600 dark:text-rose-400"
               disabled
             >
               Rejected
             </Button>
           ) : exchangeRelation?.status === 'PENDING_SENT' ? (
             <Button
-              variant="ghost"
-              className="rounded-none rounded-br-2xl text-sm text-primary hover:bg-primary/10"
+              size="sm"
+              variant="outline"
+              className="col-span-2 h-9 rounded-xl text-xs font-bold text-primary"
               disabled
             >
               Sent
             </Button>
           ) : exchangeRelation?.status === 'PENDING_RECEIVED' ? (
             <Button
-              variant="ghost"
-              className="rounded-none rounded-br-2xl text-sm text-amber-600 hover:bg-amber-500/10"
+              size="sm"
+              variant="outline"
+              className="col-span-2 h-9 rounded-xl text-xs font-bold text-amber-600"
               disabled
             >
               Incoming
@@ -205,7 +209,8 @@ export const MarketplaceCard: FC<{ profile: User }> = React.memo(({ profile }) =
             <Button
               onClick={() => setRequestOpen(true)}
               variant="gradient"
-              className="rounded-none rounded-br-2xl text-sm"
+              size="sm"
+              className="col-span-2 h-9 rounded-xl text-xs font-bold shadow-none"
               aria-label={`Connect with ${profile.name}`}
             >
               Connect <ArrowUpRight className="ml-1 h-3.5 w-3.5" />

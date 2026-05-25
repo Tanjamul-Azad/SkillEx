@@ -134,6 +134,21 @@ public class UserServiceImpl implements UserService {
             return new AddSkillResult("ADDED", "Matched an existing catalog skill.", existing.getId(), null);
         }
 
+        if (Boolean.TRUE.equals(req.aiSuggested())) {
+            Skill created = new Skill();
+            created.setName(name);
+            created.setCategory(req.skillCategory() == null || req.skillCategory().isBlank()
+                ? "Other"
+                : req.skillCategory().trim());
+            created.setDescription(req.skillDescription() == null || req.skillDescription().isBlank()
+                ? "AI-suggested custom skill"
+                : req.skillDescription().trim());
+            created.setIcon("Zap");
+            Skill saved = skillRepository.save(created);
+            attachSkill(user, saved, req.type(), level, req.proofVideoUrl(), req.subtitle());
+            return new AddSkillResult("ADDED", "AI-suggested skill added to your profile.", saved.getId(), null);
+        }
+
         AddSkillResult pendingResult = skillCatalogGovernanceService.submitUnknownSkill(userId, req);
         if ("ADDED".equalsIgnoreCase(pendingResult.status())
             && pendingResult.skillId() != null

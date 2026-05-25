@@ -65,8 +65,24 @@ export const UserService = {
   },
 
   /** POST /api/users/me/skills — add a custom (non-catalog) skill by name */
-  addCustomSkill: async (skillName: string, skillCategory: string, type: 'offered' | 'wanted', level = 'BEGINNER', proofVideoUrl?: string, subtitle?: string): Promise<void> => {
-    return api.post<void>('/users/me/skills', { skillName, skillCategory, type, level: level.toUpperCase(), proofVideoUrl, subtitle });
+  addCustomSkill: async (
+    skillName: string,
+    skillCategory: string,
+    type: 'offered' | 'wanted',
+    level = 'BEGINNER',
+    proofVideoUrl?: string,
+    subtitle?: string,
+    aiSuggested = false
+  ): Promise<void> => {
+    return api.post<void>('/users/me/skills', {
+      skillName,
+      skillCategory,
+      type,
+      level: level.toUpperCase(),
+      proofVideoUrl,
+      subtitle,
+      aiSuggested,
+    });
   },
 
   /** DELETE /api/users/me/skills/{skillId}?type=offered|wanted */

@@ -51,6 +51,7 @@ public class SkillIntentServiceImpl implements SkillIntentService {
     private static final double BIGRAM_THRESHOLD = 0.40; // bigram threshold to count as morphological match
 
     private final SkillRepository skillRepository;
+    private final GrokSkillIntentMatcher grokSkillIntentMatcher;
 
     // ── Stop words (noise words stripped from user intent) ────────────────────
     private static final Set<String> STOP_WORDS = Set.of(
@@ -77,10 +78,39 @@ public class SkillIntentServiceImpl implements SkillIntentService {
     @Transactional(readOnly = true)
     public SkillIntentInterpretResponse interpret(SkillIntentInterpretRequest request) {
         List<Skill> catalog = skillRepository.findAll();
+        Optional<SkillIntentInterpretResponse> grokResult = grokSkillIntentMatcher.interpret(request, catalog);
+        if (grokResult.isPresent()) {
+            return applyKnownSemanticOverrides(request, grokResult.get(), catalog);
+        }
+
         SkillIntentInterpretResultDto teach = interpretOne(
             request == null ? null : request.teachText(), catalog);
         SkillIntentInterpretResultDto learn = interpretOne(
             request == null ? null : request.learnText(), catalog);
+        return new SkillIntentInterpretResponse(teach, learn);
+    }
+
+    private SkillIntentInterpretResponse applyKnownSemanticOverrides(
+        SkillIntentInterpretRequest request,
+        SkillIntentInterpretResponse response,
+        List<Skill> catalog
+    ) {
+        if (request == null) {
+            return response;
+        }
+
+        SkillIntentInterpretResultDto teach = knownSemanticIntent(
+            request.teachText(),
+            normalize(request.teachText()),
+            catalog
+        ).orElse(response.teach());
+
+        SkillIntentInterpretResultDto learn = knownSemanticIntent(
+            request.learnText(),
+            normalize(request.learnText()),
+            catalog
+        ).orElse(response.learn());
+
         return new SkillIntentInterpretResponse(teach, learn);
     }
 
@@ -97,6 +127,11 @@ public class SkillIntentServiceImpl implements SkillIntentService {
             return new SkillIntentInterpretResultDto(rawText, inferLevel(rawText), null, List.of());
         }
 
+        Optional<SkillIntentInterpretResultDto> knownIntent = knownSemanticIntent(rawText, normalized, catalog);
+        if (knownIntent.isPresent()) {
+            return knownIntent.get();
+        }
+
         List<SkillIntentSuggestionDto> ranked = catalog.stream()
             .map(skill -> score(skill, keywords))
             .filter(s -> s.confidence() >= (int)(MIN_SCORE * 100))
@@ -106,10 +141,13 @@ public class SkillIntentServiceImpl implements SkillIntentService {
 
         // If nothing passed the threshold, surface the single best anyway so UI isn't empty
         if (ranked.isEmpty()) {
-            catalog.stream()
-                .map(skill -> score(skill, keywords))
-                .max(Comparator.comparingInt(SkillIntentSuggestionDto::confidence))
-                .ifPresent(ranked::add);
+            ranked.add(new SkillIntentSuggestionDto(
+                null,
+                inferCustomSkillName(keywords),
+                "Other",
+                45,
+                true
+            ));
         }
 
         SkillIntentSuggestionDto primary = ranked.isEmpty() ? null : ranked.get(0);
@@ -117,6 +155,114 @@ public class SkillIntentServiceImpl implements SkillIntentService {
     }
 
     // ── Skill Scoring ──────────────────────────────────────────────────────────
+
+    private Optional<SkillIntentInterpretResultDto> knownSemanticIntent(
+        String rawText,
+        String normalized,
+        List<Skill> catalog
+    ) {
+        if (containsAnyPhrase(normalized,
+            "frontend", "front end", "react", "nextjs", "next js", "next.js",
+            "javascript", "typescript", "tsx"
+        ) || containsStandaloneJs(normalized)) {
+            List<SkillIntentSuggestionDto> suggestions = new ArrayList<>();
+            addCatalogSuggestion(suggestions, catalog, "Web Development", 94);
+            addCatalogSuggestion(suggestions, catalog, "UI/UX Design", 68);
+            if (suggestions.isEmpty()) {
+                suggestions.add(customSuggestion("Frontend Development", "Tech", 90));
+            }
+            return Optional.of(result(rawText, suggestions));
+        }
+
+        if (containsAnyPhrase(normalized,
+            "llm", "large language", "gpt", "rag", "prompt", "ai agent",
+            "api", "apis", "api call", "api calls", "integration", "integrate",
+            "ai ml", "ai/ml", "machine learning", "artificial intelligence"
+        )) {
+            List<SkillIntentSuggestionDto> suggestions = new ArrayList<>();
+            boolean applicationIntent = containsAnyPhrase(normalized,
+                "llm", "large language", "gpt", "rag", "prompt", "ai agent",
+                "api", "apis", "api call", "api calls", "integration", "integrate"
+            );
+            if (applicationIntent) {
+                suggestions.add(customSuggestion("AI/ML and LLM Integration", "Tech", 90));
+                addCatalogSuggestion(suggestions, catalog, "Data Science", 74);
+                addCatalogSuggestion(suggestions, catalog, "Web Development", 62);
+            } else {
+                addCatalogSuggestion(suggestions, catalog, "Data Science", 86);
+                suggestions.add(customSuggestion("Machine Learning", "Tech", 78));
+            }
+            return Optional.of(result(rawText, suggestions));
+        }
+
+        return Optional.empty();
+    }
+
+    private SkillIntentInterpretResultDto result(String rawText, List<SkillIntentSuggestionDto> suggestions) {
+        List<SkillIntentSuggestionDto> limited = suggestions.stream()
+            .filter(Objects::nonNull)
+            .collect(Collectors.collectingAndThen(
+                Collectors.toMap(
+                    suggestion -> (suggestion.skillId() == null ? "custom:" : "catalog:") + suggestion.skillName().toLowerCase(Locale.ROOT),
+                    suggestion -> suggestion,
+                    (left, right) -> left,
+                    LinkedHashMap::new
+                ),
+                map -> map.values().stream().limit(MAX_SUGGESTIONS).toList()
+            ));
+        SkillIntentSuggestionDto primary = limited.isEmpty() ? null : limited.get(0);
+        return new SkillIntentInterpretResultDto(rawText, inferLevel(rawText), primary, limited);
+    }
+
+    private void addCatalogSuggestion(
+        List<SkillIntentSuggestionDto> suggestions,
+        List<Skill> catalog,
+        String skillName,
+        int confidence
+    ) {
+        catalog.stream()
+            .filter(skill -> skillName.equalsIgnoreCase(skill.getName()))
+            .findFirst()
+            .map(skill -> new SkillIntentSuggestionDto(
+                skill.getId(),
+                skill.getName(),
+                skill.getCategory(),
+                confidence,
+                false
+            ))
+            .ifPresent(suggestions::add);
+    }
+
+    private SkillIntentSuggestionDto customSuggestion(String skillName, String category, int confidence) {
+        return new SkillIntentSuggestionDto(null, skillName, category, confidence, true);
+    }
+
+    private boolean containsAnyPhrase(String normalized, String... phrases) {
+        for (String phrase : phrases) {
+            if (normalized.contains(phrase)) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    private boolean containsStandaloneJs(String normalized) {
+        return Arrays.asList(normalized.split("\\s+")).contains("js");
+    }
+
+    private String inferCustomSkillName(List<String> keywords) {
+        String value = keywords.stream()
+            .limit(4)
+            .map(this::titleCase)
+            .collect(Collectors.joining(" "));
+        return value.isBlank() ? "New Skill" : value;
+    }
+
+    private String titleCase(String value) {
+        if (value == null || value.isBlank()) return "";
+        String lower = value.toLowerCase(Locale.ROOT);
+        return lower.substring(0, 1).toUpperCase(Locale.ROOT) + lower.substring(1);
+    }
 
     private SkillIntentSuggestionDto score(Skill skill, List<String> keywords) {
         String skillNameLc  = normalize(skill.getName());

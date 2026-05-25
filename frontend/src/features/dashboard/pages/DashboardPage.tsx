@@ -853,20 +853,24 @@ function RankWidget({ score }: { score: number }) {
 /* ─── Sidebar: Connections tab ────────────────────────────────── */
 function ConnectionsTab({
   connections,
+  acceptedConnections,
   loading,
+  acceptedLoading,
   busy,
   onUpdate,
   onDismiss,
   currentUserId,
 }: {
   connections: Connection[];
+  acceptedConnections: Connection[];
   loading: boolean;
+  acceptedLoading: boolean;
   busy: Record<string, boolean>;
   onUpdate: (c: Connection, s: 'accepted' | 'declined') => Promise<void>;
   onDismiss: (id: string) => void;
   currentUserId: string;
 }) {
-  if (loading) {
+  if (loading || acceptedLoading) {
     return (
       <div className="space-y-3 p-4">
         {[0, 1].map(i => (
@@ -883,6 +887,60 @@ function ConnectionsTab({
   }
 
   if (connections.length === 0) {
+    if (acceptedConnections.length > 0) {
+      return (
+        <div className="space-y-2 p-4">
+          <div className="flex items-center justify-between gap-2">
+            <p className="text-[11px] font-semibold uppercase tracking-widest text-muted-foreground">Current connections</p>
+            <Button asChild variant="link" size="sm" className="h-auto p-0 text-xs text-primary">
+              <Link to="/connections?tab=accepted">View all</Link>
+            </Button>
+          </div>
+          {acceptedConnections.slice(0, 3).map((conn, i) => {
+            const partner = conn.requester.id === currentUserId ? conn.receiver : conn.requester;
+            return (
+              <motion.div
+                key={conn.id}
+                initial={{ opacity: 0, y: 8 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: i * 0.05 }}
+                className="rounded-xl border border-border/50 bg-muted/20 p-3"
+              >
+                <div className="flex items-center gap-3">
+                  <Avatar className="h-9 w-9 shrink-0">
+                    <AvatarImage src={partner.avatar ?? undefined} />
+                    <AvatarFallback className="text-xs font-semibold bg-muted">
+                      {partner.name.charAt(0)}
+                    </AvatarFallback>
+                  </Avatar>
+                  <div className="min-w-0 flex-1">
+                    <Link to={`/profile/${partner.id}`} className="block truncate text-sm font-semibold text-foreground hover:text-primary">
+                      {partner.name}
+                    </Link>
+                    <p className="truncate text-xs text-muted-foreground">@{partner.username ?? 'user'}</p>
+                  </div>
+                </div>
+                <div className="mt-3 grid grid-cols-2 gap-2">
+                  <Button asChild size="sm" variant="outline" className="rounded-lg text-xs">
+                    <Link to={`/profile/${partner.id}`}>Profile</Link>
+                  </Button>
+                  <Button asChild size="sm" className="rounded-lg text-xs">
+                    <Link to={`/messages/${partner.id}`}>
+                      <MessageSquare className="mr-1.5 h-3.5 w-3.5" />
+                      Message
+                    </Link>
+                  </Button>
+                </div>
+              </motion.div>
+            );
+          })}
+          <Button asChild variant="ghost" size="sm" className="h-8 w-full rounded-lg text-xs text-primary hover:bg-primary/10">
+            <Link to="/dashboard#active-exchanges">Arrange meeting from active exchanges</Link>
+          </Button>
+        </div>
+      );
+    }
+
     return (
       <div className="flex flex-col items-center justify-center p-4 py-6 text-center">
         <Users className="h-8 w-8 text-muted-foreground/40 mb-3" />
@@ -913,14 +971,26 @@ function ConnectionsTab({
             className="rounded-xl border border-border/50 bg-muted/20 p-3 hover:bg-muted/40 transition-colors duration-200"
           >
             <div className="flex items-center gap-3">
-              <Avatar className="h-9 w-9 shrink-0">
-                <AvatarImage src={partner.avatar ?? undefined} />
-                <AvatarFallback className="text-xs font-semibold bg-muted">
-                  {partner.name.charAt(0)}
-                </AvatarFallback>
-              </Avatar>
+              <Link
+                to={`/profile/${partner.id}`}
+                className="shrink-0 rounded-full focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
+                aria-label={`View ${partner.name}'s profile`}
+              >
+                <Avatar className="h-9 w-9 transition-transform hover:scale-105">
+                  <AvatarImage src={partner.avatar ?? undefined} />
+                  <AvatarFallback className="text-xs font-semibold bg-muted">
+                    {partner.name.charAt(0)}
+                  </AvatarFallback>
+                </Avatar>
+              </Link>
               <div className="min-w-0 flex-1">
-                <p className="truncate text-sm font-semibold text-foreground">{partner.name}</p>
+                <Link
+                  to={`/profile/${partner.id}`}
+                  className="block truncate text-sm font-semibold text-foreground transition-colors hover:text-primary"
+                  title={`View ${partner.name}'s profile`}
+                >
+                  {partner.name}
+                </Link>
                 <p className="truncate text-xs text-muted-foreground">@{partner.username ?? 'user'}</p>
               </div>
               <Button
@@ -939,7 +1009,18 @@ function ConnectionsTab({
                 "{conn.message}"
               </p>
             )}
-            <div className="mt-3 grid grid-cols-2 gap-2">
+            <Button
+              asChild
+              size="sm"
+              variant="ghost"
+              className="mt-3 h-8 w-full rounded-lg text-xs text-primary hover:bg-primary/10"
+            >
+              <Link to={`/profile/${partner.id}`}>
+                View profile
+                <ArrowRight className="ml-1.5 h-3.5 w-3.5" />
+              </Link>
+            </Button>
+            <div className="mt-2 grid grid-cols-2 gap-2">
               <Button
                 size="sm"
                 variant="outline"
@@ -1348,6 +1429,11 @@ export default function DashboardPage() {
     loading: connectionsLoading,
     refetch: refetchConnections,
   } = useConnections({ status: 'pending', direction: 'received' });
+  const {
+    connections: acceptedConnections,
+    loading: acceptedConnectionsLoading,
+    refetch: refetchAcceptedConnections,
+  } = useConnections({ status: 'accepted', direction: 'all' });
   const [connectionBusy, setConnectionBusy] = useState<Record<string, boolean>>({});
   const [incomingRequest, setIncomingRequest] = useState<Exchange | null>(null);
   const [incomingRequestOpen, setIncomingRequestOpen] = useState(false);
@@ -1546,10 +1632,11 @@ export default function DashboardPage() {
 
       if (type.includes('CONNECTION')) {
         void refetchConnections();
+        void refetchAcceptedConnections();
         refreshDashboardStats();
       }
     });
-  }, [refetch, refetchConnections, refreshDashboardStats, fetchSessions, user?.id]);
+  }, [refetch, refetchConnections, refetchAcceptedConnections, refreshDashboardStats, fetchSessions, user?.id]);
   const activeExchanges = React.useMemo(() => {
     const seen = new Set<string>();
     return exchanges
@@ -1668,6 +1755,7 @@ export default function DashboardPage() {
         return next;
       });
       await refetchConnections();
+      await refetchAcceptedConnections();
       toast({
         title: status === 'accepted' ? 'Connection accepted' : 'Connection declined',
         description: `${partner.name.split(' ')[0]} ${status === 'accepted' ? 'added to your network' : 'request declined'}.`,
@@ -1933,7 +2021,7 @@ export default function DashboardPage() {
               <div className="flex items-center gap-2">
                 {pendingConnectionCount > 0 && <Badge className="text-[9px] rounded-full bg-primary/20 text-primary hover:bg-primary/30 border-0">{pendingConnectionCount} pending</Badge>}
                 <Button asChild variant="ghost" size="sm" className="h-7 px-2 text-xs text-primary">
-                  <Link to="/connections">Open</Link>
+                  <Link to="/connections?tab=received">Review all</Link>
                 </Button>
               </div>
             </div>
@@ -1949,7 +2037,9 @@ export default function DashboardPage() {
                 <TabsContent value="connections" className="m-0 p-0 focus-visible:outline-none">
                   <ConnectionsTab
                     connections={quickConnectionRequests}
+                    acceptedConnections={acceptedConnections}
                     loading={connectionsLoading}
+                    acceptedLoading={acceptedConnectionsLoading}
                     busy={connectionBusy}
                     onUpdate={handleConnectionUpdate}
                     onDismiss={handleConnectionDismiss}
@@ -1975,7 +2065,7 @@ export default function DashboardPage() {
         </div>
 
         {/* ══ PRIORITY WORK ROW (Active Exchanges & Sessions) ═════════════ */}
-        <div className="col-span-1 md:col-span-2 lg:col-span-2 flex flex-col min-h-[260px]">
+        <div id="active-exchanges" className="col-span-1 md:col-span-2 lg:col-span-2 flex flex-col min-h-[260px]">
           <ScrollReveal animation="fade-up" delay={0.08} className="h-full flex flex-col bg-card rounded-3xl border border-white/5 overflow-hidden p-4 shadow-[inset_0_1px_0_0_hsla(0,0%,100%,0.05)]">
              <SectionHeading icon={Zap} action={
                 <Button asChild variant="ghost" size="sm" className="h-7 text-xs font-semibold text-primary hover:bg-primary/10">
@@ -2285,11 +2375,11 @@ export default function DashboardPage() {
                   </div>
                 </div>
 
-                <div className="mt-3 grid grid-cols-3 gap-2">
+                <div className="mt-3 grid grid-cols-1 gap-2 sm:grid-cols-3">
                   <Button
                     variant="outline"
                     size="sm"
-                    className="text-xs"
+                    className="h-9 rounded-xl text-xs font-semibold"
                     onClick={() => navigate(`/profile/${incomingRequest.requester.id}`)}
                     disabled={Boolean(incomingExchangeBusy[incomingRequest.id])}
                   >
@@ -2298,7 +2388,7 @@ export default function DashboardPage() {
                   <Button
                     variant="outline"
                     size="sm"
-                    className="text-xs border-destructive/20 text-destructive hover:bg-destructive/8 hover:border-destructive/30"
+                    className="h-9 rounded-xl border-destructive/20 text-xs font-semibold text-destructive hover:bg-destructive/8 hover:border-destructive/30"
                     onClick={() => void handlePendingExchangeAction(incomingRequest, 'declined')}
                     disabled={Boolean(incomingExchangeBusy[incomingRequest.id])}
                   >
@@ -2306,7 +2396,7 @@ export default function DashboardPage() {
                   </Button>
                   <Button
                     size="sm"
-                    className="text-xs"
+                    className="h-9 rounded-xl text-xs font-semibold"
                     onClick={() => void handlePendingExchangeAction(incomingRequest, 'accepted')}
                     disabled={Boolean(incomingExchangeBusy[incomingRequest.id])}
                   >

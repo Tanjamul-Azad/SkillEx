@@ -19,6 +19,7 @@ public record AddSkillRequest(
     @Size(max = 500) String skillDescription,
     @Size(max = 500) String sourceIntent,
     @Min(0) @Max(100) Integer matchConfidence,
+    Boolean aiSuggested,
 
     @NotBlank @Pattern(regexp = "BEGINNER|MODERATE|EXPERT") String level,
     @NotBlank @Pattern(regexp = "offered|wanted")           String type,

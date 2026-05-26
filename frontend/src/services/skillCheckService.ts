@@ -9,16 +9,28 @@ export interface SkillCheckMeeting {
   message?: string | null;
   requesterOutcome?: string | null;
   targetOutcome?: string | null;
-  introDone: boolean;
-  proofDemoDone: boolean;
-  goalAlignmentDone: boolean;
-  scheduleFitDone: boolean;
+  checklistIntro: boolean;
+  checklistDemo: boolean;
+  checklistGoalAlignment: boolean;
+  checklistScheduleFit: boolean;
+  scheduledAt?: string | null;
   createdAt: string;
 }
 
+interface PagedResponse<T> {
+  content: T[];
+  number: number;
+  size: number;
+  totalElements: number;
+  totalPages: number;
+  last: boolean;
+}
+
 export const skillCheckService = {
+  list: (page = 0, size = 10): Promise<PagedResponse<SkillCheckMeeting>> =>
+    api.get<PagedResponse<SkillCheckMeeting>>(`/skill-checks?page=${page}&size=${size}`),
   create: (data: { targetUserId: string; skillId: string; message?: string }): Promise<SkillCheckMeeting> =>
     api.post<SkillCheckMeeting>('/skill-checks', data),
-  feedback: (id: string, data: { outcome: 'SUITABLE' | 'MAYBE' | 'NOT_SUITABLE'; notes?: string }): Promise<SkillCheckMeeting> =>
+  feedback: (id: string, data: { outcome: 'SUITABLE' | 'MAYBE' | 'NOT_SUITABLE'; comment?: string }): Promise<SkillCheckMeeting> =>
     api.post<SkillCheckMeeting>(`/skill-checks/${id}/feedback`, data),
 };

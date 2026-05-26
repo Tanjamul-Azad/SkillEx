@@ -62,7 +62,6 @@ const FeedTab = ({ intentFilter, onlineCount }: { intentFilter?: string; onlineC
   const [stories, setStories] = useState<Story[]>([]);
   const [trendingSkills, setTrendingSkills] = useState<TrendingSkill[]>([]);
   const [suggestions, setSuggestions] = useState<SuggestedUser[]>([]);
-  const [followedUsers, setFollowedUsers] = useState<Set<string>>(new Set());
   const [relationshipStatuses, setRelationshipStatuses] = useState<Record<string, string>>({});
   const [currentPage, setCurrentPage] = useState(0);
   const [hasMore, setHasMore] = useState(true);
@@ -87,14 +86,16 @@ const FeedTab = ({ intentFilter, onlineCount }: { intentFilter?: string; onlineC
     try {
       const relStatus = relationshipStatuses[uId];
       if (relStatus === 'NONE' || !relStatus) {
-        await connectionService.create({ receiverId: uId, message: "Hi! I saw your profile on the SkillEX Community Hub and would love to exchange skills!" });
+        const connection = await connectionService.create({ receiverId: uId, message: "Hi! I saw your profile on the SkillEX Community Hub and would love to exchange skills!" });
         setRelationshipStatuses(prev => ({
           ...prev,
-          [uId]: 'PENDING_SENT'
+          [uId]: connection.status?.toUpperCase() === 'ACCEPTED' ? 'CONNECTED' : 'PENDING_SENT'
         }));
         toast({
-          title: "Connection Request Sent",
-          description: "We've sent a professional connection invitation.",
+          title: connection.status?.toUpperCase() === 'ACCEPTED' ? 'Already connected' : 'Connection Request Sent',
+          description: connection.status?.toUpperCase() === 'ACCEPTED'
+            ? 'You can message this person now.'
+            : "We've sent a professional connection invitation.",
         });
       } else if (relStatus === 'PENDING_RECEIVED') {
         const rel = await connectionService.getRelationship(uId);
@@ -108,6 +109,8 @@ const FeedTab = ({ intentFilter, onlineCount }: { intentFilter?: string; onlineC
             title: "Connected!",
             description: "You are now connected for skill exchange.",
           });
+        } else {
+          throw new Error('Could not find the pending request.');
         }
       }
     } catch (err) {
@@ -677,17 +680,19 @@ const SkillCirclesTab = () => {
 // --- DISCUSSIONS TAB ---
 const DiscussionCard = React.memo(({ discussion: d }: { discussion: Discussion }) => {
   const [localUpvotes, setLocalUpvotes] = React.useState(d.upvotes);
-  const [upvoted, setUpvoted] = React.useState(false);
+  const [upvoted, setUpvoted] = React.useState(Boolean(d.isUpvotedByViewer));
 
   const handleUpvote = async () => {
     const wasUpvoted = upvoted;
     setUpvoted(!wasUpvoted);
-    setLocalUpvotes(n => wasUpvoted ? n - 1 : n + 1);
+    setLocalUpvotes(n => Math.max(0, wasUpvoted ? n - 1 : n + 1));
     try {
-      await CommunityService.upvoteDiscussion(d.id);
+      const updated = await CommunityService.upvoteDiscussion(d.id);
+      setUpvoted(Boolean(updated.isUpvotedByViewer));
+      setLocalUpvotes(updated.upvotes ?? 0);
     } catch {
       setUpvoted(wasUpvoted);
-      setLocalUpvotes(n => wasUpvoted ? n + 1 : n - 1);
+      setLocalUpvotes(n => Math.max(0, wasUpvoted ? n + 1 : n - 1));
     }
   };
 

@@ -5,8 +5,9 @@ import { useExchanges } from '@/hooks/useExchanges';
 import { useConnections } from '@/hooks/useConnections';
 import { exchangeService } from '@/services/exchangeService';
 import { connectionService } from '@/services/connectionService';
-import { DashboardService } from '@/services/dashboardService';
+import { DashboardService, type SmartAction } from '@/services/dashboardService';
 import { SessionService } from '@/services/sessionService';
+import { skillCheckService, type SkillCheckMeeting } from '@/services/skillCheckService';
 import { onRealtimeNotification } from '@/lib/realtime';
 import type { Exchange } from '@/services/exchangeService';
 import type { Connection } from '@/services/connectionService';
@@ -582,6 +583,7 @@ function ExchangeCard({
                         skillId: skillToSchedule.id,
                         scheduledAt: `${scheduleDate}T${scheduleTime}:00`,
                         durationMins: 60,
+                        notes: sessionNotes.trim() || undefined,
                         sessionType: 'VIDEO',
                       });
 
@@ -935,7 +937,7 @@ function ConnectionsTab({
             );
           })}
           <Button asChild variant="ghost" size="sm" className="h-8 w-full rounded-lg text-xs text-primary hover:bg-primary/10">
-            <Link to="/dashboard#active-exchanges">Arrange meeting from active exchanges</Link>
+            <Link to="/connections?tab=accepted&arrange=1">Arrange meeting from active exchanges</Link>
           </Button>
         </div>
       );
@@ -1375,6 +1377,11 @@ function UpcomingSessionsSection({
                       })
                     : 'Date TBD'}
                 </p>
+                {session.sharedNotes && (
+                  <p className="mt-1 line-clamp-2 text-xs text-muted-foreground">
+                    Notes: {session.sharedNotes}
+                  </p>
+                )}
               </div>
               {isProposal ? (
                 canAccept ? (
@@ -1452,6 +1459,11 @@ export default function DashboardPage() {
   const [creditWallet, setCreditWallet] = React.useState<CreditWallet | null>(null);
   const [creditTransactions, setCreditTransactions] = React.useState<CreditTransaction[]>([]);
   const [creditHistoryLoading, setCreditHistoryLoading] = React.useState(false);
+  const [smartActions, setSmartActions] = React.useState<SmartAction[]>([]);
+  const [smartActionsLoading, setSmartActionsLoading] = React.useState(false);
+  const [skillChecks, setSkillChecks] = React.useState<SkillCheckMeeting[]>([]);
+  const [skillChecksLoading, setSkillChecksLoading] = React.useState(false);
+  const [skillCheckFeedbackBusy, setSkillCheckFeedbackBusy] = React.useState<string | null>(null);
 
   const [sessions, setSessions] = useState<Session[]>([]);
   const [sessionsLoading, setSessionsLoading] = useState(false);
@@ -1479,18 +1491,38 @@ export default function DashboardPage() {
       .catch(() => {});
   }, []);
 
+  const refreshSmartActions = React.useCallback(() => {
+    setSmartActionsLoading(true);
+    DashboardService.getSmartActions()
+      .then(setSmartActions)
+      .catch(() => setSmartActions([]))
+      .finally(() => setSmartActionsLoading(false));
+  }, []);
+
+  const refreshSkillChecks = React.useCallback(() => {
+    setSkillChecksLoading(true);
+    skillCheckService.list(0, 10)
+      .then((page) => setSkillChecks(page.content ?? []))
+      .catch(() => setSkillChecks([]))
+      .finally(() => setSkillChecksLoading(false));
+  }, []);
+
   const handleExchangeStatusChanged = React.useCallback(async () => {
     void refetch();
     void fetchSessions();
-  }, [refetch, fetchSessions]);
+    refreshDashboardStats();
+    refreshSmartActions();
+  }, [refetch, fetchSessions, refreshDashboardStats, refreshSmartActions]);
 
   React.useEffect(() => {
     refreshDashboardStats();
+    refreshSmartActions();
     if (user?.id) {
       fetchSessions();
+      refreshSkillChecks();
       creditService.wallet().then(setCreditWallet).catch(() => setCreditWallet(null));
     }
-  }, [refreshDashboardStats, fetchSessions, user?.id]);
+  }, [refreshDashboardStats, refreshSmartActions, refreshSkillChecks, fetchSessions, user?.id]);
 
   React.useEffect(() => {
     if (!creditDialogOpen) {
@@ -1516,6 +1548,37 @@ export default function DashboardPage() {
   const dismissedConnectionsStorageKey = currentUserId
     ? `dashboard-dismissed-connections:${currentUserId}`
     : '';
+
+  const handleSkillCheckFeedback = React.useCallback(async (
+    meetingId: string,
+    outcome: 'SUITABLE' | 'MAYBE' | 'NOT_SUITABLE',
+  ) => {
+    try {
+      setSkillCheckFeedbackBusy(meetingId);
+      const updated = await skillCheckService.feedback(meetingId, {
+        outcome,
+        comment: 'Submitted from the dashboard.',
+      });
+      setSkillChecks((prev) => prev.map((meeting) => (
+        meeting.id === updated.id ? updated : meeting
+      )));
+      toast({
+        title: 'Feedback saved',
+        description: 'The skill check has been updated.',
+        variant: 'success',
+      });
+      refreshDashboardStats();
+      refreshSmartActions();
+    } catch {
+      toast({
+        title: 'Could not save feedback',
+        description: 'Refresh the dashboard and try again.',
+        variant: 'destructive',
+      });
+    } finally {
+      setSkillCheckFeedbackBusy(null);
+    }
+  }, [refreshDashboardStats, refreshSmartActions, toast]);
 
   React.useEffect(() => {
     if (!dismissedConnectionsStorageKey) {
@@ -1627,16 +1690,19 @@ export default function DashboardPage() {
       if (type.includes('MATCH') || type.includes('SESSION') || type.includes('REVIEW')) {
         void refetch();
         void fetchSessions();
+        refreshSkillChecks();
         refreshDashboardStats();
+        refreshSmartActions();
       }
 
       if (type.includes('CONNECTION')) {
         void refetchConnections();
         void refetchAcceptedConnections();
         refreshDashboardStats();
+        refreshSmartActions();
       }
     });
-  }, [refetch, refetchConnections, refetchAcceptedConnections, refreshDashboardStats, fetchSessions, user?.id]);
+  }, [refetch, refetchConnections, refetchAcceptedConnections, refreshDashboardStats, refreshSmartActions, refreshSkillChecks, fetchSessions, user?.id]);
   const activeExchanges = React.useMemo(() => {
     const seen = new Set<string>();
     return exchanges
@@ -2006,7 +2072,7 @@ export default function DashboardPage() {
 
         <div className="col-span-1 md:col-span-1 lg:col-span-1 row-span-1 flex flex-col h-full">
           <ScrollReveal animation="fade-up" delay={0.2} className="h-full w-full">
-            <BoostBanner />
+            <BoostBanner actions={smartActions} loading={smartActionsLoading} />
           </ScrollReveal>
         </div>
 
@@ -2176,7 +2242,13 @@ export default function DashboardPage() {
         
         <div className="col-span-1 md:col-span-1 h-full flex flex-col">
           <ScrollReveal animation="fade-left" delay={0.26} className="h-full flex-1">
-            <TaskProgressWidget />
+            <TaskProgressWidget
+              meetings={skillChecks}
+              loading={skillChecksLoading}
+              currentUserId={currentUserId}
+              feedbackBusy={skillCheckFeedbackBusy}
+              onFeedback={handleSkillCheckFeedback}
+            />
           </ScrollReveal>
         </div>
       </div>

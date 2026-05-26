@@ -1,11 +1,21 @@
 'use client';
 
 import { useAuth } from '@/hooks/useAuth';
-import { useNavigate } from 'react-router-dom';
+import { Navigate, useNavigate } from 'react-router-dom';
 import React, { useEffect } from 'react';
 import { Skeleton } from '@/components/ui/skeleton';
 
-export default function ProtectedRouteWrapper({ children }: { children: React.ReactNode }) {
+interface ProtectedRouteWrapperProps {
+  children: React.ReactNode;
+  requiredRole?: string;
+  redirectTo?: string;
+}
+
+export default function ProtectedRouteWrapper({
+  children,
+  requiredRole,
+  redirectTo = '/dashboard',
+}: ProtectedRouteWrapperProps) {
   const { user, isLoading } = useAuth();
   const navigate = useNavigate();
 
@@ -25,6 +35,10 @@ export default function ProtectedRouteWrapper({ children }: { children: React.Re
         </div>
       </div>
     );
+  }
+
+  if (requiredRole && user.role !== requiredRole) {
+    return <Navigate to={redirectTo} replace />;
   }
 
   return <>{children}</>;

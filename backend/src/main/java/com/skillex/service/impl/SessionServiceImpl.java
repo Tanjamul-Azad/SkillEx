@@ -107,6 +107,7 @@ public class SessionServiceImpl implements SessionService {
         session.setScheduledAt(req.scheduledAt());
         session.setDurationMins(req.durationMins());
         session.setMeetLink(req.meetLink());
+        session.setSharedNotes(req.notes());
         session.setSessionType(meetingType);
         session.setStatus(Session.SessionStatus.PROPOSED);
         Session saved = sessionRepository.save(session);

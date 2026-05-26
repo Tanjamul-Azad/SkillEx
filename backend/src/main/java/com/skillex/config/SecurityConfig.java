@@ -50,6 +50,9 @@ public class SecurityConfig {
                 .requestMatchers("/ws/**", "/ws/info").permitAll()
                 // Static uploads
                 .requestMatchers("/uploads/**").permitAll()
+                .requestMatchers("/api/admin/**", "/api/skills/pending/**").hasRole("ADMIN")
+                .requestMatchers(HttpMethod.POST, "/api/credits/admin/**", "/api/moderation/actions").hasRole("ADMIN")
+                .requestMatchers(HttpMethod.GET, "/api/moderation/reports", "/api/moderation/cases/**", "/api/moderation/users/**").hasRole("ADMIN")
                 // Public read-only routes — skills catalogue, feedbacks and community browsing
                 .requestMatchers(HttpMethod.GET, "/api/skills", "/api/skills/**").permitAll()
                 .requestMatchers(HttpMethod.GET, "/api/feedbacks").permitAll()

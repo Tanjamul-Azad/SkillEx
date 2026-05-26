@@ -170,10 +170,14 @@ public class DtoMapper {
     }
 
     public CommunityDtos.DiscussionDto toDiscussion(Discussion d) {
+        return toDiscussion(d, false);
+    }
+
+    public CommunityDtos.DiscussionDto toDiscussion(Discussion d, boolean isUpvotedByViewer) {
         return new CommunityDtos.DiscussionDto(
             d.getId(), d.getTitle(), d.getContent(),
             toSummary(d.getAuthor()), d.getCategory(),
-            d.getUpvotes(), d.getReplies(), d.getViews(),
+            d.getUpvotes(), isUpvotedByViewer, d.getReplies(), d.getViews(),
             d.getIsPinned(), d.getCreatedAt()
         );
     }

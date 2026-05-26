@@ -76,14 +76,17 @@ export const PostCard = React.memo(({ post, onDelete }: PostCardProps) => {
   const handleLike = async () => {
     const newLiked = !liked;
     setLiked(newLiked);
-    setLocalLikes(prev => newLiked ? prev + 1 : prev - 1);
+    setLocalLikes(prev => Math.max(0, newLiked ? prev + 1 : prev - 1));
     try {
-      if (newLiked) await CommunityService.likePost(post.id);
-      else await CommunityService.unlikePost(post.id);
+      const updated = newLiked
+        ? await CommunityService.likePost(post.id)
+        : await CommunityService.unlikePost(post.id);
+      setLiked(updated.isLikedByViewer ?? newLiked);
+      setLocalLikes(updated.likes ?? 0);
     } catch {
       // Rollback on error
       setLiked(!newLiked);
-      setLocalLikes(prev => !newLiked ? prev + 1 : prev - 1);
+      setLocalLikes(prev => Math.max(0, !newLiked ? prev + 1 : prev - 1));
       toast({ title: 'Connection error', description: 'Could not sync like status.', variant: 'destructive' });
     }
   };

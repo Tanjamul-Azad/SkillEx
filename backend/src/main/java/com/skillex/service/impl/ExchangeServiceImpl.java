@@ -192,11 +192,15 @@ public class ExchangeServiceImpl implements ExchangeService {
             return new ExchangeRelationshipDto(targetUserId, "NONE", null);
         }
 
-        Exchange latest = exchangeRepository.findPairHistory(
+        var history = exchangeRepository.findPairHistory(
             userId,
             targetUserId,
-            PageRequest.of(0, 1)
-        ).stream().findFirst().orElse(null);
+            PageRequest.of(0, 10)
+        );
+        Exchange latest = history.stream()
+            .filter(exchange -> exchange.getStatus() == Exchange.ExchangeStatus.ACCEPTED)
+            .findFirst()
+            .orElseGet(() -> history.stream().findFirst().orElse(null));
 
         if (latest == null) {
             return new ExchangeRelationshipDto(targetUserId, "NONE", null);

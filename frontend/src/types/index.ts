@@ -120,6 +120,7 @@ export interface Discussion {
   category: string;
   content: string;
   upvotes: number;
+  isUpvotedByViewer?: boolean;
   replies: number;
   views: number;
   createdAt: string;

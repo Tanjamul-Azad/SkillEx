@@ -37,6 +37,7 @@ public class CommunityServiceImpl implements CommunityService {
     private final UserRepository userRepository;
     private final SkillRepository skillRepository;
     private final PostLikeRepository postLikeRepository;
+    private final DiscussionUpvoteRepository discussionUpvoteRepository;
     private final CommentRepository commentRepository;
     private final ConnectionRepository connectionRepository;
     private final UserSkillOfferedRepository offeredRepo;
@@ -91,9 +92,31 @@ public class CommunityServiceImpl implements CommunityService {
 
     @Override
     @Transactional(readOnly = true)
-    public PagedResponse<CommunityDtos.DiscussionDto> getDiscussions(int page, int size) {
+    public PagedResponse<CommunityDtos.DiscussionDto> getDiscussions(String viewerId, int page, int size) {
         var pageable = PageRequest.of(page, size, Sort.by("createdAt").descending());
-        return PagedResponse.of(discussionRepository.findAll(pageable).map(mapper::toDiscussion));
+        Page<Discussion> discussionPage = discussionRepository.findAll(pageable);
+        List<Discussion> discussions = discussionPage.getContent();
+        Set<String> upvotedIds = Set.of();
+        if (viewerId != null && !viewerId.isBlank() && !discussions.isEmpty()) {
+            upvotedIds = new HashSet<>(discussionUpvoteRepository.findUpvotedDiscussionIdsByUser(
+                viewerId,
+                discussions.stream().map(Discussion::getId).toList()
+            ));
+        }
+        final Set<String> upvotedDiscussionIds = upvotedIds;
+
+        List<CommunityDtos.DiscussionDto> content = discussions.stream()
+            .map(discussion -> mapper.toDiscussion(discussion, upvotedDiscussionIds.contains(discussion.getId())))
+            .toList();
+
+        return new PagedResponse<>(
+            content,
+            discussionPage.getNumber(),
+            discussionPage.getSize(),
+            discussionPage.getTotalElements(),
+            discussionPage.getTotalPages(),
+            discussionPage.isLast()
+        );
     }
 
     @Override
@@ -121,10 +144,26 @@ public class CommunityServiceImpl implements CommunityService {
     @Override
     @Transactional
     public CommunityDtos.DiscussionDto upvoteDiscussion(String userId, String discussionId) {
+        restrictionService.assertCanUseAccount(userId, "COMMUNITY");
         Discussion discussion = discussionRepository.findById(discussionId)
             .orElseThrow(() -> new EntityNotFoundException("Discussion not found: " + discussionId));
+        User user = findUser(userId);
+        boolean alreadyUpvoted = discussionUpvoteRepository.existsByIdDiscussionIdAndIdUserId(discussionId, userId);
+
+        if (alreadyUpvoted) {
+            discussionUpvoteRepository.deleteByIdDiscussionIdAndIdUserId(discussionId, userId);
+            discussion.setUpvotes(Math.max(0, discussion.getUpvotes() - 1));
+            return mapper.toDiscussion(discussionRepository.save(discussion), false);
+        }
+
+        DiscussionUpvote upvote = DiscussionUpvote.builder()
+            .id(new DiscussionUpvote.DiscussionUpvoteId(discussionId, userId))
+            .discussion(discussion)
+            .user(user)
+            .build();
+        discussionUpvoteRepository.save(upvote);
         discussion.setUpvotes(discussion.getUpvotes() + 1);
-        return mapper.toDiscussion(discussionRepository.save(discussion));
+        return mapper.toDiscussion(discussionRepository.save(discussion), true);
     }
 
     // ── Posts ────────────────────────────────────────────────────────────────
@@ -238,7 +277,7 @@ public class CommunityServiceImpl implements CommunityService {
             post.setSkill(skill);
         }
 
-        CommunityDtos.PostDto result = mapper.toPost(postRepository.save(post), false);
+        CommunityDtos.PostDto result = mapper.toPost(postRepository.saveAndFlush(post), false);
 
         eventPublisher.publishEvent(new ReputationUpdateEvent(
             authorId, ReputationUpdateEvent.Trigger.COMMUNITY_INTERACTION));
@@ -249,6 +288,7 @@ public class CommunityServiceImpl implements CommunityService {
     @Override
     @Transactional
     public CommunityDtos.PostDto likePost(String userId, String postId) {
+        restrictionService.assertCanUseAccount(userId, "COMMUNITY");
         Post post = postRepository.findById(postId)
             .orElseThrow(() -> new EntityNotFoundException("Post not found: " + postId));
         User user = findUser(userId);
@@ -256,24 +296,35 @@ public class CommunityServiceImpl implements CommunityService {
         boolean alreadyLiked = postLikeRepository.existsByIdPostIdAndIdUserId(postId, userId);
 
         if (alreadyLiked) {
-            // Unlike: remove the like and decrement counter
+            return mapper.toPost(post, true);
+        }
+
+        PostLike like = PostLike.builder()
+            .id(new PostLike.PostLikeId(postId, userId))
+            .post(post)
+            .user(user)
+            .build();
+        postLikeRepository.save(like);
+        post.setLikes(post.getLikes() + 1);
+        postRepository.save(post);
+        rewardCommunityContributionIfEligible(post);
+        return mapper.toPost(post, true);
+    }
+
+    @Override
+    @Transactional
+    public CommunityDtos.PostDto unlikePost(String userId, String postId) {
+        restrictionService.assertCanUseAccount(userId, "COMMUNITY");
+        Post post = postRepository.findById(postId)
+            .orElseThrow(() -> new EntityNotFoundException("Post not found: " + postId));
+
+        if (postLikeRepository.existsByIdPostIdAndIdUserId(postId, userId)) {
             postLikeRepository.deleteByIdPostIdAndIdUserId(postId, userId);
             post.setLikes(Math.max(0, post.getLikes() - 1));
             postRepository.save(post);
-            return mapper.toPost(post, false);
-        } else {
-            // Like: add the like and increment counter
-            PostLike like = PostLike.builder()
-                .id(new PostLike.PostLikeId(postId, userId))
-                .post(post)
-                .user(user)
-                .build();
-            postLikeRepository.save(like);
-            post.setLikes(post.getLikes() + 1);
-            postRepository.save(post);
-            rewardCommunityContributionIfEligible(post);
-            return mapper.toPost(post, true);
         }
+
+        return mapper.toPost(post, false);
     }
 
     private void rewardCommunityContributionIfEligible(Post post) {
@@ -331,7 +382,7 @@ public class CommunityServiceImpl implements CommunityService {
             .author(author)
             .content(req.content())
             .build();
-        Comment saved = commentRepository.save(comment);
+        Comment saved = commentRepository.saveAndFlush(comment);
 
         // Update the post's comment counter
         post.setComments(post.getComments() + 1);

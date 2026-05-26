@@ -9,6 +9,7 @@ import { Toaster } from '@/components/ui/toaster';
 import Logo from '@/components/ui/Logo';
 import { CommandPalette, useCommandPalette } from '@/components/ui/CommandPalette';
 import { ErrorBoundary } from '@/components/ui/ErrorBoundary';
+import ProtectedRouteWrapper from '@/components/auth/ProtectedRouteWrapper';
 
 // Code-split page imports
 const LandingPage = React.lazy(() => import('./features/marketing/pages/LandingPage'));
@@ -122,6 +123,9 @@ function SplashScreen({ onDone }: { onDone: () => void }) {
 /* ── App shell — wires global command palette ──────────────────── */
 function AppShell() {
   const { open, close } = useCommandPalette();
+  const adminOnly = (page: React.ReactNode) => (
+    <ProtectedRouteWrapper requiredRole="ADMIN">{page}</ProtectedRouteWrapper>
+  );
 
   return (
     <ErrorBoundary>
@@ -147,13 +151,13 @@ function AppShell() {
           <Route path="/privacy" element={<PrivacyPage />} />
           <Route path="/trust" element={<TrustPage />} />
           <Route path="/verify/certificate/:code" element={<CertificateVerifyPage />} />
-          <Route path="/admin" element={<AdminDashboardPage />} />
-          <Route path="/admin/reports" element={<AdminReportsPage />} />
-          <Route path="/admin/cases/:caseId" element={<AdminReportsPage />} />
-          <Route path="/admin/rules" element={<AdminRulesPage />} />
-          <Route path="/admin/users/:userId" element={<AdminUserPage />} />
-          <Route path="/admin/skills/pending" element={<AdminSkillsPendingPage />} />
-          <Route path="/admin/audit" element={<AdminAuditPage />} />
+          <Route path="/admin" element={adminOnly(<AdminDashboardPage />)} />
+          <Route path="/admin/reports" element={adminOnly(<AdminReportsPage />)} />
+          <Route path="/admin/cases/:caseId" element={adminOnly(<AdminReportsPage />)} />
+          <Route path="/admin/rules" element={adminOnly(<AdminRulesPage />)} />
+          <Route path="/admin/users/:userId" element={adminOnly(<AdminUserPage />)} />
+          <Route path="/admin/skills/pending" element={adminOnly(<AdminSkillsPendingPage />)} />
+          <Route path="/admin/audit" element={adminOnly(<AdminAuditPage />)} />
           <Route path="*" element={<NotFoundPage />} />
         </Routes>
       </Suspense>

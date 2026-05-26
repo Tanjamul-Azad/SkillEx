@@ -71,10 +71,12 @@ public class CommunityController {
 
     @GetMapping("/discussions")
     public ResponseEntity<ApiResponse<PagedResponse<CommunityDtos.DiscussionDto>>> getDiscussions(
+        HttpServletRequest request,
         @RequestParam(defaultValue = "0") int page,
         @RequestParam(defaultValue = "20") int size
     ) {
-        return ResponseEntity.ok(ApiResponse.ok(communityService.getDiscussions(page, size)));
+        String viewerId = currentUserId(request);
+        return ResponseEntity.ok(ApiResponse.ok(communityService.getDiscussions(viewerId, page, size)));
     }
 
     @PostMapping("/discussions")
@@ -159,6 +161,15 @@ public class CommunityController {
     ) {
         String userId = currentUserId(request);
         return ResponseEntity.ok(ApiResponse.ok(communityService.likePost(userId, postId)));
+    }
+
+    @PostMapping("/posts/{postId}/unlike")
+    public ResponseEntity<ApiResponse<CommunityDtos.PostDto>> unlikePost(
+        HttpServletRequest request,
+        @PathVariable String postId
+    ) {
+        String userId = currentUserId(request);
+        return ResponseEntity.ok(ApiResponse.ok(communityService.unlikePost(userId, postId)));
     }
 
     @DeleteMapping("/posts/{postId}")

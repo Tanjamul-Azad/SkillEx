@@ -101,12 +101,26 @@ public class SkillCheckServiceImpl implements SkillCheckService {
 
     private SkillCheckMeetingDto toDto(SkillCheckMeeting meeting) {
         Skill skill = meeting.getSkill();
+        String requesterOutcome = feedbackRepository.findByMeetingIdAndReviewerId(
+                meeting.getId(),
+                meeting.getRequester().getId()
+            )
+            .map(feedback -> feedback.getOutcome().name())
+            .orElse(null);
+        String targetOutcome = feedbackRepository.findByMeetingIdAndReviewerId(
+                meeting.getId(),
+                meeting.getTargetUser().getId()
+            )
+            .map(feedback -> feedback.getOutcome().name())
+            .orElse(null);
         return new SkillCheckMeetingDto(
             meeting.getId(),
             mapper.toSummary(meeting.getRequester()),
             mapper.toSummary(meeting.getTargetUser()),
             new SkillCheckMeetingDto.SkillRef(skill.getId(), skill.getName(), skill.getIcon(), skill.getCategory()),
             meeting.getStatus().name(),
+            requesterOutcome,
+            targetOutcome,
             Boolean.TRUE.equals(meeting.getChecklistIntro()),
             Boolean.TRUE.equals(meeting.getChecklistDemo()),
             Boolean.TRUE.equals(meeting.getChecklistGoalAlignment()),

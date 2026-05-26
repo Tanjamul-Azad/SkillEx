@@ -22,6 +22,7 @@ const POST_TYPES = [
   { id: 'question', label: 'Question', icon: HelpCircle },
   { id: 'showcase', label: 'Showcase', icon: Tag },
 ] as const;
+const MAX_MEDIA_SIZE_BYTES = 20 * 1024 * 1024;
 
 type PostType = typeof POST_TYPES[number]['id'];
 
@@ -50,12 +51,29 @@ export const PostComposer = React.memo(({ onPost }: PostComposerProps) => {
   const handleAttach = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file) {
+      if (!file.type.startsWith('image/') && !file.type.startsWith('video/')) {
+        toast({ title: 'Unsupported file', description: 'Attach an image or video file.', variant: 'destructive' });
+        e.target.value = '';
+        return;
+      }
+      if (file.size > MAX_MEDIA_SIZE_BYTES) {
+        toast({ title: 'File too large', description: 'Please attach media under 20 MB.', variant: 'destructive' });
+        e.target.value = '';
+        return;
+      }
+      if (attachedPreview) {
+        URL.revokeObjectURL(attachedPreview);
+      }
       setAttachedFile(file);
       const url = URL.createObjectURL(file);
       setAttachedPreview(url);
       setFocused(true);
     }
   };
+
+  useEffect(() => () => {
+    if (attachedPreview) URL.revokeObjectURL(attachedPreview);
+  }, [attachedPreview]);
 
   const handleSubmit = async () => {
     if (!content.trim() && !attachedFile) return;
@@ -77,11 +95,16 @@ export const PostComposer = React.memo(({ onPost }: PostComposerProps) => {
       setContent('');
       setPostType('regular');
       setFocused(false);
+      if (attachedPreview) {
+        URL.revokeObjectURL(attachedPreview);
+      }
       setAttachedPreview(null);
       setAttachedFile(null);
       setSelectedSkillId(null);
-    } catch {
-      toast({ title: 'Failed to post', description: 'Please try again.', variant: 'destructive' });
+      if (fileInputRef.current) fileInputRef.current.value = '';
+    } catch (error) {
+      const message = error instanceof Error ? error.message : 'Please try again.';
+      toast({ title: 'Failed to post', description: message, variant: 'destructive' });
     } finally {
       setSubmitting(false);
     }
@@ -175,9 +198,11 @@ export const PostComposer = React.memo(({ onPost }: PostComposerProps) => {
                           onClick={() => { 
                             setContent(''); 
                             setFocused(false); 
+                            if (attachedPreview) URL.revokeObjectURL(attachedPreview);
                             setAttachedPreview(null); 
                             setAttachedFile(null);
                             setSelectedSkillId(null);
+                            if (fileInputRef.current) fileInputRef.current.value = '';
                           }}
                         >
                           Cancel
@@ -204,7 +229,12 @@ export const PostComposer = React.memo(({ onPost }: PostComposerProps) => {
                       )}
                       <button
                         type="button"
-                        onClick={() => { setAttachedPreview(null); setAttachedFile(null); }}
+                        onClick={() => {
+                          if (attachedPreview) URL.revokeObjectURL(attachedPreview);
+                          setAttachedPreview(null);
+                          setAttachedFile(null);
+                          if (fileInputRef.current) fileInputRef.current.value = '';
+                        }}
                         className="absolute top-2 right-2 h-8 w-8 rounded-full bg-black/60 hover:bg-destructive/80 text-foreground flex items-center justify-center transition-all backdrop-blur-md border border-primary/25 hover:border-destructive"
                       >
                         <svg className="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><path d="M18 6 6 18M6 6l12 12"/></svg>

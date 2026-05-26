@@ -96,6 +96,7 @@ class SessionServiceImplTest {
             LocalDateTime.now().plusDays(1),
             60,
             null,
+            null,
             "VIDEO"
         ));
 
@@ -124,6 +125,7 @@ class SessionServiceImplTest {
             "video",
             LocalDateTime.now().plusDays(1),
             60,
+            null,
             null,
             "VIDEO"
         )));
@@ -193,6 +195,7 @@ class SessionServiceImplTest {
             offered.getId(),
             LocalDateTime.now().plusDays(1),
             60,
+            null,
             null,
             "VIDEO"
         )));

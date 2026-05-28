@@ -56,7 +56,6 @@ import { UserService } from '@/services/userService';
 import { exchangeService, type ExchangeRelationship } from '@/services/exchangeService';
 import { connectionService } from '@/services/connectionService';
 import { MarketplaceCard } from '@/features/match/components/MarketplaceCard';
-import { appVisuals } from '@/lib/appVisuals';
 
 const categories = [
   { id: 'Tech', name: 'Technology' },

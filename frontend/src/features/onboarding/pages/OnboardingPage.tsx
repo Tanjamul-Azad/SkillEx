@@ -218,7 +218,6 @@ export default function OnboardingPage() {
 
   return (
     <div className="min-h-screen bg-background relative overflow-hidden flex items-center justify-center p-4">
-      <div className="absolute inset-0 bg-[url('/noise.png')] opacity-[0.03] mix-blend-overlay pointer-events-none z-10" />
       <div className="w-full max-w-xl relative z-20">
         {/* Logo */}
         <motion.div

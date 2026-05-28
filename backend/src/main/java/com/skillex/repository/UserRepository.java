@@ -36,6 +36,9 @@ public interface UserRepository extends JpaRepository<User, String> {
 
     boolean existsByEmailIgnoreCase(String email);
 
+    @Query("SELECT COUNT(u) FROM User u WHERE LOWER(u.email) LIKE LOWER(CONCAT('%', :suffix))")
+    long countByEmailSuffix(@Param("suffix") String suffix);
+
     boolean existsByUsername(String username);
 
     boolean existsByUsernameIgnoreCase(String username);

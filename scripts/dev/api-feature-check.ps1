@@ -90,6 +90,7 @@ function Invoke-Multipart {
     [string]$Path,
     [string]$FilePath,
     [string]$Token,
+    [string]$ContentType = "application/octet-stream",
     [int[]]$Expected = @(200, 201)
   )
 
@@ -109,7 +110,7 @@ function Invoke-Multipart {
     $content = New-Object System.Net.Http.MultipartFormDataContent
     [byte[]]$bytes = [System.IO.File]::ReadAllBytes($FilePath)
     $fileContent = New-Object System.Net.Http.ByteArrayContent(,$bytes)
-    $fileContent.Headers.ContentType = [System.Net.Http.Headers.MediaTypeHeaderValue]::Parse("application/octet-stream")
+    $fileContent.Headers.ContentType = [System.Net.Http.Headers.MediaTypeHeaderValue]::Parse($ContentType)
     $content.Add($fileContent, "file", [System.IO.Path]::GetFileName($FilePath))
 
     $httpResp = $client.PostAsync($uri, $content).Result
@@ -535,9 +536,14 @@ Invoke-Json -Name "Match cycles" -Method Get -Path "/api/match/cycles?maxLength=
 Invoke-Json -Name "Match top cycles" -Method Get -Path "/api/match/top-cycles?maxLength=4&limit=10" -Token $tokenA | Out-Null
 
 # Upload authenticated + static serve
-$tempFile = Join-Path $env:TEMP "skillex-api-check-$suffix.txt"
-"SkillEX upload test $suffix" | Set-Content -Path $tempFile -Encoding UTF8
-$uploadRes = Invoke-Multipart -Name "Upload file authenticated" -Path "/api/upload" -FilePath $tempFile -Token $tokenA
+$badTempFile = Join-Path $env:TEMP "skillex-api-check-$suffix.txt"
+"SkillEX upload test $suffix" | Set-Content -Path $badTempFile -Encoding UTF8
+Invoke-Multipart -Name "Reject non-image upload" -Path "/api/upload" -FilePath $badTempFile -Token $tokenA -Expected @(400) | Out-Null
+
+$tempFile = Join-Path $env:TEMP "skillex-api-check-$suffix.png"
+[byte[]]$pngBytes = [Convert]::FromBase64String("iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+/p9sAAAAASUVORK5CYII=")
+[System.IO.File]::WriteAllBytes($tempFile, $pngBytes)
+$uploadRes = Invoke-Multipart -Name "Upload image authenticated" -Path "/api/upload" -FilePath $tempFile -Token $tokenA -ContentType "image/png"
 
 if ($uploadRes.Json -and $uploadRes.Json.data -and $uploadRes.Json.data.url) {
   $uploadedPath = $uploadRes.Json.data.url

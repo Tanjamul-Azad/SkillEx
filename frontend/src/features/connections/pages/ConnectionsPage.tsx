@@ -105,10 +105,10 @@ export default function ConnectionsPage() {
     });
   }, [activeTab, fetchConnections, user?.id]);
 
-  const getPartner = (connection: Connection) => {
+  const getPartner = useCallback((connection: Connection) => {
     if (!user) return connection.requester;
     return connection.requester.id === user.id ? connection.receiver : connection.requester;
-  };
+  }, [user]);
 
   const emptyMeta = useMemo(() => {
     if (activeTab === 'accepted') {
@@ -151,15 +151,15 @@ export default function ConnectionsPage() {
     }
   };
 
-  const resetMeetingForm = () => {
+  const resetMeetingForm = useCallback(() => {
     setMeetingDate('');
     setMeetingTime('');
     setMeetingNotes('');
     setMeetingConfirmed(false);
     setMeetingBusy(false);
-  };
+  }, []);
 
-  const getSchedulableSkill = (exchange: Exchange): {
+  const getSchedulableSkill = useCallback((exchange: Exchange): {
     skill: ExchangeSkillRef;
     teacherId: string;
     learnerId: string;
@@ -180,16 +180,16 @@ export default function ConnectionsPage() {
       teacherId: teachingMySkill ? user.id : partner.id,
       learnerId: teachingMySkill ? partner.id : user.id,
     };
-  };
+  }, [user?.id]);
 
-  const openMeetingDialog = (partner: Connection['requester'], exchange: Exchange) => {
+  const openMeetingDialog = useCallback((partner: Connection['requester'], exchange: Exchange) => {
     setMeetingPartner(partner);
     setMeetingExchange(exchange);
     resetMeetingForm();
     setMeetingOpen(true);
-  };
+  }, [resetMeetingForm]);
 
-  const findAcceptedExchangeForPartner = async (partnerId: string): Promise<Exchange | null> => {
+  const findAcceptedExchangeForPartner = useCallback(async (partnerId: string): Promise<Exchange | null> => {
     try {
       const relationship = await exchangeService.getRelationship(partnerId);
       if (relationship.status === 'ACCEPTED' && relationship.exchangeId) {
@@ -210,7 +210,7 @@ export default function ConnectionsPage() {
         && ((requesterId === user?.id && receiverId === partnerId)
           || (requesterId === partnerId && receiverId === user?.id));
     }) ?? null;
-  };
+  }, [user?.id]);
 
   const openMeetingRequest = async (connection: Connection) => {
     const partner = getPartner(connection);
@@ -248,7 +248,7 @@ export default function ConnectionsPage() {
     }
   };
 
-  const openFirstAvailableMeeting = async () => {
+  const openFirstAvailableMeeting = useCallback(async () => {
     const acceptedConnections = connections.filter((connection) => connection.status?.toUpperCase() === 'ACCEPTED');
     if (acceptedConnections.length === 0) {
       toast({
@@ -279,7 +279,7 @@ export default function ConnectionsPage() {
     } finally {
       setActionBusy((prev) => ({ ...prev, 'meeting:first': false }));
     }
-  };
+  }, [connections, findAcceptedExchangeForPartner, getPartner, getSchedulableSkill, openMeetingDialog, toast]);
 
   const submitMeetingRequest = async () => {
     if (!meetingExchange || !meetingPartner) {
@@ -342,7 +342,7 @@ export default function ConnectionsPage() {
     autoArrangeHandled.current = true;
     navigate('/connections?tab=accepted', { replace: true });
     void openFirstAvailableMeeting();
-  }, [activeTab, connections, loading, location.search, navigate]);
+  }, [activeTab, connections, loading, location.search, navigate, openFirstAvailableMeeting]);
 
   const meetingScheduleDetails = meetingExchange ? getSchedulableSkill(meetingExchange) : null;
 

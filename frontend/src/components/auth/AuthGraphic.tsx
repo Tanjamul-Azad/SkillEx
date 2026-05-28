@@ -40,7 +40,6 @@ export function AuthGraphic() {
       />
       <div className="absolute inset-0 bg-[linear-gradient(90deg,rgba(4,8,15,0.55),rgba(4,8,15,0.22)),linear-gradient(180deg,rgba(4,8,15,0.16),rgba(4,8,15,0.88))]" />
       <div className="absolute inset-0 bg-[radial-gradient(circle_at_22%_26%,rgba(0,245,212,0.24),transparent_30%),radial-gradient(circle_at_82%_12%,rgba(255,199,0,0.14),transparent_22%)]" />
-      <div className="absolute inset-0 bg-[url('/noise.png')] opacity-[0.05] mix-blend-overlay" />
 
       {floatingSkills.map(({ label, icon: Icon, className }, index) => (
         <motion.div

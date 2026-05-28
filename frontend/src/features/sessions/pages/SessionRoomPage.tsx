@@ -10,7 +10,7 @@ import type { Session } from '@/types';
 import { 
   Video, VideoOff, Mic, MicOff, Monitor, PhoneOff, 
   FileText, MessageSquare, Sparkles, Loader2, Save, Volume2, Settings, Download,
-  Palette, Hand, MessageCircle, Send, Trash2, CheckCircle
+  Palette, Hand, Send, Trash2, CheckCircle
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
@@ -23,6 +23,15 @@ interface ChatMessage {
   spokenAt: string;
   confidenceScore?: number;
   detectedLanguage?: string;
+}
+
+interface InRoomMessage {
+  id: number;
+  speakerUserId: string;
+  speakerRole: string;
+  speakerName?: string;
+  content: string;
+  spokenAt: string;
 }
 
 interface SessionNotes {
@@ -57,13 +66,12 @@ export default function SessionRoomPage() {
   const [raiseHandAlert, setRaiseHandAlert] = useState<string | null>(null);
 
   // In-Room Ephemeral Chat states
-  const [inRoomMessages, setInRoomMessages] = useState<any[]>([]);
+  const [inRoomMessages, setInRoomMessages] = useState<InRoomMessage[]>([]);
   const [chatInput, setChatInput] = useState('');
   const chatEndRef = useRef<HTMLDivElement>(null);
 
-  // Live Translation states
-  const [translateEnabled, setTranslateEnabled] = useState(false);
-  const [targetLanguage, setTargetLanguage] = useState('bn');
+  const [translateEnabled] = useState(false);
+  const [targetLanguage] = useState('bn');
   const [translatedTranscriptMap, setTranslatedTranscriptMap] = useState<Record<number, string>>({});
   const [translatingMap, setTranslatingMap] = useState<Record<number, boolean>>({});
 
@@ -204,7 +212,7 @@ export default function SessionRoomPage() {
       };
       void translateMessage();
     });
-  }, [transcript, translateEnabled, targetLanguage]);
+  }, [transcript, translateEnabled, targetLanguage, translatedTranscriptMap, translatingMap]);
 
   // Send ephemeral chat message
   const sendInRoomChatMessage = (e?: React.FormEvent) => {
@@ -443,7 +451,10 @@ export default function SessionRoomPage() {
       if (payload.userId !== user?.id && payload.raised) {
         // Play soft beep sound
         try {
-          const audioCtx = new (window.AudioContext || (window as any).webkitAudioContext)();
+          const AudioContextClass =
+            window.AudioContext ?? (window as Window & { webkitAudioContext?: typeof AudioContext }).webkitAudioContext;
+          if (!AudioContextClass) return;
+          const audioCtx = new AudioContextClass();
           const oscillator = audioCtx.createOscillator();
           const gainNode = audioCtx.createGain();
           oscillator.connect(gainNode);
@@ -453,7 +464,9 @@ export default function SessionRoomPage() {
           gainNode.gain.setValueAtTime(0.06, audioCtx.currentTime);
           oscillator.start();
           oscillator.stop(audioCtx.currentTime + 0.18);
-        } catch {}
+        } catch (error) {
+          console.warn('[SessionRoom] Raise-hand sound skipped', error);
+        }
         
         setRaiseHandAlert(`${payload.userName} raised their hand! ✋`);
         setTimeout(() => setRaiseHandAlert(null), 4000);
@@ -749,6 +762,18 @@ export default function SessionRoomPage() {
       sessionInfo &&
       participantIds.some((id) => id !== user.id && (id === sessionInfo.teacher.id || id === sessionInfo.learner.id))
   );
+  const toggleRaiseHand = () => {
+    if (!sessionId || !user) return;
+    setLocalHandRaised((previous) => {
+      const next = !previous;
+      send?.(`/topic/session/${sessionId}/raise-hand`, {
+        userId: user.id,
+        userName: user.name,
+        raised: next,
+      });
+      return next;
+    });
+  };
 
   return (
     <div className="flex flex-col h-screen bg-[#0D1B2A] text-slate-100 overflow-hidden font-sans">
@@ -769,6 +794,20 @@ export default function SessionRoomPage() {
                 {currentUserSessionRole}
               </span>
             </div>
+
+            <button
+              onClick={toggleRaiseHand}
+              className={cn(
+                "ml-2 flex items-center gap-1.5 rounded-full border px-3 py-1 text-[10px] font-bold uppercase tracking-wider transition-all duration-300 transform active:scale-95",
+                localHandRaised
+                  ? "border-amber-400/40 bg-amber-500/20 text-amber-200"
+                  : "border-white/10 bg-white/5 text-slate-300 hover:bg-white/10"
+              )}
+              title={localHandRaised ? "Lower hand" : "Raise hand"}
+            >
+              <Hand className={cn("h-3 w-3", localHandRaised && "fill-amber-200")} />
+              {localHandRaised ? "Lower Hand" : "Raise Hand"}
+            </button>
             
             <button
               onClick={handleCompleteSession}
@@ -1323,6 +1362,20 @@ export default function SessionRoomPage() {
                         </button>
                       ))}
                     </div>
+
+                    <div className="w-px h-5 bg-white/10 mx-1" />
+
+                    <button
+                      onClick={() => setIsEraser((value) => !value)}
+                      className={cn(
+                        "rounded-lg border px-2.5 py-1 text-[11px] font-bold transition",
+                        isEraser
+                          ? "border-amber-400/40 bg-amber-500/15 text-amber-200"
+                          : "border-white/10 bg-white/5 text-slate-300 hover:bg-white/10"
+                      )}
+                    >
+                      {isEraser ? "Eraser" : "Brush"}
+                    </button>
 
                     <div className="w-px h-5 bg-white/10 mx-1" />
 

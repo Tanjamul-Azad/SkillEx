@@ -148,7 +148,7 @@ public class CreditServiceImpl implements CreditService {
     }
 
     private UserCreditWallet ensureWallet(User user) {
-        return walletRepository.findById(user.getId()).map(wallet -> {
+        return walletRepository.findByUserIdForUpdate(user.getId()).map(wallet -> {
             if (!Boolean.TRUE.equals(wallet.getStarterGrantReleased()) && isStarterGrantEligible(user)) {
                 wallet.setBalance(wallet.getBalance() + DEFAULT_STARTER_CREDITS);
                 wallet.setLifetimeEarned(wallet.getLifetimeEarned() + DEFAULT_STARTER_CREDITS);

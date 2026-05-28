@@ -3,6 +3,7 @@ package com.skillex.controller;
 import com.skillex.dto.common.ApiResponse;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.web.bind.annotation.*;
@@ -13,15 +14,30 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.nio.file.StandardCopyOption;
+import java.util.Locale;
 import java.util.UUID;
 import java.util.Map;
 import java.util.HashMap;
+import java.util.Set;
 
 @RestController
 @RequestMapping("/api/upload")
 public class FileController {
 
     private static final Logger log = LoggerFactory.getLogger(FileController.class);
+    private static final long MAX_UPLOAD_BYTES = 5L * 1024L * 1024L;
+    private static final Set<String> ALLOWED_CONTENT_TYPES = Set.of(
+        "image/jpeg",
+        "image/png",
+        "image/webp",
+        "image/gif"
+    );
+    private static final Map<String, String> EXTENSIONS_BY_CONTENT_TYPE = Map.of(
+        "image/jpeg", ".jpg",
+        "image/png", ".png",
+        "image/webp", ".webp",
+        "image/gif", ".gif"
+    );
 
     @Value("${file.upload-dir:./uploads}")
     private String uploadDir;
@@ -31,6 +47,16 @@ public class FileController {
         if (file.isEmpty()) {
             log.warn("Upload attempt with empty file");
             return ResponseEntity.badRequest().body(new ApiResponse<>(false, null, "Please select a file to upload."));
+        }
+        if (file.getSize() > MAX_UPLOAD_BYTES) {
+            return ResponseEntity.status(HttpStatus.PAYLOAD_TOO_LARGE)
+                .body(new ApiResponse<>(false, null, "File must be 5MB or smaller."));
+        }
+
+        String contentType = file.getContentType() == null ? "" : file.getContentType().toLowerCase(Locale.ROOT);
+        if (!ALLOWED_CONTENT_TYPES.contains(contentType)) {
+            return ResponseEntity.badRequest()
+                .body(new ApiResponse<>(false, null, "Only JPG, PNG, WebP, and GIF images are allowed."));
         }
 
         try {
@@ -42,11 +68,12 @@ public class FileController {
                 Files.createDirectories(uploadPath);
             }
 
-            String originalFilename = file.getOriginalFilename();
-            String extension = "";
-            if (originalFilename != null && originalFilename.contains(".")) {
-                extension = originalFilename.substring(originalFilename.lastIndexOf("."));
+            if (!hasExpectedImageSignature(file, contentType)) {
+                return ResponseEntity.badRequest()
+                    .body(new ApiResponse<>(false, null, "Uploaded file content is not a supported image."));
             }
+
+            String extension = EXTENSIONS_BY_CONTENT_TYPE.getOrDefault(contentType, ".img");
 
             String newFilename = UUID.randomUUID().toString() + extension;
             Path filePath = uploadPath.resolve(newFilename);
@@ -65,5 +92,44 @@ public class FileController {
             log.error("Failed to upload file: {}", file.getOriginalFilename(), e);
             return ResponseEntity.internalServerError().body(new ApiResponse<>(false, null, "Failed to upload file: " + e.getMessage()));
         }
+    }
+
+    private boolean hasExpectedImageSignature(MultipartFile file, String contentType) throws IOException {
+        byte[] header;
+        try (var stream = file.getInputStream()) {
+            header = stream.readNBytes(16);
+        }
+
+        if ("image/jpeg".equals(contentType)) {
+            return header.length >= 3
+                && (header[0] & 0xFF) == 0xFF
+                && (header[1] & 0xFF) == 0xD8
+                && (header[2] & 0xFF) == 0xFF;
+        }
+        if ("image/png".equals(contentType)) {
+            byte[] png = {(byte) 0x89, 0x50, 0x4E, 0x47, 0x0D, 0x0A, 0x1A, 0x0A};
+            return startsWith(header, png);
+        }
+        if ("image/gif".equals(contentType)) {
+            return startsWith(header, "GIF87a".getBytes()) || startsWith(header, "GIF89a".getBytes());
+        }
+        if ("image/webp".equals(contentType)) {
+            return header.length >= 12
+                && header[0] == 'R' && header[1] == 'I' && header[2] == 'F' && header[3] == 'F'
+                && header[8] == 'W' && header[9] == 'E' && header[10] == 'B' && header[11] == 'P';
+        }
+        return false;
+    }
+
+    private boolean startsWith(byte[] value, byte[] prefix) {
+        if (value.length < prefix.length) {
+            return false;
+        }
+        for (int i = 0; i < prefix.length; i++) {
+            if (value[i] != prefix[i]) {
+                return false;
+            }
+        }
+        return true;
     }
 }

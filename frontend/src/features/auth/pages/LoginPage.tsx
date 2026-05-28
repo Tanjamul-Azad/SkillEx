@@ -80,7 +80,6 @@ function AuthPage() {
 
   return (
     <main className="relative grid min-h-screen w-full grid-cols-1 overflow-hidden bg-[#050914] lg:grid-cols-12">
-      <div className="absolute inset-0 bg-[url('/noise.png')] opacity-[0.03] mix-blend-overlay pointer-events-none z-10" />
       <div className="relative z-20 lg:col-span-6">
         <AuthGraphic />
       </div>

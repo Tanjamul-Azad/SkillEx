@@ -194,7 +194,7 @@ export const PostCard = React.memo(({ post, onDelete }: PostCardProps) => {
           {/* Media content */}
           {post.mediaUrl && (
             <div className="mt-4 relative rounded-xl overflow-hidden border border-primary/15 bg-background cursor-pointer" onClick={handleVideoToggle}>
-              {post.mediaUrl.match(/\.(mp4|webm|ogg)$/) || post.type === 'showcase' ? (
+              {post.mediaUrl.match(/\.(mp4|webm|ogg)$/i) ? (
                 <div className="relative aspect-video bg-card group/video">
                   <video 
                     ref={videoRef} 

@@ -151,7 +151,7 @@ public class CommunityServiceImpl implements CommunityService {
         boolean alreadyUpvoted = discussionUpvoteRepository.existsByIdDiscussionIdAndIdUserId(discussionId, userId);
 
         if (alreadyUpvoted) {
-            discussionUpvoteRepository.deleteByIdDiscussionIdAndIdUserId(discussionId, userId);
+            discussionUpvoteRepository.deleteById(new DiscussionUpvote.DiscussionUpvoteId(discussionId, userId));
             discussion.setUpvotes(Math.max(0, discussion.getUpvotes() - 1));
             return mapper.toDiscussion(discussionRepository.save(discussion), false);
         }
@@ -319,7 +319,7 @@ public class CommunityServiceImpl implements CommunityService {
             .orElseThrow(() -> new EntityNotFoundException("Post not found: " + postId));
 
         if (postLikeRepository.existsByIdPostIdAndIdUserId(postId, userId)) {
-            postLikeRepository.deleteByIdPostIdAndIdUserId(postId, userId);
+            postLikeRepository.deleteById(new PostLike.PostLikeId(postId, userId));
             post.setLikes(Math.max(0, post.getLikes() - 1));
             postRepository.save(post);
         }

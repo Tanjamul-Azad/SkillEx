@@ -8,7 +8,7 @@
     "java.import.gradle.wrapper.enabled": true,
     "java.gradle.buildServer.enabled": "on",
     "java.gradle.buildServer.openBuildOutput": "neverOpen",
-    "gradle.autoDetect": "off",
+    "gradle.autoDetect": "on",
     "gradle.projectOpenBehaviour": "Open",
     "java.import.maven.enabled": false,
     "java.project.importOnFirstTimeStartup": "automatic",

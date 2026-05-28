@@ -84,7 +84,7 @@ export const PostComposer = React.memo(({ onPost }: PostComposerProps) => {
         mediaUrl = await CommunityService.uploadMedia(attachedFile);
       }
 
-      const typeMap: Record<PostType, string> = { regular: 'EXCHANGE', question: 'QUESTION', showcase: 'SHOWCASE' };
+      const typeMap: Record<PostType, string> = { regular: 'SHOWCASE', question: 'QUESTION', showcase: 'SHOWCASE' };
       const newPost = await CommunityService.createPost({
         type: typeMap[postType],
         content: content.trim(),

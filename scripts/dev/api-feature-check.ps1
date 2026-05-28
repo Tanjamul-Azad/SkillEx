@@ -212,13 +212,14 @@ if (-not $tokenB) { Add-Result -Name "Token user B present" -Passed $false -Stat
 Invoke-Json -Name "Auth me user A" -Method Get -Path "/api/auth/me" -Token $tokenA | Out-Null
 Invoke-Json -Name "Users me user A" -Method Get -Path "/api/users/me" -Token $tokenA | Out-Null
 Invoke-Json -Name "Users profile by id user A" -Method Get -Path "/api/users/$userAId" -Token $tokenA | Out-Null
-Invoke-Json -Name "Users search" -Method Get -Path "/api/users?query=QA&page=0&size=10" -Token $tokenA | Out-Null
+Invoke-Json -Name "Users search" -Method Get -Path "/api/users/search?q=QA&page=0&size=10" -Token $tokenA | Out-Null
 Invoke-Json -Name "Update profile user A" -Method Patch -Path "/api/users/me" -Token $tokenA -Body @{ university = "QA Updated University"; bio = "API feature verification run." } | Out-Null
 
 # Skills add/remove
 if ($firstSkillId) {
   Invoke-Json -Name "Add skill offered user A" -Method Post -Path "/api/users/me/skills" -Token $tokenA -Body @{ skillId = $firstSkillId; type = "offered"; level = "MODERATE" } | Out-Null
   Invoke-Json -Name "Remove skill offered user A" -Method Delete -Path "/api/users/me/skills/$firstSkillId?type=offered" -Token $tokenA -Expected @(200, 404) | Out-Null
+  Invoke-Json -Name "Re-add skill offered user A" -Method Post -Path "/api/users/me/skills" -Token $tokenA -Body @{ skillId = $firstSkillId; type = "offered"; level = "MODERATE" } | Out-Null
 }
 
 # Change password then login with new password
@@ -226,6 +227,22 @@ $newPassA = "Passw0rd!A2"
 Invoke-Json -Name "Change password user A" -Method Post -Path "/api/users/me/change-password" -Token $tokenA -Body @{ currentPassword = $userAPass; newPassword = $newPassA } | Out-Null
 $loginA2 = Invoke-Json -Name "Login user A with new password" -Method Post -Path "/api/auth/login" -Body @{ email = $userAEmail; password = $newPassA }
 $tokenA = $loginA2.Json.data.token
+
+$adminLogin = Invoke-Json -Name "Login demo admin" -Method Post -Path "/api/auth/login" -Body @{ email = "admin@skillex.app"; password = "Admin1234!" }
+$tokenAdmin = $adminLogin.Json.data.token
+if (-not $tokenAdmin) { Add-Result -Name "Token admin present" -Passed $false -Status 0 -Info "Missing token for demo admin" }
+
+$walletBeforeReward = Invoke-Json -Name "Credit wallet before teaching reward" -Method Get -Path "/api/credits/wallet" -Token $tokenA
+$walletBalanceBeforeReward = 0
+if ($walletBeforeReward.Json -and $walletBeforeReward.Json.data) {
+  $walletBalanceBeforeReward = [int]$walletBeforeReward.Json.data.balance
+}
+Invoke-Json -Name "Credit transactions before reward" -Method Get -Path "/api/credits/transactions?page=0&size=20" -Token $tokenA | Out-Null
+Invoke-Json -Name "AI helper match guidance" -Method Post -Path "/api/ai/helper" -Token $tokenA -Body @{
+  contextType = "MATCH"
+  prompt = "How can I improve this exchange match?"
+  pagePath = "/match"
+} | Out-Null
 
 # Community create interactions
 $eventRes = Invoke-Json -Name "Create community event" -Method Post -Path "/api/community/events" -Token $tokenA -Body @{
@@ -260,6 +277,21 @@ $postRes = Invoke-Json -Name "Create post" -Method Post -Path "/api/community/po
 $postId = $postRes.Json.data.id
 if ($postId) {
   Invoke-Json -Name "Like post" -Method Post -Path "/api/community/posts/$postId/like" -Token $tokenB | Out-Null
+  Invoke-Json -Name "Unlike post" -Method Post -Path "/api/community/posts/$postId/unlike" -Token $tokenB | Out-Null
+  Invoke-Json -Name "Like post after unlike" -Method Post -Path "/api/community/posts/$postId/like" -Token $tokenB | Out-Null
+  Invoke-Json -Name "Add post comment" -Method Post -Path "/api/community/posts/$postId/comments" -Token $tokenB -Body @{ content = "QA comment $suffix" } | Out-Null
+  Invoke-Json -Name "List post comments" -Method Get -Path "/api/community/posts/$postId/comments?page=0&size=20" | Out-Null
+  Invoke-Json -Name "User posts" -Method Get -Path "/api/community/posts/user/$userAId?page=0&size=10" | Out-Null
+}
+
+$circleCreateRes = Invoke-Json -Name "Create skill circle" -Method Post -Path "/api/community/skill-circles" -Token $tokenA -Body @{
+  name = "QA Circle $suffix"
+  icon = "Code"
+  skillIds = @($firstSkillId)
+}
+$createdCircleId = $circleCreateRes.Json.data.id
+if ($createdCircleId) {
+  Invoke-Json -Name "Join created skill circle" -Method Post -Path "/api/community/skill-circles/$createdCircleId/join" -Token $tokenB | Out-Null
 }
 
 $circles = Invoke-Json -Name "Get circles for join" -Method Get -Path "/api/community/skill-circles?page=0&size=20"
@@ -272,6 +304,13 @@ if ($circleId) {
 } else {
   Add-Result -Name "Join skill circle" -Passed $true -Status 200 -Info "Skipped, no circles available"
 }
+
+Invoke-Json -Name "Community feed for you" -Method Get -Path "/api/community/feed?mode=for-you&page=0&size=10" -Token $tokenA | Out-Null
+Invoke-Json -Name "Community feed by skill" -Method Get -Path "/api/community/feed?mode=skill&skillId=$firstSkillId&page=0&size=10" -Token $tokenA | Out-Null
+Invoke-Json -Name "Community post intent search" -Method Get -Path "/api/community/posts/search?intent=QA&page=0&size=10" -Token $tokenA | Out-Null
+Invoke-Json -Name "Community trending skills" -Method Get -Path "/api/community/trending-skills" | Out-Null
+Invoke-Json -Name "Community suggested users" -Method Get -Path "/api/community/suggested-users" -Token $tokenA | Out-Null
+Invoke-Json -Name "Community online count" -Method Get -Path "/api/community/online-count" | Out-Null
 
 # Exchange workflow A->B
 $exchangeRes = Invoke-Json -Name "Create exchange" -Method Post -Path "/api/exchanges" -Token $tokenA -Body @{
@@ -287,6 +326,10 @@ if ($exchangeId) {
   Invoke-Json -Name "Get exchange by id B" -Method Get -Path "/api/exchanges/$exchangeId" -Token $tokenB | Out-Null
   Invoke-Json -Name "Accept exchange as B" -Method Patch -Path "/api/exchanges/$exchangeId/status" -Token $tokenB -Body @{ status = "ACCEPTED" } | Out-Null
 }
+Invoke-Json -Name "Exchange relationship A to B" -Method Get -Path "/api/exchanges/relationship/$userBId" -Token $tokenA | Out-Null
+Invoke-Json -Name "Connection relationship A to B" -Method Get -Path "/api/connections/relationship/$userBId" -Token $tokenA | Out-Null
+Invoke-Json -Name "List accepted connections A" -Method Get -Path "/api/connections?status=ACCEPTED&direction=all&page=0&size=20" -Token $tokenA | Out-Null
+Invoke-Json -Name "Pending connection count B" -Method Get -Path "/api/connections/pending-count" -Token $tokenB | Out-Null
 
 # Session workflow
 $sessionId = $null
@@ -306,7 +349,16 @@ if ($exchangeId) {
 Invoke-Json -Name "List sessions A" -Method Get -Path "/api/sessions?page=0&size=20" -Token $tokenA | Out-Null
 if ($sessionId) {
   Invoke-Json -Name "Get session by id B" -Method Get -Path "/api/sessions/$sessionId" -Token $tokenB | Out-Null
-  Invoke-Json -Name "Cancel session as B" -Method Patch -Path "/api/sessions/$sessionId/cancel" -Token $tokenB | Out-Null
+  Invoke-Json -Name "Accept session as B" -Method Put -Path "/api/sessions/$sessionId/accept" -Token $tokenB -Body @{} | Out-Null
+  Invoke-Json -Name "Complete session as A" -Method Patch -Path "/api/sessions/$sessionId/complete" -Token $tokenA -Body @{} | Out-Null
+  $walletAfterReward = Invoke-Json -Name "Credit wallet after teaching reward" -Method Get -Path "/api/credits/wallet" -Token $tokenA
+  if ($walletAfterReward.Json -and $walletAfterReward.Json.data) {
+    $afterRewardBalance = [int]$walletAfterReward.Json.data.balance
+    Add-Result -Name "Teaching reward increases wallet by 15" -Passed ($afterRewardBalance -eq ($walletBalanceBeforeReward + 15)) -Status 200 -Info "before=$walletBalanceBeforeReward after=$afterRewardBalance"
+  } else {
+    Add-Result -Name "Teaching reward increases wallet by 15" -Passed $false -Status 0 -Info "Missing wallet response after completion"
+  }
+  Invoke-Json -Name "Credit transactions after teaching reward" -Method Get -Path "/api/credits/transactions?page=0&size=20" -Token $tokenA | Out-Null
 }
 
 # Reviews
@@ -321,6 +373,141 @@ if ($sessionId) {
 }
 Invoke-Json -Name "List reviews for user A" -Method Get -Path "/api/reviews?userId=$userAId&page=0&size=10" -Token $tokenA | Out-Null
 
+# Separate cancellation lifecycle check, because reviews are only valid after completed sessions.
+$cancelSessionRes = $null
+if ($exchangeId) {
+  $cancelSessionRes = Invoke-Json -Name "Create cancellable session" -Method Post -Path "/api/sessions" -Token $tokenA -Body @{
+    exchangeId = $exchangeId
+    teacherId = $userAId
+    learnerId = $userBId
+    skillId = $firstSkillId
+    scheduledAt = (Get-Date).AddDays(2).ToString("yyyy-MM-ddTHH:mm:ss")
+    durationMins = 60
+    meetLink = "https://meet.example.com/qa-cancel-$suffix"
+  }
+}
+$cancelSessionId = $cancelSessionRes.Json.data.id
+if ($cancelSessionId) {
+  Invoke-Json -Name "Cancel session as B" -Method Patch -Path "/api/sessions/$cancelSessionId/cancel" -Token $tokenB -Body @{} | Out-Null
+}
+
+# Credit payment spend/refund workflow
+$walletBeforeCreditPayment = Invoke-Json -Name "Credit wallet before credit exchange" -Method Get -Path "/api/credits/wallet" -Token $tokenA
+$balanceBeforeCreditPayment = if ($walletBeforeCreditPayment.Json -and $walletBeforeCreditPayment.Json.data) { [int]$walletBeforeCreditPayment.Json.data.balance } else { 0 }
+$creditExchangeRes = Invoke-Json -Name "Create credit payment exchange" -Method Post -Path "/api/exchanges" -Token $tokenA -Body @{
+  receiverId = $userBId
+  wantedSkillId = $firstSkillId
+  mode = "CREDIT_PAYMENT"
+  message = "QA credit payment request"
+}
+$creditExchangeId = $creditExchangeRes.Json.data.id
+$creditCost = if ($creditExchangeRes.Json -and $creditExchangeRes.Json.data -and $creditExchangeRes.Json.data.creditCost) { [int]$creditExchangeRes.Json.data.creditCost } else { 10 }
+$walletAfterCreditCharge = Invoke-Json -Name "Credit wallet after credit exchange charge" -Method Get -Path "/api/credits/wallet" -Token $tokenA
+if ($walletAfterCreditCharge.Json -and $walletAfterCreditCharge.Json.data) {
+  $balanceAfterCreditCharge = [int]$walletAfterCreditCharge.Json.data.balance
+  Add-Result -Name "Credit exchange charge decreases wallet" -Passed ($balanceAfterCreditCharge -eq ($balanceBeforeCreditPayment - $creditCost)) -Status 200 -Info "before=$balanceBeforeCreditPayment cost=$creditCost after=$balanceAfterCreditCharge"
+}
+if ($creditExchangeId) {
+  Invoke-Json -Name "Reject credit exchange as B" -Method Put -Path "/api/exchanges/$creditExchangeId/reject" -Token $tokenB -Body @{} | Out-Null
+}
+$walletAfterCreditRefund = Invoke-Json -Name "Credit wallet after credit exchange refund" -Method Get -Path "/api/credits/wallet" -Token $tokenA
+if ($walletAfterCreditRefund.Json -and $walletAfterCreditRefund.Json.data) {
+  $balanceAfterCreditRefund = [int]$walletAfterCreditRefund.Json.data.balance
+  Add-Result -Name "Credit exchange refund restores wallet" -Passed ($balanceAfterCreditRefund -eq $balanceBeforeCreditPayment) -Status 200 -Info "before=$balanceBeforeCreditPayment after=$balanceAfterCreditRefund"
+}
+
+# Live room, transcript, generated notes, and room completion reward
+$roomSessionId = $null
+if ($exchangeId) {
+  $roomSessionRes = Invoke-Json -Name "Create live room session" -Method Post -Path "/api/sessions" -Token $tokenA -Body @{
+    exchangeId = $exchangeId
+    teacherId = $userAId
+    learnerId = $userBId
+    skillId = $firstSkillId
+    scheduledAt = (Get-Date).AddDays(3).ToString("yyyy-MM-ddTHH:mm:ss")
+    durationMins = 45
+    meetLink = "https://meet.example.com/qa-room-$suffix"
+    sessionType = "VIDEO"
+  }
+  $roomSessionId = $roomSessionRes.Json.data.id
+}
+
+if ($roomSessionId) {
+  Invoke-Json -Name "Accept live room session as B" -Method Put -Path "/api/sessions/$roomSessionId/accept" -Token $tokenB -Body @{} | Out-Null
+  $walletBeforeRoomEnd = Invoke-Json -Name "Credit wallet before room end" -Method Get -Path "/api/credits/wallet" -Token $tokenA
+  $balanceBeforeRoomEnd = if ($walletBeforeRoomEnd.Json -and $walletBeforeRoomEnd.Json.data) { [int]$walletBeforeRoomEnd.Json.data.balance } else { 0 }
+  Invoke-Json -Name "Join live room as A" -Method Post -Path "/api/sessions/$roomSessionId/join" -Token $tokenA -Body @{} | Out-Null
+  Invoke-Json -Name "Get live room presence" -Method Get -Path "/api/sessions/$roomSessionId/presence" -Token $tokenA | Out-Null
+  Invoke-Json -Name "Submit transcript as A" -Method Post -Path "/api/sessions/$roomSessionId/transcribe/text" -Token $tokenA -Body @{ text = "Today we covered the practical roadmap and next steps for the skill exchange."; confidenceScore = 0.96; detectedLanguage = "en" } | Out-Null
+  Invoke-Json -Name "Submit transcript as B" -Method Post -Path "/api/sessions/$roomSessionId/transcribe/text" -Token $tokenB -Body @{ text = "I understood the plan and will practice the assignment before our next session."; confidenceScore = 0.94; detectedLanguage = "en" } | Out-Null
+  Invoke-Json -Name "Get live room transcript" -Method Get -Path "/api/sessions/$roomSessionId/transcript" -Token $tokenA | Out-Null
+  Invoke-Json -Name "Trigger generated notes" -Method Post -Path "/api/sessions/$roomSessionId/notes/generate" -Token $tokenA -Body @{} -Expected @(202) | Out-Null
+
+  $notesReady = $false
+  $notesStatus = 0
+  for ($attempt = 1; $attempt -le 12; $attempt++) {
+    Start-Sleep -Seconds 1
+    try {
+      $headers = @{ Authorization = "Bearer $tokenA" }
+      $notesResp = Invoke-WebRequest -Uri "$BaseUrl/api/sessions/$roomSessionId/notes" -Method Get -Headers $headers -UseBasicParsing -TimeoutSec 10
+      $notesStatus = [int]$notesResp.StatusCode
+      if ($notesStatus -eq 200) {
+        $notesReady = $true
+        break
+      }
+    } catch {
+      if ($_.Exception.Response) {
+        $notesStatus = [int]$_.Exception.Response.StatusCode.value__
+      }
+    }
+  }
+  Add-Result -Name "Generated notes ready" -Passed $notesReady -Status $notesStatus -Info "roomSessionId=$roomSessionId"
+  if ($notesReady) {
+    Invoke-Json -Name "Export generated notes markdown" -Method Get -Path "/api/sessions/$roomSessionId/notes/export?format=md" -Token $tokenA -Expected @(200) | Out-Null
+  }
+  Invoke-Json -Name "End live room as A" -Method Post -Path "/api/sessions/$roomSessionId/end" -Token $tokenA -Body @{} | Out-Null
+  Invoke-Json -Name "Leave live room as B" -Method Post -Path "/api/sessions/$roomSessionId/leave" -Token $tokenB -Body @{} | Out-Null
+  $walletAfterRoomEnd = Invoke-Json -Name "Credit wallet after room end" -Method Get -Path "/api/credits/wallet" -Token $tokenA
+  if ($walletAfterRoomEnd.Json -and $walletAfterRoomEnd.Json.data) {
+    $balanceAfterRoomEnd = [int]$walletAfterRoomEnd.Json.data.balance
+    Add-Result -Name "Room end teaching reward increases wallet by 15" -Passed ($balanceAfterRoomEnd -eq ($balanceBeforeRoomEnd + 15)) -Status 200 -Info "before=$balanceBeforeRoomEnd after=$balanceAfterRoomEnd"
+  }
+}
+
+# Skill checks and skill-check credit rewards
+$skillCheckRes = Invoke-Json -Name "Create skill check" -Method Post -Path "/api/skill-checks" -Token $tokenB -Body @{
+  targetUserId = $userAId
+  skillId = $firstSkillId
+  message = "QA skill check request"
+  scheduledAt = (Get-Date).AddDays(4).ToString("yyyy-MM-ddTHH:mm:ss")
+}
+$skillCheckId = $skillCheckRes.Json.data.id
+Invoke-Json -Name "List skill checks B" -Method Get -Path "/api/skill-checks?page=0&size=20" -Token $tokenB | Out-Null
+if ($skillCheckId) {
+  $walletBeforeSkillCheckA = Invoke-Json -Name "Credit wallet A before skill check feedback" -Method Get -Path "/api/credits/wallet" -Token $tokenA
+  $walletBeforeSkillCheckB = Invoke-Json -Name "Credit wallet B before skill check feedback" -Method Get -Path "/api/credits/wallet" -Token $tokenB
+  $balanceBeforeSkillCheckA = if ($walletBeforeSkillCheckA.Json -and $walletBeforeSkillCheckA.Json.data) { [int]$walletBeforeSkillCheckA.Json.data.balance } else { 0 }
+  $balanceBeforeSkillCheckB = if ($walletBeforeSkillCheckB.Json -and $walletBeforeSkillCheckB.Json.data) { [int]$walletBeforeSkillCheckB.Json.data.balance } else { 0 }
+  Invoke-Json -Name "Skill check feedback from B" -Method Post -Path "/api/skill-checks/$skillCheckId/feedback" -Token $tokenB -Body @{ outcome = "SUITABLE"; comment = "Clear explanation and useful demo." } | Out-Null
+  Invoke-Json -Name "Skill check feedback from A" -Method Post -Path "/api/skill-checks/$skillCheckId/feedback" -Token $tokenA -Body @{ outcome = "SUITABLE"; comment = "Learner was prepared and understood the task." } | Out-Null
+  $walletAfterSkillCheckA = Invoke-Json -Name "Credit wallet A after skill check feedback" -Method Get -Path "/api/credits/wallet" -Token $tokenA
+  $walletAfterSkillCheckB = Invoke-Json -Name "Credit wallet B after skill check feedback" -Method Get -Path "/api/credits/wallet" -Token $tokenB
+  if ($walletAfterSkillCheckA.Json -and $walletAfterSkillCheckA.Json.data) {
+    $balanceAfterSkillCheckA = [int]$walletAfterSkillCheckA.Json.data.balance
+    Add-Result -Name "Skill check rewards target credits" -Passed ($balanceAfterSkillCheckA -eq ($balanceBeforeSkillCheckA + 2)) -Status 200 -Info "before=$balanceBeforeSkillCheckA after=$balanceAfterSkillCheckA"
+  }
+  if ($walletAfterSkillCheckB.Json -and $walletAfterSkillCheckB.Json.data) {
+    $balanceAfterSkillCheckB = [int]$walletAfterSkillCheckB.Json.data.balance
+    Add-Result -Name "Skill check rewards requester credits" -Passed ($balanceAfterSkillCheckB -eq ($balanceBeforeSkillCheckB + 2)) -Status 200 -Info "before=$balanceBeforeSkillCheckB after=$balanceAfterSkillCheckB"
+  }
+}
+
+Invoke-Json -Name "My certificates" -Method Get -Path "/api/certificates/me" -Token $tokenA | Out-Null
+Invoke-Json -Name "User certificates" -Method Get -Path "/api/users/$userAId/certificates" | Out-Null
+Invoke-Json -Name "My badges" -Method Get -Path "/api/badges/me" -Token $tokenA | Out-Null
+Invoke-Json -Name "User badges" -Method Get -Path "/api/users/$userAId/badges" | Out-Null
+Invoke-Json -Name "Public GitHub badge SVG" -Method Get -Path "/api/public/badges/github/$userAId/$firstSkillId" -Expected @(200) | Out-Null
+
 # Notifications + dashboard
 $notifRes = Invoke-Json -Name "List notifications" -Method Get -Path "/api/notifications?page=0&size=20" -Token $tokenA
 Invoke-Json -Name "Mark all notifications read" -Method Post -Path "/api/notifications/read-all" -Token $tokenA -Body @{} | Out-Null
@@ -332,13 +519,17 @@ if ($notifRes.Json -and $notifRes.Json.data -and $notifRes.Json.data.content -an
 }
 
 Invoke-Json -Name "Dashboard stats" -Method Get -Path "/api/dashboard/stats" -Token $tokenA | Out-Null
+Invoke-Json -Name "Dashboard smart actions" -Method Get -Path "/api/dashboard/smart-actions" -Token $tokenA | Out-Null
 
 # Messages + match
+Invoke-Json -Name "Send direct message" -Method Post -Path "/api/messages/$userBId" -Token $tokenA -Body @{ content = "QA message $suffix"; type = "TEXT" } | Out-Null
 Invoke-Json -Name "List conversations" -Method Get -Path "/api/messages/conversations" -Token $tokenA | Out-Null
 Invoke-Json -Name "Get message history" -Method Get -Path "/api/messages/$userBId?page=0&size=20" -Token $tokenA | Out-Null
 Invoke-Json -Name "Mark messages read" -Method Patch -Path "/api/messages/$userBId/read" -Token $tokenA -Body @{} | Out-Null
 
 Invoke-Json -Name "Match users" -Method Get -Path "/api/match/users?limit=10" -Token $tokenA | Out-Null
+Invoke-Json -Name "Match compatibility target B" -Method Get -Path "/api/match/$userBId" -Token $tokenA | Out-Null
+Invoke-Json -Name "Match explanation target B" -Method Get -Path "/api/match/explain/$userBId" -Token $tokenA | Out-Null
 Invoke-Json -Name "Match chains" -Method Get -Path "/api/match/chains?maxDepth=4&limit=10" -Token $tokenA | Out-Null
 Invoke-Json -Name "Match cycles" -Method Get -Path "/api/match/cycles?maxLength=4&limit=10" -Token $tokenA | Out-Null
 Invoke-Json -Name "Match top cycles" -Method Get -Path "/api/match/top-cycles?maxLength=4&limit=10" -Token $tokenA | Out-Null
@@ -351,6 +542,84 @@ $uploadRes = Invoke-Multipart -Name "Upload file authenticated" -Path "/api/uplo
 if ($uploadRes.Json -and $uploadRes.Json.data -and $uploadRes.Json.data.url) {
   $uploadedPath = $uploadRes.Json.data.url
   Invoke-Json -Name "Fetch uploaded static file" -Method Get -Path $uploadedPath -Expected @(200) | Out-Null
+}
+
+Invoke-Json -Name "Platform analytics" -Method Get -Path "/api/analytics/platform?limit=5" -Token $tokenA | Out-Null
+Invoke-Json -Name "Create platform feedback" -Method Post -Path "/api/feedbacks" -Token $tokenA -Body @{ rating = 5; comment = "QA feedback $suffix" } | Out-Null
+Invoke-Json -Name "List platform feedback" -Method Get -Path "/api/feedbacks" | Out-Null
+
+# Moderation and admin workflow
+$reportId = $null
+if ($postId) {
+  $reportRes = Invoke-Json -Name "Create moderation report" -Method Post -Path "/api/moderation/reports" -Token $tokenB -Body @{
+    targetType = "POST"
+    targetId = $postId
+    targetUserId = $userAId
+    category = "QA_TEST"
+    reason = "QA report to verify moderation case creation."
+    evidence = "Automated showcase readiness check."
+  }
+  $reportId = $reportRes.Json.data.id
+}
+
+Invoke-Json -Name "Admin overview" -Method Get -Path "/api/admin/overview" -Token $tokenAdmin | Out-Null
+Invoke-Json -Name "Admin audit logs" -Method Get -Path "/api/admin/audit-logs?page=0&size=20" -Token $tokenAdmin | Out-Null
+Invoke-Json -Name "Admin list moderation reports" -Method Get -Path "/api/moderation/reports?page=0&size=20" -Token $tokenAdmin | Out-Null
+$casesRes = Invoke-Json -Name "Admin list moderation cases" -Method Get -Path "/api/moderation/cases?page=0&size=20" -Token $tokenAdmin
+$caseId = $null
+if ($casesRes.Json -and $casesRes.Json.data -and $casesRes.Json.data.content -and $casesRes.Json.data.content.Count -gt 0) {
+  $caseId = $casesRes.Json.data.content[0].id
+}
+if ($caseId) {
+  Invoke-Json -Name "Admin get moderation case" -Method Get -Path "/api/moderation/cases/$caseId" -Token $tokenAdmin | Out-Null
+  Invoke-Json -Name "Admin apply moderation warning" -Method Post -Path "/api/moderation/actions" -Token $tokenAdmin -Body @{
+    caseId = $caseId
+    targetUserId = $userAId
+    targetType = "POST"
+    targetId = $postId
+    actionType = "WARN"
+    severity = "LOW"
+    reason = "QA moderation warning"
+    evidence = "Automated readiness flow"
+    durationHours = 24
+  } | Out-Null
+}
+Invoke-Json -Name "User A restrictions after moderation" -Method Get -Path "/api/users/me/restrictions" -Token $tokenA | Out-Null
+Invoke-Json -Name "Admin list user moderation actions" -Method Get -Path "/api/moderation/users/$userAId/actions?page=0&size=20" -Token $tokenAdmin | Out-Null
+Invoke-Json -Name "Admin list rules" -Method Get -Path "/api/admin/rules" -Token $tokenAdmin | Out-Null
+$ruleRes = Invoke-Json -Name "Admin create rule" -Method Post -Path "/api/admin/rules" -Token $tokenAdmin -Body @{
+  code = "QA_RULE_$suffix"
+  title = "QA Rule $suffix"
+  description = "Temporary rule generated by readiness check."
+  category = "QA"
+  severity = "LOW"
+  defaultAction = "NO_ACTION"
+  active = $true
+}
+$ruleId = $ruleRes.Json.data.id
+if ($ruleId) {
+  Invoke-Json -Name "Admin update rule" -Method Put -Path "/api/admin/rules/$ruleId" -Token $tokenAdmin -Body @{
+    code = "QA_RULE_$suffix"
+    title = "QA Rule Updated $suffix"
+    description = "Updated by readiness check."
+    category = "QA"
+    severity = "LOW"
+    defaultAction = "NO_ACTION"
+    active = $false
+  } | Out-Null
+}
+Invoke-Json -Name "Admin pending skills list" -Method Get -Path "/api/skills/pending?limit=20" -Token $tokenAdmin | Out-Null
+
+$walletBeforeAdminAdjust = Invoke-Json -Name "Credit wallet before admin adjustment" -Method Get -Path "/api/credits/wallet" -Token $tokenA
+$balanceBeforeAdminAdjust = if ($walletBeforeAdminAdjust.Json -and $walletBeforeAdminAdjust.Json.data) { [int]$walletBeforeAdminAdjust.Json.data.balance } else { 0 }
+$adminAdjustRes = Invoke-Json -Name "Admin adjust credits" -Method Post -Path "/api/credits/admin/adjust" -Token $tokenAdmin -Body @{
+  userId = $userAId
+  amount = 3
+  reason = "QA admin adjustment"
+}
+if ($adminAdjustRes.Json -and $adminAdjustRes.Json.data) {
+  $balanceAfterAdminAdjust = [int]$adminAdjustRes.Json.data.balance
+  Add-Result -Name "Admin adjustment increases wallet" -Passed ($balanceAfterAdminAdjust -eq ($balanceBeforeAdminAdjust + 3)) -Status 200 -Info "before=$balanceBeforeAdminAdjust after=$balanceAfterAdminAdjust"
 }
 
 # Unauthorized check

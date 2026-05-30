@@ -10,6 +10,8 @@ public record SkillCheckMeetingDto(
     UserSummaryDto targetUser,
     SkillRef skill,
     String status,
+    String requesterOutcome,
+    String targetOutcome,
     boolean checklistIntro,
     boolean checklistDemo,
     boolean checklistGoalAlignment,

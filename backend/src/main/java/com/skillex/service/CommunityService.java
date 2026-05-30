@@ -21,7 +21,7 @@ public interface CommunityService {
 
     // ── Discussions ──────────────────────────────────────────────────────────
 
-    PagedResponse<CommunityDtos.DiscussionDto> getDiscussions(int page, int size);
+    PagedResponse<CommunityDtos.DiscussionDto> getDiscussions(String viewerId, int page, int size);
 
     CommunityDtos.DiscussionDto createDiscussion(String authorId, CreateDiscussionRequest req);
 
@@ -40,6 +40,8 @@ public interface CommunityService {
     CommunityDtos.PostDto createPost(String authorId, CreatePostRequest req);
 
     CommunityDtos.PostDto likePost(String userId, String postId);
+
+    CommunityDtos.PostDto unlikePost(String userId, String postId);
 
     void deletePost(String userId, String postId);
 

@@ -16,6 +16,7 @@ public record CreateSessionRequest(
     String skillId,
     @NotNull @Future LocalDateTime scheduledAt,
     @Min(15) @Max(240) int durationMins,
-    String meetLink,      // optional
-    String sessionType    // optional — "VIDEO" (default) or "AUDIO"
+    String meetLink,
+    String notes,
+    String sessionType
 ) {}

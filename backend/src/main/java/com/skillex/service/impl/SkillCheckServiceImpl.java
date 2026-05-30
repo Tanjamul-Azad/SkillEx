@@ -16,6 +16,7 @@ import com.skillex.repository.UserSkillOfferedRepository;
 import com.skillex.service.AccountRestrictionService;
 import com.skillex.service.CreditService;
 import com.skillex.service.DtoMapper;
+import com.skillex.service.ProgressService;
 import com.skillex.service.SkillCheckService;
 import jakarta.persistence.EntityNotFoundException;
 import lombok.RequiredArgsConstructor;
@@ -35,6 +36,7 @@ public class SkillCheckServiceImpl implements SkillCheckService {
     private final DtoMapper mapper;
     private final AccountRestrictionService restrictionService;
     private final CreditService creditService;
+    private final ProgressService progressService;
 
     @Override
     @Transactional
@@ -91,22 +93,39 @@ public class SkillCheckServiceImpl implements SkillCheckService {
         meeting.setChecklistDemo(true);
         meeting.setChecklistGoalAlignment(true);
         meeting.setChecklistScheduleFit(true);
-        if (feedbackRepository.countByMeetingId(meetingId) >= 2) {
+        boolean alreadyCompleted = meeting.getStatus() == SkillCheckMeeting.SkillCheckStatus.COMPLETED;
+        if (!alreadyCompleted && feedbackRepository.countByMeetingId(meetingId) >= 2) {
             meeting.setStatus(SkillCheckMeeting.SkillCheckStatus.COMPLETED);
             creditService.rewardSkillCheck(meeting.getRequester().getId(), 2, "Skill check participation reward");
             creditService.rewardSkillCheck(meeting.getTargetUser().getId(), 2, "Skill check participation reward");
+            progressService.awardXp(meeting.getRequester().getId(), "SKILL_CHECK_COMPLETED", meeting.getId(), 25, "Completed a skill verification flow.");
+            progressService.awardXp(meeting.getTargetUser().getId(), "SKILL_CHECK_COMPLETED", meeting.getId(), 25, "Completed a skill verification flow.");
         }
         return toDto(meetingRepository.save(meeting));
     }
 
     private SkillCheckMeetingDto toDto(SkillCheckMeeting meeting) {
         Skill skill = meeting.getSkill();
+        String requesterOutcome = feedbackRepository.findByMeetingIdAndReviewerId(
+                meeting.getId(),
+                meeting.getRequester().getId()
+            )
+            .map(feedback -> feedback.getOutcome().name())
+            .orElse(null);
+        String targetOutcome = feedbackRepository.findByMeetingIdAndReviewerId(
+                meeting.getId(),
+                meeting.getTargetUser().getId()
+            )
+            .map(feedback -> feedback.getOutcome().name())
+            .orElse(null);
         return new SkillCheckMeetingDto(
             meeting.getId(),
             mapper.toSummary(meeting.getRequester()),
             mapper.toSummary(meeting.getTargetUser()),
             new SkillCheckMeetingDto.SkillRef(skill.getId(), skill.getName(), skill.getIcon(), skill.getCategory()),
             meeting.getStatus().name(),
+            requesterOutcome,
+            targetOutcome,
             Boolean.TRUE.equals(meeting.getChecklistIntro()),
             Boolean.TRUE.equals(meeting.getChecklistDemo()),
             Boolean.TRUE.equals(meeting.getChecklistGoalAlignment()),

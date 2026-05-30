@@ -46,6 +46,59 @@ export interface User {
   joinedAt: string;
 }
 
+export interface UserProgress {
+  userId: string;
+  totalXp: number;
+  currentLevel: number;
+  xpIntoLevel: number;
+  xpForNextLevel: number;
+  levelProgressPercent: number;
+  currentStreakDays: number;
+  longestStreakDays: number;
+  weeklyGoal: number;
+  lastActivityDate?: string | null;
+  updatedAt: string;
+}
+
+export interface XpEvent {
+  id: string;
+  sourceType: string;
+  sourceId?: string | null;
+  xpDelta: number;
+  reason: string;
+  occurredAt: string;
+}
+
+export type PortfolioProofType =
+  | 'PROJECT'
+  | 'GITHUB'
+  | 'BEHANCE'
+  | 'CERTIFICATE'
+  | 'SESSION_OUTCOME'
+  | 'MEDIA'
+  | 'OTHER';
+
+export interface PortfolioProof {
+  id: string;
+  userId: string;
+  skill?: {
+    id: string;
+    name: string;
+    icon?: string | null;
+    category?: string | null;
+  } | null;
+  title: string;
+  description?: string | null;
+  proofType: PortfolioProofType | string;
+  url?: string | null;
+  mediaUrl?: string | null;
+  sourceSessionId?: string | null;
+  visibility: 'PUBLIC' | 'PRIVATE' | string;
+  featured: boolean;
+  createdAt: string;
+  updatedAt: string;
+}
+
 export interface SkillMatch {
   id: string;
   userA: User;
@@ -120,6 +173,7 @@ export interface Discussion {
   category: string;
   content: string;
   upvotes: number;
+  isUpvotedByViewer?: boolean;
   replies: number;
   views: number;
   createdAt: string;

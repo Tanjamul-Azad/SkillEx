@@ -1,6 +1,7 @@
 package com.skillex.dto.message;
 
 import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.Pattern;
 import jakarta.validation.constraints.Size;
 
 /**
@@ -10,7 +11,7 @@ public record SendMessageRequest(
     @NotBlank String toUserId,
     @Size(max = 4000) String content,
     /** "TEXT" (default) or "IMAGE" */
-    String type,
+    @Pattern(regexp = "TEXT|IMAGE", flags = Pattern.Flag.CASE_INSENSITIVE) String type,
     /** Optional image URL for image messages */
-    String imageUrl
+    @Size(max = 500) String imageUrl
 ) {}

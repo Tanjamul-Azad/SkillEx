@@ -50,14 +50,25 @@ public interface ExchangeRepository extends JpaRepository<Exchange, String> {
 
     @Query("SELECT e FROM Exchange e WHERE (e.requester.id = :userId OR e.receiver.id = :userId) AND e.status = :status")
     Page<Exchange> findByRequesterIdOrReceiverIdAndStatus(
-        @Param("userId") String userId1,
-        @Param("userId") String userId2,
+        @Param("userId") String userId,
+        @Param("status") ExchangeStatus status,
+        Pageable pageable);
+
+    @Query("SELECT e FROM Exchange e WHERE (e.requester.id = :requesterId OR e.receiver.id = :receiverId) AND e.status = :status")
+    Page<Exchange> findByRequesterIdOrReceiverIdAndStatus(
+        @Param("requesterId") String requesterId,
+        @Param("receiverId") String receiverId,
         @Param("status") ExchangeStatus status,
         Pageable pageable);
 
     @Query("SELECT COUNT(e) FROM Exchange e WHERE (e.requester.id = :userId OR e.receiver.id = :userId) AND e.status = :status")
     long countByRequesterIdOrReceiverIdAndStatus(
         @Param("userId") String userId,
-        @Param("userId") String userId2,
+        @Param("status") ExchangeStatus status);
+
+    @Query("SELECT COUNT(e) FROM Exchange e WHERE (e.requester.id = :requesterId OR e.receiver.id = :receiverId) AND e.status = :status")
+    long countByRequesterIdOrReceiverIdAndStatus(
+        @Param("requesterId") String requesterId,
+        @Param("receiverId") String receiverId,
         @Param("status") ExchangeStatus status);
 }

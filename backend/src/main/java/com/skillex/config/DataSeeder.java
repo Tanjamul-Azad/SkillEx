@@ -6,6 +6,7 @@ import com.skillex.model.UserSkillOffered.UserSkillId;
 import com.skillex.repository.*;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.boot.context.event.ApplicationReadyEvent;
 import org.springframework.context.event.EventListener;
 import org.springframework.security.crypto.password.PasswordEncoder;
@@ -25,6 +26,7 @@ import java.util.List;
  */
 @Slf4j
 @Component
+@ConditionalOnProperty(name = "app.demo.seed.enabled", havingValue = "true")
 @RequiredArgsConstructor
 public class DataSeeder {
 

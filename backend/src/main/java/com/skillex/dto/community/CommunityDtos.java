@@ -31,6 +31,7 @@ public final class CommunityDtos {
         UserSummaryDto author,
         String category,
         int upvotes,
+        boolean isUpvotedByViewer,
         int replies,
         int views,
         boolean isPinned,

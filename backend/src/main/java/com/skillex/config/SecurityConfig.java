@@ -6,6 +6,7 @@ import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.http.HttpMethod;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
+import org.springframework.security.config.annotation.method.configuration.EnableMethodSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
 import org.springframework.security.config.annotation.web.configurers.AbstractHttpConfigurer;
 import org.springframework.security.config.http.SessionCreationPolicy;
@@ -29,6 +30,7 @@ import java.util.List;
  */
 @Configuration
 @EnableWebSecurity
+@EnableMethodSecurity
 @RequiredArgsConstructor
 public class SecurityConfig {
 
@@ -42,7 +44,7 @@ public class SecurityConfig {
         http
             .csrf(AbstractHttpConfigurer::disable)
             .cors(cors -> cors.configurationSource(corsConfigurationSource()))
-            .sessionManagement(s -> s.sessionCreationPolicy(SessionCreationPolicy.IF_REQUIRED))
+            .sessionManagement(s -> s.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
             .authorizeHttpRequests(auth -> auth
                 .requestMatchers(HttpMethod.POST, "/api/auth/login", "/api/auth/register", "/api/auth/refresh", "/api/auth/firebase/google").permitAll()
                 .requestMatchers(HttpMethod.POST, "/api/skills/interpret").permitAll()
@@ -50,11 +52,15 @@ public class SecurityConfig {
                 .requestMatchers("/ws/**", "/ws/info").permitAll()
                 // Static uploads
                 .requestMatchers("/uploads/**").permitAll()
+                .requestMatchers("/api/admin/**", "/api/skills/pending/**").hasRole("ADMIN")
+                .requestMatchers(HttpMethod.POST, "/api/credits/admin/**", "/api/moderation/actions").hasRole("ADMIN")
+                .requestMatchers(HttpMethod.GET, "/api/moderation/reports", "/api/moderation/cases/**", "/api/moderation/users/**").hasRole("ADMIN")
                 // Public read-only routes — skills catalogue, feedbacks and community browsing
                 .requestMatchers(HttpMethod.GET, "/api/skills", "/api/skills/**").permitAll()
                 .requestMatchers(HttpMethod.GET, "/api/feedbacks").permitAll()
                 .requestMatchers(HttpMethod.GET, "/api/public/**").permitAll()
                 .requestMatchers(HttpMethod.GET, "/api/users/*/certificates", "/api/users/*/badges").permitAll()
+                .requestMatchers(HttpMethod.GET, "/api/users/*/progress", "/api/users/*/portfolio-proofs").permitAll()
                 .requestMatchers(HttpMethod.GET,
                     "/api/community/events",
                     "/api/community/events/**",

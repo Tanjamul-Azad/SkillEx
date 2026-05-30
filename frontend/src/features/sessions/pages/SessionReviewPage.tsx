@@ -34,7 +34,7 @@ export default function SessionReviewPage() {
 
     let pollAttempts = 0;
     const maxPolls = 20; // Up to 80 seconds of polling
-    let intervalId: any;
+    let intervalId: ReturnType<typeof setInterval> | undefined;
 
     const checkNotes = async () => {
       try {

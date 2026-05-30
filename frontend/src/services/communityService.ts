@@ -10,6 +10,32 @@ export interface PagedResponse<T> {
   last: boolean;
 }
 
+const normalizePost = (post: Post): Post => ({
+  ...post,
+  type: String(post.type).toLowerCase() as Post['type'],
+  createdAt: post.createdAt ?? new Date().toISOString(),
+  likes: Number(post.likes ?? 0),
+  comments: Number(post.comments ?? 0),
+});
+
+const normalizePostPage = (page: PagedResponse<Post>): PagedResponse<Post> => ({
+  ...page,
+  content: (page.content ?? []).map(normalizePost),
+});
+
+const normalizeDiscussion = (discussion: Discussion): Discussion => ({
+  ...discussion,
+  createdAt: discussion.createdAt ?? new Date().toISOString(),
+  upvotes: Number(discussion.upvotes ?? 0),
+  replies: Number(discussion.replies ?? 0),
+  views: Number(discussion.views ?? 0),
+});
+
+const normalizeDiscussionPage = (page: PagedResponse<Discussion>): PagedResponse<Discussion> => ({
+  ...page,
+  content: (page.content ?? []).map(normalizeDiscussion),
+});
+
 /**
  * CommunityService — community-related API calls.
  * All methods map to Spring Boot REST endpoints under /api/community/*.
@@ -23,36 +49,36 @@ export const CommunityService = {
     api.post<void>(`/community/events/${eventId}/attend`, {}),
 
   // ── Discussions ────────────────────────────────────────────────────────────
-  getDiscussions: (page = 0, size = 20): Promise<PagedResponse<Discussion>> =>
-    api.get<PagedResponse<Discussion>>(`/community/discussions?page=${page}&size=${size}`),
+  getDiscussions: async (page = 0, size = 20): Promise<PagedResponse<Discussion>> =>
+    normalizeDiscussionPage(await api.get<PagedResponse<Discussion>>(`/community/discussions?page=${page}&size=${size}`)),
 
-  upvoteDiscussion: (discussionId: string): Promise<Discussion> =>
-    api.post<Discussion>(`/community/discussions/${discussionId}/upvote`, {}),
+  upvoteDiscussion: async (discussionId: string): Promise<Discussion> =>
+    normalizeDiscussion(await api.post<Discussion>(`/community/discussions/${discussionId}/upvote`, {})),
 
   // ── Posts ──────────────────────────────────────────────────────────────────
-  getPosts: (page = 0, size = 20): Promise<PagedResponse<Post>> =>
-    api.get<PagedResponse<Post>>(`/community/posts?page=${page}&size=${size}`),
+  getPosts: async (page = 0, size = 20): Promise<PagedResponse<Post>> =>
+    normalizePostPage(await api.get<PagedResponse<Post>>(`/community/posts?page=${page}&size=${size}`)),
 
   getFeed: (mode = 'for-you', skillId?: string, page = 0, size = 20): Promise<PagedResponse<Post>> => {
     const params = new URLSearchParams({ mode, page: String(page), size: String(size) });
     if (skillId) params.set('skillId', skillId);
-    return api.get<PagedResponse<Post>>(`/community/feed?${params.toString()}`);
+    return api.get<PagedResponse<Post>>(`/community/feed?${params.toString()}`).then(normalizePostPage);
   },
 
-  searchPosts: (intent: string, page = 0, size = 20): Promise<PagedResponse<Post>> =>
-    api.get<PagedResponse<Post>>(`/community/posts/search?intent=${encodeURIComponent(intent)}&page=${page}&size=${size}`),
+  searchPosts: async (intent: string, page = 0, size = 20): Promise<PagedResponse<Post>> =>
+    normalizePostPage(await api.get<PagedResponse<Post>>(`/community/posts/search?intent=${encodeURIComponent(intent)}&page=${page}&size=${size}`)),
 
-  getUserPosts: (userId: string, page = 0, size = 10): Promise<PagedResponse<Post>> =>
-    api.get<PagedResponse<Post>>(`/community/posts/user/${userId}?page=${page}&size=${size}`),
+  getUserPosts: async (userId: string, page = 0, size = 10): Promise<PagedResponse<Post>> =>
+    normalizePostPage(await api.get<PagedResponse<Post>>(`/community/posts/user/${userId}?page=${page}&size=${size}`)),
 
-  createPost: (data: { type: string; content: string; skillId?: string; mediaUrl?: string }): Promise<Post> =>
-    api.post<Post>('/community/posts', data),
+  createPost: async (data: { type: string; content: string; skillId?: string; mediaUrl?: string }): Promise<Post> =>
+    normalizePost(await api.post<Post>('/community/posts', data)),
 
-  likePost: (postId: string): Promise<Post> =>
-    api.post<Post>(`/community/posts/${postId}/like`, {}),
+  likePost: async (postId: string): Promise<Post> =>
+    normalizePost(await api.post<Post>(`/community/posts/${postId}/like`, {})),
 
-  unlikePost: (postId: string): Promise<Post> =>
-    api.post<Post>(`/community/posts/${postId}/unlike`, {}),
+  unlikePost: async (postId: string): Promise<Post> =>
+    normalizePost(await api.post<Post>(`/community/posts/${postId}/unlike`, {})),
 
   deletePost: (postId: string): Promise<void> =>
     api.delete<void>(`/community/posts/${postId}`),

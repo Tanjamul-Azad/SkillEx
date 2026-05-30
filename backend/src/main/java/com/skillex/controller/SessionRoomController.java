@@ -13,6 +13,7 @@ import com.skillex.service.AgoraTokenService;
 import com.skillex.service.AccountRestrictionService;
 import com.skillex.service.NoteGenerationProcessor;
 import com.skillex.service.NoteGenerationService;
+import com.skillex.service.SessionService;
 import com.skillex.service.SessionPresenceService;
 import com.skillex.service.TranscriptProcessor;
 import com.skillex.service.TranscriptService;
@@ -52,6 +53,7 @@ public class SessionRoomController {
     private final TranscriptService transcriptService;
     private final TranscriptProcessor transcriptProcessor;
     private final SessionPresenceService sessionPresenceService;
+    private final SessionService sessionService;
     private final NoteGenerationService noteGenerationService;
     private final NoteGenerationProcessor noteGenerationProcessor;
     private final SimpMessagingTemplate messagingTemplate;
@@ -145,11 +147,10 @@ public class SessionRoomController {
             return ResponseEntity.status(HttpStatus.FORBIDDEN).build();
         }
 
-        session.setStatus(SessionStatus.COMPLETED);
-        Session saved = sessionRepository.save(session);
+        var completed = sessionService.markCompleted(sessionId, userId);
         broadcastPresence(sessionId, "LEFT", userId, sessionPresenceService.markLeft(sessionId, userId));
 
-        return ResponseEntity.ok(new SessionSummaryDto(saved.getId(), "COMPLETED", LocalDateTime.now()));
+        return ResponseEntity.ok(new SessionSummaryDto(completed.id(), completed.status(), LocalDateTime.now()));
     }
 
     /**

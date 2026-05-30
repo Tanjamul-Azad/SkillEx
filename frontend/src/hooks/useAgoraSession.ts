@@ -13,8 +13,6 @@ if (typeof window !== 'undefined') {
   AgoraRTC.setLogLevel(3);
 }
 
-const AGORA_APP_ID = 'bf8f5464ba264a64b2c1fe2ccb7a87c3';
-
 type StreamRole = 'host' | 'audience';
 
 export const useAgoraSession = (sessionId: string) => {
@@ -316,7 +314,10 @@ export const useAgoraSession = (sessionId: string) => {
     joiningRef.current = true;
     try {
       setJoinError(null);
-      const resolvedAppId = appId || import.meta.env.VITE_AGORA_APP_ID || AGORA_APP_ID;
+      const resolvedAppId = appId || import.meta.env.VITE_AGORA_APP_ID;
+      if (!resolvedAppId) {
+        throw new Error('Agora App ID is not configured.');
+      }
       const resolvedToken = token && token.trim().length > 0 ? token : null;
       const client = clientRef.current;
       // Join Room

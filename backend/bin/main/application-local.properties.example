@@ -17,6 +17,9 @@ DB_PASSWORD=your_mysql_password
 APP_JWT_SECRET=replace_with_a_long_random_secret_at_least_32_chars
 APP_JWT_EXPIRATION_MS=86400000
 
+# Enable sample users/content only for local showcase databases.
+app.demo.seed.enabled=true
+
 # ── Firebase Google popup auth (frontend popup -> backend JWT) ──
 FIREBASE_GOOGLE_ENABLED=true
 FIREBASE_PROJECT_ID=your_firebase_project_id
@@ -28,6 +31,13 @@ FIREBASE_SERVICE_ACCOUNT_JSON=
 # ── AI / Gemini ───────────────────────────────────────────────────
 # Get key at: https://aistudio.google.com/app/apikey
 GEMINI_API_KEY=your_gemini_api_key_here
+
+# Grok smart skill matching
+GROK_API_KEY=your_grok_api_key_here
+# Leave blank for auto-detection: gsk_ keys use Groq Cloud, xAI keys use api.x.ai.
+GROK_ENDPOINT=
+GROK_MODEL=grok-4.3
+GROK_TIMEOUT_MS=12000
 
 # ── OpenAI / Whisper (optional audio transcription) ─────────────
 # Set if you want server-side audio chunk transcription via /transcribe
@@ -71,6 +81,6 @@ app.ai.gemma.model=gemma2:2b
 # ── Agora Video/Audio Call Room Credentials ──────────────────────
 # Sign up at https://console.agora.io to get your App ID and App Certificate.
 # These enable real-time WebRTC audio/video call streaming rooms.
-app.agora.app-id=bf8f5464ba264a64b2c1fe2ccb7a87c3
-app.agora.app-certificate=c3218a61f792462d884d0c0b035d353e
+app.agora.app-id=your_agora_app_id
+app.agora.app-certificate=your_agora_app_certificate
 

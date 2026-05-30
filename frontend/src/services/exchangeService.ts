@@ -52,6 +52,10 @@ export const exchangeService = {
     return api.get<PagedResponse<Exchange>>(`/exchanges?${params.toString()}`);
   },
 
+  getById(id: string): Promise<Exchange> {
+    return api.get<Exchange>(`/exchanges/${id}`);
+  },
+
   create(data: {
     receiverId: string;
     offeredSkillId?: string;

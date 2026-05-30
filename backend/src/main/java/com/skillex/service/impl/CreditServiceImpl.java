@@ -148,8 +148,10 @@ public class CreditServiceImpl implements CreditService {
     }
 
     private UserCreditWallet ensureWallet(User user) {
-        return walletRepository.findById(user.getId()).map(wallet -> {
-            if (!Boolean.TRUE.equals(wallet.getStarterGrantReleased()) && isStarterGrantEligible(user)) {
+        User lockedUser = userRepository.findByIdForUpdate(user.getId()).orElse(user);
+
+        return walletRepository.findByUserIdForUpdate(lockedUser.getId()).map(wallet -> {
+            if (!Boolean.TRUE.equals(wallet.getStarterGrantReleased()) && isStarterGrantEligible(lockedUser)) {
                 wallet.setBalance(wallet.getBalance() + DEFAULT_STARTER_CREDITS);
                 wallet.setLifetimeEarned(wallet.getLifetimeEarned() + DEFAULT_STARTER_CREDITS);
                 wallet.setStarterGrantReleased(true);
@@ -158,9 +160,9 @@ public class CreditServiceImpl implements CreditService {
             }
             return wallet;
         }).orElseGet(() -> {
-            boolean eligibleForStarter = isStarterGrantEligible(user);
+            boolean eligibleForStarter = isStarterGrantEligible(lockedUser);
             UserCreditWallet wallet = UserCreditWallet.builder()
-                .user(user)
+                .user(lockedUser)
                 .balance(eligibleForStarter ? DEFAULT_STARTER_CREDITS : 0)
                 .lifetimeEarned(eligibleForStarter ? DEFAULT_STARTER_CREDITS : 0)
                 .lifetimeSpent(0)
@@ -168,7 +170,7 @@ public class CreditServiceImpl implements CreditService {
                 .build();
             wallet = walletRepository.save(wallet);
             if (eligibleForStarter) {
-                saveTx(user, null, null, DEFAULT_STARTER_CREDITS, CreditTransaction.TransactionType.STARTER_GRANT, "Starter credits for verified SkillEX learners with a complete profile.");
+                saveTx(lockedUser, null, null, DEFAULT_STARTER_CREDITS, CreditTransaction.TransactionType.STARTER_GRANT, "Starter credits for verified SkillEX learners with a complete profile.");
             }
             return wallet;
         });

@@ -18,6 +18,7 @@ import com.skillex.service.NotificationService;
 import com.skillex.service.AccountRestrictionService;
 import com.skillex.service.CertificateService;
 import com.skillex.service.CreditService;
+import com.skillex.service.ProgressService;
 import com.skillex.service.reputation.ReputationUpdateEvent;
 import jakarta.persistence.EntityNotFoundException;
 import lombok.RequiredArgsConstructor;
@@ -57,6 +58,7 @@ public class SessionServiceImpl implements SessionService {
     private final AccountRestrictionService restrictionService;
     private final CreditService creditService;
     private final CertificateService certificateService;
+    private final ProgressService progressService;
 
     @Override
     @Transactional(readOnly = true)
@@ -107,6 +109,7 @@ public class SessionServiceImpl implements SessionService {
         session.setScheduledAt(req.scheduledAt());
         session.setDurationMins(req.durationMins());
         session.setMeetLink(req.meetLink());
+        session.setSharedNotes(req.notes());
         session.setSessionType(meetingType);
         session.setStatus(Session.SessionStatus.PROPOSED);
         Session saved = sessionRepository.save(session);
@@ -219,6 +222,10 @@ public class SessionServiceImpl implements SessionService {
         Session session = findSession(sessionId);
         assertParticipant(session, requestingUserId);
         boolean wasCompleted = session.getStatus() == Session.SessionStatus.COMPLETED;
+        if (wasCompleted) {
+            return mapper.toSession(session);
+        }
+
         session.setStatus(Session.SessionStatus.COMPLETED);
         SessionDto result = mapper.toSession(sessionRepository.save(session));
 
@@ -229,14 +236,25 @@ public class SessionServiceImpl implements SessionService {
             session.getLearner().getId(), ReputationUpdateEvent.Trigger.SESSION_COMPLETED));
 
         try {
-            if (wasCompleted) {
-                return result;
-            }
             creditService.rewardTeachingSession(
                 session.getTeacher().getId(),
                 session.getExchange(),
                 15,
                 "Earned credits for completing a teaching session in " + session.getSkill().getName() + "."
+            );
+            progressService.awardXp(
+                session.getTeacher().getId(),
+                "SESSION_TEACH",
+                session.getId(),
+                60,
+                "Completed a teaching session in " + session.getSkill().getName() + "."
+            );
+            progressService.awardXp(
+                session.getLearner().getId(),
+                "SESSION_LEARN",
+                session.getId(),
+                35,
+                "Completed a learning session in " + session.getSkill().getName() + "."
             );
             certificateService.evaluateAfterSession(session.getId());
         } catch (Exception e) {

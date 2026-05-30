@@ -6,6 +6,7 @@ import com.skillex.dto.message.ConversationDto;
 import com.skillex.dto.message.MessageDto;
 import com.skillex.dto.message.SendMessageHttpRequest;
 import com.skillex.dto.message.SendMessageRequest;
+import jakarta.validation.Valid;
 import com.skillex.service.MessageService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
@@ -77,7 +78,7 @@ public class MessageController {
     public ResponseEntity<ApiResponse<MessageDto>> sendViaHttp(
         Authentication auth,
         @PathVariable String peerId,
-        @RequestBody SendMessageHttpRequest req
+        @Valid @RequestBody SendMessageHttpRequest req
     ) {
         String senderId = userId(auth);
         MessageDto saved = messageService.sendMessage(
@@ -102,7 +103,7 @@ public class MessageController {
      *  - /user/{senderId}/queue/messages    — sender's own queue (for multi-tab sync)
      */
 @MessageMapping("/chat.send")
-    public void handleChatMessage(Principal principal, SendMessageRequest req) {
+    public void handleChatMessage(Principal principal, @Valid SendMessageRequest req) {
         String senderId = principal.getName();
         MessageDto saved = messageService.sendMessage(
             senderId,

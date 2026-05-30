@@ -11,8 +11,11 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from '@/components/ui/dialog';
 import { Textarea } from '@/components/ui/textarea';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import {
   Zap,
   Star,
@@ -31,6 +34,11 @@ import {
   CheckCircle,
   Clock,
   TrendingUp,
+  ExternalLink,
+  Flame,
+  Github,
+  LinkIcon,
+  Trash2,
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Link, Navigate, useNavigate as useNav, useSearchParams } from 'react-router-dom';
@@ -38,7 +46,7 @@ import { cn } from '@/lib/utils';
 import DashboardLayout from '@/components/layout/DashboardLayout';
 import { SkillBadge } from '@/components/ui/SkillBadge';
 import { SkillExScoreBadge } from '@/components/ui/SkillExScoreBadge';
-import type { User, Skill, Review } from '@/types';
+import type { User, Skill, Review, UserProgress, PortfolioProof, PortfolioProofType } from '@/types';
 import { AddSkillDialog } from '@/features/profile/components/AddSkillDialog';
 import {
   connectionService,
@@ -53,6 +61,7 @@ import { appVisuals } from '@/lib/appVisuals';
 import { skillTrustService, type SkillTrust } from '@/services/skillTrustService';
 import { skillCheckService } from '@/services/skillCheckService';
 import { certificateService, type SkillCertificate, type UserBadge } from '@/services/certificateService';
+import { progressService } from '@/services/progressService';
 
 const containerVariants = {
   hidden: { opacity: 0 },
@@ -302,6 +311,47 @@ function ReviewCard({ review }: { review: Review }) {
   );
 }
 
+const PROOF_TYPES: Array<{ value: PortfolioProofType; label: string }> = [
+  { value: 'PROJECT', label: 'Project' },
+  { value: 'GITHUB', label: 'GitHub' },
+  { value: 'BEHANCE', label: 'Behance' },
+  { value: 'CERTIFICATE', label: 'Certificate' },
+  { value: 'SESSION_OUTCOME', label: 'Session outcome' },
+  { value: 'MEDIA', label: 'Media' },
+  { value: 'OTHER', label: 'Other' },
+];
+
+const proofIconFor = (type?: string) => {
+  if (type === 'GITHUB') return Github;
+  if (type === 'CERTIFICATE') return Award;
+  if (type === 'SESSION_OUTCOME') return CheckCircle;
+  if (type === 'MEDIA') return Play;
+  return LinkIcon;
+};
+
+const cleanOptional = (value: string) => {
+  const trimmed = value.trim();
+  return trimmed.length ? trimmed : undefined;
+};
+
+type PortfolioFormState = {
+  title: string;
+  description: string;
+  proofType: PortfolioProofType;
+  skillId: string;
+  url: string;
+  featured: boolean;
+};
+
+const emptyPortfolioForm: PortfolioFormState = {
+  title: '',
+  description: '',
+  proofType: 'PROJECT',
+  skillId: 'none',
+  url: '',
+  featured: true,
+};
+
 export default function ProfilePage() {
   const params = useParams();
   const { user: currentUser } = useAuth();
@@ -336,20 +386,25 @@ export default function ProfilePage() {
   const [userPosts, setUserPosts] = useState<Post[]>([]);
   const [certificates, setCertificates] = useState<SkillCertificate[]>([]);
   const [badges, setBadges] = useState<UserBadge[]>([]);
+  const [progress, setProgress] = useState<UserProgress | null>(null);
+  const [portfolioProofs, setPortfolioProofs] = useState<PortfolioProof[]>([]);
+  const [portfolioDialogOpen, setPortfolioDialogOpen] = useState(false);
+  const [portfolioSubmitting, setPortfolioSubmitting] = useState(false);
+  const [portfolioForm, setPortfolioForm] = useState<PortfolioFormState>(emptyPortfolioForm);
   
   const [showcaseOpen, setShowcaseOpen] = useState(false);
   const [showcaseIndex, setShowcaseIndex] = useState(0);
 
   const tabParam = searchParams.get('tab');
   const focusParam = searchParams.get('focus');
-  const resolvedInitialTab = tabParam === 'reviews' || tabParam === 'activity' || tabParam === 'skills' || tabParam === 'credentials'
+  const resolvedInitialTab = tabParam === 'reviews' || tabParam === 'activity' || tabParam === 'skills' || tabParam === 'credentials' || tabParam === 'portfolio'
     ? tabParam
     : 'skills';
-  const [activeTab, setActiveTab] = useState<'skills' | 'reviews' | 'activity' | 'credentials'>(resolvedInitialTab);
+  const [activeTab, setActiveTab] = useState<'skills' | 'reviews' | 'activity' | 'credentials' | 'portfolio'>(resolvedInitialTab);
 
   useEffect(() => {
     const next = searchParams.get('tab');
-    if (next === 'skills' || next === 'reviews' || next === 'activity' || next === 'credentials') {
+    if (next === 'skills' || next === 'reviews' || next === 'activity' || next === 'credentials' || next === 'portfolio') {
       setActiveTab(next);
     }
   }, [searchParams]);
@@ -363,9 +418,11 @@ export default function ProfilePage() {
       ReviewService.getForUser(userId),
       CommunityService.getUserPosts(userId),
       certificateService.userCertificates(userId),
-      certificateService.userBadges(userId)
+      certificateService.userBadges(userId),
+      progressService.userProgress(userId),
+      progressService.userPortfolio(userId, 0, 20),
     ])
-      .then(([userResult, reviewsResult, postsResult, certificateResult, badgeResult]) => {
+      .then(([userResult, reviewsResult, postsResult, certificateResult, badgeResult, progressResult, portfolioResult]) => {
         const u = userResult as User;
         setProfileUser(u);
         setOfferedSkills(u.skillsOffered ?? []);
@@ -375,6 +432,8 @@ export default function ProfilePage() {
         setUserPosts(postsResult.content ?? []);
         setCertificates(certificateResult ?? []);
         setBadges(badgeResult ?? []);
+        setProgress(progressResult);
+        setPortfolioProofs(portfolioResult.content ?? []);
       })
       .catch(() => setNotFound(true))
       .finally(() => setLoading(false));
@@ -429,7 +488,7 @@ export default function ProfilePage() {
   const isPendingReceived = relationshipStatus === 'PENDING_RECEIVED';
   const emphasizeOfferedSkills = activeTab === 'skills' && focusParam === 'offered';
   const handleTabChange = (next: string) => {
-    if (next !== 'skills' && next !== 'reviews' && next !== 'activity' && next !== 'credentials') return;
+    if (next !== 'skills' && next !== 'reviews' && next !== 'activity' && next !== 'credentials' && next !== 'portfolio') return;
     setActiveTab(next);
 
     const nextParams = new URLSearchParams(searchParams);
@@ -438,6 +497,57 @@ export default function ProfilePage() {
       nextParams.delete('focus');
     }
     setSearchParams(nextParams, { replace: true });
+  };
+  const refreshPortfolio = async () => {
+    const [nextProgress, nextPortfolio] = await Promise.all([
+      progressService.userProgress(profileUser.id),
+      progressService.userPortfolio(profileUser.id, 0, 20),
+    ]);
+    setProgress(nextProgress);
+    setPortfolioProofs(nextPortfolio.content ?? []);
+  };
+
+  const handleCreatePortfolioProof = async () => {
+    if (!portfolioForm.title.trim()) return;
+    setPortfolioSubmitting(true);
+    try {
+      const created = await progressService.createPortfolioProof({
+        title: portfolioForm.title.trim(),
+        description: cleanOptional(portfolioForm.description),
+        proofType: portfolioForm.proofType,
+        skillId: portfolioForm.skillId === 'none' ? undefined : portfolioForm.skillId,
+        url: cleanOptional(portfolioForm.url),
+        visibility: 'PUBLIC',
+        featured: portfolioForm.featured,
+      });
+      setPortfolioProofs((prev) => [created, ...prev]);
+      await refreshPortfolio();
+      setPortfolioDialogOpen(false);
+      setPortfolioForm(emptyPortfolioForm);
+      toast({ title: 'Portfolio proof added', description: 'Your profile now shows stronger proof of skill.', variant: 'success' });
+    } catch (error) {
+      toast({
+        title: 'Could not add proof',
+        description: error instanceof Error ? error.message : 'Please check the details and try again.',
+        variant: 'destructive',
+      });
+    } finally {
+      setPortfolioSubmitting(false);
+    }
+  };
+
+  const handleDeletePortfolioProof = async (proofId: string) => {
+    try {
+      await progressService.deletePortfolioProof(proofId);
+      setPortfolioProofs((prev) => prev.filter((proof) => proof.id !== proofId));
+      toast({ title: 'Portfolio proof removed', variant: 'success' });
+    } catch (error) {
+      toast({
+        title: 'Could not remove proof',
+        description: error instanceof Error ? error.message : 'Try again later.',
+        variant: 'destructive',
+      });
+    }
   };
   const avgRating =
     userReviews.length > 0
@@ -758,11 +868,40 @@ export default function ProfilePage() {
                   color="text-secondary"
                 />
                 <StatCard
-                  icon={TrendingUp}
-                  label="SkillEx Score"
-                  value={profileUser.skillexScore}
+                  icon={Flame}
+                  label="Streak"
+                  value={`${progress?.currentStreakDays ?? 0}d`}
                   color="text-accent"
                 />
+              </div>
+
+              <div className="mt-4 grid gap-3 md:grid-cols-[0.8fr_1.2fr]">
+                <div className="rounded-2xl border border-primary/15 bg-primary/5 p-4">
+                  <p className="text-[10px] font-bold uppercase tracking-widest text-primary">Skill XP</p>
+                  <div className="mt-2 flex items-end justify-between gap-3">
+                    <div>
+                      <p className="font-headline text-3xl font-extrabold text-foreground">{progress?.totalXp ?? 0}</p>
+                      <p className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
+                        Level {progress?.currentLevel ?? 1}
+                      </p>
+                    </div>
+                    <Badge className="rounded-full bg-amber-500/10 text-amber-500">
+                      Longest {progress?.longestStreakDays ?? 0}d
+                    </Badge>
+                  </div>
+                </div>
+                <div className="rounded-2xl border border-border/70 bg-background/60 p-4 dark:border-white/10 dark:bg-black/20">
+                  <div className="mb-2 flex items-center justify-between text-xs">
+                    <span className="font-semibold text-foreground">{progress?.xpIntoLevel ?? 0} XP this level</span>
+                    <span className="text-muted-foreground">{progress?.xpForNextLevel ?? 100} XP next</span>
+                  </div>
+                  <div className="h-2.5 overflow-hidden rounded-full bg-muted">
+                    <div
+                      className="h-full rounded-full bg-primary transition-all"
+                      style={{ width: `${Math.max(0, Math.min(100, progress?.levelProgressPercent ?? 0))}%` }}
+                    />
+                  </div>
+                </div>
               </div>
             </div>
           </div>
@@ -808,7 +947,7 @@ export default function ProfilePage() {
 
         {/* ── Main Content ── */}
         <Tabs value={activeTab} onValueChange={handleTabChange} className="w-full">
-          <TabsList className="grid w-full sm:w-auto grid-cols-4 sm:max-w-[540px] mb-8 bg-black/40 backdrop-blur-xl border border-white/5 shadow-[inset_0_1px_0_0_hsla(0,0%,100%,0.05)] rounded-[1.5rem] p-1.5 h-auto">
+          <TabsList className="grid w-full sm:w-auto grid-cols-5 sm:max-w-[680px] mb-8 bg-black/40 backdrop-blur-xl border border-white/5 shadow-[inset_0_1px_0_0_hsla(0,0%,100%,0.05)] rounded-[1.5rem] p-1.5 h-auto">
             <TabsTrigger value="skills" className="rounded-xl py-2.5 text-[10px] uppercase font-bold tracking-widest data-[state=active]:bg-white/10 data-[state=active]:text-white data-[state=active]:shadow-[0_0_15px_rgba(255,255,255,0.05)] transition-all">
               <BookOpen className="w-3.5 h-3.5 mr-2 opacity-70" />
               Skills
@@ -825,6 +964,10 @@ export default function ProfilePage() {
             <TabsTrigger value="activity" className="rounded-xl py-2.5 text-[10px] uppercase font-bold tracking-widest data-[state=active]:bg-white/10 data-[state=active]:text-white data-[state=active]:shadow-[0_0_15px_rgba(255,255,255,0.05)] transition-all">
               <Zap className="w-3.5 h-3.5 mr-2 opacity-70" />
               Activity
+            </TabsTrigger>
+            <TabsTrigger value="portfolio" className="rounded-xl py-2.5 text-[10px] uppercase font-bold tracking-widest data-[state=active]:bg-white/10 data-[state=active]:text-white data-[state=active]:shadow-[0_0_15px_rgba(255,255,255,0.05)] transition-all">
+              <LinkIcon className="w-3.5 h-3.5 mr-2 opacity-70" />
+              Portfolio
             </TabsTrigger>
             <TabsTrigger value="credentials" className="rounded-xl py-2.5 text-[10px] uppercase font-bold tracking-widest data-[state=active]:bg-white/10 data-[state=active]:text-white data-[state=active]:shadow-[0_0_15px_rgba(255,255,255,0.05)] transition-all">
               <Award className="w-3.5 h-3.5 mr-2 opacity-70" />
@@ -1006,6 +1149,94 @@ export default function ProfilePage() {
                       onDelete={(id) => setUserPosts(prev => prev.filter(p => p.id !== id))}
                     />
                   ))}
+                </div>
+              )}
+            </div>
+          </TabsContent>
+
+          <TabsContent value="portfolio" className="mt-6">
+            <div className="space-y-6">
+              <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                <div>
+                  <h3 className="font-headline text-xl font-extrabold tracking-tight text-foreground">Skill Portfolio</h3>
+                  <p className="mt-1 text-sm text-muted-foreground">
+                    Projects, certificates, repositories, and session outcomes that prove real ability.
+                  </p>
+                </div>
+                {isOwnProfile && (
+                  <Button className="rounded-xl text-[10px] font-bold uppercase tracking-widest" onClick={() => setPortfolioDialogOpen(true)}>
+                    <Plus className="mr-2 h-4 w-4" />
+                    Add Proof
+                  </Button>
+                )}
+              </div>
+
+              {portfolioProofs.length === 0 ? (
+                <div className="rounded-[2rem] border border-dashed border-white/10 bg-black/30 p-10 text-center">
+                  <div className="mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-2xl border border-white/10 bg-white/5">
+                    <LinkIcon className="h-6 w-6 text-muted-foreground" />
+                  </div>
+                  <p className="text-sm font-semibold text-foreground">
+                    {isOwnProfile ? 'Add your first proof of skill.' : 'No portfolio proof is public yet.'}
+                  </p>
+                  <p className="mx-auto mt-2 max-w-md text-xs text-muted-foreground">
+                    A strong profile should show proof beyond a bio: work samples, public links, certificates, and outcomes from completed sessions.
+                  </p>
+                </div>
+              ) : (
+                <div className="grid gap-4 md:grid-cols-2">
+                  {portfolioProofs.map((proof) => {
+                    const ProofIcon = proofIconFor(proof.proofType);
+                    return (
+                      <div key={proof.id} className="group rounded-[1.5rem] border border-white/10 bg-black/35 p-5 transition-colors hover:border-primary/30">
+                        <div className="flex items-start justify-between gap-3">
+                          <div className="min-w-0">
+                            <div className="mb-3 flex flex-wrap items-center gap-2">
+                              <Badge className="rounded-full bg-primary/10 text-primary">
+                                <ProofIcon className="mr-1.5 h-3.5 w-3.5" />
+                                {proof.proofType.split('_').join(' ')}
+                              </Badge>
+                              {proof.featured && (
+                                <Badge variant="outline" className="rounded-full border-amber-500/30 text-amber-500">Featured</Badge>
+                              )}
+                              {proof.skill && (
+                                <Badge variant="secondary" className="rounded-full">
+                                  {proof.skill.icon} {proof.skill.name}
+                                </Badge>
+                              )}
+                            </div>
+                            <h4 className="line-clamp-2 text-base font-bold text-foreground">{proof.title}</h4>
+                            {proof.description && (
+                              <p className="mt-2 line-clamp-3 text-sm leading-relaxed text-muted-foreground">{proof.description}</p>
+                            )}
+                          </div>
+                          {isOwnProfile && (
+                            <Button
+                              size="icon"
+                              variant="ghost"
+                              className="h-8 w-8 shrink-0 rounded-lg text-muted-foreground hover:text-destructive"
+                              onClick={() => handleDeletePortfolioProof(proof.id)}
+                              aria-label="Remove portfolio proof"
+                            >
+                              <Trash2 className="h-4 w-4" />
+                            </Button>
+                          )}
+                        </div>
+
+                        <div className="mt-4 flex items-center justify-between gap-3 border-t border-white/10 pt-4">
+                          <span className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
+                            {new Date(proof.createdAt).toLocaleDateString()}
+                          </span>
+                          {proof.url && (
+                            <Button size="sm" variant="outline" className="rounded-full" onClick={() => window.open(proof.url ?? '', '_blank', 'noopener,noreferrer')}>
+                              Open
+                              <ExternalLink className="ml-2 h-3.5 w-3.5" />
+                            </Button>
+                          )}
+                        </div>
+                      </div>
+                    );
+                  })}
                 </div>
               )}
             </div>
@@ -1336,6 +1567,108 @@ export default function ProfilePage() {
               }}
             >
               Save
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog
+        open={portfolioDialogOpen}
+        onOpenChange={(open) => {
+          setPortfolioDialogOpen(open);
+          if (!open) setPortfolioForm(emptyPortfolioForm);
+        }}
+      >
+        <DialogContent className="sm:max-w-2xl">
+          <DialogHeader>
+            <DialogTitle>Add Portfolio Proof</DialogTitle>
+            <DialogDescription>
+              Add a public proof item that makes your skill profile believable during matching.
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="grid gap-4 py-2 sm:grid-cols-2">
+            <div className="space-y-2 sm:col-span-2">
+              <Label htmlFor="proof-title">Title</Label>
+              <Input
+                id="proof-title"
+                value={portfolioForm.title}
+                onChange={(event) => setPortfolioForm((prev) => ({ ...prev, title: event.target.value.slice(0, 140) }))}
+                placeholder="React dashboard rebuild, speaking demo, design case study..."
+              />
+            </div>
+
+            <div className="space-y-2">
+              <Label>Proof type</Label>
+              <Select
+                value={portfolioForm.proofType}
+                onValueChange={(value) => setPortfolioForm((prev) => ({ ...prev, proofType: value as PortfolioProofType }))}
+              >
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {PROOF_TYPES.map((type) => (
+                    <SelectItem key={type.value} value={type.value}>{type.label}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div className="space-y-2">
+              <Label>Related skill</Label>
+              <Select
+                value={portfolioForm.skillId}
+                onValueChange={(value) => setPortfolioForm((prev) => ({ ...prev, skillId: value }))}
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="Optional" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="none">No specific skill</SelectItem>
+                  {offeredSkills.map((skill) => (
+                    <SelectItem key={skill.id} value={skill.id}>{skill.name}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div className="space-y-2 sm:col-span-2">
+              <Label htmlFor="proof-url">Link</Label>
+              <Input
+                id="proof-url"
+                value={portfolioForm.url}
+                onChange={(event) => setPortfolioForm((prev) => ({ ...prev, url: event.target.value.slice(0, 600) }))}
+                placeholder="https://github.com/you/project or certificate URL"
+              />
+            </div>
+
+            <div className="space-y-2 sm:col-span-2">
+              <Label htmlFor="proof-description">Description</Label>
+              <Textarea
+                id="proof-description"
+                value={portfolioForm.description}
+                onChange={(event) => setPortfolioForm((prev) => ({ ...prev, description: event.target.value.slice(0, 1200) }))}
+                placeholder="Explain what this proves, your role, and the outcome."
+                className="min-h-[110px] resize-none"
+              />
+            </div>
+
+            <label className="flex cursor-pointer items-center gap-3 rounded-xl border border-border/60 bg-muted/20 px-3 py-2 text-sm sm:col-span-2">
+              <input
+                type="checkbox"
+                checked={portfolioForm.featured}
+                onChange={(event) => setPortfolioForm((prev) => ({ ...prev, featured: event.target.checked }))}
+                className="h-4 w-4 rounded border-border"
+              />
+              Feature this proof on the portfolio tab
+            </label>
+          </div>
+
+          <DialogFooter>
+            <Button variant="ghost" onClick={() => setPortfolioDialogOpen(false)}>Cancel</Button>
+            <Button onClick={handleCreatePortfolioProof} disabled={portfolioSubmitting || portfolioForm.title.trim().length < 3}>
+              {portfolioSubmitting ? 'Saving...' : 'Save Proof'}
             </Button>
           </DialogFooter>
         </DialogContent>

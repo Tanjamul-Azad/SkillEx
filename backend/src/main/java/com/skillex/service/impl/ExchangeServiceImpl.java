@@ -109,7 +109,7 @@ public class ExchangeServiceImpl implements ExchangeService {
     @Transactional(readOnly = true)
     public ExchangeDto getById(String exchangeId, String requestingUserId) {
         Exchange ex = findExchange(exchangeId);
-        assertParticipant(ex, requestingUserId);
+        assertParticipant(isRequester(ex, requestingUserId), isReceiver(ex, requestingUserId));
         return mapper.toExchange(ex);
     }
 
@@ -117,11 +117,33 @@ public class ExchangeServiceImpl implements ExchangeService {
     @Transactional
     public ExchangeDto updateStatus(String exchangeId, String requestingUserId, UpdateExchangeRequest req) {
         Exchange ex = findExchange(exchangeId);
-        assertParticipant(ex, requestingUserId);
+        boolean requester = isRequester(ex, requestingUserId);
+        boolean receiver = isReceiver(ex, requestingUserId);
+        assertParticipant(requester, receiver);
 
-        Exchange.ExchangeStatus next = Exchange.ExchangeStatus.valueOf(req.status().toUpperCase());
+        Exchange.ExchangeStatus current = ex.getStatus();
+        Exchange.ExchangeStatus next = parseStatus(req.status());
         if (ex.getStatus() == next) {
             return mapper.toExchange(ex);
+        }
+
+        if (next == Exchange.ExchangeStatus.ACCEPTED || next == Exchange.ExchangeStatus.DECLINED) {
+            if (!receiver) {
+                throw new AccessDeniedException("Only the request receiver can accept or decline an exchange.");
+            }
+            if (current != Exchange.ExchangeStatus.PENDING) {
+                throw new IllegalStateException("Only pending exchanges can be accepted or declined.");
+            }
+        }
+
+        if (next == Exchange.ExchangeStatus.CANCELLED) {
+            if (current != Exchange.ExchangeStatus.PENDING && current != Exchange.ExchangeStatus.ACCEPTED) {
+                throw new IllegalStateException("Only pending or accepted exchanges can be cancelled.");
+            }
+        }
+
+        if (next == Exchange.ExchangeStatus.COMPLETED && current != Exchange.ExchangeStatus.ACCEPTED) {
+            throw new IllegalStateException("Only accepted exchanges can be completed.");
         }
 
         ex.setStatus(next);
@@ -177,7 +199,16 @@ public class ExchangeServiceImpl implements ExchangeService {
     @Transactional
     public void cancel(String exchangeId, String requestingUserId) {
         Exchange ex = findExchange(exchangeId);
-        assertParticipant(ex, requestingUserId);
+        boolean requester = isRequester(ex, requestingUserId);
+        boolean receiver = isReceiver(ex, requestingUserId);
+        assertParticipant(requester, receiver);
+        Exchange.ExchangeStatus current = ex.getStatus();
+        if (current == Exchange.ExchangeStatus.CANCELLED) {
+            return;
+        }
+        if (current == Exchange.ExchangeStatus.DECLINED || current == Exchange.ExchangeStatus.COMPLETED) {
+            throw new IllegalStateException("This exchange can no longer be cancelled.");
+        }
         ex.setStatus(Exchange.ExchangeStatus.CANCELLED);
         Exchange saved = exchangeRepository.save(ex);
         if (saved.getExchangeMode() == Exchange.ExchangeMode.CREDIT_PAYMENT) {
@@ -192,11 +223,12 @@ public class ExchangeServiceImpl implements ExchangeService {
             return new ExchangeRelationshipDto(targetUserId, "NONE", null);
         }
 
-        Exchange latest = exchangeRepository.findPairHistory(
+        var history = exchangeRepository.findPairHistory(
             userId,
             targetUserId,
-            PageRequest.of(0, 1)
-        ).stream().findFirst().orElse(null);
+            PageRequest.of(0, 10)
+        );
+        Exchange latest = history.stream().findFirst().orElse(null);
 
         if (latest == null) {
             return new ExchangeRelationshipDto(targetUserId, "NONE", null);
@@ -230,7 +262,11 @@ public class ExchangeServiceImpl implements ExchangeService {
 
     private Exchange.ExchangeMode parseMode(String requestedMode, Skill offeredSkill, Skill wantedSkill) {
         if (requestedMode != null && !requestedMode.isBlank()) {
-            return Exchange.ExchangeMode.valueOf(requestedMode.toUpperCase());
+            try {
+                return Exchange.ExchangeMode.valueOf(requestedMode.toUpperCase());
+            } catch (IllegalArgumentException ex) {
+                throw new IllegalArgumentException("Invalid exchange mode: " + requestedMode);
+            }
         }
         if (offeredSkill == null && wantedSkill != null) {
             return Exchange.ExchangeMode.CREDIT_PAYMENT;
@@ -249,10 +285,24 @@ public class ExchangeServiceImpl implements ExchangeService {
         return trustScore >= 80 ? 15 : CreditService.STANDARD_SESSION_COST;
     }
 
-    private void assertParticipant(Exchange ex, String userId) {
-        boolean isParticipant = ex.getRequester().getId().equals(userId)
-            || ex.getReceiver().getId().equals(userId);
-        if (!isParticipant) {
+    private Exchange.ExchangeStatus parseStatus(String status) {
+        try {
+            return Exchange.ExchangeStatus.valueOf(status.toUpperCase());
+        } catch (IllegalArgumentException ex) {
+            throw new IllegalArgumentException("Invalid exchange status: " + status);
+        }
+    }
+
+    private boolean isRequester(Exchange ex, String userId) {
+        return ex.getRequester().getId().equals(userId);
+    }
+
+    private boolean isReceiver(Exchange ex, String userId) {
+        return ex.getReceiver().getId().equals(userId);
+    }
+
+    private void assertParticipant(boolean requester, boolean receiver) {
+        if (!requester && !receiver) {
             throw new AccessDeniedException("You are not a participant in this exchange.");
         }
     }

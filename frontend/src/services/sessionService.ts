@@ -59,6 +59,7 @@ export const SessionService = {
     scheduledAt: string;
     durationMins: number;
     meetLink?: string;
+    notes?: string;
     sessionType?: 'VIDEO' | 'AUDIO';
   }): Promise<Session> => {
     const result = await api.post<Session>('/sessions', data);

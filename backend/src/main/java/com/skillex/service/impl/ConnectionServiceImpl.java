@@ -110,7 +110,7 @@ public class ConnectionServiceImpl implements ConnectionService {
         } else if ("all".equals(normalizedDirection)) {
             pageResult = statusEnum == null
                 ? connectionRepository.findByRequesterIdOrReceiverId(userId, userId, pageable)
-                : connectionRepository.findByRequesterIdOrReceiverIdAndStatus(userId, userId, statusEnum, pageable);
+                : connectionRepository.findByRequesterIdOrReceiverIdAndStatus(userId, statusEnum, pageable);
         } else {
             throw new IllegalArgumentException("direction must be one of: all, sent, received");
         }

@@ -3,8 +3,12 @@ package com.skillex.service.impl;
 import com.skillex.dto.common.PagedResponse;
 import com.skillex.dto.message.ConversationDto;
 import com.skillex.dto.message.MessageDto;
+import com.skillex.model.Connection;
+import com.skillex.model.Exchange;
 import com.skillex.model.Message;
 import com.skillex.model.User;
+import com.skillex.repository.ConnectionRepository;
+import com.skillex.repository.ExchangeRepository;
 import com.skillex.repository.MessageRepository;
 import com.skillex.repository.UserRepository;
 import com.skillex.service.AccountRestrictionService;
@@ -26,6 +30,8 @@ public class MessageServiceImpl implements MessageService {
 
     private final MessageRepository messageRepository;
     private final UserRepository    userRepository;
+    private final ConnectionRepository connectionRepository;
+    private final ExchangeRepository exchangeRepository;
     private final AccountRestrictionService restrictionService;
 
     // ── Queries ──────────────────────────────────────────────────────────────
@@ -76,10 +82,14 @@ public class MessageServiceImpl implements MessageService {
     @Transactional
     public MessageDto sendMessage(String senderId, String receiverId, String content, String type, String imageUrl) {
         restrictionService.assertCanUseAccount(senderId, "MESSAGING");
+        if (senderId.equals(receiverId)) {
+            throw new IllegalArgumentException("You cannot message yourself.");
+        }
         User sender   = userRepository.findById(senderId)
             .orElseThrow(() -> new EntityNotFoundException("Sender not found: " + senderId));
         User receiver = userRepository.findById(receiverId)
             .orElseThrow(() -> new EntityNotFoundException("Receiver not found: " + receiverId));
+        assertCanMessage(senderId, receiverId);
 
         Message.MessageType msgType;
         try {
@@ -119,5 +129,29 @@ public class MessageServiceImpl implements MessageService {
             Boolean.TRUE.equals(m.getIsRead()),
             m.getCreatedAt()
         );
+    }
+
+    private void assertCanMessage(String senderId, String receiverId) {
+        boolean connected = !connectionRepository.findPairByStatuses(
+            senderId,
+            receiverId,
+            List.of(Connection.ConnectionStatus.ACCEPTED),
+            PageRequest.of(0, 1)
+        ).isEmpty();
+        if (connected) {
+            return;
+        }
+
+        boolean acceptedExchange = exchangeRepository.findPairHistory(
+            senderId,
+            receiverId,
+            PageRequest.of(0, 5)
+        ).stream().anyMatch(exchange -> exchange.getStatus() == Exchange.ExchangeStatus.ACCEPTED);
+
+        if (!acceptedExchange) {
+            throw new org.springframework.security.access.AccessDeniedException(
+                "You can message users only after an accepted connection or exchange."
+            );
+        }
     }
 }

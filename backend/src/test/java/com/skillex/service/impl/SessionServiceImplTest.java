@@ -15,6 +15,7 @@ import com.skillex.service.NotificationService;
 import com.skillex.service.AccountRestrictionService;
 import com.skillex.service.CertificateService;
 import com.skillex.service.CreditService;
+import com.skillex.service.ProgressService;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -32,8 +33,10 @@ import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyCollection;
+import static org.mockito.ArgumentMatchers.anyInt;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.when;
 
 @ExtendWith(MockitoExtension.class)
@@ -50,6 +53,7 @@ class SessionServiceImplTest {
     @Mock private AccountRestrictionService restrictionService;
     @Mock private CreditService creditService;
     @Mock private CertificateService certificateService;
+    @Mock private ProgressService progressService;
 
     private SessionServiceImpl service;
 
@@ -66,7 +70,8 @@ class SessionServiceImplTest {
             notificationService,
             restrictionService,
             creditService,
-            certificateService
+            certificateService,
+            progressService
         );
     }
 
@@ -199,6 +204,31 @@ class SessionServiceImplTest {
             null,
             "VIDEO"
         )));
+    }
+
+    @Test
+    void markCompleted_doesNotPublishRewardsAgainWhenAlreadyCompleted() {
+        User teacher = user("teacher", "Teacher");
+        User learner = user("learner", "Learner");
+        Skill skill = skill("python", "Python");
+        Exchange exchange = acceptedExchange("exchange-1", teacher, learner, skill, null);
+
+        Session session = new Session();
+        session.setId("session-completed");
+        session.setExchange(exchange);
+        session.setTeacher(teacher);
+        session.setLearner(learner);
+        session.setSkill(skill);
+        session.setStatus(Session.SessionStatus.COMPLETED);
+
+        when(sessionRepository.findById(session.getId())).thenReturn(Optional.of(session));
+
+        service.markCompleted(session.getId(), teacher.getId());
+
+        verify(sessionRepository, never()).save(any(Session.class));
+        verify(eventPublisher, never()).publishEvent(any());
+        verify(creditService, never()).rewardTeachingSession(any(), any(), anyInt(), any());
+        verify(certificateService, never()).evaluateAfterSession(any());
     }
 
     private static Exchange acceptedExchange(String id, User requester, User receiver, Skill offered, Skill wanted) {

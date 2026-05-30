@@ -228,10 +228,7 @@ public class ExchangeServiceImpl implements ExchangeService {
             targetUserId,
             PageRequest.of(0, 10)
         );
-        Exchange latest = history.stream()
-            .filter(exchange -> exchange.getStatus() == Exchange.ExchangeStatus.ACCEPTED)
-            .findFirst()
-            .orElseGet(() -> history.stream().findFirst().orElse(null));
+        Exchange latest = history.stream().findFirst().orElse(null);
 
         if (latest == null) {
             return new ExchangeRelationshipDto(targetUserId, "NONE", null);

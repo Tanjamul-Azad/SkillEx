@@ -21,10 +21,10 @@ public interface ConnectionRepository extends JpaRepository<Connection, String> 
 
     Page<Connection> findByRequesterIdOrReceiverId(String requesterId, String receiverId, Pageable pageable);
 
+    @Query("SELECT c FROM Connection c WHERE (c.requester.id = :userId OR c.receiver.id = :userId) AND c.status = :status")
     Page<Connection> findByRequesterIdOrReceiverIdAndStatus(
-        String requesterId,
-        String receiverId,
-        ConnectionStatus status,
+        @Param("userId") String userId,
+        @Param("status") ConnectionStatus status,
         Pageable pageable
     );
 

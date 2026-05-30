@@ -21,9 +21,12 @@ import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.security.access.AccessDeniedException;
 
 import java.util.Optional;
+import java.util.List;
 
+import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
@@ -123,6 +126,22 @@ class ExchangeServiceImplTest {
         service.updateStatus(exchange.getId(), receiver.getId(), new UpdateExchangeRequest("DECLINED"));
 
         verify(creditService).refundCreditExchange(exchange);
+    }
+
+    @Test
+    void getRelationship_usesLatestExchangeInsteadOfOlderAcceptedExchange() {
+        User requester = user("requester");
+        User receiver = user("receiver");
+        Exchange pending = exchange("exchange-pending", requester, receiver, Exchange.ExchangeStatus.PENDING);
+        Exchange accepted = exchange("exchange-accepted", requester, receiver, Exchange.ExchangeStatus.ACCEPTED);
+
+        when(exchangeRepository.findPairHistory(eq(requester.getId()), eq(receiver.getId()), any()))
+            .thenReturn(List.of(pending, accepted));
+
+        var result = service.getRelationship(requester.getId(), receiver.getId());
+
+        assertEquals("PENDING_SENT", result.status());
+        assertEquals(pending.getId(), result.exchangeId());
     }
 
     private static Exchange exchange(String id, User requester, User receiver, Exchange.ExchangeStatus status) {

@@ -13,6 +13,7 @@ import com.skillex.repository.UserRepository;
 import com.skillex.service.AccountRestrictionService;
 import com.skillex.service.CertificateService;
 import com.skillex.service.DtoMapper;
+import com.skillex.service.ProgressService;
 import com.skillex.service.ReviewService;
 import com.skillex.service.reputation.ReputationUpdateEvent;
 import jakarta.persistence.EntityNotFoundException;
@@ -37,6 +38,7 @@ public class ReviewServiceImpl implements ReviewService {
     private final ApplicationEventPublisher eventPublisher;
     private final AccountRestrictionService restrictionService;
     private final CertificateService certificateService;
+    private final ProgressService progressService;
 
     @Override
     @Transactional(readOnly = true)
@@ -100,6 +102,8 @@ public class ReviewServiceImpl implements ReviewService {
         // Publish reputation update event — ReputationServiceImpl will recompute skillexScore
         eventPublisher.publishEvent(new ReputationUpdateEvent(req.toUserId(), ReputationUpdateEvent.Trigger.REVIEW_ADDED));
         certificateService.evaluateUserSkill(req.toUserId(), req.skillId());
+        progressService.awardXp(fromUserId, "REVIEW_GIVEN", saved.getId(), 15, "Submitted useful session feedback.");
+        progressService.awardXp(req.toUserId(), "REVIEW_RECEIVED", saved.getId(), Math.max(10, req.rating() * 4), "Received session feedback for " + skill.getName() + ".");
 
         return mapper.toReview(saved);
     }

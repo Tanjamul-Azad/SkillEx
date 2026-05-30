@@ -8,6 +8,7 @@ import { connectionService } from '@/services/connectionService';
 import { DashboardService, type SmartAction } from '@/services/dashboardService';
 import { SessionService } from '@/services/sessionService';
 import { skillCheckService, type SkillCheckMeeting } from '@/services/skillCheckService';
+import { progressService } from '@/services/progressService';
 import { onRealtimeNotification } from '@/lib/realtime';
 import type { Exchange } from '@/services/exchangeService';
 import type { Connection } from '@/services/connectionService';
@@ -31,6 +32,8 @@ import {
   Play,
   X,
   Coins,
+  Flame,
+  Trophy,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -63,7 +66,7 @@ import {
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
-import type { Skill, Session } from '@/types';
+import type { Skill, Session, UserProgress, XpEvent } from '@/types';
 import { creditService, type CreditTransaction, type CreditWallet } from '@/services/creditService';
 
 /* ─────────────────────────────────────────────────────────────
@@ -710,6 +713,91 @@ function formatTimeAgo(createdAt?: string) {
 }
 
 /* ─── Onboarding strip (compact, horizontal) ─────────────────── */
+function LearningMomentumWidget({
+  progress,
+  events,
+  loading,
+}: {
+  progress: UserProgress | null;
+  events: XpEvent[];
+  loading: boolean;
+}) {
+  const levelProgress = Math.max(0, Math.min(100, progress?.levelProgressPercent ?? 0));
+  const nextXp = Math.max(0, progress?.xpForNextLevel ?? 100);
+  const streak = progress?.currentStreakDays ?? 0;
+
+  return (
+    <Card className="h-full overflow-hidden border-border/60 bg-card dark:border-white/[0.07]">
+      <CardContent className="flex h-full flex-col p-4">
+        <div className="mb-4 flex items-start justify-between gap-3">
+          <div>
+            <p className="flex items-center gap-2 text-sm font-bold uppercase tracking-widest text-foreground">
+              <Trophy className="h-4 w-4 text-primary" />
+              Learning Momentum
+            </p>
+            <p className="mt-1 text-xs text-muted-foreground">XP, streak, and recent proof of progress.</p>
+          </div>
+          <Badge className="rounded-full border-primary/20 bg-primary/10 px-3 py-1 text-primary">
+            Level {progress?.currentLevel ?? 1}
+          </Badge>
+        </div>
+
+        {loading ? (
+          <div className="space-y-3">
+            <Skeleton className="h-16 rounded-2xl" />
+            <Skeleton className="h-8 rounded-xl" />
+            <Skeleton className="h-20 rounded-2xl" />
+          </div>
+        ) : (
+          <>
+            <div className="grid grid-cols-2 gap-3">
+              <div className="rounded-2xl border border-border/60 bg-muted/20 p-3">
+                <p className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">Total XP</p>
+                <p className="mt-1 font-headline text-2xl font-extrabold">{progress?.totalXp ?? 0}</p>
+              </div>
+              <div className="rounded-2xl border border-amber-500/20 bg-amber-500/10 p-3">
+                <p className="flex items-center gap-1 text-[10px] font-bold uppercase tracking-widest text-amber-500">
+                  <Flame className="h-3.5 w-3.5" />
+                  Streak
+                </p>
+                <p className="mt-1 font-headline text-2xl font-extrabold">{streak}d</p>
+              </div>
+            </div>
+
+            <div className="mt-4 rounded-2xl border border-border/60 bg-background/50 p-3">
+              <div className="mb-2 flex items-center justify-between text-xs">
+                <span className="font-semibold text-foreground">{progress?.xpIntoLevel ?? 0} XP this level</span>
+                <span className="text-muted-foreground">{nextXp} XP next</span>
+              </div>
+              <Progress value={levelProgress} className="h-2" />
+            </div>
+
+            <div className="mt-4 min-h-0 flex-1 space-y-2 overflow-y-auto pr-1 custom-scrollbar">
+              {events.length === 0 ? (
+                <p className="rounded-xl border border-dashed border-border/60 px-3 py-4 text-xs text-muted-foreground">
+                  Complete sessions, reviews, skill checks, or portfolio proof to earn XP.
+                </p>
+              ) : events.slice(0, 4).map((event) => (
+                <div key={event.id} className="flex items-center justify-between gap-3 rounded-xl border border-border/60 bg-muted/20 px-3 py-2">
+                  <div className="min-w-0">
+                    <p className="truncate text-xs font-semibold text-foreground">{event.reason}</p>
+                    <p className="mt-0.5 text-[10px] font-semibold uppercase tracking-widest text-muted-foreground">
+                      {event.sourceType.split('_').join(' ')} | {formatTimeAgo(event.occurredAt)}
+                    </p>
+                  </div>
+                  <Badge variant="outline" className="shrink-0 rounded-full border-emerald-500/30 text-emerald-500">
+                    +{event.xpDelta}
+                  </Badge>
+                </div>
+              ))}
+            </div>
+          </>
+        )}
+      </CardContent>
+    </Card>
+  );
+}
+
 function OnboardingProgress({
   user,
   exchanges,
@@ -1464,6 +1552,9 @@ export default function DashboardPage() {
   const [skillChecks, setSkillChecks] = React.useState<SkillCheckMeeting[]>([]);
   const [skillChecksLoading, setSkillChecksLoading] = React.useState(false);
   const [skillCheckFeedbackBusy, setSkillCheckFeedbackBusy] = React.useState<string | null>(null);
+  const [learningProgress, setLearningProgress] = React.useState<UserProgress | null>(null);
+  const [xpEvents, setXpEvents] = React.useState<XpEvent[]>([]);
+  const [learningProgressLoading, setLearningProgressLoading] = React.useState(false);
 
   const [sessions, setSessions] = useState<Session[]>([]);
   const [sessionsLoading, setSessionsLoading] = useState(false);
@@ -1507,12 +1598,31 @@ export default function DashboardPage() {
       .finally(() => setSkillChecksLoading(false));
   }, []);
 
+  const refreshLearningProgress = React.useCallback(() => {
+    if (!user?.id) return;
+    setLearningProgressLoading(true);
+    Promise.all([
+      progressService.myProgress(),
+      progressService.myXpEvents(0, 8),
+    ])
+      .then(([progress, events]) => {
+        setLearningProgress(progress);
+        setXpEvents(events.content ?? []);
+      })
+      .catch(() => {
+        setLearningProgress(null);
+        setXpEvents([]);
+      })
+      .finally(() => setLearningProgressLoading(false));
+  }, [user?.id]);
+
   const handleExchangeStatusChanged = React.useCallback(async () => {
     void refetch();
     void fetchSessions();
     refreshDashboardStats();
     refreshSmartActions();
-  }, [refetch, fetchSessions, refreshDashboardStats, refreshSmartActions]);
+    refreshLearningProgress();
+  }, [refetch, fetchSessions, refreshDashboardStats, refreshSmartActions, refreshLearningProgress]);
 
   React.useEffect(() => {
     refreshDashboardStats();
@@ -1520,9 +1630,10 @@ export default function DashboardPage() {
     if (user?.id) {
       fetchSessions();
       refreshSkillChecks();
+      refreshLearningProgress();
       creditService.wallet().then(setCreditWallet).catch(() => setCreditWallet(null));
     }
-  }, [refreshDashboardStats, refreshSmartActions, refreshSkillChecks, fetchSessions, user?.id]);
+  }, [refreshDashboardStats, refreshSmartActions, refreshSkillChecks, refreshLearningProgress, fetchSessions, user?.id]);
 
   React.useEffect(() => {
     if (!creditDialogOpen) {
@@ -1569,6 +1680,7 @@ export default function DashboardPage() {
       });
       refreshDashboardStats();
       refreshSmartActions();
+      refreshLearningProgress();
     } catch {
       toast({
         title: 'Could not save feedback',
@@ -1578,7 +1690,7 @@ export default function DashboardPage() {
     } finally {
       setSkillCheckFeedbackBusy(null);
     }
-  }, [refreshDashboardStats, refreshSmartActions, toast]);
+  }, [refreshDashboardStats, refreshSmartActions, refreshLearningProgress, toast]);
 
   React.useEffect(() => {
     if (!dismissedConnectionsStorageKey) {
@@ -2127,6 +2239,16 @@ export default function DashboardPage() {
         <div className="col-span-1 flex flex-col h-full">
           <ScrollReveal animation="fade-up" delay={0.22} className="h-full">
             <RankWidget score={skillexScore} />
+          </ScrollReveal>
+        </div>
+
+        <div className="col-span-1 md:col-span-2 lg:col-span-3 flex min-h-[320px] flex-col">
+          <ScrollReveal animation="fade-up" delay={0.23} className="h-full">
+            <LearningMomentumWidget
+              progress={learningProgress}
+              events={xpEvents}
+              loading={learningProgressLoading}
+            />
           </ScrollReveal>
         </div>
 

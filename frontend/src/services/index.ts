@@ -31,6 +31,7 @@ export { FeedbackService }         from './feedbackService';
 export { CommunityService }        from './communityService';
 export { exchangeService }         from './exchangeService';
 export { connectionService }       from './connectionService';
+export { progressService }         from './progressService';
 export type { Exchange, ExchangeRelationship, ExchangeRelationshipStatus } from './exchangeService';
 export type { Connection, ConnectionRelationship } from './connectionService';
 

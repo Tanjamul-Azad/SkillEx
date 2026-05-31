@@ -8,7 +8,6 @@ import {
   Users,
   MessageSquare,
   Plus,
-  Heart,
   ArrowUp,
   MapPin,
   Circle,
@@ -19,6 +18,17 @@ import { Button } from '@/components/ui/button';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
 import { ConfirmDialog } from '@/components/ui/ConfirmDialog';
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { Textarea } from '@/components/ui/textarea';
 import { useAuth } from '@/hooks/useAuth';
 import { useToast } from '@/hooks/use-toast';
 import { cn } from '@/lib/utils';
@@ -29,7 +39,8 @@ import { PostComposer } from '../components/PostComposer';
 import { StoryCircle } from '../components/StoryCircle';
 import { CommunityService } from '@/services/communityService';
 import { connectionService } from '@/services/connectionService';
-import type { Post, Story, TrendingSkill, SuggestedUser, Discussion, Event, SkillCircle } from '@/types';
+import { SkillService } from '@/services/skillService';
+import type { Post, Story, TrendingSkill, SuggestedUser, Discussion, Event, SkillCircle, Skill } from '@/types';
 import { appVisuals } from '@/lib/appVisuals';
 
 const tabs = [
@@ -51,6 +62,56 @@ const itemVariants = {
   hidden: { opacity: 0, y: 20 },
   visible: { opacity: 1, y: 0, transition: { type: 'spring', stiffness: 100 } },
 };
+
+function SkillPicker({
+  skills,
+  selected,
+  onChange,
+  limit = 4,
+}: {
+  skills: Skill[];
+  selected: string[];
+  onChange: (ids: string[]) => void;
+  limit?: number;
+}) {
+  const visibleSkills = skills.slice(0, 16);
+
+  const toggleSkill = (skillId: string) => {
+    if (selected.includes(skillId)) {
+      onChange(selected.filter(id => id !== skillId));
+      return;
+    }
+    if (selected.length < limit) {
+      onChange([...selected, skillId]);
+    }
+  };
+
+  return (
+    <div className="flex flex-wrap gap-2">
+      {visibleSkills.map(skill => {
+        const active = selected.includes(skill.id);
+        return (
+          <button
+            key={skill.id}
+            type="button"
+            onClick={() => toggleSkill(skill.id)}
+            className={cn(
+              'rounded-xl border px-3 py-1.5 text-[10px] font-bold uppercase tracking-widest transition-all',
+              active
+                ? 'border-primary/40 bg-primary/15 text-primary'
+                : 'border-border/70 bg-background/70 text-muted-foreground hover:border-primary/30 hover:text-primary'
+            )}
+          >
+            {skill.name}
+          </button>
+        );
+      })}
+      {visibleSkills.length === 0 && (
+        <span className="text-xs text-muted-foreground">No skills available yet.</span>
+      )}
+    </div>
+  );
+}
 
 // --- FEED TAB COMPONENTS ---
 
@@ -343,137 +404,106 @@ const FeedTab = ({ intentFilter, onlineCount }: { intentFilter?: string; onlineC
 };
 
 // --- EVENTS TAB COMPONENTS ---
-const EventCard = React.memo(({ event }: { event: Event }) => {
-  const [interested, setInterested] = React.useState(false);
-  const { toast } = useToast();
+const EventCard = React.memo(({
+  event,
+  currentUserId,
+  busy,
+  onAttend,
+}: {
+  event: Event;
+  currentUserId?: string;
+  busy?: boolean;
+  onAttend: (event: Event) => Promise<void>;
+}) => {
+  const attending = Boolean(currentUserId && event.attendees?.some(attendee => attendee.id === currentUserId));
+  const attendeeCount = event.attendees?.length ?? 0;
+
   return (
-    <div className="group relative overflow-hidden h-full flex flex-col rounded-2xl border border-primary/15 bg-card backdrop-blur-xl transition-all duration-300 hover:border-primary/20 shadow-sm">
-      <div className={cn("relative h-[220px] w-full flex flex-col justify-end p-5 overflow-hidden shrink-0", event.coverGradient)}>
-        <img src="https://images.unsplash.com/photo-1505373877841-8d25f7d46678?auto=format&fit=crop&w=400&q=80" alt="Event Cover" className="absolute inset-0 h-full w-full object-cover mix-blend-overlay opacity-50 transition-transform duration-700 group-hover:scale-110" />
-        <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-black/20 to-transparent z-10" />
-        <div className="relative z-20 flex flex-col gap-2">
-          <Badge className="w-fit bg-red-500/20 text-red-500 hover:bg-red-500/30 backdrop-blur-md border border-red-500/30 font-bold uppercase tracking-widest text-[9px] px-2 py-0.5 rounded-md shadow-[0_0_10px_rgba(239,68,68,0.2)]">
-            UPCOMING
+    <div className="product-row group grid gap-4 p-4 sm:grid-cols-[minmax(0,1.4fr)_minmax(240px,0.8fr)_auto] sm:items-center">
+      <div className="min-w-0">
+        <div className="mb-2 flex flex-wrap items-center gap-2">
+          <Badge className={cn('rounded-full border px-2.5 py-0.5 text-[9px] font-bold uppercase tracking-widest', attending ? 'border-emerald-500/30 bg-emerald-500/10 text-emerald-400' : 'border-primary/25 bg-primary/10 text-primary')}>
+            {attending ? 'Registered' : 'Upcoming'}
           </Badge>
-          <h3 className="font-headline text-2xl font-extrabold text-foreground leading-tight drop-shadow-md">{event.title}</h3>
+          <span className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
+            {event.isOnline ? 'Online' : 'In person'}
+          </span>
+        </div>
+        <h3 className="truncate font-headline text-lg font-extrabold text-foreground group-hover:text-primary">
+          {event.title}
+        </h3>
+        <p className="mt-1 line-clamp-2 text-sm text-muted-foreground">
+          {event.description || 'Skill-focused community session.'}
+        </p>
+        <div className="mt-3 flex flex-wrap gap-1.5">
+          {(event.skills ?? []).slice(0, 4).map(skill => (
+            <Badge key={skill.id} variant="outline" className="rounded-full border-primary/20 bg-primary/5 px-2 py-0.5 text-[10px] font-semibold text-primary">
+              {skill.name}
+            </Badge>
+          ))}
         </div>
       </div>
-      <div className="p-5 flex flex-col flex-1 relative z-20 bg-transparent">
-        {/* Compact Details Row */}
-        <div className="flex items-start justify-between gap-3 mb-4 border-b border-primary/15 pb-4">
-          <div className="space-y-2 mt-1">
-            <div className="flex items-center gap-2 text-foreground/90 font-bold text-sm">
-              <Calendar className="h-4 w-4 text-primary drop-shadow-[0_0_8px_rgba(var(--primary-color),0.5)]" />
-              {new Date(event.eventDate).toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric', year: 'numeric' })}
-            </div>
-            <div className="flex items-center gap-2 text-foreground/90 font-bold text-sm">
-              <MapPin className="h-4 w-4 text-secondary drop-shadow-[0_0_8px_rgba(var(--secondary-color),0.5)]" />
-              {event.isOnline ? `Online Event` : event.location}
-            </div>
-          </div>
-          <div className="text-right flex flex-col items-end shrink-0">
-             <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest mb-1.5">Hosted By</p>
-             <div className="flex items-center gap-2 cursor-pointer hover:opacity-80 transition-opacity">
-               <Avatar className="h-8 w-8 ring-2 ring-white/10 shadow-[0_0_10px_rgba(255,255,255,0.1)]">
-                 <AvatarImage src={event.host.avatar} className="object-cover" />
-                 <AvatarFallback className="font-bold text-xs bg-primary/20 text-primary">{event.host.name.charAt(0)}</AvatarFallback>
-               </Avatar>
-               <p className="font-bold text-sm leading-tight text-foreground hover:text-primary transition-colors">{event.host.name.split(' ')[0]}</p>
-             </div>
-          </div>
+
+      <div className="grid gap-2 text-sm text-foreground/90">
+        <div className="flex items-center gap-2">
+          <Calendar className="h-4 w-4 text-primary" />
+          <span>{new Date(event.eventDate).toLocaleString('en-US', { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' })}</span>
         </div>
-
-        {/* Compact Target Skills */}
-        <div className="mb-2">
-          <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest mb-2 mt-1">Target Skills</p>
-          <div className="flex flex-wrap gap-1.5">
-            {event.skills.slice(0, 3).map(skill => (
-              <Badge key={skill.id} variant="secondary" className="px-2 py-1 text-[10px] font-bold uppercase tracking-wider bg-primary/5 text-foreground hover:bg-primary/10 hover:text-primary transition-colors border border-primary/15 shadow-[0_2px_10px_rgba(0,0,0,0.2)]">
-                {skill.name}
-              </Badge>
-            ))}
-            {event.skills.length > 3 && (
-              <Badge variant="secondary" className="px-2 py-1 text-[10px] font-bold uppercase tracking-wider bg-primary/5 text-foreground/60 border border-primary/15 shadow-[0_2px_10px_rgba(0,0,0,0.2)]">
-                +{event.skills.length - 3}
-              </Badge>
-            )}
-          </div>
+        <div className="flex items-center gap-2">
+          <MapPin className="h-4 w-4 text-secondary" />
+          <span className="truncate">{event.isOnline ? 'Online event' : event.location || 'Location pending'}</span>
         </div>
-
-        <div className="flex-grow" />
-
-        {/* Going & Buttons row */}
-        <div className="mt-5 pt-4 border-t border-primary/20 flex items-center justify-between gap-3">
-          <div className="flex flex-col gap-1 shrink-0">
-            <span className="text-[10px] font-bold tracking-widest uppercase text-muted-foreground">Going</span>
-            <div className="flex items-center -space-x-2">
-              {event.attendees.slice(0, 3).map((att, index) => (
-                <Avatar
-                  key={att.id}
-                  className="h-7 w-7 border-[2px] border-black/80 shadow-[0_0_10px_rgba(255,255,255,0.1)] hover:scale-110 transition-transform relative hover:z-20"
-                  style={{ zIndex: 10 - index }}
-                >
-                  <AvatarImage src={att.avatar} className="object-cover" />
-                  <AvatarFallback className="text-[10px] font-bold bg-primary/20 text-primary">{att.name.charAt(0)}</AvatarFallback>
-                </Avatar>
-              ))}
-              {event.attendees.length > 3 && (
-                <div className="flex h-7 w-7 items-center justify-center rounded-full border-[2px] border-black/80 bg-primary/10 text-[10px] font-bold text-foreground shadow-[0_0_10px_rgba(255,255,255,0.1)] relative z-10 backdrop-blur-sm">
-                  +{event.attendees.length - 3}
-                </div>
-              )}
-            </div>
-          </div>
-          
-          <div className="flex gap-2 flex-1 justify-end">
-            <Button 
-              variant="outline" 
-              size="sm"
-              className={cn('h-9 rounded-xl border border-primary/20 border-dashed hover:border-solid hover:bg-primary/5 hover:text-primary transition-all font-bold uppercase tracking-widest text-[10px] px-3 text-muted-foreground', interested && 'bg-red-500/10 text-red-500 border-red-500/30 border-solid shadow-[0_0_15px_rgba(239,68,68,0.2)] hover:bg-red-500/20 hover:text-red-500')} 
-              onClick={async () => {
-                const wasInterested = interested;
-                setInterested(!wasInterested);
-                try {
-                  await CommunityService.attendEvent(event.id);
-                } catch {
-                  setInterested(wasInterested);
-                }
-              }}
-            >
-              <Heart className={cn('mr-2 h-4 w-4 transition-all', interested && 'fill-red-500 text-red-500 scale-110 drop-shadow-[0_0_8px_rgba(239,68,68,0.6)]')} /> Interested
-            </Button>
-            <Button 
-              size="sm"
-              className="h-9 rounded-xl text-[10px] font-bold uppercase tracking-widest px-5 bg-primary text-primary-foreground hover:bg-primary/90 shadow-[0_0_15px_hsl(var(--primary)/0.3)] transition-all hover:shadow-[0_0_25px_hsl(var(--primary)/0.5)]"
-              onClick={async () => {
-                try {
-                  await CommunityService.attendEvent(event.id);
-                  toast({ title: 'Registration confirmed!', description: `See you at ${event.title}!`, variant: 'default' });
-                } catch {
-                  toast({ title: 'Registration failed', description: 'Please try again.', variant: 'destructive' });
-                }
-              }}
-            >
-              Register
-            </Button>
-          </div>
+        <div className="flex items-center gap-2">
+          <Users className="h-4 w-4 text-muted-foreground" />
+          <span>{attendeeCount} attending</span>
         </div>
       </div>
+
+      <Button
+        size="sm"
+        disabled={busy || attending}
+        className={cn(
+          'rounded-xl px-5 text-[10px] font-bold uppercase tracking-widest',
+          attending ? 'bg-emerald-500/15 text-emerald-400 hover:bg-emerald-500/15' : 'bg-primary text-primary-foreground hover:bg-primary/90'
+        )}
+        onClick={() => onAttend(event)}
+      >
+        {busy ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : attending ? 'Going' : 'Register'}
+      </Button>
     </div>
   )
 });
 EventCard.displayName = 'EventCard';
 
 const EventsTab = () => {
+  const { user } = useAuth();
+  const { toast } = useToast();
   const [events, setEvents] = useState<Event[]>([]);
-  const filterChips = ['All', 'Online', 'In-Person', 'Workshop', 'Meetup'];
+  const [skills, setSkills] = useState<Skill[]>([]);
   const [activeFilter, setActiveFilter] = useState('All');
+  const [createOpen, setCreateOpen] = useState(false);
+  const [submitting, setSubmitting] = useState(false);
+  const [attendBusy, setAttendBusy] = useState<Record<string, boolean>>({});
+  const [eventForm, setEventForm] = useState({
+    title: '',
+    description: '',
+    eventDate: '',
+    location: '',
+    isOnline: true,
+    skillIds: [] as string[],
+  });
+  const filterChips = ['All', 'Online', 'In-Person'];
 
-  useEffect(() => {
-    CommunityService.getEvents().then((r) => setEvents(r.content ?? [])).catch(() => {});
+  const loadEvents = useCallback(async () => {
+    const response = await CommunityService.getEvents();
+    setEvents(response.content ?? []);
   }, []);
 
-  const featuredEvent = events[0];
+  useEffect(() => {
+    loadEvents().catch(() => {});
+    SkillService.getAll().then(setSkills).catch(() => {});
+  }, [loadEvents]);
+
   const filteredEvents = events.filter(event => {
     if (activeFilter === 'All') return true;
     if (activeFilter === 'Online') return event.isOnline;
@@ -481,41 +511,203 @@ const EventsTab = () => {
     return true;
   });
 
+  const handleAttend = async (event: Event) => {
+    setAttendBusy(prev => ({ ...prev, [event.id]: true }));
+    try {
+      await CommunityService.attendEvent(event.id);
+      await loadEvents();
+      toast({ title: 'Registration confirmed', description: `You are going to ${event.title}.`, variant: 'success' });
+    } catch (error) {
+      toast({
+        title: 'Registration failed',
+        description: error instanceof Error ? error.message : 'Please try again.',
+        variant: 'destructive',
+      });
+    } finally {
+      setAttendBusy(prev => {
+        const next = { ...prev };
+        delete next[event.id];
+        return next;
+      });
+    }
+  };
+
+  const handleCreateEvent = async () => {
+    if (!eventForm.title.trim() || !eventForm.eventDate) {
+      toast({ title: 'Event title and time are required', variant: 'destructive' });
+      return;
+    }
+    if (new Date(eventForm.eventDate).getTime() <= Date.now()) {
+      toast({ title: 'Choose a future event time', variant: 'destructive' });
+      return;
+    }
+
+    setSubmitting(true);
+    try {
+      const created = await CommunityService.createEvent({
+        title: eventForm.title.trim(),
+        description: eventForm.description.trim(),
+        eventDate: eventForm.eventDate,
+        location: eventForm.isOnline ? 'Online' : eventForm.location.trim(),
+        isOnline: eventForm.isOnline,
+        coverGradient: 'from-slate-950 via-slate-900 to-primary/30',
+        skillIds: eventForm.skillIds,
+      });
+      setEvents(prev => [created, ...prev]);
+      setCreateOpen(false);
+      setEventForm({ title: '', description: '', eventDate: '', location: '', isOnline: true, skillIds: [] });
+      toast({ title: 'Event created', description: 'Your event is live in the community.', variant: 'success' });
+    } catch (error) {
+      toast({
+        title: 'Could not create event',
+        description: error instanceof Error ? error.message : 'Please check the details and try again.',
+        variant: 'destructive',
+      });
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
   return (
-    <div className="space-y-6">
-      {featuredEvent ? (
-        <div className={cn("relative h-64 rounded-[2rem] overflow-hidden p-8 flex flex-col justify-end text-foreground shadow-[0_0_30px_rgba(0,0,0,0.5)] group border border-primary/20", featuredEvent.coverGradient)}>
-          <img src="https://images.unsplash.com/photo-1540575467063-178a50c2df87?auto=format&fit=crop&w=1200&q=80" alt="Featured Event" className="absolute inset-0 h-full w-full object-cover mix-blend-overlay opacity-50 group-hover:scale-105 transition-transform duration-700" />
-          <div className="absolute inset-0 bg-gradient-to-t from-black via-black/50 to-transparent z-10" />
-          <div className="relative z-20">
-            <Badge className="mb-4 bg-primary text-primary-foreground border-none shadow-[0_0_15px_hsl(var(--primary)/0.5)] text-[10px] font-bold uppercase tracking-widest px-3 py-1">FEATURED EVENT</Badge>
-            <h2 className="text-3xl md:text-5xl font-extrabold font-headline drop-shadow-[0_4px_10px_rgba(0,0,0,1)] tracking-tight">{featuredEvent.title}</h2>
-            <p className="mt-3 text-foreground font-bold text-sm tracking-wide flex items-center gap-2 drop-shadow-[0_2px_5px_rgba(0,0,0,0.8)]"><Calendar className="h-5 w-5 text-primary drop-shadow-[0_0_8px_hsl(var(--primary)/0.8)]" /> {new Date(featuredEvent.eventDate).toDateString()}</p>
+    <div className="space-y-5">
+      <div className="product-panel overflow-hidden">
+        <div className="grid gap-5 p-5 lg:grid-cols-[1.2fr_0.8fr] lg:items-center">
+          <div>
+            <div className="mb-3 flex items-center gap-2 text-primary">
+              <Calendar className="h-5 w-5" />
+              <span className="text-[10px] font-bold uppercase tracking-widest">Live learning calendar</span>
+            </div>
+            <h2 className="font-headline text-2xl font-extrabold text-foreground">Events that turn community into sessions</h2>
+            <p className="mt-2 max-w-2xl text-sm leading-relaxed text-muted-foreground">
+              Create workshops, register attendance, and keep events tied to real skills and members.
+            </p>
+          </div>
+          <div className="flex flex-wrap items-center justify-start gap-2 lg:justify-end">
+            {filterChips.map(chip => (
+              <Button
+                key={chip}
+                variant={activeFilter === chip ? 'default' : 'outline'}
+                className={cn(
+                  'rounded-xl text-[10px] font-bold uppercase tracking-widest',
+                  activeFilter === chip ? 'bg-primary text-primary-foreground' : 'border-border/70 bg-background/70 text-muted-foreground hover:text-primary'
+                )}
+                onClick={() => setActiveFilter(chip)}
+              >
+                {chip}
+              </Button>
+            ))}
+            <Button className="rounded-xl text-[10px] font-bold uppercase tracking-widest" onClick={() => setCreateOpen(true)}>
+              <Plus className="mr-2 h-3.5 w-3.5" />
+              Create event
+            </Button>
           </div>
         </div>
-      ) : (
-        <div className="h-48 rounded-[2rem] border border-primary/15 bg-card backdrop-blur-xl flex items-center justify-center text-[10px] uppercase font-bold tracking-widest text-muted-foreground shadow-[inset_0_1px_0_0_hsla(0,0%,100%,0.05)]">Loading events...</div>
-      )}
-      <div className="flex gap-3 overflow-x-auto pb-2 custom-scrollbar">
-        {filterChips.map(chip => (
-          <Button 
-            key={chip} 
-            variant={activeFilter === chip ? 'default' : 'outline'} 
-            className={cn(
-              "rounded-xl text-[10px] font-bold uppercase tracking-widest transition-all",
-              activeFilter === chip 
-                ? "bg-primary text-primary-foreground shadow-[0_0_15px_hsl(var(--primary)/0.2)] hover:bg-primary/90" 
-                : "border-primary/20 bg-card text-muted-foreground hover:text-primary hover:bg-primary/10 hover:border-primary/25"
-            )}
-            onClick={() => setActiveFilter(chip)}
-          >
-            {chip}
-          </Button>
-        ))}
       </div>
-      <motion.div variants={containerVariants} initial="hidden" animate="visible" className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
-        {filteredEvents.map(event => <motion.div variants={itemVariants} key={event.id} className="h-full"><EventCard event={event} /></motion.div>)}
-      </motion.div>
+
+      <div className="product-panel overflow-hidden">
+        <div className="product-table">
+          {filteredEvents.map(event => (
+            <EventCard
+              key={event.id}
+              event={event}
+              currentUserId={user?.id}
+              busy={attendBusy[event.id]}
+              onAttend={handleAttend}
+            />
+          ))}
+          {filteredEvents.length === 0 && (
+            <div className="product-empty">
+              <Calendar className="mx-auto mb-3 h-8 w-8 text-muted-foreground/40" />
+              <p className="font-bold text-foreground">No events found</p>
+              <p className="mt-1 text-sm text-muted-foreground">Create one for this community lane.</p>
+            </div>
+          )}
+        </div>
+      </div>
+
+      <Dialog open={createOpen} onOpenChange={setCreateOpen}>
+        <DialogContent className="sm:max-w-2xl">
+          <DialogHeader>
+            <DialogTitle>Create event</DialogTitle>
+            <DialogDescription>Publish a skill-focused event with a real date, location, and target skills.</DialogDescription>
+          </DialogHeader>
+          <div className="grid gap-4 py-2">
+            <div className="space-y-2">
+              <Label htmlFor="event-title">Title</Label>
+              <Input id="event-title" value={eventForm.title} onChange={event => {
+                const value = event.currentTarget.value;
+                setEventForm(prev => ({ ...prev, title: value }));
+              }} placeholder="Portfolio review night" />
+            </div>
+            <div className="grid gap-4 sm:grid-cols-2">
+              <div className="space-y-2">
+                <Label htmlFor="event-date">Date and time</Label>
+                <Input
+                  id="event-date"
+                  type="datetime-local"
+                  value={eventForm.eventDate}
+                  onInput={event => {
+                    const value = event.currentTarget.value;
+                    setEventForm(prev => ({ ...prev, eventDate: value }));
+                  }}
+                  onChange={event => {
+                    const value = event.currentTarget.value;
+                    setEventForm(prev => ({ ...prev, eventDate: value }));
+                  }}
+                />
+              </div>
+              <div className="space-y-2">
+                <Label>Format</Label>
+                <div className="grid grid-cols-2 gap-2">
+                  {[
+                    { value: true, label: 'Online' },
+                    { value: false, label: 'In person' },
+                  ].map(option => (
+                    <button
+                      key={option.label}
+                      type="button"
+                      onClick={() => setEventForm(prev => ({ ...prev, isOnline: option.value }))}
+                      className={cn(
+                        'rounded-xl border px-3 py-2 text-sm font-semibold transition-all',
+                        eventForm.isOnline === option.value ? 'border-primary/40 bg-primary/15 text-primary' : 'border-border/70 bg-background/70 text-muted-foreground'
+                      )}
+                    >
+                      {option.label}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            </div>
+            {!eventForm.isOnline && (
+              <div className="space-y-2">
+                <Label htmlFor="event-location">Location</Label>
+                <Input id="event-location" value={eventForm.location} onChange={event => {
+                  const value = event.currentTarget.value;
+                  setEventForm(prev => ({ ...prev, location: value }));
+                }} placeholder="Campus lab, room 204" />
+              </div>
+            )}
+            <div className="space-y-2">
+              <Label htmlFor="event-description">Description</Label>
+              <Textarea id="event-description" rows={3} value={eventForm.description} onChange={event => {
+                const value = event.currentTarget.value;
+                setEventForm(prev => ({ ...prev, description: value }));
+              }} placeholder="What people will practice, build, or review..." />
+            </div>
+            <div className="space-y-2">
+              <Label>Target skills</Label>
+              <SkillPicker skills={skills} selected={eventForm.skillIds} onChange={ids => setEventForm(prev => ({ ...prev, skillIds: ids }))} />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setCreateOpen(false)}>Cancel</Button>
+            <Button onClick={handleCreateEvent} disabled={submitting}>
+              {submitting ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Plus className="mr-2 h-4 w-4" />}
+              Publish event
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   )
 }
@@ -527,8 +719,20 @@ const ACTIVITY_LABELS: Record<string, string> = {
   QUIET: '😴 Quiet',
 };
 
-const CircleCard = React.memo(({ circle }: { circle: SkillCircle }) => {
-  const [joined, setJoined] = React.useState(false);
+const CircleCard = React.memo(({
+  circle,
+  currentUserId,
+  busy,
+  onJoin,
+  onLeave,
+}: {
+  circle: SkillCircle;
+  currentUserId?: string;
+  busy?: boolean;
+  onJoin: (circle: SkillCircle) => Promise<void>;
+  onLeave: (circle: SkillCircle) => Promise<void>;
+}) => {
+  const joined = Boolean(currentUserId && circle.members?.some(member => member.id === currentUserId));
   const [leaveConfirmOpen, setLeaveConfirmOpen] = React.useState(false);
   const { toast } = useToast();
   return (
@@ -619,17 +823,12 @@ const CircleCard = React.memo(({ circle }: { circle: SkillCircle }) => {
                 if (joined) {
                   setLeaveConfirmOpen(true);
                 } else {
-                  try {
-                    await CommunityService.joinCircle(circle.id);
-                    setJoined(true);
-                    toast({ title: `Joined ${circle.name}!`, description: 'You can now participate in this skill circle.', variant: 'default' });
-                  } catch {
-                    toast({ title: 'Failed to join circle', variant: 'destructive' });
-                  }
+                  await onJoin(circle);
                 }
               }}
+              disabled={busy}
             >
-              {joined ? 'Leave Circle' : 'Join Circle'}
+              {busy ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : joined ? 'Leave Circle' : 'Join Circle'}
             </Button>
           </div>
         </div>
@@ -643,7 +842,7 @@ const CircleCard = React.memo(({ circle }: { circle: SkillCircle }) => {
         confirmLabel="Leave circle"
         cancelLabel="Stay"
         variant="destructive"
-        onConfirm={() => { setJoined(false); toast({ title: `Left ${circle.name}` }); }}
+        onConfirm={() => onLeave(circle)}
       />
     </>
   );
@@ -651,28 +850,156 @@ const CircleCard = React.memo(({ circle }: { circle: SkillCircle }) => {
 CircleCard.displayName = 'CircleCard';
 
 const SkillCirclesTab = () => {
+  const { user } = useAuth();
+  const { toast } = useToast();
   const [circles, setCircles] = useState<SkillCircle[]>([]);
+  const [skills, setSkills] = useState<Skill[]>([]);
+  const [createOpen, setCreateOpen] = useState(false);
+  const [submitting, setSubmitting] = useState(false);
+  const [busy, setBusy] = useState<Record<string, boolean>>({});
+  const [circleForm, setCircleForm] = useState({ name: '', icon: 'SE', skillIds: [] as string[] });
 
   useEffect(() => {
     CommunityService.getSkillCircles().then((r) => setCircles(r.content ?? [])).catch(() => {});
+    SkillService.getAll().then(setSkills).catch(() => {});
   }, []);
+
+  const updateCircle = (updated: SkillCircle) => {
+    setCircles(prev => prev.map(circle => circle.id === updated.id ? updated : circle));
+  };
+
+  const handleJoin = async (circle: SkillCircle) => {
+    setBusy(prev => ({ ...prev, [circle.id]: true }));
+    try {
+      const updated = await CommunityService.joinCircle(circle.id);
+      updateCircle(updated);
+      toast({ title: `Joined ${circle.name}`, description: 'You can now participate in this skill circle.', variant: 'success' });
+    } catch (error) {
+      toast({ title: 'Failed to join circle', description: error instanceof Error ? error.message : 'Please try again.', variant: 'destructive' });
+    } finally {
+      setBusy(prev => {
+        const next = { ...prev };
+        delete next[circle.id];
+        return next;
+      });
+    }
+  };
+
+  const handleLeave = async (circle: SkillCircle) => {
+    setBusy(prev => ({ ...prev, [circle.id]: true }));
+    try {
+      const updated = await CommunityService.leaveCircle(circle.id);
+      updateCircle(updated);
+      toast({ title: `Left ${circle.name}` });
+    } catch (error) {
+      toast({ title: 'Could not leave circle', description: error instanceof Error ? error.message : 'Please try again.', variant: 'destructive' });
+    } finally {
+      setBusy(prev => {
+        const next = { ...prev };
+        delete next[circle.id];
+        return next;
+      });
+    }
+  };
+
+  const handleCreateCircle = async () => {
+    if (!circleForm.name.trim()) {
+      toast({ title: 'Circle name is required', variant: 'destructive' });
+      return;
+    }
+    setSubmitting(true);
+    try {
+      const created = await CommunityService.createSkillCircle({
+        name: circleForm.name.trim(),
+        icon: circleForm.icon.trim() || 'SE',
+        skillIds: circleForm.skillIds,
+      });
+      setCircles(prev => [created, ...prev]);
+      setCreateOpen(false);
+      setCircleForm({ name: '', icon: 'SE', skillIds: [] });
+      toast({ title: 'Skill circle created', description: 'The circle is ready for members.', variant: 'success' });
+    } catch (error) {
+      toast({ title: 'Could not create circle', description: error instanceof Error ? error.message : 'Please try again.', variant: 'destructive' });
+    } finally {
+      setSubmitting(false);
+    }
+  };
 
   return (
     <div className="space-y-8">
-      <div>
-        <h2 className="text-3xl font-extrabold font-headline text-foreground tracking-tight drop-shadow-md">Join Skill Circles</h2>
-        <p className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground mt-2">Exchange skills and grow together in topic-focused groups.</p>
+      <div className="product-panel p-5">
+        <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
+          <div>
+            <h2 className="font-headline text-2xl font-extrabold text-foreground">Skill circles</h2>
+            <p className="mt-1 text-sm text-muted-foreground">Focused spaces for repeat learning, practice, and community support.</p>
+          </div>
+          <Button className="rounded-xl text-[10px] font-bold uppercase tracking-widest" onClick={() => setCreateOpen(true)}>
+            <Plus className="mr-2 h-3.5 w-3.5" />
+            Create circle
+          </Button>
+        </div>
       </div>
       <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
-        <div className="rounded-[2rem] border-2 border-dashed border-primary/25 bg-background backdrop-blur-xl flex flex-col items-center justify-center text-center p-8 min-h-[300px] cursor-pointer hover:border-primary/50 hover:bg-primary/5 transition-all duration-300 group shadow-[inset_0_1px_0_0_hsla(0,0%,100%,0.05)] h-full">
+        <button
+          type="button"
+          onClick={() => setCreateOpen(true)}
+          className="rounded-[2rem] border-2 border-dashed border-primary/25 bg-background backdrop-blur-xl flex flex-col items-center justify-center text-center p-8 min-h-[300px] cursor-pointer hover:border-primary/50 hover:bg-primary/5 transition-all duration-300 group shadow-[inset_0_1px_0_0_hsla(0,0%,100%,0.05)] h-full"
+        >
           <div className="h-20 w-20 rounded-full bg-primary/5 border border-primary/20 flex items-center justify-center group-hover:bg-primary/10 group-hover:border-primary/30 group-hover:scale-110 transition-all duration-300 shadow-[0_0_15px_rgba(255,255,255,0.05)] group-hover:shadow-[0_0_25px_hsl(var(--primary)/0.3)]">
             <Plus className="h-10 w-10 text-muted-foreground group-hover:text-primary transition-colors" />
           </div>
           <h3 className="mt-6 font-extrabold font-headline text-xl text-foreground group-hover:text-primary transition-colors">Create New Circle</h3>
           <p className="mt-2 text-[10px] font-bold uppercase tracking-widest text-muted-foreground group-hover:text-primary transition-colors">Start a new community</p>
-        </div>
-        {circles.map(circle => <CircleCard key={circle.id} circle={circle} />)}
+        </button>
+        {circles.map(circle => (
+          <CircleCard
+            key={circle.id}
+            circle={circle}
+            currentUserId={user?.id}
+            busy={busy[circle.id]}
+            onJoin={handleJoin}
+            onLeave={handleLeave}
+          />
+        ))}
       </div>
+
+      <Dialog open={createOpen} onOpenChange={setCreateOpen}>
+        <DialogContent className="sm:max-w-2xl">
+          <DialogHeader>
+            <DialogTitle>Create skill circle</DialogTitle>
+            <DialogDescription>Build a focused group around a few skills so people know why they should join.</DialogDescription>
+          </DialogHeader>
+          <div className="grid gap-4 py-2">
+            <div className="grid gap-4 sm:grid-cols-[1fr_120px]">
+              <div className="space-y-2">
+                <Label htmlFor="circle-name">Circle name</Label>
+                <Input id="circle-name" value={circleForm.name} onChange={event => {
+                  const value = event.currentTarget.value;
+                  setCircleForm(prev => ({ ...prev, name: value }));
+                }} placeholder="Frontend Practice Lab" />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="circle-icon">Mark</Label>
+                <Input id="circle-icon" maxLength={8} value={circleForm.icon} onChange={event => {
+                  const value = event.currentTarget.value;
+                  setCircleForm(prev => ({ ...prev, icon: value }));
+                }} placeholder="UI" />
+              </div>
+            </div>
+            <div className="space-y-2">
+              <Label>Skills</Label>
+              <SkillPicker skills={skills} selected={circleForm.skillIds} onChange={ids => setCircleForm(prev => ({ ...prev, skillIds: ids }))} />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setCreateOpen(false)}>Cancel</Button>
+            <Button onClick={handleCreateCircle} disabled={submitting}>
+              {submitting ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Plus className="mr-2 h-4 w-4" />}
+              Create circle
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   )
 }
@@ -765,18 +1092,49 @@ const DiscussionCard = React.memo(({ discussion: d }: { discussion: Discussion }
 DiscussionCard.displayName = 'DiscussionCard';
 
 const DiscussionsTab = () => {
+  const { toast } = useToast();
   const [discussions, setDiscussions] = useState<Discussion[]>([]);
   const categories = ['All', 'General', 'Skill Tips', 'Success Stories', 'Help & Support', 'Announcements'];
   const [activeCategory, setActiveCategory] = useState('All');
+  const [createOpen, setCreateOpen] = useState(false);
+  const [submitting, setSubmitting] = useState(false);
+  const [discussionForm, setDiscussionForm] = useState({ title: '', content: '', category: 'General' });
 
   useEffect(() => {
     CommunityService.getDiscussions().then((r) => setDiscussions(r.content ?? [])).catch(() => {});
   }, []);
 
+  const handleCreateDiscussion = async () => {
+    if (!discussionForm.title.trim() || !discussionForm.content.trim()) {
+      toast({ title: 'Title and details are required', variant: 'destructive' });
+      return;
+    }
+    setSubmitting(true);
+    try {
+      const created = await CommunityService.createDiscussion({
+        title: discussionForm.title.trim(),
+        content: discussionForm.content.trim(),
+        category: discussionForm.category,
+      });
+      setDiscussions(prev => [created, ...prev]);
+      setDiscussionForm({ title: '', content: '', category: 'General' });
+      setCreateOpen(false);
+      toast({ title: 'Discussion started', description: 'The community can now respond.', variant: 'success' });
+    } catch (error) {
+      toast({ title: 'Could not start discussion', description: error instanceof Error ? error.message : 'Please try again.', variant: 'destructive' });
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
   return (
     <div className="grid grid-cols-1 lg:grid-cols-4 gap-8">
       <aside className="col-span-1">
         <div className="rounded-2xl border border-primary/15 bg-card backdrop-blur-xl shadow-sm p-4 space-y-2">
+            <Button className="mb-3 w-full rounded-xl text-[10px] font-bold uppercase tracking-widest" onClick={() => setCreateOpen(true)}>
+              <Plus className="mr-2 h-3.5 w-3.5" />
+              New discussion
+            </Button>
             {categories.map(cat => (
               <Button
                 key={cat}
@@ -808,6 +1166,55 @@ const DiscussionsTab = () => {
           </div>
         )}
       </main>
+      <Dialog open={createOpen} onOpenChange={setCreateOpen}>
+        <DialogContent className="sm:max-w-2xl">
+          <DialogHeader>
+            <DialogTitle>Start discussion</DialogTitle>
+            <DialogDescription>Ask a specific question or share a useful topic for the community.</DialogDescription>
+          </DialogHeader>
+          <div className="grid gap-4 py-2">
+            <div className="space-y-2">
+              <Label htmlFor="discussion-title">Title</Label>
+              <Input id="discussion-title" value={discussionForm.title} onChange={event => {
+                const value = event.currentTarget.value;
+                setDiscussionForm(prev => ({ ...prev, title: value }));
+              }} placeholder="How do I practice UI critique faster?" />
+            </div>
+            <div className="space-y-2">
+              <Label>Category</Label>
+              <div className="flex flex-wrap gap-2">
+                {categories.filter(cat => cat !== 'All').map(category => (
+                  <button
+                    key={category}
+                    type="button"
+                    onClick={() => setDiscussionForm(prev => ({ ...prev, category }))}
+                    className={cn(
+                      'rounded-xl border px-3 py-1.5 text-[10px] font-bold uppercase tracking-widest transition-all',
+                      discussionForm.category === category ? 'border-primary/40 bg-primary/15 text-primary' : 'border-border/70 bg-background/70 text-muted-foreground hover:text-primary'
+                    )}
+                  >
+                    {category}
+                  </button>
+                ))}
+              </div>
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="discussion-content">Details</Label>
+              <Textarea id="discussion-content" rows={5} value={discussionForm.content} onChange={event => {
+                const value = event.currentTarget.value;
+                setDiscussionForm(prev => ({ ...prev, content: value }));
+              }} placeholder="Add context, what you tried, and what kind of answer you need..." />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setCreateOpen(false)}>Cancel</Button>
+            <Button onClick={handleCreateDiscussion} disabled={submitting}>
+              {submitting ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <MessageSquare className="mr-2 h-4 w-4" />}
+              Publish
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   )
 }
@@ -845,34 +1252,34 @@ export default function CommunityPage() {
 
   return (
     <DashboardLayout>
-      <div className="container mx-auto p-4 md:p-7 space-y-7">
-        <div className="app-shell relative overflow-hidden p-5 md:p-7">
+      <div className="product-page space-y-5">
+        <div className="product-header relative overflow-hidden">
           <div className="absolute inset-y-0 right-0 hidden w-[42%] md:block">
             <img src={appVisuals.communityCollaboration} alt="Members collaborating on skill exchange sessions" className="h-full w-full object-cover" loading="eager" />
             <div className="absolute inset-0 bg-gradient-to-r from-card via-card/65 to-transparent" />
           </div>
           <div className="flex flex-col md:flex-row md:items-start md:justify-between gap-6 relative z-10">
             <div className="max-w-xl">
-              <h1 className="font-headline text-3xl md:text-4xl font-extrabold tracking-tight text-foreground">Community Hub</h1>
-              <p className="mt-3 text-sm leading-relaxed text-muted-foreground">Join discussions, attend sessions, and connect with people trading skills across design, tech, language, business, and creative work.</p>
+              <h1 className="product-title">Community Hub</h1>
+              <p className="product-subtitle">Join discussions, attend sessions, and connect with people trading skills across design, tech, language, business, and creative work.</p>
             </div>
-            <div className="flex items-center gap-2 px-4 py-2 rounded-xl bg-background border border-primary/20 shadow-[0_8px_22px_-18px_hsl(var(--primary)/0.5)]">
+            <div className="flex items-center gap-2 px-4 py-2 rounded-xl bg-background/80 border border-primary/20 shadow-[0_8px_22px_-18px_hsl(var(--primary)/0.5)]">
               <Circle className="h-2 w-2 fill-green-500 text-green-500 drop-shadow-[0_0_5px_rgba(34,197,94,0.8)] animate-pulse" />
               <span className="text-[10px] font-bold uppercase tracking-widest text-foreground">{onlineCount} members online</span>
             </div>
           </div>
         </div>
 
-        <div className="pt-2">
-          <div className="border-b border-primary/15">
-            <div className="flex space-x-6 overflow-x-auto custom-scrollbar pb-1">
+        <div>
+          <div className="product-toolbar">
+            <div className="flex gap-4 overflow-x-auto custom-scrollbar">
               {tabs.map((tab) => (
                 <button
                   key={tab.id}
                   onClick={() => setActiveTab(tab.id)}
                   className={cn(
-                    "relative flex-shrink-0 whitespace-nowrap py-3 px-1 text-[10px] font-bold uppercase tracking-widest transition-colors outline-none flex items-center gap-2",
-                    activeTab === tab.id ? 'text-primary drop-shadow-[0_0_8px_hsl(var(--primary)/0.35)]' : 'text-muted-foreground hover:text-primary'
+                    "product-tab flex flex-shrink-0 items-center gap-2 whitespace-nowrap outline-none",
+                    activeTab === tab.id ? 'product-tab-active' : ''
                   )}
                 >
                   <tab.icon className="h-4 w-4" />
@@ -880,7 +1287,7 @@ export default function CommunityPage() {
                   {activeTab === tab.id && (
                     <motion.div
                       layoutId="community-tab-underline"
-                      className="absolute bottom-0 left-0 right-0 h-0.5 bg-primary shadow-[0_0_10px_hsl(var(--primary)/0.5)]"
+                      className="absolute bottom-0 left-0 right-0 h-0.5 bg-primary"
                       transition={{ type: 'spring', stiffness: 300, damping: 30 }}
                     />
                   )}
@@ -896,7 +1303,7 @@ export default function CommunityPage() {
               animate={{ y: 0, opacity: 1, filter: 'blur(0px)' }}
               exit={{ y: -20, opacity: 0, filter: 'blur(5px)' }}
               transition={{ duration: 0.3, ease: 'easeOut' }}
-              className="mt-8"
+              className="mt-5"
             >
               {activeTab === 'feed' && <FeedTab intentFilter={intentFilter} onlineCount={onlineCount} />}
               {activeTab === 'events' && <EventsTab />}

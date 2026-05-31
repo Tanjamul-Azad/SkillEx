@@ -151,9 +151,14 @@ Write-Host "== API Feature Validation Start =="
 $skillsRes = Invoke-Json -Name "Public skills list" -Method Get -Path "/api/skills"
 $firstSkillId = $null
 $firstSkillName = ""
+$unrelatedSkillId = $null
 if ($skillsRes.Json -and $skillsRes.Json.data -and $skillsRes.Json.data.Count -gt 0) {
   $firstSkillId = $skillsRes.Json.data[0].id
   $firstSkillName = $skillsRes.Json.data[0].name
+  $unrelatedSkill = @($skillsRes.Json.data | Where-Object { $_.id -ne $firstSkillId -and $_.name -ne "Public Speaking" } | Select-Object -First 1)
+  if ($unrelatedSkill.Count -gt 0) {
+    $unrelatedSkillId = $unrelatedSkill[0].id
+  }
 }
 
 if (-not $firstSkillId) {
@@ -221,6 +226,65 @@ if ($firstSkillId) {
   Invoke-Json -Name "Add skill offered user A" -Method Post -Path "/api/users/me/skills" -Token $tokenA -Body @{ skillId = $firstSkillId; type = "offered"; level = "MODERATE" } | Out-Null
   Invoke-Json -Name "Remove skill offered user A" -Method Delete -Path "/api/users/me/skills/$firstSkillId?type=offered" -Token $tokenA -Expected @(200, 404) | Out-Null
   Invoke-Json -Name "Re-add skill offered user A" -Method Post -Path "/api/users/me/skills" -Token $tokenA -Body @{ skillId = $firstSkillId; type = "offered"; level = "MODERATE" } | Out-Null
+}
+
+# Progress + portfolio proof edge cases
+$progressBefore = Invoke-Json -Name "Progress before portfolio proof" -Method Get -Path "/api/progress/me" -Token $tokenA
+$progressBeforeXp = 0
+if ($progressBefore.Json -and $progressBefore.Json.data) {
+  $progressBeforeXp = [int]$progressBefore.Json.data.totalXp
+}
+
+if ($firstSkillId) {
+  Invoke-Json -Name "Reject unsafe portfolio URL" -Method Post -Path "/api/users/me/portfolio-proofs" -Token $tokenA -Expected @(422) -Body @{
+    skillId = $firstSkillId
+    title = "Unsafe proof URL"
+    proofType = "PROJECT"
+    url = "javascript:alert(1)"
+    visibility = "PUBLIC"
+  } | Out-Null
+
+  if ($unrelatedSkillId) {
+    Invoke-Json -Name "Reject unrelated portfolio skill" -Method Post -Path "/api/users/me/portfolio-proofs" -Token $tokenA -Expected @(403) -Body @{
+      skillId = $unrelatedSkillId
+      title = "Wrong skill proof"
+      proofType = "PROJECT"
+      url = "https://example.com/wrong-skill"
+      visibility = "PUBLIC"
+    } | Out-Null
+  }
+
+  $privateProof = Invoke-Json -Name "Create private portfolio proof" -Method Post -Path "/api/users/me/portfolio-proofs" -Token $tokenA -Body @{
+    skillId = $firstSkillId
+    title = "QA private portfolio proof"
+    description = "Private proof should only be visible to owner."
+    proofType = "PROJECT"
+    url = "https://example.com/private-proof"
+    visibility = "PRIVATE"
+    featured = $true
+  }
+  $privateProofId = $privateProof.Json.data.id
+
+  $ownerProofs = Invoke-Json -Name "Owner sees private portfolio proof" -Method Get -Path "/api/users/$userAId/portfolio-proofs?page=0&size=10" -Token $tokenA
+  $ownerMatchCount = @($ownerProofs.Json.data.content | Where-Object { $_.id -eq $privateProofId }).Count
+  Add-Result -Name "Owner private portfolio proof visible" -Passed ($ownerMatchCount -eq 1) -Status $ownerMatchCount -Info "expected 1"
+
+  $publicProofs = Invoke-Json -Name "Public hides private portfolio proof" -Method Get -Path "/api/users/$userAId/portfolio-proofs?page=0&size=10"
+  $publicMatchCount = @($publicProofs.Json.data.content | Where-Object { $_.id -eq $privateProofId }).Count
+  Add-Result -Name "Public private portfolio proof hidden" -Passed ($publicMatchCount -eq 0) -Status $publicMatchCount -Info "expected 0"
+
+  Invoke-Json -Name "Other user cannot delete portfolio proof" -Method Delete -Path "/api/users/me/portfolio-proofs/$privateProofId" -Token $tokenB -Expected @(403) | Out-Null
+
+  $progressAfter = Invoke-Json -Name "Progress after portfolio proof" -Method Get -Path "/api/progress/me" -Token $tokenA
+  $progressAfterXp = 0
+  if ($progressAfter.Json -and $progressAfter.Json.data) {
+    $progressAfterXp = [int]$progressAfter.Json.data.totalXp
+  }
+  Add-Result -Name "Portfolio proof awards 20 XP" -Passed (($progressAfterXp - $progressBeforeXp) -eq 20) -Status 200 -Info "before=$progressBeforeXp after=$progressAfterXp"
+
+  $xpEvents = Invoke-Json -Name "XP events after portfolio proof" -Method Get -Path "/api/progress/me/xp-events?page=0&size=10" -Token $tokenA
+  $eventMatchCount = @($xpEvents.Json.data.content | Where-Object { $_.sourceId -eq $privateProofId }).Count
+  Add-Result -Name "Portfolio proof XP event recorded" -Passed ($eventMatchCount -eq 1) -Status $eventMatchCount -Info "expected 1"
 }
 
 # Change password then login with new password
@@ -293,6 +357,7 @@ $circleCreateRes = Invoke-Json -Name "Create skill circle" -Method Post -Path "/
 $createdCircleId = $circleCreateRes.Json.data.id
 if ($createdCircleId) {
   Invoke-Json -Name "Join created skill circle" -Method Post -Path "/api/community/skill-circles/$createdCircleId/join" -Token $tokenB | Out-Null
+  Invoke-Json -Name "Leave created skill circle" -Method Post -Path "/api/community/skill-circles/$createdCircleId/leave" -Token $tokenB | Out-Null
 }
 
 $circles = Invoke-Json -Name "Get circles for join" -Method Get -Path "/api/community/skill-circles?page=0&size=20"

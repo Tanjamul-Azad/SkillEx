@@ -57,6 +57,9 @@ public class PortfolioServiceImpl implements PortfolioService {
             ? null
             : skillRepository.findById(request.skillId())
                 .orElseThrow(() -> new EntityNotFoundException("Skill not found: " + request.skillId()));
+        if (skill != null && !isUserSkill(user, skill.getId())) {
+            throw new AccessDeniedException("Portfolio proof can only be attached to skills on your profile.");
+        }
         Session session = request.sourceSessionId() == null || request.sourceSessionId().isBlank()
             ? null
             : sessionRepository.findById(request.sourceSessionId())
@@ -97,6 +100,11 @@ public class PortfolioServiceImpl implements PortfolioService {
 
     private String blankToNull(String value) {
         return value == null || value.isBlank() ? null : value.trim();
+    }
+
+    private boolean isUserSkill(User user, String skillId) {
+        return user.getSkillsOffered().stream().anyMatch(skill -> skill.getId().equals(skillId))
+            || user.getSkillsWanted().stream().anyMatch(skill -> skill.getId().equals(skillId));
     }
 
     private PortfolioProofDto toDto(PortfolioProof proof) {

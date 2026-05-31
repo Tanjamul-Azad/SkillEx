@@ -9,8 +9,8 @@ public record CreatePortfolioProofRequest(
     @NotBlank @Size(max = 140) String title,
     @Size(max = 1200) String description,
     @NotBlank @Pattern(regexp = "PROJECT|GITHUB|BEHANCE|CERTIFICATE|SESSION_OUTCOME|MEDIA|OTHER") String proofType,
-    @Size(max = 600) String url,
-    @Size(max = 600) String mediaUrl,
+    @Size(max = 600) @Pattern(regexp = "^$|https?://.+", message = "URL must start with http:// or https://") String url,
+    @Size(max = 600) @Pattern(regexp = "^$|https?://.+", message = "Media URL must start with http:// or https://") String mediaUrl,
     String sourceSessionId,
     @Pattern(regexp = "PUBLIC|PRIVATE") String visibility,
     Boolean featured

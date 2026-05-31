@@ -45,12 +45,26 @@ export const CommunityService = {
   getEvents: (page = 0, size = 20): Promise<PagedResponse<Event>> =>
     api.get<PagedResponse<Event>>(`/community/events?page=${page}&size=${size}`),
 
+  createEvent: (data: {
+    title: string;
+    description?: string;
+    eventDate: string;
+    location?: string;
+    isOnline: boolean;
+    coverGradient?: string;
+    skillIds?: string[];
+  }): Promise<Event> =>
+    api.post<Event>('/community/events', data),
+
   attendEvent: (eventId: string): Promise<void> =>
     api.post<void>(`/community/events/${eventId}/attend`, {}),
 
   // ── Discussions ────────────────────────────────────────────────────────────
   getDiscussions: async (page = 0, size = 20): Promise<PagedResponse<Discussion>> =>
     normalizeDiscussionPage(await api.get<PagedResponse<Discussion>>(`/community/discussions?page=${page}&size=${size}`)),
+
+  createDiscussion: async (data: { title: string; content: string; category?: string }): Promise<Discussion> =>
+    normalizeDiscussion(await api.post<Discussion>('/community/discussions', data)),
 
   upvoteDiscussion: async (discussionId: string): Promise<Discussion> =>
     normalizeDiscussion(await api.post<Discussion>(`/community/discussions/${discussionId}/upvote`, {})),
@@ -98,8 +112,14 @@ export const CommunityService = {
   getSkillCircles: (page = 0, size = 20): Promise<PagedResponse<SkillCircle>> =>
     api.get<PagedResponse<SkillCircle>>(`/community/skill-circles?page=${page}&size=${size}`),
 
+  createSkillCircle: (data: { name: string; icon?: string; skillIds?: string[] }): Promise<SkillCircle> =>
+    api.post<SkillCircle>('/community/skill-circles', data),
+
   joinCircle: (circleId: string): Promise<SkillCircle> =>
     api.post<SkillCircle>(`/community/skill-circles/${circleId}/join`, {}),
+
+  leaveCircle: (circleId: string): Promise<SkillCircle> =>
+    api.post<SkillCircle>(`/community/skill-circles/${circleId}/leave`, {}),
 
   // ── Trending & Suggestions ─────────────────────────────────────────────────
   getTrendingSkills: (): Promise<TrendingSkill[]> =>

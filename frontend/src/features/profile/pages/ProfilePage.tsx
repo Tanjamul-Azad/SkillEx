@@ -33,7 +33,6 @@ import {
   Award,
   CheckCircle,
   Clock,
-  TrendingUp,
   ExternalLink,
   Flame,
   Github,
@@ -85,14 +84,13 @@ function StatCard({
   color: string;
 }) {
   return (
-    <div className="app-card app-card-hover group relative flex flex-col items-start gap-2 overflow-hidden p-4">
-      <div className="absolute top-0 right-0 -mr-6 -mt-6 w-16 h-16 rounded-full bg-primary/5 blur-2xl pointer-events-none group-hover:bg-primary/10 transition-colors" />
-      <div className={cn('p-2 rounded-xl transition-transform duration-300 group-hover:scale-105 border border-border/70 bg-background/70 dark:border-white/10 dark:bg-white/5', color)}>
+    <div className="group flex min-w-0 items-center gap-3 py-2">
+      <div className={cn('flex h-9 w-9 shrink-0 items-center justify-center rounded-xl border border-border/60 bg-background/50 transition-colors duration-300 group-hover:border-primary/25 dark:border-white/10 dark:bg-white/5', color)}>
         <Icon className="w-4 h-4" />
       </div>
-      <div>
-        <span className="block text-2xl font-extrabold font-headline leading-none text-foreground tracking-tight">{value}</span>
-        <span className="block text-[9px] font-bold text-muted-foreground uppercase tracking-widest mt-1.5">{label}</span>
+      <div className="min-w-0">
+        <span className="block font-headline text-xl font-extrabold leading-none tracking-tight text-foreground">{value}</span>
+        <span className="mt-1 block truncate text-[9px] font-bold uppercase tracking-widest text-muted-foreground">{label}</span>
       </div>
     </div>
   );
@@ -160,36 +158,31 @@ function SkillSection({
 
   return (
     <motion.div variants={itemVariants}>
-      <Card id={id} className={cn('app-card app-card-hover h-full overflow-hidden relative', emphasized && 'ring-1 ring-primary/30 bg-gradient-to-br from-primary/5 to-transparent')}>
-        <div className={cn("absolute top-0 right-0 -mr-16 -mt-16 w-32 h-32 rounded-full blur-3xl pointer-events-none opacity-20", variant === 'offer' ? 'bg-primary' : 'bg-secondary')} />
-        <CardHeader className="pb-4 border-b border-border/70 dark:border-white/10 relative z-10 px-5 pt-5">
-          <CardTitle className="flex items-center gap-3 text-sm font-bold text-foreground tracking-wide">
-            <div className={cn("p-1.5 rounded-lg border border-white/10 shadow-sm", variant === 'offer' ? 'bg-primary/10 text-primary' : 'bg-secondary/10 text-secondary')}>
+      <section id={id} className={cn('relative h-full overflow-hidden rounded-3xl border border-border/60 bg-background/30 p-5 transition-colors duration-300 hover:border-primary/20 dark:border-white/10 dark:bg-white/[0.03]', emphasized && 'border-primary/30 bg-primary/5')}>
+        <div className={cn("absolute inset-x-5 top-0 h-px opacity-60", variant === 'offer' ? 'bg-primary' : 'bg-secondary')} />
+        <div className="relative z-10 mb-5 flex items-center gap-3">
+          <div className={cn("flex h-8 w-8 items-center justify-center rounded-xl", variant === 'offer' ? 'bg-primary/10 text-primary' : 'bg-secondary/10 text-secondary')}>
               <Icon className="w-4 h-4" />
-            </div>
-            <span className="uppercase tracking-widest text-[11px]">{title}</span>
-            <Badge variant="secondary" className="ml-auto text-[9px] uppercase font-bold px-2 py-0.5 bg-muted text-muted-foreground border border-border/70 dark:border-white/10 rounded-md">
-              {skills.length}
-            </Badge>
-            {isOwner && (
-              <Button
-                size="icon"
-                variant="ghost"
-                className="h-7 w-7 rounded-lg border border-white/10 bg-white/5 hover:bg-primary hover:border-primary hover:text-primary-foreground transition-all shadow-[inset_0_1px_0_0_hsla(0,0%,100%,0.05)]"
-                onClick={onAdd}
-                aria-label={`Add skill to ${title}`}
-              >
-                <Plus className="h-3 w-3" />
-              </Button>
-            )}
-          </CardTitle>
-        </CardHeader>
-        <CardContent className="pt-6 px-6 pb-6 relative z-10">
+          </div>
+          <div className="min-w-0">
+            <h3 className="text-[11px] font-bold uppercase tracking-widest text-foreground">{title}</h3>
+            <p className="mt-0.5 text-[10px] font-semibold uppercase tracking-widest text-muted-foreground">{skills.length} skill{skills.length === 1 ? '' : 's'}</p>
+          </div>
+          {isOwner && (
+            <Button
+              size="icon"
+              variant="ghost"
+              className="ml-auto h-8 w-8 rounded-full border border-white/10 bg-white/5 hover:bg-primary hover:border-primary hover:text-primary-foreground transition-all"
+              onClick={onAdd}
+              aria-label={`Add skill to ${title}`}
+            >
+              <Plus className="h-3.5 w-3.5" />
+            </Button>
+          )}
+        </div>
+        <div className="relative z-10">
           {skills.length === 0 ? (
-          <div className="flex flex-col items-center justify-center gap-3 py-10 px-4 text-center rounded-xl bg-background/70 border border-border/70 border-dashed dark:border-white/10 dark:bg-black/20">
-              <div className="w-10 h-10 rounded-xl bg-muted flex items-center justify-center border border-border/70 dark:border-white/10">
-                <Icon className="w-4 h-4 text-muted-foreground/40" />
-              </div>
+          <div className="flex flex-col items-start justify-center gap-3 rounded-2xl border border-dashed border-border/60 bg-background/30 px-4 py-7 dark:border-white/10 dark:bg-black/10">
               <div className="space-y-1">
                 <p className="text-xs font-medium text-muted-foreground">{emptyText}</p>
               </div>
@@ -203,7 +196,7 @@ function SkillSection({
             <div className="space-y-5">
               <div className="flex flex-wrap gap-2">
                 {displayed.map((skill) => (
-                  <div key={skill.id} className="flex flex-col gap-1 rounded-xl border border-border/60 bg-background/60 p-2">
+                  <div key={skill.id} className="flex flex-col gap-1 rounded-2xl border border-border/50 bg-background/40 p-2 dark:border-white/10 dark:bg-black/10">
                     <div className="flex flex-wrap items-center gap-2">
                       <SkillBadge skill={skill} />
                       {variant === 'offer' && <SkillTrustBadge userId={profileUserId} skillId={skill.id} />}
@@ -242,8 +235,8 @@ function SkillSection({
               </AnimatePresence>
             </div>
           )}
-        </CardContent>
-      </Card>
+        </div>
+      </section>
     </motion.div>
   );
 }
@@ -681,14 +674,14 @@ export default function ProfilePage() {
 
   return (
     <DashboardLayout>
-      <div className="max-w-5xl mx-auto px-4 py-5 md:py-7 space-y-7">
+      <div className="product-page space-y-5">
         {/* ── Premium Profile Header ── */}
         <motion.div
           initial={{ opacity: 0, y: -16 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.5, ease: 'easeOut' }}
         >
-          <div className="app-shell relative overflow-hidden group">
+          <div className="product-panel relative group">
             {/* Cover banner with glassmorphic layers */}
             <div
               className="relative h-48 sm:h-60 w-full bg-muted overflow-hidden"
@@ -818,16 +811,16 @@ export default function ProfilePage() {
                   <SkillExScoreBadge score={profileUser.skillexScore} />
                 </div>
 
-                <div className="flex flex-wrap items-center gap-y-2 gap-x-5 text-[10px] uppercase font-bold tracking-widest text-muted-foreground">
-                  <span className="flex items-center gap-1.5 bg-background/70 px-4 py-1.5 rounded-full border border-border/70 dark:border-white/10 dark:bg-white/5">
+                <div className="flex flex-wrap items-center gap-x-5 gap-y-2 text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
+                  <span className="flex items-center gap-1.5">
                     <MapPin className="w-4 h-4 text-primary/70" />
                     {profileUser.university}
                   </span>
-                  <span className="flex items-center gap-1.5 bg-background/70 px-4 py-1.5 rounded-full border border-border/70 dark:border-white/10 dark:bg-white/5">
+                  <span className="flex items-center gap-1.5">
                     <Award className="w-4 h-4 text-warning/70" />
                     {profileUser.level}
                   </span>
-                  <span className="flex items-center gap-1.5 bg-background/70 px-4 py-1.5 rounded-full border border-border/70 dark:border-white/10 dark:bg-white/5">
+                  <span className="flex items-center gap-1.5">
                     <Clock className="w-4 h-4 text-blue-500/70" />
                     Joined{' '}
                     {new Date(profileUser.joinedAt).toLocaleDateString('en-US', {
@@ -839,16 +832,16 @@ export default function ProfilePage() {
 
                 {profileUser.bio && (
                   <div className="pt-2">
-                    <p className="text-[15px] text-foreground/90 max-w-3xl leading-relaxed bg-background/70 border border-border/70 p-5 rounded-2xl backdrop-blur-md border-l-2 border-l-primary relative overflow-hidden dark:border-white/10 dark:bg-black/20">
-                      <span className="absolute -top-4 -left-2 text-6xl text-primary/10 select-none font-serif z-0">"</span>
-                      <span className="relative z-10">{profileUser.bio}</span>
+                    <p className="max-w-3xl border-l-2 border-l-primary pl-4 text-[15px] leading-relaxed text-foreground/90">
+                      {profileUser.bio}
                     </p>
                   </div>
                 )}
               </div>
 
-              {/* Stats Row */}
-              <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mt-7 pt-5 border-t border-border/70 dark:border-white/10">
+              {/* Signal rail */}
+              <div className="mt-7 border-t border-border/70 pt-5 dark:border-white/10">
+                <div className="grid grid-cols-2 gap-x-6 gap-y-3 md:grid-cols-4">
                 <StatCard
                   icon={Play}
                   label="Sessions"
@@ -873,34 +866,32 @@ export default function ProfilePage() {
                   value={`${progress?.currentStreakDays ?? 0}d`}
                   color="text-accent"
                 />
+                </div>
               </div>
 
-              <div className="mt-4 grid gap-3 md:grid-cols-[0.8fr_1.2fr]">
-                <div className="rounded-2xl border border-primary/15 bg-primary/5 p-4">
-                  <p className="text-[10px] font-bold uppercase tracking-widest text-primary">Skill XP</p>
-                  <div className="mt-2 flex items-end justify-between gap-3">
-                    <div>
-                      <p className="font-headline text-3xl font-extrabold text-foreground">{progress?.totalXp ?? 0}</p>
-                      <p className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
-                        Level {progress?.currentLevel ?? 1}
-                      </p>
+              <div className="mt-5 rounded-2xl border border-primary/15 bg-primary/[0.06] px-4 py-3">
+                <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                  <div className="min-w-0">
+                    <p className="text-[10px] font-bold uppercase tracking-widest text-primary">Skill XP</p>
+                    <p className="mt-1 text-sm font-semibold text-foreground">
+                      {progress?.totalXp ?? 0} XP | Level {progress?.currentLevel ?? 1}
+                    </p>
+                  </div>
+                  <div className="min-w-0 flex-1 sm:max-w-md">
+                    <div className="mb-1.5 flex items-center justify-between text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
+                      <span>{progress?.xpIntoLevel ?? 0} XP this level</span>
+                      <span>{progress?.xpForNextLevel ?? 100} next</span>
                     </div>
-                    <Badge className="rounded-full bg-amber-500/10 text-amber-500">
-                      Longest {progress?.longestStreakDays ?? 0}d
-                    </Badge>
+                    <div className="h-2 overflow-hidden rounded-full bg-background/70">
+                      <div
+                        className="h-full rounded-full bg-primary transition-all"
+                        style={{ width: `${Math.max(0, Math.min(100, progress?.levelProgressPercent ?? 0))}%` }}
+                      />
+                    </div>
                   </div>
-                </div>
-                <div className="rounded-2xl border border-border/70 bg-background/60 p-4 dark:border-white/10 dark:bg-black/20">
-                  <div className="mb-2 flex items-center justify-between text-xs">
-                    <span className="font-semibold text-foreground">{progress?.xpIntoLevel ?? 0} XP this level</span>
-                    <span className="text-muted-foreground">{progress?.xpForNextLevel ?? 100} XP next</span>
-                  </div>
-                  <div className="h-2.5 overflow-hidden rounded-full bg-muted">
-                    <div
-                      className="h-full rounded-full bg-primary transition-all"
-                      style={{ width: `${Math.max(0, Math.min(100, progress?.levelProgressPercent ?? 0))}%` }}
-                    />
-                  </div>
+                  <Badge className="w-fit rounded-full bg-amber-500/10 text-amber-500">
+                    Longest {progress?.longestStreakDays ?? 0}d
+                  </Badge>
                 </div>
               </div>
             </div>
@@ -947,12 +938,12 @@ export default function ProfilePage() {
 
         {/* ── Main Content ── */}
         <Tabs value={activeTab} onValueChange={handleTabChange} className="w-full">
-          <TabsList className="grid w-full sm:w-auto grid-cols-5 sm:max-w-[680px] mb-8 bg-black/40 backdrop-blur-xl border border-white/5 shadow-[inset_0_1px_0_0_hsla(0,0%,100%,0.05)] rounded-[1.5rem] p-1.5 h-auto">
-            <TabsTrigger value="skills" className="rounded-xl py-2.5 text-[10px] uppercase font-bold tracking-widest data-[state=active]:bg-white/10 data-[state=active]:text-white data-[state=active]:shadow-[0_0_15px_rgba(255,255,255,0.05)] transition-all">
+          <TabsList className="product-toolbar mb-5 grid h-auto w-full grid-cols-5 gap-1 p-1 sm:max-w-[680px]">
+            <TabsTrigger value="skills" className="rounded-xl py-2.5 text-[10px] font-bold uppercase tracking-widest transition-colors data-[state=active]:bg-primary data-[state=active]:text-primary-foreground">
               <BookOpen className="w-3.5 h-3.5 mr-2 opacity-70" />
               Skills
             </TabsTrigger>
-            <TabsTrigger value="reviews" className="rounded-xl py-2.5 text-[10px] uppercase font-bold tracking-widest data-[state=active]:bg-white/10 data-[state=active]:text-white data-[state=active]:shadow-[0_0_15px_rgba(255,255,255,0.05)] transition-all">
+            <TabsTrigger value="reviews" className="rounded-xl py-2.5 text-[10px] font-bold uppercase tracking-widest transition-colors data-[state=active]:bg-primary data-[state=active]:text-primary-foreground">
               <Star className="w-3.5 h-3.5 mr-2 opacity-70" />
               Reviews
               {userReviews.length > 0 && (
@@ -961,15 +952,15 @@ export default function ProfilePage() {
                 </Badge>
               )}
             </TabsTrigger>
-            <TabsTrigger value="activity" className="rounded-xl py-2.5 text-[10px] uppercase font-bold tracking-widest data-[state=active]:bg-white/10 data-[state=active]:text-white data-[state=active]:shadow-[0_0_15px_rgba(255,255,255,0.05)] transition-all">
+            <TabsTrigger value="activity" className="rounded-xl py-2.5 text-[10px] font-bold uppercase tracking-widest transition-colors data-[state=active]:bg-primary data-[state=active]:text-primary-foreground">
               <Zap className="w-3.5 h-3.5 mr-2 opacity-70" />
               Activity
             </TabsTrigger>
-            <TabsTrigger value="portfolio" className="rounded-xl py-2.5 text-[10px] uppercase font-bold tracking-widest data-[state=active]:bg-white/10 data-[state=active]:text-white data-[state=active]:shadow-[0_0_15px_rgba(255,255,255,0.05)] transition-all">
+            <TabsTrigger value="portfolio" className="rounded-xl py-2.5 text-[10px] font-bold uppercase tracking-widest transition-colors data-[state=active]:bg-primary data-[state=active]:text-primary-foreground">
               <LinkIcon className="w-3.5 h-3.5 mr-2 opacity-70" />
               Portfolio
             </TabsTrigger>
-            <TabsTrigger value="credentials" className="rounded-xl py-2.5 text-[10px] uppercase font-bold tracking-widest data-[state=active]:bg-white/10 data-[state=active]:text-white data-[state=active]:shadow-[0_0_15px_rgba(255,255,255,0.05)] transition-all">
+            <TabsTrigger value="credentials" className="rounded-xl py-2.5 text-[10px] font-bold uppercase tracking-widest transition-colors data-[state=active]:bg-primary data-[state=active]:text-primary-foreground">
               <Award className="w-3.5 h-3.5 mr-2 opacity-70" />
               Proof
             </TabsTrigger>
@@ -1011,39 +1002,6 @@ export default function ProfilePage() {
               </motion.div>
             </motion.div>
 
-            {/* XP Progress */}
-            <motion.div variants={itemVariants} initial="hidden" animate="visible" className="mt-6">
-              <div className="p-6 bg-black/40 backdrop-blur-xl border border-white/5 rounded-[2rem] shadow-[inset_0_1px_0_0_hsla(0,0%,100%,0.05)] relative overflow-hidden group">
-                <div className="absolute right-0 top-0 w-64 h-64 bg-primary/5 blur-3xl rounded-full -mr-32 -mt-32 pointer-events-none group-hover:bg-primary/10 transition-colors duration-700" />
-                <div className="flex items-center justify-between mb-4 relative z-10">
-                  <div className="flex items-center gap-3">
-                    <div className="p-2 rounded-xl bg-primary/10 border border-primary/20 shadow-[0_0_15px_rgba(var(--primary),0.1)]">
-                      <TrendingUp className="w-5 h-5 text-primary drop-shadow-[0_0_8px_rgba(var(--primary),0.5)]" />
-                    </div>
-                    <div>
-                      <h3 className="text-sm font-bold font-headline text-foreground tracking-wide">Skill Progress</h3>
-                      <p className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground mt-0.5">Rank {profileUser.level}</p>
-                    </div>
-                  </div>
-                  <div className="text-right">
-                    <span className="text-2xl font-extrabold font-headline text-foreground">{profileUser.skillexScore}</span>
-                    <span className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground ml-1">/ {Math.ceil(profileUser.skillexScore / 500) * 500} XP</span>
-                  </div>
-                </div>
-                
-                <div className="relative h-3 w-full bg-black/60 rounded-full overflow-hidden border border-white/5 shadow-[inset_0_2px_4px_rgba(0,0,0,0.5)] z-10 mt-2">
-                  <motion.div 
-                    initial={{ width: 0 }}
-                    animate={{ width: `${(profileUser.skillexScore % 500) / 5}%` }}
-                    transition={{ duration: 1, ease: 'easeOut' }}
-                    className="absolute top-0 left-0 h-full bg-gradient-to-r from-primary/80 to-primary rounded-full shadow-[0_0_10px_hsl(var(--primary)/0.5)]"
-                  />
-                </div>
-                <p className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground mt-4 text-center sm:text-left z-10 relative">
-                  <span className="text-foreground">{Math.ceil(profileUser.skillexScore / 500) * 500 - profileUser.skillexScore} XP</span> required for next tier.
-                </p>
-              </div>
-            </motion.div>
           </TabsContent>
 
           {/* ── Reviews Tab ── */}

@@ -94,7 +94,8 @@ public class MatchServiceImpl implements MatchService {
         // Scan the full exchange graph so we surface all system-wide cycles, not just
         // the 2-hop subgraph of one user.  Results are ranked; the caller (frontend)
         // highlights cycles that contain the requesting user.
+        int safeLimit = Math.max(1, Math.min(limit, 50));
         List<ExchangeCycle> allCycles = cycleFinder.findCycles(graphBuilder.build());
-        return cycleScorer.rankCycles(allCycles, limit);
+        return cycleScorer.rankCycles(allCycles, safeLimit);
     }
 }

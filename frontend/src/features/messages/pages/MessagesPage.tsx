@@ -17,6 +17,7 @@ import {
   Pin,
   Trash2,
   Loader2,
+  Users,
 } from 'lucide-react';
 import { useAuth } from '@/hooks/useAuth';
 import { useToast } from '@/hooks/use-toast';
@@ -41,7 +42,7 @@ import { TokenStore } from '@/services/http/ApiClient';
 import { MessageService } from '@/services/messageService';
 import type { MessageDto, ConversationDto } from '@/services/messageService';
 import { UserService } from '@/services/userService';
-import { appVisuals } from '@/lib/appVisuals';
+import { connectionService, type ConnectionUser } from '@/services/connectionService';
 
 /* ── Types ──────────────────────────────────────────────────────────── */
 interface Message {
@@ -96,7 +97,7 @@ function parseDtoDate(value: unknown): Date {
 }
 
 function messagePreview(dto: MessageDto): string {
-  return dto.type?.toUpperCase() === 'IMAGE' ? '📷 Image' : (dto.content ?? '');
+  return dto.type?.toUpperCase() === 'IMAGE' ? 'Image' : (dto.content ?? '');
 }
 
 /* ── Mappers ─────────────────────────────────────────────────────────── */
@@ -260,6 +261,48 @@ function ConversationItem({
   );
 }
 
+function SkillExLogoMark({ compact = false }: { compact?: boolean }) {
+  return (
+    <div className={cn('inline-flex items-center font-headline font-extrabold tracking-tight', compact ? 'text-2xl' : 'text-5xl')}>
+      <span className="text-foreground">Skill</span>
+      <span className="text-primary">EX</span>
+    </div>
+  );
+}
+
+function RecentAccountItem({
+  account,
+  onClick,
+}: {
+  account: ConnectionUser;
+  onClick: () => void;
+}) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      className="group flex w-full items-center gap-3 rounded-2xl border border-transparent px-3 py-2.5 text-left transition-all hover:border-white/10 hover:bg-white/[0.04]"
+    >
+      <div className="relative shrink-0">
+        <Avatar className="h-11 w-11 border border-border/60 dark:border-white/10">
+          <AvatarImage src={account.avatar ?? undefined} alt={account.name} className="object-cover" />
+          <AvatarFallback className="bg-primary/10 text-xs font-bold text-primary">
+            {getInitials(account.name)}
+          </AvatarFallback>
+        </Avatar>
+        {account.isOnline && (
+          <span className="absolute bottom-0 right-0 h-3 w-3 rounded-full border-2 border-card bg-emerald-500" />
+        )}
+      </div>
+      <div className="min-w-0 flex-1">
+        <p className="truncate text-sm font-bold text-foreground">{account.name}</p>
+        <p className="truncate text-xs text-muted-foreground">{account.university || account.level || 'SkillEX member'}</p>
+      </div>
+      <MessageSquarePlus className="h-4 w-4 shrink-0 text-muted-foreground transition-colors group-hover:text-primary" />
+    </button>
+  );
+}
+
 function MessageBubble({
   msg,
   isMe,
@@ -343,9 +386,27 @@ export default function MessagesPage() {
   const [sending, setSending] = useState(false);
   const [mobileShowChat, setMobileShowChat] = useState(!!paramUserId);
   const [emojiOpen, setEmojiOpen] = useState(false);
+  const [recentAccounts, setRecentAccounts] = useState<ConnectionUser[]>([]);
 
   // Keep ref in sync for WebSocket callback
   useEffect(() => { activeConvIdRef.current = activeConvId; }, [activeConvId]);
+
+  useEffect(() => {
+    if (!user?.id) return;
+    connectionService.list('ACCEPTED', 'all', 0, 12)
+      .then((page) => {
+        const seen = new Set<string>();
+        const accounts = (page.content ?? [])
+          .map((connection) => connection.requester.id === user.id ? connection.receiver : connection.requester)
+          .filter((account) => {
+            if (!account?.id || account.id === user.id || seen.has(account.id)) return false;
+            seen.add(account.id);
+            return true;
+          });
+        setRecentAccounts(accounts);
+      })
+      .catch(() => setRecentAccounts([]));
+  }, [user?.id]);
 
   // ── Load conversations on mount ──────────────────────────────────────────
   useEffect(() => {
@@ -569,10 +630,34 @@ export default function MessagesPage() {
     setMobileShowChat(true);
   };
 
+  const openRecentAccount = (account: ConnectionUser) => {
+    setConversations(prev => dedupeConversations([
+      {
+        id: account.id,
+        user: {
+          id: account.id,
+          name: account.name,
+          avatar: account.avatar ?? undefined,
+          online: account.isOnline,
+        },
+        lastMessage: 'No messages yet',
+        lastMessageTime: new Date(),
+        unreadCount: 0,
+        messages: [],
+      },
+      ...prev,
+    ]));
+    openConversation(account.id);
+  };
+
   const filteredConvs = conversations.filter(c =>
     c.user.name.toLowerCase().includes(search.toLowerCase()) ||
     c.lastMessage.toLowerCase().includes(search.toLowerCase())
   );
+  const recentAccountsForSidebar = recentAccounts
+    .filter(account => !conversations.some(conv => conv.id === account.id))
+    .filter(account => account.name.toLowerCase().includes(search.toLowerCase()) || (account.university ?? '').toLowerCase().includes(search.toLowerCase()))
+    .slice(0, 8);
 
   // Group messages by date for date separators
   const groupedMessages = activeConv?.messages.reduce<{ date: string; messages: Message[] }[]>(
@@ -643,15 +728,43 @@ export default function MessagesPage() {
               ) : (
                 <AnimatePresence>
                   {filteredConvs.length === 0 ? (
-                    <div className="flex flex-col items-center justify-center h-full py-10 text-center px-5">
-                      <div className="app-media mb-5 aspect-[16/10] w-full max-w-[260px]">
-                        <img src={appVisuals.messagesSession} alt="Preparing a skill session conversation" className="h-full w-full object-cover" loading="lazy" />
-                      </div>
-                      <div className="w-12 h-12 rounded-xl bg-primary/10 border border-primary/20 flex items-center justify-center mb-4">
-                        <MessageSquarePlus className="h-6 w-6 text-primary/60" />
-                      </div>
-                      <p className="text-sm font-bold text-foreground/80 mb-2">No conversations yet</p>
-                      <p className="text-xs text-muted-foreground text-balance">Open a profile or match to start planning a skill exchange.</p>
+                    <div className="space-y-5 px-1 py-2">
+                      {conversations.length > 0 ? (
+                        <div className="rounded-2xl border border-dashed border-white/10 px-4 py-8 text-center">
+                          <Search className="mx-auto mb-3 h-5 w-5 text-muted-foreground" />
+                          <p className="text-sm font-bold text-foreground">No matching chats</p>
+                          <p className="mt-1 text-xs text-muted-foreground">Try another name or message keyword.</p>
+                        </div>
+                      ) : (
+                        <div className="rounded-2xl border border-white/10 bg-white/[0.03] px-4 py-4">
+                          <div className="mb-4 flex items-center gap-3">
+                            <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-primary/10 text-primary">
+                              <Users className="h-4 w-4" />
+                            </div>
+                            <div>
+                              <p className="text-sm font-bold text-foreground">Recent accounts</p>
+                              <p className="text-xs text-muted-foreground">Start from people already connected with you.</p>
+                            </div>
+                          </div>
+                          {recentAccountsForSidebar.length === 0 ? (
+                            <div className="rounded-xl border border-dashed border-white/10 px-4 py-7 text-center">
+                              <MessageSquarePlus className="mx-auto mb-3 h-5 w-5 text-primary" />
+                              <p className="text-sm font-bold text-foreground/80">No conversations yet</p>
+                              <p className="mt-1 text-xs text-muted-foreground">Open a profile or match to start planning a skill exchange.</p>
+                            </div>
+                          ) : (
+                            <div className="space-y-1">
+                              {recentAccountsForSidebar.map((account) => (
+                                <RecentAccountItem
+                                  key={account.id}
+                                  account={account}
+                                  onClick={() => openRecentAccount(account)}
+                                />
+                              ))}
+                            </div>
+                          )}
+                        </div>
+                      )}
                     </div>
                   ) : (
                     filteredConvs.map(conv => (
@@ -760,8 +873,8 @@ export default function MessagesPage() {
                     </div>
                   ) : groupedMessages.length === 0 ? (
                     <div className="flex flex-col items-center justify-center h-full text-center gap-4 py-12 px-6">
-                      <div className="app-media aspect-[16/9] w-full max-w-md">
-                        <img src={appVisuals.messagesSession} alt="Skill session conversation setup" className="h-full w-full object-cover" loading="lazy" />
+                      <div className="px-8 py-3">
+                        <SkillExLogoMark />
                       </div>
                       <div className="p-4 rounded-2xl bg-primary/10 border border-primary/20">
                         <MessageSquarePlus className="h-8 w-8 text-primary" />
@@ -893,10 +1006,10 @@ export default function MessagesPage() {
                 className="hidden md:flex flex-1 flex-col items-center justify-center text-center p-8 bg-background/50 dark:bg-black/20 relative overflow-hidden"
               >
                 <div className="absolute inset-0 dot-grid opacity-20 pointer-events-none mix-blend-overlay" />
-                <div className="app-media relative z-10 mb-7 aspect-[16/9] w-full max-w-lg">
-                  <img src={appVisuals.messagesSession} alt="Modern skill session chat" className="h-full w-full object-cover" loading="lazy" />
+                <div className="relative z-10 mb-7 px-10 py-3">
+                  <SkillExLogoMark />
                 </div>
-                <h2 className="text-3xl font-extrabold font-headline text-foreground relative z-10 mb-3">SkillEX Messages</h2>
+                <h2 className="text-3xl font-extrabold font-headline text-foreground relative z-10 mb-3">Messages</h2>
                 <p className="text-sm text-muted-foreground max-w-sm relative z-10 text-balance leading-relaxed">
                   Select a conversation or start from a profile to plan your next skill exchange.
                 </p>

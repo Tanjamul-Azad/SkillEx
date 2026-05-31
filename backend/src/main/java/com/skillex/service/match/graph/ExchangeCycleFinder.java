@@ -262,8 +262,8 @@ public class ExchangeCycleFinder {
             String fromId   = path.get(i);
             String toId     = path.get((i + 1) % path.size()); // wraps: last → first
 
-            String fromName = nameMap.get(fromId);
-            String toName   = nameMap.get(toId);
+            String learnerName = nameMap.get(fromId);
+            String teacherName = nameMap.get(toId);
 
             // Retrieve the matching skills on this directed edge
             Set<String> matchingIds = graph.outgoingEdges(fromId).stream()
@@ -280,8 +280,8 @@ public class ExchangeCycleFinder {
                 .orElse("Unknown Skill");
 
             hops.add(new ExchangeCycleHop(
-                fromId, fromName,
-                toId,   toName,
+                toId, teacherName,
+                fromId, learnerName,
                 matchingIds,
                 primarySkillName
             ));

@@ -63,6 +63,8 @@ public interface CommunityService {
 
     CommunityDtos.SkillCircleDto joinSkillCircle(String userId, String circleId);
 
+    CommunityDtos.SkillCircleDto leaveSkillCircle(String userId, String circleId);
+
     // ── Trending & Suggestions ───────────────────────────────────────────────
 
     List<CommunityDtos.TrendingSkillDto> getTrendingSkills();

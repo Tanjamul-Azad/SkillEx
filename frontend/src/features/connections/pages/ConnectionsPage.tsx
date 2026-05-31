@@ -2,9 +2,8 @@ import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { useDocumentTitle } from '@/hooks/useDocumentTitle';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
-import { CalendarDays, Users, Send, Inbox, MessageSquare, UserCheck, Clock } from 'lucide-react';
+import { CalendarDays, Users, Send, Inbox, MessageSquare, UserCheck, Clock, RefreshCw } from 'lucide-react';
 import DashboardLayout from '@/components/layout/DashboardLayout';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -27,7 +26,7 @@ import { SessionService } from '@/services/sessionService';
 import { onRealtimeNotification } from '@/lib/realtime';
 import { useAuth } from '@/hooks/useAuth';
 import { useToast } from '@/hooks/use-toast';
-import { appVisuals } from '@/lib/appVisuals';
+import { cn } from '@/lib/utils';
 
 type ConnectionTab = 'accepted' | 'sent' | 'received';
 
@@ -348,15 +347,31 @@ export default function ConnectionsPage() {
 
   return (
     <DashboardLayout>
-      <div className="container mx-auto max-w-6xl px-4 py-5 md:px-8 md:py-7 space-y-5">
+      <div className="product-page space-y-4">
         <motion.div
           initial={{ opacity: 0, y: -10 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.25 }}
-          className="flex flex-col gap-2"
+          className="product-header"
         >
-          <h1 className="font-headline text-3xl font-extrabold md:text-4xl leading-tight">Connections</h1>
-          <p className="max-w-2xl text-sm text-muted-foreground">Manage people you can message, exchange with, or invite into future skill sessions.</p>
+          <div>
+            <h1 className="product-title">Connections</h1>
+            <p className="product-subtitle">Manage people you can message, exchange with, or invite into future skill sessions.</p>
+          </div>
+          <div className="grid grid-cols-3 gap-2 text-center">
+            <div className="product-kpi px-4 py-3">
+              <p className="font-headline text-2xl font-extrabold">{connections.length}</p>
+              <p className="text-[10px] font-extrabold uppercase tracking-widest text-muted-foreground">Showing</p>
+            </div>
+            <div className="product-kpi px-4 py-3">
+              <p className="font-headline text-2xl font-extrabold text-primary">{activeTab === 'accepted' ? connections.length : 0}</p>
+              <p className="text-[10px] font-extrabold uppercase tracking-widest text-muted-foreground">Ready</p>
+            </div>
+            <div className="product-kpi px-4 py-3">
+              <p className="font-headline text-2xl font-extrabold text-warning">{activeTab !== 'accepted' ? connections.length : 0}</p>
+              <p className="text-[10px] font-extrabold uppercase tracking-widest text-muted-foreground">Pending</p>
+            </div>
+          </div>
         </motion.div>
 
         <Tabs
@@ -366,57 +381,81 @@ export default function ConnectionsPage() {
             setActiveTab(nextTab);
             navigate(`/connections?tab=${nextTab}`, { replace: true });
           }}
-          className="space-y-6"
+          className="space-y-4"
         >
-          <TabsList className="inline-flex h-11 w-full rounded-2xl border border-border/70 bg-card p-1 shadow-sm md:w-auto dark:border-white/10">
-            <TabsTrigger value="accepted" className="rounded-xl px-5 text-xs font-bold data-[state=active]:bg-primary data-[state=active]:text-primary-foreground transition-all flex-1 md:flex-none">
-              <Users className="mr-2 h-3.5 w-3.5" />
-              Accepted
-            </TabsTrigger>
-            <TabsTrigger value="sent" className="rounded-xl px-5 text-xs font-bold data-[state=active]:bg-primary/10 data-[state=active]:text-primary transition-all flex-1 md:flex-none">
-              <Send className="mr-2 h-3.5 w-3.5" />
-              Sent
-            </TabsTrigger>
-            <TabsTrigger value="received" className="rounded-xl px-5 text-xs font-bold data-[state=active]:bg-primary/10 data-[state=active]:text-primary transition-all flex-1 md:flex-none">
-              <Inbox className="mr-2 h-3.5 w-3.5" />
-              Received
-            </TabsTrigger>
-          </TabsList>
+          <div className="product-toolbar">
+            <TabsList className="h-10 rounded-none border-0 bg-transparent p-0">
+              <TabsTrigger value="accepted" className="product-tab gap-2 rounded-none bg-transparent data-[state=active]:border-primary data-[state=active]:bg-transparent data-[state=active]:text-foreground data-[state=active]:shadow-none">
+                <Users className="h-3.5 w-3.5" />
+                Accepted
+              </TabsTrigger>
+              <TabsTrigger value="sent" className="product-tab gap-2 rounded-none bg-transparent data-[state=active]:border-primary data-[state=active]:bg-transparent data-[state=active]:text-foreground data-[state=active]:shadow-none">
+                <Send className="h-3.5 w-3.5" />
+                Sent
+              </TabsTrigger>
+              <TabsTrigger value="received" className="product-tab gap-2 rounded-none bg-transparent data-[state=active]:border-primary data-[state=active]:bg-transparent data-[state=active]:text-foreground data-[state=active]:shadow-none">
+                <Inbox className="h-3.5 w-3.5" />
+                Received
+              </TabsTrigger>
+            </TabsList>
+            <div className="flex flex-wrap items-center gap-2">
+              <Button
+                variant="outline"
+                size="sm"
+                className="h-9 rounded-xl gap-2 text-xs font-bold"
+                onClick={() => void fetchConnections(activeTab)}
+                disabled={loading}
+              >
+                <RefreshCw className={loading ? 'h-3.5 w-3.5 animate-spin' : 'h-3.5 w-3.5'} />
+                Refresh
+              </Button>
+              <Button size="sm" className="h-9 rounded-xl text-xs font-bold" onClick={() => navigate('/match')}>
+                Find partners
+              </Button>
+            </div>
+          </div>
         </Tabs>
 
-        <Card className="app-shell overflow-hidden">
-          <CardHeader className="border-b border-border/60 pb-4 dark:border-white/10">
-            <CardTitle className="flex items-center gap-3 text-base font-headline font-bold">
-              {activeTab === 'accepted' ? <div className="rounded-xl border border-primary/20 bg-primary/10 p-2"><UserCheck className="h-4 w-4 text-primary" /></div> : <div className="rounded-xl border border-primary/20 bg-primary/10 p-2"><Clock className="h-4 w-4 text-primary" /></div>}
-              {activeTab === 'accepted' ? 'Accepted Connections' : activeTab === 'sent' ? 'Sent Requests' : 'Received Requests'}
-              <Badge className="ml-auto border border-border/70 bg-muted text-foreground px-3 py-1 font-bold dark:border-white/10">{connections.length}</Badge>
-            </CardTitle>
-          </CardHeader>
-
-          <CardContent className="p-5 md:p-6">
-            {loading ? (
-              <div className="space-y-3">
-                {[0, 1, 2].map((idx) => (
-                  <div key={idx} className="rounded-xl border border-border/50 p-3">
-                    <div className="flex items-center gap-3">
-                      <Skeleton className="h-10 w-10 rounded-full" />
-                      <div className="flex-1 space-y-2">
-                        <Skeleton className="h-3.5 w-32" />
-                        <Skeleton className="h-3 w-52" />
-                      </div>
-                    </div>
-                  </div>
-                ))}
+        <section className="product-panel">
+          <div className="flex items-center justify-between gap-3 border-b border-border/60 px-4 py-3 dark:border-white/10">
+            <div className="flex items-center gap-3">
+              <div className="flex h-9 w-9 items-center justify-center rounded-xl border border-primary/20 bg-primary/10">
+                {activeTab === 'accepted' ? <UserCheck className="h-4 w-4 text-primary" /> : <Clock className="h-4 w-4 text-primary" />}
               </div>
-            ) : connections.length === 0 ? (
-              <div className="grid gap-6 rounded-2xl border border-dashed border-border/80 bg-background/70 p-5 md:grid-cols-[minmax(0,1fr)_320px] md:p-6 dark:border-white/10 dark:bg-black/20">
-                <div className="flex flex-col justify-center text-left">
-                  <div className="mb-4 inline-flex h-11 w-11 items-center justify-center rounded-xl border border-primary/20 bg-primary/10">
-                    <Users className="h-5 w-5 text-primary" />
+              <div>
+                <h2 className="font-headline text-base font-extrabold">
+                  {activeTab === 'accepted' ? 'Accepted connections' : activeTab === 'sent' ? 'Sent requests' : 'Received requests'}
+                </h2>
+                <p className="text-xs text-muted-foreground">{activeTab === 'accepted' ? 'People ready for chat and meetings.' : 'Pending relationship requests that need a next action.'}</p>
+              </div>
+            </div>
+            <Badge className="rounded-full border border-border/70 bg-muted px-3 py-1 font-bold text-foreground dark:border-white/10">
+              {connections.length}
+            </Badge>
+          </div>
+
+          {loading ? (
+            <div className="space-y-0">
+              {[0, 1, 2].map((idx) => (
+                <div key={idx} className="product-row flex items-center gap-3 px-4 py-4">
+                  <Skeleton className="h-10 w-10 rounded-full" />
+                  <div className="flex-1 space-y-2">
+                    <Skeleton className="h-3.5 w-40" />
+                    <Skeleton className="h-3 w-64" />
                   </div>
-                  <p className="text-2xl font-headline font-extrabold">{emptyMeta.title}</p>
-                  <p className="mt-3 max-w-md text-sm leading-relaxed text-muted-foreground">{emptyMeta.description}</p>
-                  <div className="mt-5 flex flex-wrap gap-3">
+                  <Skeleton className="h-9 w-28 rounded-xl" />
+                </div>
+              ))}
+            </div>
+          ) : connections.length === 0 ? (
+            <div className="p-4">
+              <div className="product-empty text-left">
+                <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
+                  <div>
+                    <p className="font-headline text-xl font-extrabold text-foreground">{emptyMeta.title}</p>
+                    <p className="mt-2 max-w-xl text-sm leading-relaxed text-muted-foreground">{emptyMeta.description}</p>
+                  </div>
+                  <div className="flex flex-wrap gap-2">
                     <Button size="sm" onClick={() => navigate('/match')} className="rounded-xl">
                       Find matches
                     </Button>
@@ -425,139 +464,146 @@ export default function ConnectionsPage() {
                     </Button>
                   </div>
                 </div>
-                <div className="app-media aspect-[16/10]">
-                  <img src={appVisuals.connectionsNetwork} alt="People connecting through a skill exchange" className="h-full w-full object-cover" loading="lazy" />
-                </div>
               </div>
-            ) : (
-              <motion.div
-                className="grid auto-rows-fr grid-cols-1 gap-4 lg:grid-cols-2"
-                initial="hidden"
-                animate="visible"
-                variants={{
-                  visible: { transition: { staggerChildren: 0.05 } },
-                }}
-              >
-                {connections.map((connection, _i) => {
-                  const partner = getPartner(connection);
-                  return (
-                    <motion.div
-                      key={connection.id}
-                      variants={{
-                        hidden: { opacity: 0, y: 20 },
-                        visible: { opacity: 1, y: 0, transition: { type: 'spring', stiffness: 100 } }
-                      }}
-                      className="app-card app-card-hover group relative flex min-h-[190px] flex-col overflow-hidden"
-                    >
-                      <div className="pointer-events-none absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-primary/45 to-transparent opacity-0 transition-opacity duration-500 group-hover:opacity-100" />
-                      
-                      <div className="relative z-10 flex flex-1 flex-col p-5">
-                        <div className="flex items-center gap-4">
-                          <div className="relative shrink-0">
-                            <Avatar className="h-14 w-14 bg-card ring-2 ring-primary/10 transition-all duration-300 group-hover:ring-primary/30">
-                              <AvatarImage src={partner.avatar ?? undefined} alt={partner.name} className="object-cover" />
-                              <AvatarFallback className="bg-muted text-xl font-bold">{partner.name.charAt(0)}</AvatarFallback>
-                            </Avatar>
-                            {/* Online indicator dot for accepted connections (mocked representation) */}
-                            {activeTab === 'accepted' && (
-                              <span className="absolute bottom-0 right-0 h-4 w-4 rounded-full border-[3px] border-card bg-emerald-500 shadow-[0_0_10px_var(--emerald-500)]" />
-                            )}
-                          </div>
-                          
-                          <div className="flex min-w-0 flex-1 flex-col">
-                            <button
-                              type="button"
-                              className="truncate text-left font-headline text-lg font-extrabold leading-tight text-foreground transition-colors hover:text-primary"
-                              onClick={() => navigate(`/profile/${partner.id}`)}
-                            >
-                              {partner.name}
-                            </button>
-                            <span className="mt-1 text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
-                              @{partner.username ?? 'user'}
-                            </span>
-                            {connection.message && activeTab !== 'accepted' && (
-                              <p className="mt-3 text-[11px] font-semibold text-muted-foreground italic border-l-2 border-primary/40 pl-3 py-1 w-full bg-white/5 rounded-r-lg line-clamp-3">
-                                "{connection.message}"
-                              </p>
-                            )}
-                          </div>
-                        </div>
+            </div>
+          ) : (
+            <div className="overflow-x-auto">
+              <table className="product-table">
+                <thead>
+                  <tr>
+                    <th className="product-th">Person</th>
+                    <th className="product-th">Status</th>
+                    <th className="product-th">Request context</th>
+                    <th className="product-th">Created</th>
+                    <th className="product-th text-right">Actions</th>
+                  </tr>
+                </thead>
+                <motion.tbody
+                  initial="hidden"
+                  animate="visible"
+                  variants={{ visible: { transition: { staggerChildren: 0.035 } } }}
+                >
+                  {connections.map((connection) => {
+                    const partner = getPartner(connection);
+                    const createdAt = new Date(connection.createdAt);
+                    const statusTone = activeTab === 'accepted'
+                      ? 'border-emerald-500/25 bg-emerald-500/10 text-emerald-500'
+                      : activeTab === 'received'
+                        ? 'border-warning/25 bg-warning/10 text-warning'
+                        : 'border-primary/25 bg-primary/10 text-primary';
 
-                        <div className="mt-auto pt-5">
-                          {activeTab === 'accepted' && (
-                            <div className="grid w-full grid-cols-2 gap-2 border-t border-border/60 pt-4 sm:grid-cols-3 dark:border-white/10">
-                              <Button
-                                size="sm"
-                                variant="outline"
-                                className="h-9 min-w-0 rounded-xl text-xs font-bold"
+                    return (
+                      <motion.tr
+                        key={connection.id}
+                        variants={{
+                          hidden: { opacity: 0, y: 8 },
+                          visible: { opacity: 1, y: 0, transition: { duration: 0.18 } },
+                        }}
+                        className="product-row"
+                      >
+                        <td className="product-td">
+                          <div className="flex min-w-[230px] items-center gap-3">
+                            <div className="relative shrink-0">
+                              <Avatar className="h-10 w-10 border border-border/70 dark:border-white/10">
+                                <AvatarImage src={partner.avatar ?? undefined} alt={partner.name} className="object-cover" />
+                                <AvatarFallback className="bg-muted text-sm font-bold">{partner.name.charAt(0)}</AvatarFallback>
+                              </Avatar>
+                              {partner.isOnline && (
+                                <span className="absolute bottom-0 right-0 h-3 w-3 rounded-full border-2 border-card bg-emerald-500" />
+                              )}
+                            </div>
+                            <div className="min-w-0">
+                              <button
+                                type="button"
+                                className="truncate text-left font-headline text-sm font-extrabold text-foreground hover:text-primary"
                                 onClick={() => navigate(`/profile/${partner.id}`)}
                               >
-                                Profile
-                              </Button>
+                                {partner.name}
+                              </button>
+                              <p className="truncate text-xs text-muted-foreground">@{partner.username ?? 'user'} · {partner.university ?? 'SkillEX member'}</p>
+                            </div>
+                          </div>
+                        </td>
+                        <td className="product-td">
+                          <Badge variant="outline" className={cn('rounded-full px-2.5 py-1 text-[10px] font-extrabold uppercase tracking-widest', statusTone)}>
+                            {activeTab === 'accepted' ? 'Connected' : activeTab === 'received' ? 'Needs reply' : 'Waiting'}
+                          </Badge>
+                        </td>
+                        <td className="product-td">
+                          <p className="max-w-[360px] truncate text-xs text-muted-foreground">
+                            {connection.message || (activeTab === 'accepted' ? 'Ready to plan a learning session.' : 'No message included.')}
+                          </p>
+                        </td>
+                        <td className="product-td">
+                          <p className="whitespace-nowrap text-xs font-semibold text-muted-foreground">
+                            {Number.isNaN(createdAt.getTime()) ? 'Recently' : createdAt.toLocaleDateString()}
+                          </p>
+                        </td>
+                        <td className="product-td">
+                          <div className="flex justify-end gap-2">
+                            {activeTab === 'accepted' && (
+                              <>
+                                <Button size="sm" variant="outline" className="h-8 rounded-lg px-3 text-xs font-bold" onClick={() => navigate(`/profile/${partner.id}`)}>
+                                  Profile
+                                </Button>
+                                <Button
+                                  size="sm"
+                                  variant="outline"
+                                  className="h-8 rounded-lg px-3 text-xs font-bold"
+                                  onClick={() => void openMeetingRequest(connection)}
+                                  disabled={actionBusy[`meeting:${connection.id}`]}
+                                >
+                                  <CalendarDays className="mr-1.5 h-3.5 w-3.5" />
+                                  {actionBusy[`meeting:${connection.id}`] ? 'Checking' : 'Meeting'}
+                                </Button>
+                                <Button size="sm" className="h-8 rounded-lg px-3 text-xs font-bold" onClick={() => navigate(`/messages/${partner.id}`)}>
+                                  <MessageSquare className="mr-1.5 h-3.5 w-3.5" />
+                                  Message
+                                </Button>
+                              </>
+                            )}
+                            {activeTab === 'sent' && (
                               <Button
                                 size="sm"
                                 variant="outline"
-                                className="h-9 min-w-0 rounded-xl text-xs font-bold"
-                                onClick={() => void openMeetingRequest(connection)}
-                                disabled={actionBusy[`meeting:${connection.id}`]}
-                              >
-                                {actionBusy[`meeting:${connection.id}`] ? 'Checking...' : 'Meeting'}
-                              </Button>
-                              <Button
-                                size="sm"
-                                variant="gradient"
-                                className="col-span-2 h-9 min-w-0 rounded-xl text-xs font-bold shadow-none sm:col-span-1"
-                                onClick={() => navigate(`/messages/${partner.id}`)}
-                              >
-                                <MessageSquare className="mr-1.5 h-3.5 w-3.5" />
-                                Message
-                              </Button>
-                            </div>
-                          )}
-
-                          {activeTab === 'sent' && (
-                            <Button
-                              size="sm"
-                              variant="outline"
-                              className="mt-4 h-9 w-full rounded-xl border-destructive/30 text-xs font-bold text-destructive hover:bg-destructive/10"
-                              onClick={() => updateConnectionStatus(connection.id, 'cancelled')}
-                              disabled={actionBusy[connection.id]}
-                            >
-                              {actionBusy[connection.id] ? 'Cancelling...' : 'Cancel Request'}
-                            </Button>
-                          )}
-
-                          {activeTab === 'received' && (
-                            <div className="mt-4 grid w-full grid-cols-2 gap-2">
-                              <Button
-                                size="sm"
-                                variant="outline"
-                                className="h-9 rounded-xl border-destructive/40 text-xs font-bold text-destructive hover:bg-destructive/10"
-                                onClick={() => updateConnectionStatus(connection.id, 'declined')}
+                                className="h-8 rounded-lg border-destructive/30 px-3 text-xs font-bold text-destructive hover:bg-destructive/10"
+                                onClick={() => updateConnectionStatus(connection.id, 'cancelled')}
                                 disabled={actionBusy[connection.id]}
                               >
-                                Decline
+                                {actionBusy[connection.id] ? 'Cancelling' : 'Cancel'}
                               </Button>
-                              <Button
-                                size="sm"
-                                variant="gradient"
-                                className="h-9 rounded-xl border-none text-xs font-bold shadow-none"
-                                onClick={() => updateConnectionStatus(connection.id, 'accepted')}
-                                disabled={actionBusy[connection.id]}
-                              >
-                                {actionBusy[connection.id] ? 'Accepting...' : 'Accept'}
-                              </Button>
-                            </div>
-                          )}
-                        </div>
-                      </div>
-                    </motion.div>
-                  );
-                })}
-              </motion.div>
-            )}
-          </CardContent>
-        </Card>
+                            )}
+                            {activeTab === 'received' && (
+                              <>
+                                <Button
+                                  size="sm"
+                                  variant="outline"
+                                  className="h-8 rounded-lg border-destructive/35 px-3 text-xs font-bold text-destructive hover:bg-destructive/10"
+                                  onClick={() => updateConnectionStatus(connection.id, 'declined')}
+                                  disabled={actionBusy[connection.id]}
+                                >
+                                  Decline
+                                </Button>
+                                <Button
+                                  size="sm"
+                                  className="h-8 rounded-lg px-3 text-xs font-bold"
+                                  onClick={() => updateConnectionStatus(connection.id, 'accepted')}
+                                  disabled={actionBusy[connection.id]}
+                                >
+                                  {actionBusy[connection.id] ? 'Accepting' : 'Accept'}
+                                </Button>
+                              </>
+                            )}
+                          </div>
+                        </td>
+                      </motion.tr>
+                    );
+                  })}
+                </motion.tbody>
+              </table>
+            </div>
+          )}
+        </section>
 
         <Dialog
           open={meetingOpen}

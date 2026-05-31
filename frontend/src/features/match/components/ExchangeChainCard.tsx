@@ -12,6 +12,7 @@ export interface CycleHop {
   fromUserName: string;
   toUserId: string;
   toUserName: string;
+  matchingSkillIds?: string[];
   primarySkillName: string;
 }
 

@@ -1,47 +1,61 @@
 import React from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Area, AreaChart, ResponsiveContainer, Tooltip, XAxis } from 'recharts';
+import { Area, AreaChart, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts';
 import { TrendingUp, TrendingDown, Activity } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
-interface ActivityChartProps {
-  data: { name: string; hours: number; amt: number }[];
-  trend: number;
+export interface ActivityChartPoint {
+  name: string;
+  value: number;
+  sessions: number;
+  exchanges: number;
+  xp: number;
 }
 
-export function ActivityChart({ data, trend }: ActivityChartProps) {
+interface ActivityChartProps {
+  data: ActivityChartPoint[];
+  trend: number;
+  total: number;
+  loading?: boolean;
+}
+
+export function ActivityChart({ data, trend, total, loading = false }: ActivityChartProps) {
   const isPositive = trend >= 0;
+  const hasData = total > 0;
 
   return (
-    <Card className="h-full w-full border-white/5 bg-card/80 backdrop-blur-md rounded-3xl overflow-hidden transition-all duration-300 hover:border-white/10 hover:shadow-glow-sm shadow-[inset_0_1px_0_0_hsla(0,0%,100%,0.05)]">
-      <CardHeader className="flex flex-row items-center justify-between pb-2 pt-6 px-6 relative z-10">
+    <Card className="h-full min-h-[260px] w-full overflow-hidden rounded-2xl border-border/70 bg-card/65 backdrop-blur-md transition-colors duration-300 hover:border-primary/20 dark:border-white/10 dark:bg-card/55">
+      <CardHeader className="relative z-10 flex flex-row items-start justify-between gap-4 px-5 pb-2 pt-5">
         <div>
           <CardTitle className="text-xs font-bold tracking-widest uppercase text-muted-foreground flex items-center gap-2">
             <Activity className="h-4 w-4 text-primary" />
-            Performance
+            Activity Trend
           </CardTitle>
-          <div className="mt-3 flex items-end gap-3">
-            <span className="font-headline text-[38px] leading-none font-bold tracking-tighter text-foreground drop-shadow-[0_0_8px_var(--primary)]">
-              78%
+          <div className="mt-2 flex items-end gap-3">
+            <span className="font-headline text-3xl font-bold leading-none tracking-tight text-foreground">
+              {loading ? '--' : total}
             </span>
             <div className={cn(
-              "flex items-center text-[11px] font-bold uppercase tracking-wider px-2.5 py-1 rounded-full mb-1",
+              "mb-0.5 flex items-center rounded-full border px-2.5 py-1 text-[11px] font-bold uppercase tracking-wider",
               isPositive ? "bg-emerald-500/20 text-emerald-400 border border-emerald-500/30" : "bg-rose-500/20 text-rose-400 border border-rose-500/30"
             )}>
               {isPositive ? <TrendingUp className="mr-1.5 h-3 w-3" /> : <TrendingDown className="mr-1.5 h-3 w-3" />}
-              {isPositive ? '+' : '-'}{Math.abs(trend)}%
+              {loading || !hasData ? '0%' : `${isPositive ? '+' : '-'}${Math.abs(trend)}%`}
             </div>
           </div>
+          <p className="mt-1 text-xs text-muted-foreground">
+            Sessions, exchanges, and XP events from real account activity.
+          </p>
         </div>
       </CardHeader>
 
-      <CardContent className="p-0 mt-4 relative z-0">
+      <CardContent className="relative z-0 mt-1 p-0">
         <div className="absolute inset-0 bg-gradient-to-t from-primary/10 to-transparent pointer-events-none" />
-        <div className="h-[220px] w-full">
+        <div className="h-[165px] w-full">
           <ResponsiveContainer width="100%" height="100%">
-            <AreaChart data={data} margin={{ top: 10, right: 0, left: 0, bottom: 10 }}>
+            <AreaChart data={data} margin={{ top: 8, right: 10, left: 0, bottom: 8 }}>
               <defs>
-                <linearGradient id="colorHours" x1="0" y1="0" x2="0" y2="1">
+                <linearGradient id="colorActivity" x1="0" y1="0" x2="0" y2="1">
                   <stop offset="0%" stopColor="hsl(var(--primary))" stopOpacity={0.25} />
                   <stop offset="100%" stopColor="hsl(var(--primary))" stopOpacity={0.0} />
                 </linearGradient>
@@ -53,12 +67,14 @@ export function ActivityChart({ data, trend }: ActivityChartProps) {
               <Tooltip
                 content={({ active, payload }) => {
                   if (active && payload && payload.length) {
+                    const point = payload[0].payload as ActivityChartPoint;
                     return (
-                      <div className="rounded-xl border border-white/10 bg-black/60 px-3 py-2 text-xs font-bold shadow-glow-sm backdrop-blur-md text-white">
-                        <div className="flex gap-2 items-center">
-                          <span className="text-muted-foreground/80 lowercase">{payload[0].payload.name}</span>
-                          <span className="text-primary">{payload[0].value}%</span>
-                        </div>
+                      <div className="rounded-xl border border-white/10 bg-black/70 px-3 py-2 text-xs font-semibold shadow-glow-sm backdrop-blur-md text-white">
+                        <p className="mb-1 text-muted-foreground">{point.name}</p>
+                        <p className="text-primary">{point.value} total actions</p>
+                        <p className="mt-1 text-[11px] text-white/70">
+                          {point.sessions} sessions, {point.exchanges} exchanges, {point.xp} XP events
+                        </p>
                       </div>
                     );
                   }
@@ -68,16 +84,17 @@ export function ActivityChart({ data, trend }: ActivityChartProps) {
               />
               <Area
                 type="monotone"
-                dataKey="hours"
+                dataKey="value"
                 stroke="hsl(var(--primary))"
                 strokeWidth={1.5}
                 strokeOpacity={0.8}
                 fillOpacity={1}
-                fill="url(#colorHours)"
+                fill="url(#colorActivity)"
                 animationDuration={2000}
                 animationEasing="ease-out"
                 filter="url(#glow)"
               />
+              <YAxis hide domain={[0, 'dataMax + 1']} allowDecimals={false} />
               <XAxis 
                 dataKey="name" 
                 axisLine={false} 

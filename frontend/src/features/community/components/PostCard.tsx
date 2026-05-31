@@ -195,7 +195,7 @@ export const PostCard = React.memo(({ post, onDelete }: PostCardProps) => {
           {post.mediaUrl && (
             <div className="mt-4 relative rounded-xl overflow-hidden border border-primary/15 bg-background cursor-pointer" onClick={handleVideoToggle}>
               {post.mediaUrl.match(/\.(mp4|webm|ogg)$/i) ? (
-                <div className="relative aspect-video bg-card group/video">
+                <div className="relative aspect-[16/10] bg-card group/video">
                   <video 
                     ref={videoRef} 
                     src={post.mediaUrl} 
@@ -210,7 +210,9 @@ export const PostCard = React.memo(({ post, onDelete }: PostCardProps) => {
                   </div>
                 </div>
               ) : (
-                <img src={post.mediaUrl} alt="Post content" className="w-full h-auto object-cover opacity-90 hover:opacity-100 transition-opacity duration-300" />
+                <div className="aspect-[16/10] bg-card">
+                  <img src={post.mediaUrl} alt="Post content" className="h-full w-full object-cover opacity-90 hover:opacity-100 transition-opacity duration-300" />
+                </div>
               )}
             </div>
           )}

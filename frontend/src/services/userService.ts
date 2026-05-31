@@ -1,4 +1,4 @@
-import { User } from '@/types';
+import { User, type Skill } from '@/types';
 import { api } from './api';
 
 export interface UserSearchResult {
@@ -20,15 +20,8 @@ export const UserService = {
   /** GET /api/users/search?q=&page=0&size=20  (page is 0-based on backend) */
   getAll: async (page = 1, size = 10, search?: string) => {
     const result = await UserService.searchPeople(search ?? '', page, size);
-    // Kept for backward compatibility with legacy places that only consume id/name/avatar/university.
     return {
-      content: result.content.map((person) => ({
-        id: person.id,
-        name: person.displayName,
-        username: person.username,
-        avatar: person.avatar ?? '',
-        university: person.university ?? '',
-      })) as unknown as User[],
+      content: result.content.map(searchResultToUser),
       totalElements: result.totalElements,
     };
   },
@@ -105,3 +98,34 @@ export const UserService = {
     return api.post<void>('/users/me/connect-email/verify-otp', { email, otp });
   },
 };
+
+function searchSkill(name: string, type: 'offered' | 'wanted', userId: string, index: number): Skill {
+  return {
+    id: `${type}-${userId}-${index}-${name.toLowerCase().replace(/[^a-z0-9]+/g, '-')}`,
+    name,
+    icon: '',
+    category: 'General',
+    level: 'beginner',
+    description: '',
+  };
+}
+
+function searchResultToUser(person: UserSearchResult): User {
+  return {
+    id: person.id,
+    name: person.displayName,
+    username: person.username,
+    email: '',
+    avatar: person.avatar ?? '',
+    university: person.university ?? '',
+    bio: `${person.displayName} is active in the SkillEX marketplace.`,
+    skillsOffered: (person.topSkillsOffered ?? []).map((name, index) => searchSkill(name, 'offered', person.id, index)),
+    skillsWanted: (person.topSkillsWanted ?? []).map((name, index) => searchSkill(name, 'wanted', person.id, index)),
+    skillexScore: person.reputationScore ?? 0,
+    level: 'Member',
+    sessionsCompleted: person.sessionsCompleted ?? 0,
+    rating: Number(person.rating ?? 0),
+    isOnline: person.isOnline ?? false,
+    joinedAt: new Date().toISOString(),
+  };
+}

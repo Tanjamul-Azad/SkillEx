@@ -289,24 +289,6 @@ const HeroSection = () => (
   </section>
 );
 
-const SkillTicker = () => {
-  const names = ['Video Editing', 'Python', 'Figma', 'Photography', 'Public Speaking', 'Data Science', 'Guitar', 'Digital Marketing'];
-  return (
-    <div className="relative z-10 overflow-hidden border-y border-white/10 bg-[#050a12]/70 py-4 backdrop-blur">
-      <div className="pointer-events-none absolute inset-y-0 left-0 z-10 w-20 bg-gradient-to-r from-background to-transparent" />
-      <div className="pointer-events-none absolute inset-y-0 right-0 z-10 w-20 bg-gradient-to-l from-background to-transparent" />
-      <div className="flex w-max animate-ticker whitespace-nowrap will-change-transform">
-        {[...names, ...names, ...names].map((name, index) => (
-          <span key={`${name}-${index}`} className="inline-flex items-center gap-3 px-5 text-sm font-medium text-muted-foreground">
-            <span className="h-1.5 w-1.5 rounded-full bg-primary/70" />
-            {name}
-          </span>
-        ))}
-      </div>
-    </div>
-  );
-};
-
 const ComparisonSection = () => (
   <Section>
     <div className="container mx-auto px-4">
@@ -941,7 +923,6 @@ export default function LandingPage() {
       <LandingBackground showScene={showScene} />
       <div className="relative z-10 overflow-hidden">
         <HeroSection />
-        <SkillTicker />
         <ComparisonSection />
         <HowItWorksSection />
         <SkillChainSection />

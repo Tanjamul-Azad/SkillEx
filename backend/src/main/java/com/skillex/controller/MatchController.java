@@ -113,8 +113,8 @@ public class MatchController {
     /**
      * GET /api/match/top-cycles?limit=5 — Step 8: top-ranked exchange cycles
      *
-     * <p>Finds all exchange cycles involving the authenticated user, scores each
-     * using the CycleScore formula, and returns the top {@code limit} results
+     * <p>Finds system-wide exchange cycles from the live user skill graph, scores
+     * each using the CycleScore formula, and returns the top {@code limit} results
      * ordered by score descending.
      *
      * <h3>Formula</h3>
@@ -135,9 +135,9 @@ public class MatchController {
      *   "cycle": {
      *     "userNames": ["Alice", "Bob", "Carol"],
      *     "hops": [
-     *       { "fromUserName": "Alice", "primarySkillName": "Python",    "toUserName": "Bob"   },
-     *       { "fromUserName": "Bob",   "primarySkillName": "UI Design", "toUserName": "Carol" },
-     *       { "fromUserName": "Carol", "primarySkillName": "Marketing", "toUserName": "Alice" }
+     *       { "fromUserName": "Bob",   "primarySkillName": "Python",    "toUserName": "Alice" },
+     *       { "fromUserName": "Carol", "primarySkillName": "UI Design", "toUserName": "Bob"   },
+     *       { "fromUserName": "Alice", "primarySkillName": "Marketing", "toUserName": "Carol" }
      *     ]
      *   }
      * }

@@ -240,6 +240,15 @@ public class CommunityController {
         return ResponseEntity.ok(ApiResponse.ok(communityService.joinSkillCircle(userId, circleId)));
     }
 
+    @PostMapping({"/skill-circles/{circleId}/leave", "/circles/{circleId}/leave"})
+    public ResponseEntity<ApiResponse<CommunityDtos.SkillCircleDto>> leaveSkillCircle(
+        HttpServletRequest request,
+        @PathVariable String circleId
+    ) {
+        String userId = currentUserId(request);
+        return ResponseEntity.ok(ApiResponse.ok(communityService.leaveSkillCircle(userId, circleId)));
+    }
+
     // ── Trending & Suggestions ───────────────────────────────────────────────
 
     @GetMapping("/trending-skills")

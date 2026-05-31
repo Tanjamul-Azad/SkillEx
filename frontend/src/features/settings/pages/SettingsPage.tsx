@@ -540,13 +540,15 @@ export default function SettingsPage() {
 
   return (
     <DashboardLayout>
-      <div className="relative z-10 max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-8">
-        <motion.div initial={{ opacity: 0, y: -12 }} animate={{ opacity: 1, y: 0 }} className="mb-8">
-          <h1 className="font-headline text-4xl font-extrabold tracking-tight text-white drop-shadow-md">Settings</h1>
-          <p className="mt-2 text-[11px] uppercase tracking-widest font-bold text-muted-foreground">Manage your account preferences and profile.</p>
+      <div className="product-page space-y-5">
+        <motion.div initial={{ opacity: 0, y: -12 }} animate={{ opacity: 1, y: 0 }} className="product-header">
+          <div>
+            <h1 className="product-title">Settings</h1>
+            <p className="product-subtitle">Manage your account preferences, public profile, skills, security, and privacy from one place.</p>
+          </div>
         </motion.div>
 
-        <div className="flex flex-col gap-8 lg:flex-row">
+        <div className="flex flex-col gap-5 lg:flex-row">
           {/* Sidebar */}
           <motion.aside
             initial={{ opacity: 0, x: -16 }}
@@ -554,19 +556,19 @@ export default function SettingsPage() {
             transition={{ delay: 0.1 }}
             className="w-full shrink-0 lg:w-56"
           >
-            <nav className="flex flex-row overflow-x-auto custom-scrollbar lg:flex-col gap-2 pb-2 lg:pb-0 h-full">
+            <nav className="product-panel flex h-full flex-row gap-1 overflow-x-auto p-2 custom-scrollbar lg:flex-col">
               {sections.map((s) => (
                 <button
                   key={s.id}
                   onClick={() => setActive(s.id)}
                   className={cn(
-                    "flex items-center gap-3 rounded-[1rem] px-4 py-3 text-[12px] uppercase tracking-wider font-bold transition-all w-full text-left justify-start border backdrop-blur-sm whitespace-nowrap lg:whitespace-normal group",
+                    "flex w-full items-center justify-start gap-3 rounded-xl border px-3 py-2.5 text-left text-[11px] font-extrabold uppercase tracking-wider transition-colors whitespace-nowrap lg:whitespace-normal group",
                     active === s.id
-                      ? 'bg-primary/20 text-primary border-primary/30 shadow-[0_0_20px_hsl(var(--primary)/0.15)] origin-left scale-[1.02]'
-                      : 'bg-black/20 text-muted-foreground border-white/5 hover:bg-white/5 hover:text-foreground hover:border-white/10'
-                    , s.id === 'danger' && 'lg:mt-auto text-destructive hover:bg-destructive/10 hover:text-destructive border-transparent hover:border-destructive/30')}
+                      ? 'border-primary/35 bg-primary/10 text-primary'
+                      : 'border-transparent text-muted-foreground hover:border-border/70 hover:bg-muted/30 hover:text-foreground dark:hover:border-white/10'
+                    , s.id === 'danger' && 'lg:mt-auto text-destructive hover:bg-destructive/10 hover:text-destructive hover:border-destructive/30')}
                 >
-                  <s.icon className={cn("h-4 w-4 shrink-0 transition-transform duration-300", active === s.id && 'scale-110 drop-shadow-[0_0_8px_var(--primary)]', active !== s.id && 'group-hover:scale-110')} />
+                  <s.icon className="h-4 w-4 shrink-0" />
                   <span className="block">{s.label}</span>
                 </button>
               ))}
@@ -584,14 +586,14 @@ export default function SettingsPage() {
             {/* ── PROFILE ── */}
             {active === 'profile' && (
               <>
-                <div className="overflow-hidden rounded-[2rem] border border-white/5 bg-black/40 backdrop-blur-xl shadow-[inset_0_1px_0_0_hsla(0,0%,100%,0.05)]">
-                  <div className="p-6 border-b border-white/5 bg-white/5">
-                    <h3 className="text-xl font-extrabold font-headline text-white flex items-center gap-2">
+                <div className="product-panel">
+                  <div className="p-5 border-b border-border/60 bg-muted/15 dark:border-white/10">
+                    <h3 className="text-lg font-extrabold font-headline text-foreground flex items-center gap-2">
                       <User className="h-5 w-5 text-primary" /> Profile Information
                     </h3>
                     <p className="text-[10px] uppercase font-bold tracking-widest text-muted-foreground mt-1">Update your public profile details.</p>
                   </div>
-                  <div className="p-6">
+                  <div className="p-5 md:p-6">
                     {/* Avatar */}
                     <div className="mb-8 flex flex-col sm:flex-row items-start sm:items-center gap-6">
                       <div className="relative group">
@@ -709,13 +711,13 @@ export default function SettingsPage() {
                   </div>
                 </div>
 
-                <div className="overflow-hidden rounded-[2rem] border border-white/5 bg-black/40 backdrop-blur-xl shadow-[inset_0_1px_0_0_hsla(0,0%,100%,0.05)]">
-                  <div className="p-6 border-b border-white/5 bg-white/5">
-                    <h3 className="text-xl font-extrabold font-headline text-white flex items-center gap-2">
+                <div className="product-panel">
+                  <div className="p-5 border-b border-border/60 bg-muted/15 dark:border-white/10">
+                    <h3 className="text-lg font-extrabold font-headline text-foreground flex items-center gap-2">
                       <Zap className="h-5 w-5 text-accent" /> SkillEx Stats
                     </h3>
                   </div>
-                  <div className="p-6">
+                  <div className="p-5 md:p-6">
                     <div className="grid grid-cols-2 gap-4 sm:grid-cols-4">
                       {[
                         { label: 'SkillEx Score', value: user?.skillexScore },

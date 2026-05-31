@@ -20,7 +20,7 @@
   }
 
   .app-card-hover {
-    @apply hover:-translate-y-0.5 hover:border-primary/30 hover:shadow-card-hover;
+    @apply hover:border-primary/25 hover:bg-card/90;
   }
 
   .app-kicker {
@@ -33,6 +33,94 @@
 
   .dark .app-media {
     @apply border-white/10 bg-white/5;
+  }
+
+  .product-page {
+    @apply mx-auto w-full max-w-7xl px-4 py-5 md:px-6 md:py-6;
+  }
+
+  .product-panel {
+    @apply overflow-hidden rounded-2xl border border-border/70 bg-card/65 shadow-[inset_0_1px_0_0_hsla(0,0%,100%,0.035)] backdrop-blur-xl;
+  }
+
+  .dark .product-panel {
+    @apply border-white/10 bg-card/55;
+  }
+
+  .product-row {
+    @apply border-b border-border/60 transition-colors last:border-b-0 hover:bg-primary/[0.035];
+  }
+
+  .dark .product-row {
+    @apply border-white/10 hover:bg-white/[0.035];
+  }
+
+  .product-kpi {
+    @apply rounded-xl border border-border/70 bg-background/45 p-4;
+  }
+
+  .dark .product-kpi {
+    @apply border-white/10 bg-white/[0.025];
+  }
+
+  .product-tab {
+    @apply relative h-10 rounded-none border-b-2 border-transparent px-2 text-sm font-bold text-muted-foreground transition-colors hover:text-foreground;
+  }
+
+  .product-tab-active {
+    @apply border-primary text-foreground;
+  }
+
+  .product-header {
+    @apply flex flex-col gap-4 rounded-2xl border border-border/70 bg-card/65 p-4 shadow-[inset_0_1px_0_0_hsla(0,0%,100%,0.035)] backdrop-blur-xl md:flex-row md:items-center md:justify-between md:p-5;
+  }
+
+  .dark .product-header {
+    @apply border-white/10 bg-card/55;
+  }
+
+  .product-title {
+    @apply font-headline text-2xl font-extrabold tracking-tight text-foreground md:text-3xl;
+  }
+
+  .product-subtitle {
+    @apply mt-1 max-w-2xl text-sm leading-relaxed text-muted-foreground;
+  }
+
+  .product-toolbar {
+    @apply flex flex-col gap-3 rounded-2xl border border-border/70 bg-card/55 p-2 shadow-[inset_0_1px_0_0_hsla(0,0%,100%,0.03)] md:flex-row md:items-center md:justify-between;
+  }
+
+  .dark .product-toolbar {
+    @apply border-white/10 bg-card/45;
+  }
+
+  .product-table {
+    @apply w-full min-w-[760px] border-collapse text-sm;
+  }
+
+  .product-th {
+    @apply border-b border-border/60 px-4 py-3 text-left text-[11px] font-extrabold uppercase tracking-widest text-muted-foreground;
+  }
+
+  .dark .product-th {
+    @apply border-white/10;
+  }
+
+  .product-td {
+    @apply border-b border-border/50 px-4 py-3 align-middle;
+  }
+
+  .dark .product-td {
+    @apply border-white/10;
+  }
+
+  .product-empty {
+    @apply rounded-2xl border border-dashed border-border/70 bg-background/40 p-6 text-center text-sm text-muted-foreground;
+  }
+
+  .dark .product-empty {
+    @apply border-white/10 bg-white/[0.025];
   }
 }
 
@@ -794,7 +882,7 @@
   }
 
   .card-hover:hover {
-    transform: translateY(-3px) scale(1.004) translateZ(0);
+    transform: translateY(-1px) translateZ(0);
     box-shadow:
       0 8px 24px -8px hsl(var(--primary) / 0.15),
       0 4px 12px hsl(220 30% 10% / 0.08);
@@ -822,7 +910,7 @@
   }
 
   .card-hover-glow:hover {
-    transform: translateY(-6px) translateZ(0);
+    transform: translateY(-2px) translateZ(0);
     box-shadow: var(--shadow-lg), var(--glow-primary);
     border-color: hsl(var(--primary) / 0.45);
   }
@@ -1026,7 +1114,7 @@
   }
 
   .interactive-item:hover {
-    transform: translateX(3px) translateZ(0);
+    transform: translateX(1px) translateZ(0);
   }
 
   .interactive-item:active {
@@ -1160,7 +1248,7 @@
   }
 
   .card-glow-hover:hover {
-    transform: translateY(-4px) scale(1.01);
+    transform: translateY(-1px);
     box-shadow:
       var(--shadow-xl),
       0 0 0 1px hsl(var(--primary) / 0.3),

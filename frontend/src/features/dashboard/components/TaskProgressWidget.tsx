@@ -33,9 +33,10 @@ export function TaskProgressWidget({
     + Number(meeting.checklistGoalAlignment)
     + Number(meeting.checklistScheduleFit)
   ), 0);
-  const progressValue = visibleMeetings.length === 0
-    ? 100
-    : Math.round((checklistTotal / (visibleMeetings.length * 4)) * 100);
+  const hasPendingChecks = visibleMeetings.length > 0;
+  const progressValue = hasPendingChecks
+    ? Math.round((checklistTotal / (visibleMeetings.length * 4)) * 100)
+    : 0;
   
   const data = [
     { name: 'Background', value: 100, fill: 'hsl(var(--muted))' }, // Background ring
@@ -72,8 +73,8 @@ export function TaskProgressWidget({
             </ResponsiveContainer>
             {/* Center Label */}
             <div className="absolute inset-0 flex flex-col items-center justify-center">
-              <span className="font-headline text-xl font-bold tracking-tight text-foreground">
-                {progressValue}%
+              <span className="font-headline text-lg font-bold tracking-tight text-foreground">
+                {hasPendingChecks ? `${progressValue}%` : 'Clear'}
               </span>
             </div>
           </div>

@@ -442,12 +442,43 @@ public class CommunityServiceImpl implements CommunityService {
         User user  = findUser(userId);
         SkillCircle circle = skillCircleRepository.findById(circleId)
             .orElseThrow(() -> new EntityNotFoundException("SkillCircle not found: " + circleId));
-        if (!circle.getMembers().contains(user)) {
+        boolean alreadyMember = circle.getMembers().stream()
+            .anyMatch(member -> member.getId().equals(userId));
+        if (!alreadyMember) {
             circle.getMembers().add(user);
             circle.setMemberCount(circle.getMemberCount() + 1);
             skillCircleRepository.save(circle);
         }
         return mapper.toSkillCircle(circle);
+    }
+
+    @Override
+    @Transactional
+    public CommunityDtos.SkillCircleDto leaveSkillCircle(String userId, String circleId) {
+        SkillCircle circle = skillCircleRepository.findById(circleId)
+            .orElseThrow(() -> new EntityNotFoundException("SkillCircle not found: " + circleId));
+
+        int removed = skillCircleRepository.deleteMember(circleId, userId);
+        if (removed > 0) {
+            circle.setMemberCount(Math.max(0, circle.getMemberCount() - 1));
+            skillCircleRepository.save(circle);
+        }
+
+        return new CommunityDtos.SkillCircleDto(
+            circle.getId(),
+            circle.getName(),
+            circle.getIcon(),
+            circle.getMemberCount(),
+            circle.getLastSession(),
+            circle.getActivity().name(),
+            circle.getSkills().stream()
+                .map(skill -> new CommunityDtos.SkillRef(skill.getId(), skill.getName(), skill.getIcon(), skill.getCategory()))
+                .toList(),
+            circle.getMembers().stream()
+                .filter(member -> !member.getId().equals(userId))
+                .map(mapper::toSummary)
+                .toList()
+        );
     }
 
     // ── Trending & Suggestions ───────────────────────────────────────────────

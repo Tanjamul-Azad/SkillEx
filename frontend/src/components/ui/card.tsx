@@ -9,21 +9,13 @@ const Card = React.forwardRef<
   <div
     ref={ref}
     className={cn(
-      // Base - using premium glassmorphism
-      "relative overflow-hidden rounded-3xl bg-card border border-white/5 shadow-sm",
-      "shadow-[inset_0_1px_0_0_hsla(0,0%,100%,0.05)]",
-      // GPU compositing and transitions
-      "transform-gpu will-change-transform",
-      "transition-[transform,box-shadow,border-color,background-color] duration-220 ease-expo-out",
-      // Hover properties - levitate slightly
-      "hover:-translate-y-0.5 hover:shadow-card-hover",
-      "group",
+      "group relative overflow-hidden rounded-2xl border border-border/70 bg-card/75 shadow-[inset_0_1px_0_0_hsla(0,0%,100%,0.035)]",
+      "transition-[box-shadow,border-color,background-color] duration-220 ease-expo-out",
+      "dark:border-white/10 dark:bg-card/65",
       className
     )}
     {...props}
   >
-    {/* Animated internal sheen pseudo-element (controlled via parent group hover) */}
-    <div className="absolute inset-0 z-0 bg-gradient-to-tr from-transparent via-white/5 to-transparent opacity-0 transition-opacity duration-500 group-hover:opacity-100 pointer-events-none" />
     <div className="relative z-10">{props.children}</div>
   </div>
 ))

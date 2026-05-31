@@ -209,7 +209,7 @@ export const PostComposer = React.memo(({ onPost }: PostComposerProps) => {
                         </Button>
                         <Button
                           size="sm"
-                          disabled={!content.trim() || submitting}
+                          disabled={(!content.trim() && !attachedFile) || submitting}
                           className="rounded-xl text-[10px] uppercase font-bold tracking-widest px-6 bg-primary text-primary-foreground hover:bg-primary/90 shadow-[0_0_15px_hsl(var(--primary)/0.2)] hover:shadow-[0_0_25px_hsl(var(--primary)/0.4)] transition-all"
                           onClick={handleSubmit}
                         >

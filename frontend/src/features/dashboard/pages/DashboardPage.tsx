@@ -26,13 +26,11 @@ import {
   Video,
   Zap,
   Inbox,
-  Award,
   Activity,
   BarChart3,
   Play,
   X,
   Coins,
-  Flame,
   Trophy,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -51,7 +49,7 @@ import DashboardLayout from '@/components/layout/DashboardLayout';
 import { ScrollReveal } from '@/components/ui/ScrollReveal';
 import { ConfirmDialog } from '@/components/ui/ConfirmDialog';
 import { useDocumentTitle } from '@/hooks/useDocumentTitle';
-import { ActivityChart } from '@/features/dashboard/components/ActivityChart';
+import { ActivityChart, type ActivityChartPoint } from '@/features/dashboard/components/ActivityChart';
 import { SessionCarousel } from '@/features/dashboard/components/SessionCarousel';
 import { TaskProgressWidget } from '@/features/dashboard/components/TaskProgressWidget';
 import { BoostBanner } from '@/features/dashboard/components/BoostBanner';
@@ -88,6 +86,9 @@ interface StatCardProps {
   value: number;
   footnote: string;
   index: number;
+  to?: string;
+  onClick?: () => void;
+  actionLabel?: string;
 }
 
 function StatPattern({ index }: { index: number }) {
@@ -203,8 +204,19 @@ function StatPattern({ index }: { index: number }) {
 }
 
 /* ─── Consistent stat card ────────────────────────────────────── */
-const StatCard = React.memo(({ icon: Icon, title, value, footnote, index }: StatCardProps) => {
+const StatCard = React.memo(({ icon: Icon, title, value, footnote, index, to, onClick, actionLabel }: StatCardProps) => {
   const { ref } = useCounter(value, { duration: 1.6 });
+  const navigate = useNavigate();
+  const isInteractive = Boolean(to || onClick);
+  const handleActivate = () => {
+    if (onClick) {
+      onClick();
+      return;
+    }
+    if (to) {
+      navigate(to);
+    }
+  };
 
   return (
     <motion.div
@@ -213,7 +225,19 @@ const StatCard = React.memo(({ icon: Icon, title, value, footnote, index }: Stat
         visible: { opacity: 1, y: 0 },
       }}
       transition={{ delay: index * 0.07, type: 'spring', stiffness: 220, damping: 22 }}
-      className="h-full min-h-[136px]"
+      role={isInteractive ? 'button' : undefined}
+      tabIndex={isInteractive ? 0 : undefined}
+      onClick={isInteractive ? handleActivate : undefined}
+      onKeyDown={isInteractive ? (event) => {
+        if (event.key === 'Enter' || event.key === ' ') {
+          event.preventDefault();
+          handleActivate();
+        }
+      } : undefined}
+      className={cn(
+        'h-full min-h-[136px]',
+        isInteractive && 'cursor-pointer rounded-2xl outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 focus-visible:ring-offset-background'
+      )}
     >
       <Card className="group relative h-full w-full overflow-hidden border-white/5 bg-card/80 backdrop-blur-md transition-all duration-300 hover:border-white/10 hover:shadow-glow-sm shadow-[inset_0_1px_0_0_hsla(0,0%,100%,0.05)]">
         {/* Consistent left-edge accent — always primary color */}
@@ -235,6 +259,12 @@ const StatCard = React.memo(({ icon: Icon, title, value, footnote, index }: Stat
             className="font-headline text-[32px] font-bold tabular-nums tracking-tight text-foreground leading-none"
           />
           <p className="mt-1 text-[11px] text-muted-foreground">{footnote}</p>
+          {actionLabel && (
+            <span className="mt-3 inline-flex items-center gap-1 text-[10px] font-bold uppercase tracking-widest text-primary opacity-80 transition-opacity group-hover:opacity-100">
+              {actionLabel}
+              <ArrowRight className="h-3 w-3" />
+            </span>
+          )}
 
         </CardContent>
         <StatPattern index={index} />
@@ -717,84 +747,99 @@ function LearningMomentumWidget({
   progress,
   events,
   loading,
+  to,
 }: {
   progress: UserProgress | null;
   events: XpEvent[];
   loading: boolean;
+  to?: string;
 }) {
+  const navigate = useNavigate();
   const levelProgress = Math.max(0, Math.min(100, progress?.levelProgressPercent ?? 0));
   const nextXp = Math.max(0, progress?.xpForNextLevel ?? 100);
   const streak = progress?.currentStreakDays ?? 0;
+  const totalXp = progress?.totalXp ?? 0;
+  const latestEvent = events[0];
 
   return (
-    <Card className="h-full overflow-hidden border-border/60 bg-card dark:border-white/[0.07]">
-      <CardContent className="flex h-full flex-col p-4">
-        <div className="mb-4 flex items-start justify-between gap-3">
-          <div>
-            <p className="flex items-center gap-2 text-sm font-bold uppercase tracking-widest text-foreground">
-              <Trophy className="h-4 w-4 text-primary" />
-              Learning Momentum
-            </p>
-            <p className="mt-1 text-xs text-muted-foreground">XP, streak, and recent proof of progress.</p>
+    <motion.div
+      variants={{
+        hidden: { opacity: 0, y: 16 },
+        visible: { opacity: 1, y: 0 },
+      }}
+      transition={{ delay: 0.21, type: 'spring', stiffness: 220, damping: 22 }}
+      role={to ? 'button' : undefined}
+      tabIndex={to ? 0 : undefined}
+      onClick={to ? () => navigate(to) : undefined}
+      onKeyDown={to ? (event) => {
+        if (event.key === 'Enter' || event.key === ' ') {
+          event.preventDefault();
+          navigate(to);
+        }
+      } : undefined}
+      className={cn(
+        'h-full min-h-[136px]',
+        to && 'cursor-pointer rounded-2xl outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 focus-visible:ring-offset-background'
+      )}
+    >
+      <Card className="group relative h-full w-full overflow-hidden border-white/5 bg-card/80 backdrop-blur-md transition-all duration-300 hover:border-white/10 hover:shadow-glow-sm shadow-[inset_0_1px_0_0_hsla(0,0%,100%,0.05)]">
+        <div className="absolute -right-10 -top-12 h-28 w-28 rounded-full bg-primary/10 blur-2xl transition-opacity duration-300 group-hover:opacity-80" />
+        <div className="absolute left-0 top-0 bottom-0 w-[4px] bg-primary opacity-0 group-hover:opacity-100 transition-opacity duration-300 shadow-[0_0_10px_var(--primary)]" />
+
+        <CardHeader className="relative z-10 flex flex-row items-center justify-between space-y-0 pb-2 pt-4 px-4">
+          <CardTitle className="text-[11px] font-bold uppercase tracking-wider text-muted-foreground">
+            Learning Momentum
+          </CardTitle>
+          <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-primary/10 border border-primary/20 transition-all duration-300 group-hover:bg-primary/20 group-hover:shadow-[0_0_12px_var(--primary)]">
+            <Trophy className="h-4 w-4 text-primary" />
           </div>
-          <Badge className="rounded-full border-primary/20 bg-primary/10 px-3 py-1 text-primary">
-            Level {progress?.currentLevel ?? 1}
-          </Badge>
-        </div>
+        </CardHeader>
 
         {loading ? (
-          <div className="space-y-3">
-            <Skeleton className="h-16 rounded-2xl" />
-            <Skeleton className="h-8 rounded-xl" />
-            <Skeleton className="h-20 rounded-2xl" />
+          <div className="relative z-10 px-4 pb-4 pt-0">
+            <Skeleton className="h-8 w-20 rounded-xl" />
+            <Skeleton className="mt-2 h-3 w-32 rounded-full" />
+            <Skeleton className="mt-4 h-2 w-full rounded-full" />
           </div>
         ) : (
-          <>
-            <div className="grid grid-cols-2 gap-3">
-              <div className="rounded-2xl border border-border/60 bg-muted/20 p-3">
-                <p className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">Total XP</p>
-                <p className="mt-1 font-headline text-2xl font-extrabold">{progress?.totalXp ?? 0}</p>
-              </div>
-              <div className="rounded-2xl border border-amber-500/20 bg-amber-500/10 p-3">
-                <p className="flex items-center gap-1 text-[10px] font-bold uppercase tracking-widest text-amber-500">
-                  <Flame className="h-3.5 w-3.5" />
-                  Streak
+          <CardContent className="relative z-10 px-4 pb-4 pt-0">
+            <div className="flex items-end justify-between gap-3">
+              <div>
+                <p className="font-headline text-[32px] font-bold tabular-nums tracking-tight text-foreground leading-none">
+                  {totalXp}
                 </p>
-                <p className="mt-1 font-headline text-2xl font-extrabold">{streak}d</p>
+                <p className="mt-1 text-[11px] text-muted-foreground">
+                  XP · {streak}d streak
+                </p>
               </div>
+              <Badge className="mb-1 rounded-full border-primary/20 bg-primary/10 px-2.5 py-0.5 text-[10px] text-primary">
+                Level {progress?.currentLevel ?? 1}
+              </Badge>
             </div>
 
-            <div className="mt-4 rounded-2xl border border-border/60 bg-background/50 p-3">
-              <div className="mb-2 flex items-center justify-between text-xs">
-                <span className="font-semibold text-foreground">{progress?.xpIntoLevel ?? 0} XP this level</span>
-                <span className="text-muted-foreground">{nextXp} XP next</span>
+            <div className="mt-4">
+              <div className="mb-1.5 flex items-center justify-between text-[10px] font-semibold text-muted-foreground">
+                <span>{progress?.xpIntoLevel ?? 0} XP this level</span>
+                <span>{nextXp} next</span>
               </div>
-              <Progress value={levelProgress} className="h-2" />
+              <Progress value={levelProgress} className="h-1.5" />
             </div>
 
-            <div className="mt-4 min-h-0 flex-1 space-y-2 overflow-y-auto pr-1 custom-scrollbar">
-              {events.length === 0 ? (
-                <p className="rounded-xl border border-dashed border-border/60 px-3 py-4 text-xs text-muted-foreground">
-                  Complete sessions, reviews, skill checks, or portfolio proof to earn XP.
-                </p>
-              ) : events.slice(0, 4).map((event) => (
-                <div key={event.id} className="flex items-center justify-between gap-3 rounded-xl border border-border/60 bg-muted/20 px-3 py-2">
-                  <div className="min-w-0">
-                    <p className="truncate text-xs font-semibold text-foreground">{event.reason}</p>
-                    <p className="mt-0.5 text-[10px] font-semibold uppercase tracking-widest text-muted-foreground">
-                      {event.sourceType.split('_').join(' ')} | {formatTimeAgo(event.occurredAt)}
-                    </p>
-                  </div>
-                  <Badge variant="outline" className="shrink-0 rounded-full border-emerald-500/30 text-emerald-500">
-                    +{event.xpDelta}
-                  </Badge>
-                </div>
-              ))}
-            </div>
-          </>
+            <p className="mt-3 truncate text-[11px] text-muted-foreground">
+              {latestEvent
+                ? `Last: +${latestEvent.xpDelta} XP · ${formatTimeAgo(latestEvent.occurredAt)}`
+                : 'Complete sessions, reviews, checks, or proofs.'}
+            </p>
+            {to && (
+              <span className="mt-2 inline-flex items-center gap-1 text-[10px] font-bold uppercase tracking-widest text-primary opacity-80 transition-opacity group-hover:opacity-100">
+                View progress
+                <ArrowRight className="h-3 w-3" />
+              </span>
+            )}
+          </CardContent>
         )}
-      </CardContent>
-    </Card>
+      </Card>
+    </motion.div>
   );
 }
 
@@ -883,63 +928,6 @@ function SectionHeading({
 }
 
 /* ─── Rank widget ─────────────────────────────────────────────── */
-function RankWidget({ score }: { score: number }) {
-  const ranks = [
-    { label: 'Explorer',  min: 0,   pct: '#64748b' },
-    { label: 'Learner',   min: 50,  pct: '#10b981' },
-    { label: 'Mentor',    min: 150, pct: '#3b82f6' },
-    { label: 'Expert',    min: 300, pct: '#8b5cf6' },
-    { label: 'Master',    min: 500, pct: 'hsl(var(--primary))' },
-  ];
-  const rankIdx = [...ranks].reverse().findIndex(r => score >= r.min);
-  const current = [...ranks].reverse()[rankIdx] ?? ranks[0];
-  const next    = ranks[ranks.indexOf(current) + 1];
-  const pct = next
-    ? Math.min(((score - current.min) / (next.min - current.min)) * 100, 100)
-    : 100;
-
-  return (
-    <Card className="border-border/60 bg-card dark:border-white/[0.07]">
-      <CardContent className="p-5">
-        <div className="flex items-center justify-between mb-4">
-          <div className="flex items-center gap-2">
-            <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-primary/10">
-              <Award className="h-4 w-4 text-primary" />
-            </div>
-            <div>
-              <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Rank</p>
-              <p className="text-sm font-bold text-foreground">{current.label}</p>
-            </div>
-          </div>
-          <div className="text-right">
-            <p className="text-xs text-muted-foreground">Score</p>
-            <p className="font-headline text-xl font-bold text-foreground tabular-nums">{score}</p>
-          </div>
-        </div>
-
-        {next && (
-          <div>
-            <div className="flex items-center justify-between mb-1.5">
-              <p className="text-xs text-muted-foreground">
-                {next.min - score} pts to <span className="font-semibold">{next.label}</span>
-              </p>
-              <p className="text-xs font-semibold text-primary">{Math.round(pct)}%</p>
-            </div>
-            <div className="relative h-1.5 w-full overflow-hidden rounded-full bg-muted">
-              <motion.div
-                className="h-full rounded-full bg-primary"
-                initial={{ width: '0%' }}
-                animate={{ width: `${pct}%` }}
-                transition={{ duration: 1.2, delay: 0.4, ease: 'easeOut' }}
-              />
-            </div>
-          </div>
-        )}
-      </CardContent>
-    </Card>
-  );
-}
-
 /* ─── Sidebar: Connections tab ────────────────────────────────── */
 function ConnectionsTab({
   connections,
@@ -1842,6 +1830,52 @@ export default function DashboardPage() {
     .slice(0, 6)
     .map(e => activityFromExchange(e, currentUserId))
     .filter(Boolean);
+  const activityChart = React.useMemo(() => {
+    const today = new Date();
+    const bucketCount = 6;
+    const buckets: ActivityChartPoint[] = Array.from({ length: bucketCount }, (_, index) => {
+      const date = new Date(today);
+      date.setDate(today.getDate() - ((bucketCount - 1 - index) * 7));
+      return {
+        name: date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' }),
+        value: 0,
+        sessions: 0,
+        exchanges: 0,
+        xp: 0,
+      };
+    });
+
+    const firstBucketDate = new Date(today);
+    firstBucketDate.setDate(today.getDate() - ((bucketCount - 1) * 7));
+    firstBucketDate.setHours(0, 0, 0, 0);
+
+    const addActivity = (dateValue: string | undefined, key: 'sessions' | 'exchanges' | 'xp') => {
+      if (!dateValue) return;
+      const date = new Date(dateValue);
+      if (Number.isNaN(date.getTime()) || date < firstBucketDate) return;
+      const weekIndex = Math.min(
+        bucketCount - 1,
+        Math.max(0, Math.floor((date.getTime() - firstBucketDate.getTime()) / (7 * 24 * 60 * 60 * 1000)))
+      );
+      buckets[weekIndex][key] += 1;
+      buckets[weekIndex].value += 1;
+    };
+
+    sessions.forEach((session) => {
+      addActivity(session.status === 'completed' ? (session.scheduledAt ?? session.createdAt) : session.createdAt, 'sessions');
+    });
+    exchanges.forEach((exchange) => addActivity(exchange.createdAt, 'exchanges'));
+    xpEvents.forEach((event) => addActivity(event.occurredAt, 'xp'));
+
+    const total = buckets.reduce((sum, bucket) => sum + bucket.value, 0);
+    const previous = buckets[buckets.length - 2]?.value ?? 0;
+    const latest = buckets[buckets.length - 1]?.value ?? 0;
+    const trend = previous === 0
+      ? latest > 0 ? 100 : 0
+      : Math.round(((latest - previous) / previous) * 100);
+
+    return { data: buckets, total, trend };
+  }, [sessions, exchanges, xpEvents]);
 
   const quickConnectionRequests = pendingIncomingConnections.filter(
     (connection) => !dismissedConnectionIds.has(connection.id)
@@ -2055,11 +2089,13 @@ export default function DashboardPage() {
     return 'Good evening';
   };
 
-  const skillexScore = serverStats?.skillexScore ?? user?.skillexScore ?? 0;
   const creditBalance = creditWallet?.balance ?? 0;
   const creditEarned = creditWallet?.lifetimeEarned ?? 0;
   const creditSpent = creditWallet?.lifetimeSpent ?? 0;
   const formatCreditType = (type?: string) => (type ?? 'CREDIT').split('_').join(' ');
+  const scrollToDashboardSection = React.useCallback((sectionId: string) => {
+    document.getElementById(sectionId)?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  }, []);
 
   const statCards: StatCardProps[] = [
     {
@@ -2068,6 +2104,8 @@ export default function DashboardPage() {
       value: user?.skillsOffered?.length ?? 0,
       footnote: 'skills you can teach',
       index: 0,
+      to: user?.id ? `/profile/${user.id}?tab=skills` : '/settings?tab=skills',
+      actionLabel: 'Manage skills',
     },
     {
       icon: Users,
@@ -2075,6 +2113,8 @@ export default function DashboardPage() {
       value: serverStats?.activeExchanges ?? activeExchanges.length,
       footnote: 'ongoing exchanges',
       index: 1,
+      onClick: () => scrollToDashboardSection('active-exchanges'),
+      actionLabel: 'Review exchanges',
     },
     {
       icon: CheckCircle,
@@ -2082,23 +2122,18 @@ export default function DashboardPage() {
       value: serverStats?.sessionsCompleted ?? user?.sessionsCompleted ?? 0,
       footnote: 'completed sessions',
       index: 2,
-    },
-    {
-      icon: Star,
-      title: 'SkillEx Score',
-      value: skillexScore,
-      footnote: 'your reputation score',
-      index: 3,
+      onClick: () => scrollToDashboardSection('upcoming-sessions'),
+      actionLabel: 'Open sessions',
     },
   ];
 
   return (
     <DashboardLayout>
-      <div className="mx-auto w-full max-w-[1400px] p-4 md:p-6 grid grid-cols-1 md:grid-cols-3 lg:grid-cols-4 auto-rows-[minmax(min-content,max-content)] gap-4">
+      <div className="product-page grid grid-cols-1 gap-4 md:grid-cols-3 lg:grid-cols-4">
         
         {/* ══ HERO (Spans all columns) ══════════════════════════════════ */}
         <ScrollReveal animation="fade-down" delay={0.05} duration={0.6} className="md:col-span-3 lg:col-span-4">
-          <div className="relative overflow-hidden rounded-3xl border border-white/5 bg-card/80 backdrop-blur-md shadow-[inset_0_1px_0_0_hsla(0,0%,100%,0.05)]">
+          <div className="product-panel relative">
             <div className="absolute inset-0 bg-gradient-to-br from-primary/10 via-transparent to-transparent pointer-events-none" />
             <div className="absolute inset-0 dot-grid opacity-[0.04] pointer-events-none" />
             <div className="relative z-10 flex flex-col gap-4 p-5 md:flex-row md:items-center md:justify-between lg:p-6">
@@ -2162,35 +2197,38 @@ export default function DashboardPage() {
             </ScrollReveal>
           </div>
         ))}
-
-        {/* ══ BENTO ROW 1 ═══════════════════════════════════════════════ */}
-        <div className="md:col-span-2 lg:col-span-2 row-span-2 min-h-[300px] flex flex-col">
-          <ScrollReveal animation="fade-right" delay={0.15} className="h-full flex-1">
-            <ActivityChart 
-              data={[
-                { name: 'Aug', hours: 40, amt: 2400 },
-                { name: 'Sep', hours: 30, amt: 2210 },
-                { name: 'Oct', hours: 60, amt: 2290 },
-                { name: 'Nov', hours: 48, amt: 2000 },
-                { name: 'Dec', hours: 80, amt: 2181 },
-                { name: 'Jan', hours: 75, amt: 2500 },
-                { name: 'Feb', hours: 100, amt: 2100 },
-                { name: 'Mar', hours: 85, amt: 2100 },
-              ]} 
-              trend={12} 
+        <div className="col-span-1">
+          <ScrollReveal animation="fade-up" delay={0.25} className="h-full">
+            <LearningMomentumWidget
+              progress={learningProgress}
+              events={xpEvents}
+              loading={learningProgressLoading}
+              to={user?.id ? `/profile/${user.id}?tab=activity` : '/profile'}
             />
           </ScrollReveal>
         </div>
 
-        <div className="col-span-1 md:col-span-1 lg:col-span-1 row-span-1 flex flex-col h-full">
+        {/* ══ BENTO ROW 1 ═══════════════════════════════════════════════ */}
+        <div className="md:col-span-2 lg:col-span-2 flex h-[280px] flex-col">
+          <ScrollReveal animation="fade-right" delay={0.15} className="h-full flex-1">
+            <ActivityChart 
+              data={activityChart.data}
+              trend={activityChart.trend}
+              total={activityChart.total}
+              loading={loading || sessionsLoading || learningProgressLoading}
+            />
+          </ScrollReveal>
+        </div>
+
+        <div className="col-span-1 md:col-span-1 lg:col-span-1 flex h-[280px] flex-col">
           <ScrollReveal animation="fade-up" delay={0.2} className="h-full w-full">
             <BoostBanner actions={smartActions} loading={smartActionsLoading} />
           </ScrollReveal>
         </div>
 
         {/* Compact network widget */}
-        <div className="col-span-1 md:col-span-1 lg:col-span-1 flex h-[320px] flex-col">
-          <ScrollReveal animation="fade-left" delay={0.18} className="h-full flex-1 w-full bg-card rounded-3xl border border-white/5 shadow-sm overflow-hidden flex flex-col">
+        <div className="col-span-1 md:col-span-1 lg:col-span-1 flex h-[280px] flex-col">
+          <ScrollReveal animation="fade-left" delay={0.18} className="product-panel h-full flex-1 w-full flex flex-col">
             <div className="p-4 pb-0 flex items-center justify-between">
               <h2 className="flex items-center gap-2 font-headline text-[13px] font-bold text-foreground uppercase tracking-widest">
                 <Users className="h-4 w-4 text-primary" />
@@ -2236,25 +2274,9 @@ export default function DashboardPage() {
         </div>
 
         {/* ══ BENTO ROW 2 ═══════════════════════════════════════════════ */}
-        <div className="col-span-1 flex flex-col h-full">
-          <ScrollReveal animation="fade-up" delay={0.22} className="h-full">
-            <RankWidget score={skillexScore} />
-          </ScrollReveal>
-        </div>
-
-        <div className="col-span-1 md:col-span-2 lg:col-span-3 flex min-h-[320px] flex-col">
-          <ScrollReveal animation="fade-up" delay={0.23} className="h-full">
-            <LearningMomentumWidget
-              progress={learningProgress}
-              events={xpEvents}
-              loading={learningProgressLoading}
-            />
-          </ScrollReveal>
-        </div>
-
         {/* ══ PRIORITY WORK ROW (Active Exchanges & Sessions) ═════════════ */}
         <div id="active-exchanges" className="col-span-1 md:col-span-2 lg:col-span-2 flex flex-col min-h-[260px]">
-          <ScrollReveal animation="fade-up" delay={0.08} className="h-full flex flex-col bg-card rounded-3xl border border-white/5 overflow-hidden p-4 shadow-[inset_0_1px_0_0_hsla(0,0%,100%,0.05)]">
+          <ScrollReveal animation="fade-up" delay={0.08} className="product-panel h-full flex flex-col p-4">
              <SectionHeading icon={Zap} action={
                 <Button asChild variant="ghost" size="sm" className="h-7 text-xs font-semibold text-primary hover:bg-primary/10">
                   <Link to="/match">Explore <ArrowRight className="ml-1 h-3 w-3" /></Link>
@@ -2284,8 +2306,8 @@ export default function DashboardPage() {
           </ScrollReveal>
         </div>
 
-        <div className="col-span-1 md:col-span-1 lg:col-span-1 flex flex-col min-h-[260px]">
-           <ScrollReveal animation="fade-up" delay={0.1} className="h-full flex flex-col bg-card rounded-3xl border border-white/5 overflow-hidden p-4 shadow-[inset_0_1px_0_0_hsla(0,0%,100%,0.05)]">
+        <div id="upcoming-sessions" className="col-span-1 md:col-span-1 lg:col-span-1 flex flex-col min-h-[260px]">
+           <ScrollReveal animation="fade-up" delay={0.1} className="product-panel h-full flex flex-col p-4">
              <SectionHeading icon={CalendarDays}>Upcoming</SectionHeading>
              <div className="flex-1 overflow-y-auto overflow-x-hidden custom-scrollbar -mx-2 px-2">
                <UpcomingSessionsSection
@@ -2357,7 +2379,7 @@ export default function DashboardPage() {
 
         {/* ══ BENTO ROW 3 (Carousel + Tasks) ═══════════════════════════ */}
         <div className="md:col-span-2 lg:col-span-2 min-h-[140px] flex flex-col">
-          <ScrollReveal animation="fade-up" delay={0.24} className="h-full flex-1 w-full bg-card rounded-3xl border border-white/5 p-4 overflow-hidden shadow-[inset_0_1px_0_0_hsla(0,0%,100%,0.05)]">
+          <ScrollReveal animation="fade-up" delay={0.24} className="product-panel h-full flex-1 w-full p-4">
              <SessionCarousel exchanges={exchanges} currentUserId={currentUserId} />
           </ScrollReveal>
         </div>

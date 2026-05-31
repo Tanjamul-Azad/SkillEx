@@ -6,7 +6,7 @@ import { useAuth } from '@/hooks/useAuth';
 import { useMatchUsers, type MatchUser } from '@/hooks/useMatchUsers';
 import { useTopCycles } from '@/hooks/useTopCycles';
 import { SkillGraphCard } from '@/features/match/components/SkillGraphCard';
-import { ExchangeChainCard, type ExchangeCycleData } from '@/features/match/components/ExchangeChainCard';
+import type { ExchangeCycleData, ScoredCycleDto } from '@/features/match/components/ExchangeChainCard';
 import {
   LayoutGrid,
   List,
@@ -18,16 +18,17 @@ import {
   Zap,
   RefreshCw,
   ServerCrash,
-  Link2,
   ArrowRight,
   ArrowLeftRight,
-  CheckCircle2,
   ChevronLeft,
   ChevronRight,
   Compass,
   GitMerge,
   RotateCcw,
   Network,
+  Clock3,
+  Eye,
+  ShieldCheck,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -261,6 +262,9 @@ FilterSidebar.displayName = 'FilterSidebar';
 const AIBestMatchCard: FC<{ match: MatchUser; currentUser: User | null }> = React.memo(({ match, currentUser }) => {
   const [requestOpen, setRequestOpen] = useState(false);
   const [exchangeRelation, setExchangeRelation] = useState<ExchangeRelationship | null>(null);
+  const [dialogTarget, setDialogTarget] = useState<User | null>(null);
+  const [loadingProfile, setLoadingProfile] = useState(false);
+  const { toast } = useToast();
 
   useEffect(() => {
     let active = true;
@@ -282,6 +286,23 @@ const AIBestMatchCard: FC<{ match: MatchUser; currentUser: User | null }> = Reac
 
   const myName = currentUser?.name ?? 'You';
   const score = match.compatibilityScore;
+  const openRequestDialog = async () => {
+    setLoadingProfile(true);
+    try {
+      const fullProfile = await UserService.getById(match.id);
+      setDialogTarget(fullProfile);
+      setRequestOpen(true);
+    } catch {
+      toast({
+        variant: 'destructive',
+        title: 'Could not open request',
+        description: 'The full profile could not be loaded. Please try again.',
+      });
+    } finally {
+      setLoadingProfile(false);
+    }
+  };
+
   return (
     <>
       <motion.div
@@ -405,8 +426,8 @@ const AIBestMatchCard: FC<{ match: MatchUser; currentUser: User | null }> = Reac
                     Incoming Request
                   </Button>
                 ) : (
-                  <Button variant="gradient" className="h-9 rounded-xl text-xs font-bold uppercase tracking-wider shadow-none" onClick={() => setRequestOpen(true)}>
-                    Request Exchange
+                  <Button variant="gradient" className="h-9 rounded-xl text-xs font-bold uppercase tracking-wider shadow-none" onClick={openRequestDialog} disabled={loadingProfile}>
+                    {loadingProfile ? 'Loading Profile' : 'Request Exchange'}
                   </Button>
                 )}
                 <Button variant="outline" className="h-9 rounded-xl border-border/70 bg-background/60 text-xs font-bold uppercase tracking-wider hover:bg-muted/40" asChild>
@@ -418,9 +439,9 @@ const AIBestMatchCard: FC<{ match: MatchUser; currentUser: User | null }> = Reac
         </div>
       </motion.div>
       <RequestExchangeDialog
-        open={requestOpen}
+        open={requestOpen && !!dialogTarget}
         onClose={() => setRequestOpen(false)}
-        targetUser={match as unknown as User}
+        targetUser={dialogTarget ?? (match as unknown as User)}
         onSuccess={() => {
           setExchangeRelation({
             targetUserId: match.id,
@@ -437,6 +458,9 @@ AIBestMatchCard.displayName = 'AIBestMatchCard';
 const MatchCard: FC<{ match: MatchUser }> = React.memo(({ match }) => {
   const [requestOpen, setRequestOpen] = useState(false);
   const [exchangeRelation, setExchangeRelation] = useState<ExchangeRelationship | null>(null);
+  const [dialogTarget, setDialogTarget] = useState<User | null>(null);
+  const [loadingProfile, setLoadingProfile] = useState(false);
+  const { toast } = useToast();
 
   useEffect(() => {
     let active = true;
@@ -455,6 +479,23 @@ const MatchCard: FC<{ match: MatchUser }> = React.memo(({ match }) => {
       active = false;
     };
   }, [match.id]);
+
+  const openRequestDialog = async () => {
+    setLoadingProfile(true);
+    try {
+      const fullProfile = await UserService.getById(match.id);
+      setDialogTarget(fullProfile);
+      setRequestOpen(true);
+    } catch {
+      toast({
+        variant: 'destructive',
+        title: 'Could not open request',
+        description: 'The full profile could not be loaded. Please try again.',
+      });
+    } finally {
+      setLoadingProfile(false);
+    }
+  };
 
   return (
     <>
@@ -549,20 +590,21 @@ const MatchCard: FC<{ match: MatchUser }> = React.memo(({ match }) => {
             </Button>
           ) : (
             <Button
-              onClick={() => setRequestOpen(true)}
+              onClick={openRequestDialog}
               size="sm"
               variant="gradient"
               className="h-9 rounded-xl text-xs font-bold uppercase tracking-wider shadow-none"
+              disabled={loadingProfile}
             >
-              Request
+              {loadingProfile ? 'Loading' : 'Request'}
             </Button>
           )}
         </div>
       </Card>
       <RequestExchangeDialog
-        open={requestOpen}
+        open={requestOpen && !!dialogTarget}
         onClose={() => setRequestOpen(false)}
-        targetUser={match as unknown as User}
+        targetUser={dialogTarget ?? (match as unknown as User)}
         onSuccess={() => {
           setExchangeRelation({
             targetUserId: match.id,
@@ -576,154 +618,274 @@ const MatchCard: FC<{ match: MatchUser }> = React.memo(({ match }) => {
 });
 MatchCard.displayName = 'MatchCard';
 
-type ChainParticipant = { id: string; name: string; avatar: string; teaches: string; category: string };
-type SkillChain = { id: string; participants: ChainParticipant[]; totalSkills: number; openSpots: number; joined: boolean };
+const UUID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 
-const _MOCK_CHAINS: SkillChain[] = [
-  {
-    id: 'chain-1',
-    participants: [
-      { id: 'p1', name: 'Aisha K.', avatar: 'https://i.pravatar.cc/150?img=47', teaches: 'Python', category: 'Tech' },
-      { id: 'p2', name: 'Marcus L.', avatar: 'https://i.pravatar.cc/150?img=12', teaches: 'UI Design', category: 'Design' },
-      { id: 'p3', name: 'Sofia R.', avatar: 'https://i.pravatar.cc/150?img=25', teaches: 'Spanish', category: 'Language' },
-    ],
-    totalSkills: 3,
-    openSpots: 1,
-    joined: false,
-  },
-  {
-    id: 'chain-2',
-    participants: [
-      { id: 'p4', name: 'Jin W.', avatar: 'https://i.pravatar.cc/150?img=33', teaches: 'Guitar', category: 'Creative' },
-      { id: 'p5', name: 'Priya M.', avatar: 'https://i.pravatar.cc/150?img=44', teaches: 'Data Science', category: 'Tech' },
-      { id: 'p6', name: 'Leo T.', avatar: 'https://i.pravatar.cc/150?img=60', teaches: 'Photography', category: 'Creative' },
-      { id: 'p7', name: 'Nadia B.', avatar: 'https://i.pravatar.cc/150?img=9', teaches: 'French', category: 'Language' },
-    ],
-    totalSkills: 4,
-    openSpots: 0,
-    joined: false,
-  },
-  {
-    id: 'chain-3',
-    participants: [
-      { id: 'p8', name: 'Carlos V.', avatar: 'https://i.pravatar.cc/150?img=15', teaches: 'React', category: 'Tech' },
-      { id: 'p9', name: 'Emma S.', avatar: 'https://i.pravatar.cc/150?img=38', teaches: 'Business Strategy', category: 'Business' },
-      { id: 'p10', name: 'Omar F.', avatar: 'https://i.pravatar.cc/150?img=52', teaches: 'Public Speaking', category: 'Communication' },
-    ],
-    totalSkills: 3,
-    openSpots: 2,
-    joined: false,
-  },
-];
+type ChainFilter = 'all' | 'mine' | 'swap' | 'multi';
 
-const categoryColorMap: Record<string, string> = {
-  Tech: 'bg-primary/10 text-primary border-primary/25',
-  Design: 'bg-violet-500/10 text-violet-500 border-violet-500/25 dark:text-violet-400',
-  Language: 'bg-emerald-500/10 text-emerald-700 border-emerald-500/25 dark:text-emerald-400',
-  Creative: 'bg-sky-500/10 text-sky-700 border-sky-500/25 dark:text-sky-400',
-  Business: 'bg-slate-500/10 text-slate-600 border-slate-500/20 dark:text-slate-400',
-  Communication: 'bg-indigo-500/10 text-indigo-600 border-indigo-500/25 dark:text-indigo-400',
-  Lifestyle: 'bg-teal-500/10 text-teal-700 border-teal-500/25 dark:text-teal-400',
+type ChainRequestTarget = {
+  userId: string;
+  userName: string;
+  skillId: string;
+  skillName: string;
+  actionLabel: string;
 };
 
-const SkillChainCard: FC<{ chain: SkillChain }> = React.memo(({ chain }) => {
-  const [joined, setJoined] = useState(chain.joined);
-  const full = chain.openSpots === 0;
+const isPersistedId = (value?: string) => Boolean(value && UUID_PATTERN.test(value));
+
+function validChains(cycles: ScoredCycleDto[]) {
+  return cycles.filter((item) => {
+    const cycle = item.cycle;
+    return cycle?.userIds?.length >= 2
+      && cycle.userNames.length === cycle.userIds.length
+      && cycle.hops.length === cycle.userIds.length
+      && cycle.hops.every((hop) => hop.fromUserId && hop.toUserId && hop.primarySkillName);
+  });
+}
+
+function chainTarget(cycle: ExchangeCycleData, currentUserId?: string): ChainRequestTarget | null {
+  if (!currentUserId || cycle.hops.length === 0) return null;
+  const isParticipant = cycle.userIds.includes(currentUserId);
+  const hop = isParticipant
+    ? cycle.hops.find((item) => item.toUserId === currentUserId)
+    : cycle.hops[0];
+
+  const skillId = hop?.matchingSkillIds?.find(isPersistedId);
+  if (!hop || !skillId) return null;
+
+  return {
+    userId: hop.fromUserId,
+    userName: hop.fromUserName,
+    skillId,
+    skillName: hop.primarySkillName,
+    actionLabel: isParticipant ? 'Start chain' : 'Request swap',
+  };
+}
+
+const initials = (name: string) => name.split(/\s+/).filter(Boolean).slice(0, 2).map((part) => part[0]).join('').toUpperCase();
+
+function chainKey(item: ScoredCycleDto) {
+  return `${item.cycle.userIds.join(':')}:${item.score}`;
+}
+
+function chainTitle(cycle: ExchangeCycleData) {
+  const first = cycle.hops[0]?.primarySkillName ?? 'Skill';
+  const last = cycle.hops[cycle.hops.length - 1]?.primarySkillName ?? 'Skill';
+  return `${first} -> ${last}`;
+}
+
+function chainVia(cycle: ExchangeCycleData) {
+  const middle = cycle.hops.slice(1, -1).map((hop) => hop.primarySkillName).filter(Boolean);
+  return middle.length ? `via ${middle.slice(0, 3).join(', ')}` : `${cycle.hops.length} verified swaps`;
+}
+
+function estimatedTime(cycle: ExchangeCycleData) {
+  if (cycle.hops.length <= 2) return '~1 week';
+  if (cycle.hops.length <= 4) return '~2 weeks';
+  return '~2-3 weeks';
+}
+
+function ChainAvatarPath({ cycle, currentUserId, compact = false }: { cycle: ExchangeCycleData; currentUserId?: string; compact?: boolean }) {
+  return (
+    <div className="flex min-w-0 items-center gap-2 overflow-x-auto pb-1">
+      {cycle.hops.map((hop, index) => {
+        const isCurrent = hop.fromUserId === currentUserId;
+        return (
+          <React.Fragment key={`${hop.fromUserId}-${hop.toUserId}-${hop.primarySkillName}-${index}`}>
+            <div className="flex shrink-0 flex-col items-center gap-2">
+              <Avatar className={cn(
+                compact ? 'h-9 w-9' : 'h-12 w-12',
+                'border border-border bg-background ring-2 ring-background',
+                isCurrent && 'border-primary ring-primary/30'
+              )}>
+                <AvatarFallback className={cn('font-bold', compact ? 'text-[10px]' : 'text-xs', isCurrent ? 'bg-primary/15 text-primary' : 'bg-muted text-foreground')}>
+                  {isCurrent ? 'YOU' : initials(hop.fromUserName)}
+                </AvatarFallback>
+              </Avatar>
+              {!compact && (
+                <div className="max-w-[110px] text-center">
+                  <p className="truncate text-xs font-bold">{isCurrent ? 'You' : hop.fromUserName}</p>
+                  <p className="mt-1 truncate text-[10px] font-semibold text-primary">Offers {hop.primarySkillName}</p>
+                </div>
+              )}
+            </div>
+            {index < cycle.hops.length - 1 ? (
+              <ArrowRight className="h-4 w-4 shrink-0 text-muted-foreground/60" />
+            ) : (
+              <RotateCcw className="h-4 w-4 shrink-0 text-muted-foreground/60" />
+            )}
+          </React.Fragment>
+        );
+      })}
+    </div>
+  );
+}
+
+function ScoreDonut({ score, size = 'md' }: { score: number; size?: 'sm' | 'md' }) {
+  const clamped = Math.max(0, Math.min(100, score));
+  return (
+    <div
+      className={cn('grid shrink-0 place-items-center rounded-full', size === 'sm' ? 'h-10 w-10' : 'h-14 w-14')}
+      style={{ background: `conic-gradient(hsl(var(--secondary)) ${clamped * 3.6}deg, hsl(var(--muted)) 0deg)` }}
+    >
+      <div className={cn('grid place-items-center rounded-full bg-card font-headline font-extrabold', size === 'sm' ? 'h-7 w-7 text-[10px]' : 'h-10 w-10 text-sm')}>
+        {score}
+      </div>
+    </div>
+  );
+}
+
+function ChainMetric({ icon: Icon, value, label }: { icon: React.FC<{ className?: string }>; value: string | number; label: string }) {
+  return (
+    <div className="product-kpi">
+      <Icon className="mb-3 h-5 w-5 text-primary" />
+      <p className="font-headline text-2xl font-extrabold tabular-nums">{value}</p>
+      <p className="mt-1 text-xs text-muted-foreground">{label}</p>
+    </div>
+  );
+}
+
+function ChainTableRow({
+  item,
+  rank,
+  currentUserId,
+  selected,
+  onSelect,
+  onAction,
+}: {
+  item: ScoredCycleDto;
+  rank: number;
+  currentUserId?: string;
+  selected: boolean;
+  onSelect: () => void;
+  onAction: (cycle: ExchangeCycleData) => void;
+}) {
+  const { cycle } = item;
+  const target = chainTarget(cycle, currentUserId);
+  const swaps = Math.max(1, cycle.hops.length - 1);
+
   return (
     <motion.div
       layout
-      className="rounded-2xl border border-border/70 bg-card/90 p-4 shadow-sm transition-colors duration-300 hover:border-primary/30"
-      initial={{ opacity: 0, y: 16 }}
+      initial={{ opacity: 0, y: 8 }}
       animate={{ opacity: 1, y: 0 }}
+      exit={{ opacity: 0, y: -8 }}
+      className={cn(
+        'product-row grid min-w-[1000px] grid-cols-[190px_minmax(200px,1fr)_105px_70px_70px_110px_160px] items-center gap-4 px-5 py-4',
+        selected && 'bg-primary/[0.045]'
+      )}
     >
-      {/* Participants row */}
-      <div className="flex items-center gap-1.5 overflow-x-auto pb-1">
-        {chain.participants.map((p, idx) => (
-          <React.Fragment key={p.id}>
-            <div className="flex flex-col items-center gap-1.5 min-w-[72px]">
-              <Avatar className="h-12 w-12 ring-2 ring-border">
-                <AvatarImage src={p.avatar} />
-                <AvatarFallback>{p.name.charAt(0)}</AvatarFallback>
-              </Avatar>
-              <p className="text-xs font-semibold text-center leading-tight max-w-[72px] truncate">{p.name}</p>
-              <span className={cn('text-[10px] font-medium px-1.5 py-0.5 rounded-full border', categoryColorMap[p.category] ?? 'bg-muted text-muted-foreground border-border')}>
-                {p.teaches}
-              </span>
-            </div>
-            {idx < chain.participants.length - 1 && (
-              <ArrowRight className="h-4 w-4 shrink-0 text-muted-foreground/50 mx-0.5" />
-            )}
-          </React.Fragment>
-        ))}
-        {chain.openSpots > 0 && (
-          <>
-            <ArrowRight className="h-4 w-4 shrink-0 text-muted-foreground/50 mx-0.5" />
-            <div className="flex flex-col items-center gap-1.5 min-w-[72px]">
-              <div className="h-12 w-12 rounded-full border-2 border-dashed border-primary/40 flex items-center justify-center bg-primary/5">
-                <span className="text-lg text-primary/60">+</span>
-              </div>
-              <p className="text-xs text-muted-foreground text-center">{chain.openSpots} open</p>
-            </div>
-          </>
-        )}
+      <div className="flex min-w-0 items-center gap-3">
+        <span className="grid h-8 w-8 shrink-0 place-items-center rounded-lg border border-primary/25 bg-primary/10 text-xs font-bold text-primary">
+          {rank}
+        </span>
+        <div className="min-w-0">
+          <p className="truncate text-sm font-bold">{chainTitle(cycle)}</p>
+          <p className="mt-1 truncate text-xs text-muted-foreground">{chainVia(cycle)}</p>
+        </div>
       </div>
 
-      {/* Footer */}
-      <div className="mt-4 flex items-center justify-between gap-3">
-        <div className="flex items-center gap-3 text-xs text-muted-foreground">
-          <span className="flex items-center gap-1"><Link2 className="h-3.5 w-3.5" /> {chain.totalSkills} skills</span>
-          <span className="flex items-center gap-1"><Users className="h-3.5 w-3.5" /> {chain.participants.length} members</span>
+      <ChainAvatarPath cycle={cycle} currentUserId={currentUserId} compact />
+
+      <div className="flex items-center gap-3">
+        <ScoreDonut score={item.score} size="sm" />
+        <div>
+          <p className="text-sm font-extrabold">{item.score}%</p>
+          <p className="text-xs text-muted-foreground">{item.score >= 75 ? 'Great fit' : item.score >= 60 ? 'Good fit' : 'Fair fit'}</p>
         </div>
-        {joined ? (
-          <Button size="sm" variant="outline" disabled className="gap-1.5 text-secondary border-secondary/40 bg-secondary/10">
-            <CheckCircle2 className="h-4 w-4" /> Joined
-          </Button>
-        ) : full ? (
-          <Button size="sm" variant="outline" disabled className="text-muted-foreground">Chain Full</Button>
-        ) : (
-          <Button size="sm" variant="gradient" onClick={() => setJoined(true)}>Join Chain</Button>
-        )}
+      </div>
+
+      <div className="flex items-center gap-2 text-sm font-semibold">
+        <Users className="h-4 w-4 text-muted-foreground" />
+        {cycle.userIds.length}
+      </div>
+
+      <div className="flex items-center gap-2 text-sm font-semibold">
+        <ArrowLeftRight className="h-4 w-4 text-muted-foreground" />
+        {swaps}
+      </div>
+
+      <div className="flex items-center gap-2 text-sm text-muted-foreground">
+        <Clock3 className="h-4 w-4" />
+        {estimatedTime(cycle)}
+      </div>
+
+      <div className="flex justify-end gap-2">
+        <Button variant="outline" size="sm" className="h-9 rounded-xl px-2.5 text-xs font-bold" onClick={onSelect}>
+          <Eye className="mr-1.5 h-3.5 w-3.5" />
+          View
+        </Button>
+        <Button
+          size="sm"
+          variant={target ? 'gradient' : 'outline'}
+          className="h-9 rounded-xl px-2.5 text-xs font-bold shadow-none"
+          disabled={!target}
+          onClick={() => onAction(cycle)}
+        >
+          {target?.actionLabel ?? 'Unavailable'}
+        </Button>
       </div>
     </motion.div>
   );
-});
-SkillChainCard.displayName = 'SkillChainCard';
+}
 
-const SkillChainsTab = () => {
+const SkillChainsTabV2 = () => {
   const { user } = useAuth();
   const { toast } = useToast();
-  const { cycles, loading, refetch } = useTopCycles({ limit: 20 });
+  const { cycles, loading, error, refetch } = useTopCycles({ limit: 20 });
   const [joinDialogOpen, setJoinDialogOpen] = useState(false);
   const [joinTargetUser, setJoinTargetUser] = useState<User | null>(null);
+  const [filter, setFilter] = useState<ChainFilter>('all');
+  const [selectedKey, setSelectedKey] = useState<string | null>(null);
 
-  const perfectSwaps = cycles.filter(c => c.cycle.hops.length === 2);
-  const multiChains = cycles.filter(c => c.cycle.hops.length > 2);
-  const totalParticipants = new Set(cycles.flatMap(c => c.cycle.userIds)).size;
-  const myChainCount = cycles.filter(c => user?.id && c.cycle.userIds.includes(user.id)).length;
+  const sortedCycles = useMemo(() => validChains(cycles).sort((a, b) => b.score - a.score), [cycles]);
+  const selectedCycle = useMemo(
+    () => sortedCycles.find((item) => chainKey(item) === selectedKey) ?? sortedCycles[0],
+    [selectedKey, sortedCycles]
+  );
+  const perfectSwaps = useMemo(() => sortedCycles.filter(c => c.cycle.hops.length === 2), [sortedCycles]);
+  const multiChains = useMemo(() => sortedCycles.filter(c => c.cycle.hops.length > 2), [sortedCycles]);
+  const totalParticipants = useMemo(() => new Set(sortedCycles.flatMap(c => c.cycle.userIds)).size, [sortedCycles]);
+  const averageScore = sortedCycles.length
+    ? Math.round(sortedCycles.reduce((sum, c) => sum + c.score, 0) / sortedCycles.length)
+    : 0;
+  const bestScore = selectedCycle?.score ?? 0;
+  const visibleCycles = useMemo(() => {
+    switch (filter) {
+      case 'mine':
+        return sortedCycles.filter(c => user?.id && c.cycle.userIds.includes(user.id));
+      case 'swap':
+        return perfectSwaps;
+      case 'multi':
+        return multiChains;
+      default:
+        return sortedCycles;
+    }
+  }, [filter, multiChains, perfectSwaps, sortedCycles, user?.id]);
 
-  const openJoinDialog = useCallback((cycle: ExchangeCycleData, explicitTargetId?: string) => {
-    if (!user) return;
-
-    const targetId = explicitTargetId ?? cycle.userIds.find((id) => id !== user.id);
-    if (!targetId) return;
-
-    const targetIdx = cycle.userIds.findIndex((id) => id === targetId);
-    const targetName = targetIdx >= 0 ? (cycle.userNames[targetIdx] ?? 'Chain Member') : 'Chain Member';
-    const offeredSkill = cycle.hops.find((hop) => hop.fromUserId === targetId)?.primarySkillName ?? 'Skill Exchange';
+  const openChainRequest = useCallback((cycle: ExchangeCycleData) => {
+    const target = chainTarget(cycle, user?.id);
+    if (!target) {
+      toast({
+        variant: 'destructive',
+        title: 'Chain request unavailable',
+        description: 'This chain does not expose a valid persisted skill for a request yet.',
+      });
+      return;
+    }
 
     setJoinTargetUser({
-      id: targetId,
-      name: targetName,
-      email: `${targetId}@chain.local`,
+      id: target.userId,
+      name: target.userName,
+      email: `${target.userId}@chain.local`,
       avatar: '',
-      university: 'Chain Match',
-      bio: 'Matched from exchange chain',
+      university: 'Skill Chain Match',
+      bio: 'Selected from the live skill-chain engine.',
       skillsOffered: [{
-        id: `chain-skill-${targetId}`,
-        name: offeredSkill,
-        icon: 'Sparkles',
+        id: target.skillId,
+        name: target.skillName,
+        icon: '',
         category: 'General',
-        description: `${offeredSkill} exchange opportunity`,
+        description: `${target.skillName} exchange opportunity`,
         level: 'moderate' as const,
       }],
       skillsWanted: [],
@@ -735,166 +897,166 @@ const SkillChainsTab = () => {
       joinedAt: new Date().toISOString(),
     });
     setJoinDialogOpen(true);
-  }, [user]);
-
-  const startChain = useCallback((cycle: ExchangeCycleData) => {
-    if (!user) return;
-
-    const incomingHop = cycle.hops.find((hop) => hop.toUserId === user.id);
-    if (!incomingHop) {
-      toast({
-        variant: 'destructive',
-        title: 'Cannot start this chain',
-        description: 'Your role in this chain could not be resolved.',
-      });
-      return;
-    }
-
-    openJoinDialog(cycle, incomingHop.fromUserId);
-    toast({
-      title: 'Chain kickoff ready',
-      description: `Targeted request prepared for ${incomingHop.fromUserName}. Review and send from the dialog.`,
-      variant: 'success',
-    });
-  }, [openJoinDialog, toast, user]);
+  }, [toast, user?.id]);
 
   return (
     <div className="space-y-5">
-      {/* ── How It Works explainer ── */}
-      <div className="rounded-2xl border border-border/70 bg-card/90 p-4 shadow-sm">
-        <div className="flex items-start gap-4">
-          <div className="mt-0.5 shrink-0 rounded-xl border border-primary/20 bg-primary/10 p-3">
-            <GitMerge className="h-5 w-5 text-primary" />
-          </div>
-          <div className="flex-1 min-w-0">
-            <p className="text-base font-bold uppercase tracking-wider">Barter Exchange Detection</p>
-            <p className="mt-1 text-xs text-muted-foreground leading-relaxed">
-              SkiilEX's AI builds a directed graph of all users and their offered/wanted skills, then
-              runs a three-colour DFS cycle-detection algorithm to find exchange rings automatically.
-              No money changes hands — every member teaches what they know and learns what they need.
+      <section className="product-panel">
+        <div className="flex flex-col gap-4 border-b border-border/70 p-5 md:flex-row md:items-start md:justify-between dark:border-white/10">
+          <div className="min-w-0">
+            <div className="flex items-center gap-2 text-primary">
+              <Network className="h-5 w-5" />
+              <h2 className="font-headline text-2xl font-extrabold tracking-tight">Skill Chain Engine</h2>
+            </div>
+            <p className="mt-2 max-w-2xl text-sm leading-relaxed text-muted-foreground">
+              Compute the best multi-person exchange path from real offered and wanted skills.
             </p>
           </div>
+          <div className="flex items-center gap-3 text-xs text-muted-foreground">
+            <span className="h-2 w-2 rounded-full bg-primary shadow-[0_0_10px_hsl(var(--primary))]" />
+            <span>Live data</span>
+            <Button variant="outline" size="sm" className="h-9 rounded-xl gap-2 text-xs font-bold" onClick={refetch} disabled={loading}>
+              <RefreshCw className={cn('h-4 w-4', loading && 'animate-spin')} />
+              Refresh
+            </Button>
+          </div>
         </div>
-        {/* Mini cycle diagram */}
-        <div className="mt-3 flex items-center justify-center gap-2 text-[11px] text-muted-foreground overflow-x-auto py-1">
-          {[
-            { user: 'A', offers: 'Python', wants: 'UI' },
-            { user: 'B', offers: 'UI', wants: 'Marketing' },
-            { user: 'C', offers: 'Marketing', wants: 'Python' },
-          ].map((n, idx, arr) => (
-            <React.Fragment key={n.user}>
-              <div className="flex flex-col items-center gap-1 shrink-0">
-                <div className="px-3 py-1.5 rounded-lg border border-white/15 bg-white/[0.04] text-center min-w-[80px]">
-                  <div className="font-bold text-foreground">User {n.user}</div>
-                  <div className="text-[9px] text-primary/80">offers {n.offers}</div>
-                  <div className="text-[9px] text-muted-foreground">wants {n.wants}</div>
-                </div>
-              </div>
-              {idx < arr.length - 1 && (
-                <div className="flex flex-col items-center gap-0.5 shrink-0">
-                  <ArrowRight className="h-3.5 w-3.5 text-primary/50" />
-                  <span className="text-[9px] text-primary/70">{arr[idx].offers}→{n.user}</span>
-                </div>
+
+        <div className="grid lg:grid-cols-[minmax(0,0.95fr)_minmax(340px,1fr)]">
+          <div className="border-b border-border/70 p-5 lg:border-b-0 lg:border-r dark:border-white/10">
+            <div className="mb-5 flex items-center justify-between gap-3">
+              <p className="text-base font-bold">Best path</p>
+              {selectedCycle && (
+                <Badge className="rounded-xl border border-secondary/35 bg-secondary/10 px-3 py-1 text-secondary hover:bg-secondary/10">
+                  {selectedCycle.score}% match
+                </Badge>
               )}
-            </React.Fragment>
-          ))}
-          <div className="flex flex-col items-center gap-0.5 shrink-0">
-            <RotateCcw className="h-3.5 w-3.5 text-primary/50" />
-            <span className="text-[9px] text-primary/70">Marketing→A</span>
-          </div>
-        </div>
-      </div>
-
-      {/* ── Stats bar ── */}
-      {!loading && cycles.length > 0 && (
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-4 auto-rows-min">
-          {[
-            { icon: <Network className="h-5 w-5 text-primary" />, label: 'Total Chains', value: cycles.length },
-            { icon: <ArrowLeftRight className="h-5 w-5 text-emerald-400" />, label: 'Perfect Swaps', value: perfectSwaps.length },
-            { icon: <Users className="h-5 w-5 text-purple-400" />, label: 'Participants', value: totalParticipants },
-            { icon: <CheckCircle2 className="h-5 w-5 text-warning" />, label: 'Your Chains', value: myChainCount },
-          ].map(stat => (
-            <div key={stat.label} className="flex flex-col items-center justify-center rounded-2xl border border-border/70 bg-card/90 p-4 text-center shadow-sm">
-              <div className="mb-3 shrink-0 rounded-xl bg-muted/40 p-3">{stat.icon}</div>
-              <div>
-                <div className="mb-1 font-headline text-2xl font-extrabold leading-none text-primary tabular-nums">{stat.value}</div>
-                <div className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">{stat.label}</div>
-              </div>
             </div>
-          ))}
-        </div>
-      )}
 
-      {/* ── Loading ── */}
-      {loading ? (
-        <div className="grid grid-cols-1 gap-4 lg:grid-cols-2 auto-rows-min">
-          {[...Array(4)].map((_, i) => <Skeleton key={i} variant="card" className="h-[260px] rounded-2xl" />)}
-        </div>
-      ) : cycles.length === 0 ? (
-        <div className="flex flex-col items-center justify-center rounded-2xl border border-border/70 bg-card/90 py-16 text-center shadow-sm">
-          <div className="rounded-2xl border border-border/70 bg-muted/30 p-5">
-            <GitMerge className="h-12 w-12 text-muted-foreground/50" />
+            {selectedCycle ? (
+              <>
+                <ChainAvatarPath cycle={selectedCycle.cycle} currentUserId={user?.id} />
+                <div className="mt-5 grid grid-cols-3 gap-3 border-t border-border/70 pt-4 text-sm text-muted-foreground dark:border-white/10">
+                  <span className="flex items-center gap-2"><Users className="h-4 w-4" /> {selectedCycle.cycle.userIds.length} people</span>
+                  <span className="flex items-center gap-2"><ArrowLeftRight className="h-4 w-4" /> {Math.max(1, selectedCycle.cycle.hops.length - 1)} swaps</span>
+                  <span className="flex items-center gap-2"><Clock3 className="h-4 w-4" /> {estimatedTime(selectedCycle.cycle)}</span>
+                </div>
+              </>
+            ) : (
+              <div className="rounded-2xl border border-dashed border-border/70 bg-background/35 p-6 text-sm text-muted-foreground">
+                Add offered and wanted skills to unlock live chain detection.
+              </div>
+            )}
           </div>
-          <p className="mt-6 text-lg font-headline font-bold">No exchange chains detected yet</p>
-          <p className="mt-2 text-sm text-muted-foreground max-w-md px-4">
-            Add offered and wanted skills to your profile. The AI automatically detects
-            2-way swaps and multi-person rings system-wide.
-          </p>
-          <Button variant="outline" size="sm" className="mt-8 gap-2 rounded-xl px-6 text-xs font-bold uppercase tracking-wider" onClick={refetch}>
-            <RefreshCw className="h-4 w-4" /> Retry Detection
+
+          <div className="p-5">
+            <p className="mb-5 text-base font-bold">Live chains</p>
+            <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
+              <ChainMetric icon={Network} value={sortedCycles.length} label="Active chains" />
+              <ChainMetric icon={ArrowLeftRight} value={perfectSwaps.length} label="2-way swaps" />
+              <ChainMetric icon={Users} value={totalParticipants} label="Participants" />
+              <ChainMetric icon={ShieldCheck} value={`${bestScore || averageScore}%`} label="Best score" />
+            </div>
+            <div className="mt-5 flex items-center gap-2 text-sm text-muted-foreground">
+              <ShieldCheck className="h-4 w-4 text-primary" />
+              Computed from real offered and wanted skills. No saved chain record is required.
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section className="product-panel">
+        <div className="flex flex-col gap-3 border-b border-border/70 px-5 pt-3 md:flex-row md:items-center md:justify-between dark:border-white/10">
+          <div className="flex gap-7 overflow-x-auto">
+            {[
+              { id: 'all' as const, label: 'All Chains' },
+              { id: 'swap' as const, label: '2-way Swaps' },
+              { id: 'multi' as const, label: 'Multi-person' },
+              { id: 'mine' as const, label: 'Mine' },
+            ].map((option) => (
+              <button
+                key={option.id}
+                type="button"
+                onClick={() => setFilter(option.id)}
+                className={cn('product-tab shrink-0', filter === option.id && 'product-tab-active')}
+              >
+                {option.label}
+              </button>
+            ))}
+          </div>
+          <Button variant="outline" size="sm" className="mb-3 h-9 rounded-xl gap-2 text-xs font-bold" onClick={refetch} disabled={loading}>
+            <SlidersHorizontal className="h-4 w-4" />
+            Update
           </Button>
         </div>
-      ) : (
-        <div className="space-y-8">
-          {/* 2-Way Perfect Swaps */}
-          {perfectSwaps.length > 0 && (
-            <section>
-              <div className="flex items-center gap-3 mb-4">
-                <ArrowLeftRight className="h-5 w-5 text-emerald-400 drop-shadow-[0_0_8px_var(--emerald-400)]" />
-                <h3 className="font-headline text-lg font-bold uppercase tracking-wider">Perfect 2-Way Swaps</h3>
-                <Badge className="bg-emerald-500/20 text-emerald-400 border border-emerald-500/40 text-[10px] font-bold px-2.5 py-0.5 rounded-full drop-shadow-[0_0_8px_var(--emerald-400)]">
-                  {perfectSwaps.length}
-                </Badge>
-              </div>
-              <div className="grid grid-cols-1 gap-4 lg:grid-cols-2 auto-rows-min">
-                {perfectSwaps.map((chain, i) => (
-                  <ExchangeChainCard
-                    key={`swap-${i}`}
-                    data={chain}
-                    currentUserId={user?.id}
-                    onRequestJoin={openJoinDialog}
-                    onStartChain={startChain}
-                  />
-                ))}
-              </div>
-            </section>
-          )}
 
-          {/* Multi-person chains */}
-          {multiChains.length > 0 && (
-            <section>
-              <div className="flex items-center gap-3 mb-4">
-                <Zap className="h-5 w-5 text-primary drop-shadow-[0_0_8px_var(--primary)]" />
-                <h3 className="font-headline text-lg font-bold uppercase tracking-wider">Multi-Person Chains</h3>
-                <Badge className="bg-primary/20 text-primary border border-primary/40 text-[10px] font-bold px-2.5 py-0.5 rounded-full drop-shadow-[0_0_8px_var(--primary)]">
-                  {multiChains.length}
-                </Badge>
+        <div className="overflow-x-auto">
+          <div className="grid min-w-[1000px] grid-cols-[190px_minmax(200px,1fr)_105px_70px_70px_110px_160px] gap-4 border-b border-border/70 px-5 py-3 text-xs font-bold text-muted-foreground dark:border-white/10">
+            <span>Chain</span>
+            <span>Path</span>
+            <span>Match</span>
+            <span>People</span>
+            <span>Swaps</span>
+            <span>Est. time</span>
+            <span className="text-right">Actions</span>
+          </div>
+
+          {loading ? (
+            <div className="min-w-[1000px] space-y-0">
+              {[...Array(4)].map((_, i) => (
+                <div key={i} className="product-row grid grid-cols-[190px_minmax(200px,1fr)_105px_70px_70px_110px_160px] gap-4 px-5 py-4">
+                  {[150, 200, 86, 44, 44, 80, 120].map((width, idx) => (
+                    <Skeleton key={idx} className="h-8 rounded-lg" style={{ width }} />
+                  ))}
+                </div>
+              ))}
+            </div>
+          ) : error ? (
+            <div className="p-6">
+              <div className="rounded-2xl border border-destructive/30 bg-destructive/10 p-6 text-center">
+                <ServerCrash className="mx-auto mb-3 h-8 w-8 text-destructive" />
+                <p className="text-sm font-semibold text-destructive">Could not load skill chains.</p>
+                <p className="mt-1 text-xs text-muted-foreground">{error}</p>
+                <Button className="mt-4 rounded-xl" onClick={refetch}>Try again</Button>
               </div>
-              <div className="grid grid-cols-1 gap-4 lg:grid-cols-2 auto-rows-min">
-                {multiChains.map((chain, i) => (
-                  <ExchangeChainCard
-                    key={`chain-${i}`}
-                    data={chain}
+            </div>
+          ) : visibleCycles.length === 0 ? (
+            <div className="p-6">
+              <div className="flex flex-col items-center justify-center rounded-2xl border border-dashed border-border/70 bg-background/35 px-6 py-12 text-center">
+                <GitMerge className="h-9 w-9 text-muted-foreground/55" />
+                <p className="mt-4 text-sm font-bold">No chains in this view</p>
+                <p className="mt-1 max-w-md text-xs text-muted-foreground">
+                  The live graph has no matching path for the selected filter. Try All Chains or update profile skills.
+                </p>
+              </div>
+            </div>
+          ) : (
+            <AnimatePresence initial={false}>
+              {visibleCycles.map((item, index) => {
+                const key = chainKey(item);
+                return (
+                  <ChainTableRow
+                    key={key}
+                    item={item}
+                    rank={index + 1}
                     currentUserId={user?.id}
-                    onRequestJoin={openJoinDialog}
-                    onStartChain={startChain}
+                    selected={key === (selectedCycle ? chainKey(selectedCycle) : '')}
+                    onSelect={() => setSelectedKey(key)}
+                    onAction={openChainRequest}
                   />
-                ))}
-              </div>
-            </section>
+                );
+              })}
+            </AnimatePresence>
           )}
         </div>
-      )}
+
+        {!loading && !error && visibleCycles.length > 0 && (
+          <div className="flex flex-col gap-3 border-t border-border/70 px-5 py-4 text-sm text-muted-foreground md:flex-row md:items-center md:justify-between dark:border-white/10">
+            <span>Showing 1 to {visibleCycles.length} of {sortedCycles.length} chains</span>
+            <span>Average score {averageScore}%</span>
+          </div>
+        )}
+      </section>
 
       {joinTargetUser && (
         <RequestExchangeDialog
@@ -909,6 +1071,7 @@ const SkillChainsTab = () => {
     </div>
   );
 };
+
 
 const LoadingSkeletons = () => (
   <div className="grid grid-cols-1 gap-6 md:grid-cols-2 xl:grid-cols-3">
@@ -1182,56 +1345,60 @@ export default function MatchPage() {
 
   return (
     <DashboardLayout>
-      <div className="flex flex-1">
-        <FilterSidebar
-          filters={filters}
-          setFilters={setFilters}
-          onApply={() => setMobileSheetOpen(false)}
-          mobileSheetOpen={mobileSheetOpen}
-          setMobileSheetOpen={setMobileSheetOpen}
-        />
-        <div className="flex-1 p-4 md:p-6">
-          <div className="mx-auto max-w-6xl">
-            <motion.div
-              initial={{ opacity: 0, y: -14 }}
-              animate={{ opacity: 1, y: 0 }}
-              className="relative overflow-hidden rounded-2xl border border-border/70 bg-card/90 p-4 shadow-sm md:p-5"
-            >
-              <div className="pointer-events-none absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-primary/50 to-transparent opacity-70" />
-              <div className="relative z-10">
-                <div className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
-                  <div>
-                    <h1 className="font-headline text-2xl font-extrabold tracking-tight md:text-3xl">Find Your <span className="text-primary">Skill Match</span></h1>
-                    <p className="mt-2 max-w-2xl text-sm text-muted-foreground">Compare real exchange fit: what you can offer, what you want next, and who can trade fairly with you.</p>
+      <div className="flex min-w-0 flex-1">
+        {activeTab !== 'chain' && (
+          <FilterSidebar
+            filters={filters}
+            setFilters={setFilters}
+            onApply={() => setMobileSheetOpen(false)}
+            mobileSheetOpen={mobileSheetOpen}
+            setMobileSheetOpen={setMobileSheetOpen}
+          />
+        )}
+        <div className="min-w-0 flex-1 p-4 md:p-6">
+          <div className={cn('mx-auto w-full', activeTab === 'chain' ? 'max-w-7xl' : 'max-w-6xl')}>
+            {activeTab !== 'chain' && (
+              <motion.div
+                initial={{ opacity: 0, y: -14 }}
+                animate={{ opacity: 1, y: 0 }}
+                className="relative overflow-hidden rounded-2xl border border-border/70 bg-card/90 p-4 shadow-sm md:p-5"
+              >
+                <div className="pointer-events-none absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-primary/50 to-transparent opacity-70" />
+                <div className="relative z-10">
+                  <div className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
+                    <div>
+                      <h1 className="font-headline text-2xl font-extrabold tracking-tight md:text-3xl">Find Your <span className="text-primary">Skill Match</span></h1>
+                      <p className="mt-2 max-w-2xl text-sm text-muted-foreground">Compare real exchange fit: what you can offer, what you want next, and who can trade fairly with you.</p>
+                    </div>
+                    <div className="grid grid-cols-3 gap-2 text-center text-xs">
+                      <div className="rounded-xl border border-border/70 bg-background/60 px-3 py-2">
+                        <p className="font-headline text-lg font-bold text-foreground">{filteredMatches.length}</p>
+                        <p className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">Matches</p>
+                      </div>
+                      <div className="rounded-xl border border-border/70 bg-background/60 px-3 py-2">
+                        <p className="font-headline text-lg font-bold text-primary">{bestMatch?.compatibilityScore ?? 0}%</p>
+                        <p className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">Best</p>
+                      </div>
+                      <div className="rounded-xl border border-border/70 bg-background/60 px-3 py-2">
+                        <p className="font-headline text-lg font-bold text-foreground">{activeFilterCount}</p>
+                        <p className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">Filters</p>
+                      </div>
+                    </div>
                   </div>
-                  <div className="grid grid-cols-3 gap-2 text-center text-xs">
-                    <div className="rounded-xl border border-border/70 bg-background/60 px-3 py-2">
-                      <p className="font-headline text-lg font-bold text-foreground">{filteredMatches.length}</p>
-                      <p className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">Matches</p>
-                    </div>
-                    <div className="rounded-xl border border-border/70 bg-background/60 px-3 py-2">
-                      <p className="font-headline text-lg font-bold text-primary">{bestMatch?.compatibilityScore ?? 0}%</p>
-                      <p className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">Best</p>
-                    </div>
-                    <div className="rounded-xl border border-border/70 bg-background/60 px-3 py-2">
-                      <p className="font-headline text-lg font-bold text-foreground">{activeFilterCount}</p>
-                      <p className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">Filters</p>
-                    </div>
+                  <div className="relative mt-4 max-w-4xl">
+                    <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+                    <Input
+                      placeholder="Search by skill, name, role, city, or interest..."
+                      className="h-10 rounded-xl border-border/70 bg-background/70 pl-10 text-sm"
+                      value={filters.search}
+                      onChange={(e) => setFilters({ ...filters, search: e.target.value })}
+                    />
                   </div>
                 </div>
-                <div className="relative mt-4 max-w-4xl">
-                  <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-                  <Input
-                    placeholder="Search by skill, name, role, city, or interest..."
-                    className="h-10 rounded-xl border-border/70 bg-background/70 pl-10 text-sm"
-                    value={filters.search}
-                    onChange={(e) => setFilters({ ...filters, search: e.target.value })}
-                  />
-                </div>
-              </div>
-            </motion.div>
+              </motion.div>
+            )}
 
-            <div className="relative mt-5">
+            <div className={cn('relative', activeTab === 'chain' ? 'mt-0' : 'mt-5')}>
               <div className="flex flex-col gap-3 rounded-2xl border border-border/70 bg-card/70 p-2 md:flex-row md:items-center md:justify-between">
                 <div className="flex gap-1 overflow-x-auto">
                 {[{ id: 'direct', label: 'Direct Matches' }, { id: 'chain', label: 'Skill Chains' }, { id: 'marketplace', label: 'Marketplace' }].map(tab => (
@@ -1304,7 +1471,7 @@ export default function MatchPage() {
                         {otherMatches.length === 0 && !bestMatch ? <EmptyState onReset={() => setFilters(defaultFilters)} /> : (<motion.div key={view} variants={containerVariants} initial="hidden" animate="visible" className={cn(view === 'grid' ? 'grid grid-cols-1 gap-4 md:grid-cols-2 2xl:grid-cols-3 auto-rows-min' : 'space-y-4')}>{otherMatches.map((match) => (<motion.div variants={itemVariants} key={match.id}><MatchCard match={match} /></motion.div>))}</motion.div>)}
                       </>
                     ) : activeTab === 'chain' ? (
-                      <SkillChainsTab />
+                      <SkillChainsTabV2 />
                     ) : (
                       <>
                         <div className="mb-5 rounded-2xl border border-white/10 bg-gradient-to-r from-primary/10 via-primary/5 to-transparent p-4">

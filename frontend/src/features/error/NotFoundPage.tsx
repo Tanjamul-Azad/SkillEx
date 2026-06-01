@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { motion } from 'framer-motion';
 import { Code, Music, Camera, Figma, Search, Home } from 'lucide-react';
+import AppBackButton from '@/components/navigation/AppBackButton';
 
 const floatingIcons = [
   { Icon: Code,   label: 'Coding',       x: '-62%', y: '-55%', delay: 0,    size: 'h-5 w-5', color: 'text-primary'   },
@@ -14,6 +15,7 @@ const floatingIcons = [
 export default function NotFound() {
   return (
     <div className="relative flex h-screen flex-col items-center justify-center overflow-hidden bg-background text-center p-4">
+      <AppBackButton fallbackTo="/" className="absolute left-4 top-4 z-20" />
       {/* Dot grid + blobs */}
       <div className="dot-grid pointer-events-none absolute inset-0 opacity-40" />
       <div className="pointer-events-none absolute -top-24 -left-24 h-72 w-72 rounded-full bg-primary/15 blur-3xl" />

@@ -35,8 +35,12 @@ import {
   Clock,
   ExternalLink,
   Flame,
+  Facebook,
   Github,
+  Globe,
+  Linkedin,
   LinkIcon,
+  FileText,
   Trash2,
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -46,7 +50,6 @@ import DashboardLayout from '@/components/layout/DashboardLayout';
 import { SkillBadge } from '@/components/ui/SkillBadge';
 import { SkillExScoreBadge } from '@/components/ui/SkillExScoreBadge';
 import type { User, Skill, Review, UserProgress, PortfolioProof, PortfolioProofType } from '@/types';
-import { AddSkillDialog } from '@/features/profile/components/AddSkillDialog';
 import {
   connectionService,
   type ConnectionRelationship,
@@ -168,7 +171,7 @@ function SkillSection({
             <h3 className="text-[11px] font-bold uppercase tracking-widest text-foreground">{title}</h3>
             <p className="mt-0.5 text-[10px] font-semibold uppercase tracking-widest text-muted-foreground">{skills.length} skill{skills.length === 1 ? '' : 's'}</p>
           </div>
-          {isOwner && (
+          {isOwner && onAdd && (
             <Button
               size="icon"
               variant="ghost"
@@ -186,7 +189,7 @@ function SkillSection({
               <div className="space-y-1">
                 <p className="text-xs font-medium text-muted-foreground">{emptyText}</p>
               </div>
-              {isOwner && (
+              {isOwner && onAdd && (
                 <Button size="sm" variant="outline" className="mt-2 rounded-lg px-4 text-[9px] uppercase tracking-widest font-bold h-8" onClick={onAdd}>
                   <Plus className="h-3 w-3 mr-1.5" /> Add Skill
                 </Button>
@@ -361,7 +364,6 @@ export default function ProfilePage() {
   const [wantedSkills, setWantedSkills] = useState<Skill[]>([]);
   const navTo = useNav();
   const [searchParams, setSearchParams] = useSearchParams();
-  const [addSkillMode, setAddSkillMode] = useState<'offered' | 'wanted' | null>(null);
   const [connectionRelationship, setConnectionRelationship] = useState<ConnectionRelationship | null>(null);
   const [connectionLoading, setConnectionLoading] = useState(false);
   const [connectionBusy, setConnectionBusy] = useState(false);
@@ -431,6 +433,15 @@ export default function ProfilePage() {
       .catch(() => setNotFound(true))
       .finally(() => setLoading(false));
   }, [userId]);
+
+  useEffect(() => {
+    if (!currentUser || !profileUser) return;
+    if (currentUser.id !== profileUser.id) return;
+
+    setProfileUser(currentUser);
+    setOfferedSkills(currentUser.skillsOffered ?? []);
+    setWantedSkills(currentUser.skillsWanted ?? []);
+  }, [currentUser, profileUser]);
 
   useEffect(() => {
     if (!profileUser || !currentUser || profileUser.id === currentUser.id) {
@@ -837,6 +848,66 @@ export default function ProfilePage() {
                     </p>
                   </div>
                 )}
+
+                {(profileUser.githubUrl || profileUser.linkedinUrl || profileUser.facebookUrl || profileUser.websiteUrl || profileUser.resumeUrl) && (
+                  <div className="flex flex-wrap items-center gap-2 pt-1">
+                    {profileUser.githubUrl && (
+                      <a
+                        href={profileUser.githubUrl}
+                        target="_blank"
+                        rel="noreferrer"
+                        className="inline-flex items-center gap-1.5 rounded-full border border-white/10 bg-white/[0.03] px-3 py-1.5 text-[10px] font-bold uppercase tracking-widest text-muted-foreground transition-colors hover:border-primary/30 hover:bg-primary/10 hover:text-primary"
+                      >
+                        <Github className="h-3.5 w-3.5" />
+                        GitHub
+                      </a>
+                    )}
+                    {profileUser.linkedinUrl && (
+                      <a
+                        href={profileUser.linkedinUrl}
+                        target="_blank"
+                        rel="noreferrer"
+                        className="inline-flex items-center gap-1.5 rounded-full border border-white/10 bg-white/[0.03] px-3 py-1.5 text-[10px] font-bold uppercase tracking-widest text-muted-foreground transition-colors hover:border-primary/30 hover:bg-primary/10 hover:text-primary"
+                      >
+                        <Linkedin className="h-3.5 w-3.5" />
+                        LinkedIn
+                      </a>
+                    )}
+                    {profileUser.facebookUrl && (
+                      <a
+                        href={profileUser.facebookUrl}
+                        target="_blank"
+                        rel="noreferrer"
+                        className="inline-flex items-center gap-1.5 rounded-full border border-white/10 bg-white/[0.03] px-3 py-1.5 text-[10px] font-bold uppercase tracking-widest text-muted-foreground transition-colors hover:border-primary/30 hover:bg-primary/10 hover:text-primary"
+                      >
+                        <Facebook className="h-3.5 w-3.5" />
+                        Facebook
+                      </a>
+                    )}
+                    {profileUser.websiteUrl && (
+                      <a
+                        href={profileUser.websiteUrl}
+                        target="_blank"
+                        rel="noreferrer"
+                        className="inline-flex items-center gap-1.5 rounded-full border border-white/10 bg-white/[0.03] px-3 py-1.5 text-[10px] font-bold uppercase tracking-widest text-muted-foreground transition-colors hover:border-primary/30 hover:bg-primary/10 hover:text-primary"
+                      >
+                        <Globe className="h-3.5 w-3.5" />
+                        Website
+                      </a>
+                    )}
+                    {profileUser.resumeUrl && (
+                      <a
+                        href={profileUser.resumeUrl}
+                        target="_blank"
+                        rel="noreferrer"
+                        className="inline-flex items-center gap-1.5 rounded-full border border-primary/20 bg-primary/10 px-3 py-1.5 text-[10px] font-bold uppercase tracking-widest text-primary transition-colors hover:bg-primary/20"
+                      >
+                        <FileText className="h-3.5 w-3.5" />
+                        Resume
+                      </a>
+                    )}
+                  </div>
+                )}
               </div>
 
               {/* Signal rail */}
@@ -980,11 +1051,10 @@ export default function ProfilePage() {
                   title="Can teach"
                   skills={offeredSkills}
                   icon={CheckCircle}
-                  emptyText="Add a skill you can offer."
+                  emptyText={isOwnProfile ? 'Manage your teach skills from Settings → My Skills.' : 'No teach skills added yet.'}
                   variant="offer"
                   emphasized={emphasizeOfferedSkills}
                   isOwner={isOwnProfile}
-                  onAdd={() => setAddSkillMode('offered')}
                   profileUserId={profileUser.id}
                 />
               </motion.div>
@@ -993,14 +1063,19 @@ export default function ProfilePage() {
                   title="Wants to learn"
                   skills={wantedSkills}
                   icon={BookOpen}
-                  emptyText="Add a skill you want to learn."
+                  emptyText={isOwnProfile ? 'Manage your learning skills from Settings → My Skills.' : 'No learning goals listed yet.'}
                   variant="want"
                   isOwner={isOwnProfile}
-                  onAdd={() => setAddSkillMode('wanted')}
                   profileUserId={profileUser.id}
                 />
               </motion.div>
             </motion.div>
+
+            {isOwnProfile && (
+              <div className="mt-5 rounded-2xl border border-white/10 bg-white/[0.03] p-4 text-xs text-muted-foreground">
+                Skill management moved to <Link to="/settings?tab=skills" className="font-bold text-primary hover:underline">Settings → My Skills</Link> for AI suggestions and multi-skill updates.
+              </div>
+            )}
 
           </TabsContent>
 
@@ -1332,20 +1407,6 @@ export default function ProfilePage() {
           )}
         </AnimatePresence>
       </div>
-
-      {/* Add Skill Dialog */}
-      {addSkillMode && (
-        <AddSkillDialog
-          open={!!addSkillMode}
-          onClose={() => setAddSkillMode(null)}
-          mode={addSkillMode}
-          existingIds={addSkillMode === 'offered' ? offeredSkills.map((s) => s.id) : wantedSkills.map((s) => s.id)}
-          onSave={(added) => {
-            if (addSkillMode === 'offered') setOfferedSkills((prev) => [...prev, ...added]);
-            else setWantedSkills((prev) => [...prev, ...added]);
-          }}
-        />
-      )}
 
       {/* Connection Request Dialog */}
       {!isOwnProfile && (

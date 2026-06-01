@@ -13,6 +13,7 @@ import {
   Palette, Hand, Send, Trash2, CheckCircle
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import AppBackButton from '@/components/navigation/AppBackButton';
 
 interface ChatMessage {
   id: number;
@@ -780,6 +781,7 @@ export default function SessionRoomPage() {
       {/* Immersive Top Bar Header */}
       <header className="flex items-center justify-between px-6 py-4 bg-[#1B263B]/60 border-b border-white/5 backdrop-blur-md">
         <div className="flex items-center gap-3">
+          <AppBackButton fallbackTo="/dashboard" showLabel={false} className="border-white/10 bg-white/5 text-slate-200 hover:bg-white/10 hover:text-white" />
           <div className="h-2.5 w-2.5 rounded-full bg-[#00C9C8] animate-pulse" />
           <h1 className="text-lg font-bold tracking-tight bg-gradient-to-r from-white via-slate-100 to-[#00C9C8] bg-clip-text text-transparent">
             {skillName} Live Room

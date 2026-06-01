@@ -33,6 +33,7 @@ import { ConfirmDialog } from '@/components/ui/ConfirmDialog';
 import GlobalSearch from '@/components/search/GlobalSearch';
 import HeaderMessages from '@/components/layout/HeaderMessages';
 import { creditService, type CreditTransaction, type CreditWallet } from '@/services/creditService';
+import AppBackButton from '@/components/navigation/AppBackButton';
 
 const LogoWrapper = () => (
   <Link to="/" className="group lg:hidden">
@@ -310,6 +311,8 @@ export default function Header({
         </Button>
 
         {/* Page title — Rule 1 (state visibility) */}
+        <AppBackButton fallbackTo="/dashboard" showLabel={false} className="shrink-0" />
+
         <div className="flex min-w-0 flex-1 items-center gap-2.5 lg:gap-4">
           <h1 className={cn('truncate text-sm font-semibold font-headline sm:text-base', user ? 'hidden lg:block lg:max-w-[140px] xl:max-w-[180px]' : '')}>{pageTitle}</h1>
           {user && (

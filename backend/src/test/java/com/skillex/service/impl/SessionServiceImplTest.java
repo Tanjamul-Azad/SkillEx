@@ -1,14 +1,19 @@
 package com.skillex.service.impl;
 
+import com.skillex.dto.session.CreateConnectedSessionRequest;
 import com.skillex.dto.session.CreateSessionRequest;
+import com.skillex.model.Connection;
 import com.skillex.model.Exchange;
 import com.skillex.model.Session;
 import com.skillex.model.Skill;
 import com.skillex.model.User;
+import com.skillex.repository.ConnectionRepository;
 import com.skillex.repository.ExchangeRepository;
 import com.skillex.repository.SessionNoteRepository;
 import com.skillex.repository.SessionRepository;
 import com.skillex.repository.SessionTranscriptRepository;
+import com.skillex.repository.SkillRepository;
+import com.skillex.repository.UserSkillOfferedRepository;
 import com.skillex.repository.UserRepository;
 import com.skillex.service.DtoMapper;
 import com.skillex.service.NotificationService;
@@ -44,7 +49,10 @@ class SessionServiceImplTest {
 
     @Mock private SessionRepository sessionRepository;
     @Mock private ExchangeRepository exchangeRepository;
+    @Mock private ConnectionRepository connectionRepository;
     @Mock private UserRepository userRepository;
+    @Mock private SkillRepository skillRepository;
+    @Mock private UserSkillOfferedRepository offeredRepository;
     @Mock private SessionTranscriptRepository transcriptRepository;
     @Mock private SessionNoteRepository noteRepository;
     @Mock private DtoMapper mapper;
@@ -62,7 +70,10 @@ class SessionServiceImplTest {
         service = new SessionServiceImpl(
             sessionRepository,
             exchangeRepository,
+            connectionRepository,
             userRepository,
+            skillRepository,
+            offeredRepository,
             transcriptRepository,
             noteRepository,
             mapper,
@@ -134,6 +145,81 @@ class SessionServiceImplTest {
             null,
             "VIDEO"
         )));
+    }
+
+    @Test
+    void createForConnection_createsProposedSessionWithoutExistingExchange() {
+        User requester = user("requester", "Requester");
+        User partner = user("partner", "Partner");
+        Skill skill = skill("connection-meeting", "Connection Meeting");
+        Connection connection = acceptedConnection("connection-1", requester, partner);
+
+        when(connectionRepository.findPairByStatuses(eq(requester.getId()), eq(partner.getId()), anyCollection(), any()))
+            .thenReturn(List.of(connection));
+        when(userRepository.findById(requester.getId())).thenReturn(Optional.of(requester));
+        when(userRepository.findById(partner.getId())).thenReturn(Optional.of(partner));
+        when(skillRepository.findByNameIgnoreCase("Connection Meeting")).thenReturn(Optional.of(skill));
+        when(sessionRepository.findActiveSessionsInWindow(eq(requester.getId()), anyCollection(), any(), any()))
+            .thenReturn(List.of());
+        when(sessionRepository.findActiveSessionsInWindow(eq(partner.getId()), anyCollection(), any(), any()))
+            .thenReturn(List.of());
+        when(exchangeRepository.save(any(Exchange.class))).thenAnswer(invocation -> invocation.getArgument(0));
+        when(sessionRepository.save(any(Session.class))).thenAnswer(invocation -> invocation.getArgument(0));
+
+        service.createForConnection(requester.getId(), new CreateConnectedSessionRequest(
+            partner.getId(),
+            null,
+            LocalDateTime.now().plusDays(1),
+            60,
+            null,
+            "Planning call",
+            "VIDEO"
+        ));
+
+        ArgumentCaptor<Exchange> exchangeCaptor = ArgumentCaptor.forClass(Exchange.class);
+        verify(exchangeRepository).save(exchangeCaptor.capture());
+        assertEquals(Exchange.ExchangeMode.TEST_MEETING, exchangeCaptor.getValue().getExchangeMode());
+        assertEquals(Exchange.ExchangeStatus.ACCEPTED, exchangeCaptor.getValue().getStatus());
+
+        ArgumentCaptor<Session> sessionCaptor = ArgumentCaptor.forClass(Session.class);
+        verify(sessionRepository).save(sessionCaptor.capture());
+        Session saved = sessionCaptor.getValue();
+        assertEquals(requester.getId(), saved.getTeacher().getId());
+        assertEquals(partner.getId(), saved.getLearner().getId());
+        assertEquals(skill.getId(), saved.getSkill().getId());
+        assertEquals(Session.SessionStatus.PROPOSED, saved.getStatus());
+    }
+
+    @Test
+    void createForConnection_reportsConfigurationErrorWhenConnectionMeetingSkillMissing() {
+        User requester = user("requester", "Requester");
+        User partner = user("partner", "Partner");
+        Connection connection = acceptedConnection("connection-1", requester, partner);
+
+        when(connectionRepository.findPairByStatuses(eq(requester.getId()), eq(partner.getId()), anyCollection(), any()))
+            .thenReturn(List.of(connection));
+        when(userRepository.findById(requester.getId())).thenReturn(Optional.of(requester));
+        when(userRepository.findById(partner.getId())).thenReturn(Optional.of(partner));
+        when(skillRepository.findByNameIgnoreCase("Connection Meeting")).thenReturn(Optional.empty());
+
+        IllegalStateException error = assertThrows(IllegalStateException.class, () ->
+            service.createForConnection(requester.getId(), new CreateConnectedSessionRequest(
+                partner.getId(),
+                null,
+                LocalDateTime.now().plusDays(1),
+                60,
+                null,
+                null,
+                "VIDEO"
+            ))
+        );
+
+        assertEquals(
+            "Connection meeting skill is not configured. Restart the backend so database migrations can run.",
+            error.getMessage()
+        );
+        verify(exchangeRepository, never()).save(any(Exchange.class));
+        verify(sessionRepository, never()).save(any(Session.class));
     }
 
     @Test
@@ -240,6 +326,15 @@ class SessionServiceImplTest {
         exchange.setWantedSkill(wanted);
         exchange.setStatus(Exchange.ExchangeStatus.ACCEPTED);
         return exchange;
+    }
+
+    private static Connection acceptedConnection(String id, User requester, User receiver) {
+        Connection connection = new Connection();
+        connection.setId(id);
+        connection.setRequester(requester);
+        connection.setReceiver(receiver);
+        connection.setStatus(Connection.ConnectionStatus.ACCEPTED);
+        return connection;
     }
 
     private static User user(String id, String name) {

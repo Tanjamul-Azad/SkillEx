@@ -2,16 +2,20 @@ package com.skillex.service.impl;
 
 import com.skillex.dto.common.PagedResponse;
 import com.skillex.dto.session.*;
+import com.skillex.model.Connection;
 import com.skillex.model.Exchange;
 import com.skillex.model.Session;
 import com.skillex.model.Session.MeetingType;
 import com.skillex.model.Skill;
 import com.skillex.model.User;
+import com.skillex.repository.ConnectionRepository;
 import com.skillex.repository.ExchangeRepository;
 import com.skillex.repository.SessionNoteRepository;
 import com.skillex.repository.SessionRepository;
 import com.skillex.repository.SessionTranscriptRepository;
+import com.skillex.repository.SkillRepository;
 import com.skillex.repository.UserRepository;
+import com.skillex.repository.UserSkillOfferedRepository;
 import com.skillex.service.DtoMapper;
 import com.skillex.service.SessionService;
 import com.skillex.service.NotificationService;
@@ -49,7 +53,10 @@ public class SessionServiceImpl implements SessionService {
 
     private final SessionRepository sessionRepository;
     private final ExchangeRepository exchangeRepository;
+    private final ConnectionRepository connectionRepository;
     private final UserRepository userRepository;
+    private final SkillRepository skillRepository;
+    private final UserSkillOfferedRepository offeredRepository;
     private final SessionTranscriptRepository transcriptRepository;
     private final SessionNoteRepository noteRepository;
     private final DtoMapper mapper;
@@ -125,6 +132,74 @@ public class SessionServiceImpl implements SessionService {
             notificationService.create(recipientId, requestingUserId, "SESSION_SCHEDULED", message);
         } catch (Exception e) {
             log.warn("[Session] Failed to send proposal notification", e);
+        }
+
+        return mapper.toSession(saved);
+    }
+
+    @Override
+    @Transactional
+    public SessionDto createForConnection(String requestingUserId, CreateConnectedSessionRequest req) {
+        restrictionService.assertCanUseAccount(requestingUserId, "SESSION");
+
+        if (requestingUserId.equals(req.targetUserId())) {
+            throw new IllegalArgumentException("You cannot schedule a meeting with yourself.");
+        }
+
+        boolean connected = !connectionRepository.findPairByStatuses(
+            requestingUserId,
+            req.targetUserId(),
+            Set.of(Connection.ConnectionStatus.ACCEPTED),
+            PageRequest.of(0, 1)
+        ).isEmpty();
+        if (!connected) {
+            throw new AccessDeniedException("Direct meetings are only available for accepted connections.");
+        }
+
+        User proposer = findUser(requestingUserId);
+        User partner = findUser(req.targetUserId());
+        SkillSelection selection = resolveConnectedMeetingSkill(requestingUserId, req.targetUserId(), req.skillId());
+        User teacher = selection.teacherId().equals(requestingUserId) ? proposer : partner;
+        User learner = selection.teacherId().equals(requestingUserId) ? partner : proposer;
+
+        assertNoScheduleOverlap(teacher, learner, req.scheduledAt(), req.durationMins(), null);
+
+        Exchange exchange = new Exchange();
+        exchange.setRequester(proposer);
+        exchange.setReceiver(partner);
+        exchange.setExchangeMode(Exchange.ExchangeMode.TEST_MEETING);
+        exchange.setCreditCost(0);
+        exchange.setStatus(Exchange.ExchangeStatus.ACCEPTED);
+        exchange.setMessage(hasText(req.notes())
+            ? req.notes().trim()
+            : "Direct meeting arranged from an accepted connection.");
+        if (teacher.getId().equals(proposer.getId())) {
+            exchange.setOfferedSkill(selection.skill());
+        } else {
+            exchange.setWantedSkill(selection.skill());
+        }
+        Exchange savedExchange = exchangeRepository.save(exchange);
+
+        Session session = new Session();
+        session.setExchange(savedExchange);
+        session.setTeacher(teacher);
+        session.setLearner(learner);
+        session.setSkill(selection.skill());
+        session.setProposedBy(proposer);
+        session.setScheduledAt(req.scheduledAt());
+        session.setDurationMins(req.durationMins());
+        session.setMeetLink(req.meetLink());
+        session.setSharedNotes(req.notes());
+        session.setSessionType(resolveMeetingType(req.sessionType()));
+        session.setStatus(Session.SessionStatus.PROPOSED);
+        Session saved = sessionRepository.save(session);
+
+        try {
+            String message = proposer.getName() + " proposed a connection meeting on "
+                + req.scheduledAt().toLocalDate() + " at " + req.scheduledAt().toLocalTime() + ".";
+            notificationService.create(partner.getId(), proposer.getId(), "SESSION_SCHEDULED", message);
+        } catch (Exception e) {
+            log.warn("[Session] Failed to send connected meeting notification", e);
         }
 
         return mapper.toSession(saved);
@@ -236,6 +311,11 @@ public class SessionServiceImpl implements SessionService {
             session.getLearner().getId(), ReputationUpdateEvent.Trigger.SESSION_COMPLETED));
 
         try {
+            if (session.getExchange() != null
+                && session.getExchange().getExchangeMode() == Exchange.ExchangeMode.TEST_MEETING) {
+                return result;
+            }
+
             creditService.rewardTeachingSession(
                 session.getTeacher().getId(),
                 session.getExchange(),
@@ -334,6 +414,31 @@ public class SessionServiceImpl implements SessionService {
     private Session findSession(String id) {
         return sessionRepository.findById(id)
             .orElseThrow(() -> new EntityNotFoundException("Session not found: " + id));
+    }
+
+    private User findUser(String id) {
+        return userRepository.findById(id)
+            .orElseThrow(() -> new EntityNotFoundException("User not found: " + id));
+    }
+
+    private SkillSelection resolveConnectedMeetingSkill(String requesterId, String targetUserId, String requestedSkillId) {
+        if (hasText(requestedSkillId)) {
+            Skill requested = skillRepository.findById(requestedSkillId)
+                .orElseThrow(() -> new EntityNotFoundException("Skill not found: " + requestedSkillId));
+            String teacherId = offeredRepository.existsByIdUserIdAndIdSkillId(targetUserId, requested.getId())
+                ? targetUserId
+                : requesterId;
+            return new SkillSelection(requested, teacherId);
+        }
+
+        return new SkillSelection(getConnectionMeetingSkill(), requesterId);
+    }
+
+    private Skill getConnectionMeetingSkill() {
+        return skillRepository.findByNameIgnoreCase("Connection Meeting")
+            .orElseThrow(() -> new IllegalStateException(
+                "Connection meeting skill is not configured. Restart the backend so database migrations can run."
+            ));
     }
 
     private void assertParticipant(Session session, String userId) {
@@ -484,4 +589,6 @@ public class SessionServiceImpl implements SessionService {
     }
 
     private record ScheduleDetails(User teacher, User learner, Skill skill) {}
+
+    private record SkillSelection(Skill skill, String teacherId) {}
 }

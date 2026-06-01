@@ -21,7 +21,6 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { connectionService, type Connection } from '@/services/connectionService';
-import { exchangeService, type Exchange, type ExchangeSkillRef } from '@/services/exchangeService';
 import { SessionService } from '@/services/sessionService';
 import { onRealtimeNotification } from '@/lib/realtime';
 import { useAuth } from '@/hooks/useAuth';
@@ -49,13 +48,13 @@ export default function ConnectionsPage() {
   const [actionBusy, setActionBusy] = useState<Record<string, boolean>>({});
   const [meetingOpen, setMeetingOpen] = useState(false);
   const [meetingPartner, setMeetingPartner] = useState<Connection['requester'] | null>(null);
-  const [meetingExchange, setMeetingExchange] = useState<Exchange | null>(null);
   const [meetingDate, setMeetingDate] = useState('');
   const [meetingTime, setMeetingTime] = useState('');
   const [meetingNotes, setMeetingNotes] = useState('');
   const [meetingBusy, setMeetingBusy] = useState(false);
   const [meetingConfirmed, setMeetingConfirmed] = useState(false);
   const autoArrangeHandled = React.useRef(false);
+  const meetingSubmittingRef = React.useRef(false);
 
   const fetchConnections = useCallback(async (tab: ConnectionTab) => {
     if (!user?.id) {
@@ -158,93 +157,15 @@ export default function ConnectionsPage() {
     setMeetingBusy(false);
   }, []);
 
-  const getSchedulableSkill = useCallback((exchange: Exchange): {
-    skill: ExchangeSkillRef;
-    teacherId: string;
-    learnerId: string;
-  } | null => {
-    if (!user?.id) return null;
-
-    const isRequester = exchange.requester.id === user.id;
-    const partner = isRequester ? exchange.receiver : exchange.requester;
-    const mySkill = isRequester ? exchange.offeredSkill : exchange.wantedSkill;
-    const theirSkill = isRequester ? exchange.wantedSkill : exchange.offeredSkill;
-    const skill = mySkill ?? theirSkill;
-
-    if (!skill?.id) return null;
-
-    const teachingMySkill = Boolean(mySkill?.id);
-    return {
-      skill,
-      teacherId: teachingMySkill ? user.id : partner.id,
-      learnerId: teachingMySkill ? partner.id : user.id,
-    };
-  }, [user?.id]);
-
-  const openMeetingDialog = useCallback((partner: Connection['requester'], exchange: Exchange) => {
+  const openMeetingDialog = useCallback((partner: Connection['requester']) => {
     setMeetingPartner(partner);
-    setMeetingExchange(exchange);
     resetMeetingForm();
     setMeetingOpen(true);
   }, [resetMeetingForm]);
 
-  const findAcceptedExchangeForPartner = useCallback(async (partnerId: string): Promise<Exchange | null> => {
-    try {
-      const relationship = await exchangeService.getRelationship(partnerId);
-      if (relationship.status === 'ACCEPTED' && relationship.exchangeId) {
-        const exchange = await exchangeService.getById(relationship.exchangeId);
-        if (exchange.status?.toUpperCase() === 'ACCEPTED') {
-          return exchange;
-        }
-      }
-    } catch {
-      // Fall back to the accepted exchange list below.
-    }
-
-    const acceptedExchanges = await exchangeService.list('ACCEPTED', 0, 100);
-    return (acceptedExchanges.content ?? []).find((exchange) => {
-      const requesterId = exchange.requester.id;
-      const receiverId = exchange.receiver.id;
-      return exchange.status?.toUpperCase() === 'ACCEPTED'
-        && ((requesterId === user?.id && receiverId === partnerId)
-          || (requesterId === partnerId && receiverId === user?.id));
-    }) ?? null;
-  }, [user?.id]);
-
   const openMeetingRequest = async (connection: Connection) => {
     const partner = getPartner(connection);
-    setActionBusy((prev) => ({ ...prev, [`meeting:${connection.id}`]: true }));
-
-    try {
-      const exchange = await findAcceptedExchangeForPartner(partner.id);
-
-      if (!exchange) {
-        toast({
-          title: 'Exchange required first',
-          description: `Create or accept a skill exchange with ${partner.name.split(' ')[0]} before proposing a meeting.`,
-          variant: 'default',
-        });
-        navigate(`/profile/${partner.id}`);
-        return;
-      }
-
-      if (!getSchedulableSkill(exchange)) {
-        toast({
-          title: 'No skill to schedule',
-          description: 'This exchange needs at least one selected skill before a meeting can be proposed.',
-          variant: 'destructive',
-        });
-        navigate('/dashboard#active-exchanges');
-        return;
-      }
-
-      openMeetingDialog(partner, exchange);
-    } catch (error) {
-      const message = error instanceof Error ? error.message : 'Could not check exchange status.';
-      toast({ title: 'Meeting setup failed', description: message, variant: 'destructive' });
-    } finally {
-      setActionBusy((prev) => ({ ...prev, [`meeting:${connection.id}`]: false }));
-    }
+    openMeetingDialog(partner);
   };
 
   const openFirstAvailableMeeting = useCallback(async () => {
@@ -257,32 +178,16 @@ export default function ConnectionsPage() {
       return;
     }
 
-    setActionBusy((prev) => ({ ...prev, 'meeting:first': true }));
-    try {
-      for (const connection of acceptedConnections) {
-        const partner = getPartner(connection);
-        const exchange = await findAcceptedExchangeForPartner(partner.id);
-        if (exchange && getSchedulableSkill(exchange)) {
-          openMeetingDialog(partner, exchange);
-          return;
-        }
-      }
-
-      toast({
-        title: 'No accepted exchange found',
-        description: 'Connections are ready for chat, but meetings need an accepted skill exchange first.',
-      });
-    } catch (error) {
-      const message = error instanceof Error ? error.message : 'Could not check exchange status.';
-      toast({ title: 'Meeting setup failed', description: message, variant: 'destructive' });
-    } finally {
-      setActionBusy((prev) => ({ ...prev, 'meeting:first': false }));
-    }
-  }, [connections, findAcceptedExchangeForPartner, getPartner, getSchedulableSkill, openMeetingDialog, toast]);
+    openMeetingDialog(getPartner(acceptedConnections[0]));
+  }, [connections, getPartner, openMeetingDialog, toast]);
 
   const submitMeetingRequest = async () => {
-    if (!meetingExchange || !meetingPartner) {
-      toast({ title: 'No exchange selected', variant: 'destructive' });
+    if (meetingSubmittingRef.current) {
+      return;
+    }
+
+    if (!meetingPartner) {
+      toast({ title: 'No connection selected', variant: 'destructive' });
       return;
     }
 
@@ -296,23 +201,11 @@ export default function ConnectionsPage() {
       return;
     }
 
-    const scheduleDetails = getSchedulableSkill(meetingExchange);
-    if (!scheduleDetails) {
-      toast({
-        title: 'No skill to schedule',
-        description: 'This exchange needs at least one selected skill before a meeting can be proposed.',
-        variant: 'destructive',
-      });
-      return;
-    }
-
     try {
+      meetingSubmittingRef.current = true;
       setMeetingBusy(true);
-      await SessionService.create({
-        exchangeId: meetingExchange.id,
-        teacherId: scheduleDetails.teacherId,
-        learnerId: scheduleDetails.learnerId,
-        skillId: scheduleDetails.skill.id,
+      await SessionService.createConnected({
+        targetUserId: meetingPartner.id,
         scheduledAt: `${meetingDate}T${meetingTime}:00`,
         durationMins: 60,
         notes: meetingNotes.trim() || undefined,
@@ -328,6 +221,7 @@ export default function ConnectionsPage() {
       const message = error instanceof Error ? error.message : 'Choose another time and try again.';
       toast({ title: 'Could not request meeting', description: message, variant: 'destructive' });
     } finally {
+      meetingSubmittingRef.current = false;
       setMeetingBusy(false);
     }
   };
@@ -342,8 +236,6 @@ export default function ConnectionsPage() {
     navigate('/connections?tab=accepted', { replace: true });
     void openFirstAvailableMeeting();
   }, [activeTab, connections, loading, location.search, navigate, openFirstAvailableMeeting]);
-
-  const meetingScheduleDetails = meetingExchange ? getSchedulableSkill(meetingExchange) : null;
 
   return (
     <DashboardLayout>
@@ -612,7 +504,6 @@ export default function ConnectionsPage() {
             if (!open) {
               resetMeetingForm();
               setMeetingPartner(null);
-              setMeetingExchange(null);
             }
           }}
         >
@@ -699,7 +590,7 @@ export default function ConnectionsPage() {
                     <div className="min-w-0">
                       <p className="truncate text-sm font-semibold">{meetingPartner?.name ?? 'Exchange partner'}</p>
                       <p className="text-xs text-muted-foreground">
-                        {meetingScheduleDetails?.skill.name ?? 'Skill exchange'} - 60 minute video request
+                        Direct connection meeting - 60 minute video request
                       </p>
                     </div>
                   </div>

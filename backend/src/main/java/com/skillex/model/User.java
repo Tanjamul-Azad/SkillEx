@@ -66,6 +66,21 @@ public class User {
     @Column(name = "learn_intent_text", columnDefinition = "TEXT")
     private String learnIntentText;
 
+    @Column(name = "github_url", length = 600)
+    private String githubUrl;
+
+    @Column(name = "linkedin_url", length = 600)
+    private String linkedinUrl;
+
+    @Column(name = "facebook_url", length = 600)
+    private String facebookUrl;
+
+    @Column(name = "website_url", length = 600)
+    private String websiteUrl;
+
+    @Column(name = "resume_url", length = 600)
+    private String resumeUrl;
+
     @Enumerated(EnumType.STRING)
     @Column(nullable = false, length = 10)
     @Builder.Default

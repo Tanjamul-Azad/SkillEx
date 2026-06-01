@@ -35,6 +35,11 @@ export interface User {
   bio: string;
   teachIntentText?: string;
   learnIntentText?: string;
+  githubUrl?: string;
+  linkedinUrl?: string;
+  facebookUrl?: string;
+  websiteUrl?: string;
+  resumeUrl?: string;
   skillsOffered: Skill[];
   skillsWanted: Skill[];
   skillexScore: number;

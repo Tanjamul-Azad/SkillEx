@@ -59,6 +59,7 @@ class AuthServiceImplTest {
             "u1", "Alice", "alice_1", "alice@example.com", null,
             "Uni", null, null,
             null, null,
+            null, null, null, null, null,
             "student", "NEWCOMER",
             0, 0, java.math.BigDecimal.ZERO, false, true,
             null, List.of(), List.of()
@@ -84,6 +85,7 @@ class AuthServiceImplTest {
             "u1", "Alice", "alice_1", "alice@example.com", null,
             "Uni", null, null,
             null, null,
+            null, null, null, null, null,
             "student", "NEWCOMER",
             0, 0, java.math.BigDecimal.ZERO, false, true,
             null, List.of(), List.of()

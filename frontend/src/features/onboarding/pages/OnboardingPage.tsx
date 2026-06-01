@@ -20,6 +20,7 @@ import { useToast } from '@/hooks/use-toast';
 import { UserService } from '@/services/userService';
 import { SkillService } from '@/services/skillService';
 import type { Skill } from '@/types';
+import AppBackButton from '@/components/navigation/AppBackButton';
 
 // ── Fallback static catalog (used while API loads) ────────────
 const ICON_MAP: Record<string, React.FC<{ className?: string }>> = {
@@ -218,6 +219,7 @@ export default function OnboardingPage() {
 
   return (
     <div className="min-h-screen bg-background relative overflow-hidden flex items-center justify-center p-4">
+      <AppBackButton fallbackTo="/dashboard" className="absolute left-4 top-4 z-30" />
       <div className="w-full max-w-xl relative z-20">
         {/* Logo */}
         <motion.div

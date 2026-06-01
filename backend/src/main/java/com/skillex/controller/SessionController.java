@@ -55,6 +55,15 @@ public class SessionController {
     }
 
     /** PUT /api/sessions/{id}/accept — accept a proposed session time */
+    @PostMapping("/connected")
+    public ResponseEntity<ApiResponse<SessionDto>> createForConnection(
+        Authentication auth,
+        @Valid @RequestBody CreateConnectedSessionRequest req
+    ) {
+        SessionDto dto = sessionService.createForConnection(userId(auth), req);
+        return ResponseEntity.status(HttpStatus.CREATED).body(ApiResponse.ok(dto));
+    }
+
     @PutMapping("/{id}/accept")
     public ResponseEntity<ApiResponse<SessionDto>> acceptProposal(
         Authentication auth,

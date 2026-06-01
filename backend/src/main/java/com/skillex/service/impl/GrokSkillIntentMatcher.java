@@ -311,7 +311,6 @@ public class GrokSkillIntentMatcher {
         String skillId = blankToNull(node.path("skillId").asText(null));
         String skillName = blankToNull(node.path("skillName").asText(null));
         String category = blankToNull(node.path("category").asText(null));
-        boolean custom = node.path("custom").asBoolean(false);
         int confidence = clamp(node.path("confidence").asInt(0), 0, 100);
 
         Skill catalogSkill = skillId == null ? null : skillsById.get(skillId);

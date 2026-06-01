@@ -3,6 +3,7 @@ import { Link, Navigate, useLocation } from 'react-router-dom';
 import { Shield, LayoutDashboard, Flag, ScrollText, ClipboardList, FileClock } from 'lucide-react';
 import { useAuth } from '@/hooks/useAuth';
 import { cn } from '@/lib/utils';
+import AppBackButton from '@/components/navigation/AppBackButton';
 
 const nav = [
   { href: '/admin', label: 'Overview', icon: LayoutDashboard },
@@ -49,7 +50,10 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
         </nav>
       </aside>
       <main className="min-h-screen p-4 lg:ml-64 lg:p-8">
-        <div className="mx-auto max-w-6xl">{children}</div>
+        <div className="mx-auto max-w-6xl">
+          <AppBackButton fallbackTo="/dashboard" className="mb-4" />
+          {children}
+        </div>
       </main>
     </div>
   );

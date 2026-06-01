@@ -41,7 +41,7 @@ export const UserService = {
   },
 
   /** Update authenticated user's own profile (PATCH /api/users/me) */
-  updateProfile: async (_id: string, data: Partial<Omit<User, 'id' | 'email'>>) => {
+  updateProfile: async (_id: string, data: Partial<Omit<User, 'id'>>) => {
     return api.patch<User>('/users/me', data);
   },
 
@@ -50,6 +50,13 @@ export const UserService = {
     const formData = new FormData();
     formData.append('file', file);
     return api.post<{ url: string }>('/upload', formData);
+  },
+
+  /** Upload resume PDF (POST /api/upload/resume) */
+  uploadResume: async (file: File): Promise<{ url: string }> => {
+    const formData = new FormData();
+    formData.append('file', file);
+    return api.post<{ url: string }>('/upload/resume', formData);
   },
 
   /** POST /api/users/me/skills — add an existing catalog skill */

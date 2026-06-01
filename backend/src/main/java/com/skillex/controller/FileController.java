@@ -26,6 +26,7 @@ public class FileController {
 
     private static final Logger log = LoggerFactory.getLogger(FileController.class);
     private static final long MAX_UPLOAD_BYTES = 5L * 1024L * 1024L;
+    private static final long MAX_RESUME_UPLOAD_BYTES = 10L * 1024L * 1024L;
     private static final Set<String> ALLOWED_CONTENT_TYPES = Set.of(
         "image/jpeg",
         "image/png",
@@ -94,6 +95,45 @@ public class FileController {
         }
     }
 
+    @PostMapping("/resume")
+    public ResponseEntity<ApiResponse<Map<String, String>>> uploadResume(@RequestParam("file") MultipartFile file) {
+        if (file.isEmpty()) {
+            return ResponseEntity.badRequest().body(new ApiResponse<>(false, null, "Please select a resume file to upload."));
+        }
+        if (file.getSize() > MAX_RESUME_UPLOAD_BYTES) {
+            return ResponseEntity.status(HttpStatus.PAYLOAD_TOO_LARGE)
+                .body(new ApiResponse<>(false, null, "Resume file must be 10MB or smaller."));
+        }
+
+        String contentType = file.getContentType() == null ? "" : file.getContentType().toLowerCase(Locale.ROOT);
+        if (!"application/pdf".equals(contentType)) {
+            return ResponseEntity.badRequest()
+                .body(new ApiResponse<>(false, null, "Only PDF resumes are allowed."));
+        }
+
+        try {
+            Path uploadPath = Paths.get(uploadDir, "resumes");
+            if (!Files.exists(uploadPath)) {
+                Files.createDirectories(uploadPath);
+            }
+            if (!hasPdfSignature(file)) {
+                return ResponseEntity.badRequest()
+                    .body(new ApiResponse<>(false, null, "Uploaded resume is not a valid PDF."));
+            }
+
+            String newFilename = UUID.randomUUID() + ".pdf";
+            Path filePath = uploadPath.resolve(newFilename);
+            Files.copy(file.getInputStream(), filePath, StandardCopyOption.REPLACE_EXISTING);
+
+            String fileUrl = "/uploads/resumes/" + newFilename;
+            Map<String, String> response = new HashMap<>();
+            response.put("url", fileUrl);
+            return ResponseEntity.ok(ApiResponse.ok(response));
+        } catch (IOException e) {
+            return ResponseEntity.internalServerError().body(new ApiResponse<>(false, null, "Failed to upload resume: " + e.getMessage()));
+        }
+    }
+
     private boolean hasExpectedImageSignature(MultipartFile file, String contentType) throws IOException {
         byte[] header;
         try (var stream = file.getInputStream()) {
@@ -131,5 +171,18 @@ public class FileController {
             }
         }
         return true;
+    }
+
+    private boolean hasPdfSignature(MultipartFile file) throws IOException {
+        byte[] header;
+        try (var stream = file.getInputStream()) {
+            header = stream.readNBytes(5);
+        }
+        return header.length == 5
+            && header[0] == '%'
+            && header[1] == 'P'
+            && header[2] == 'D'
+            && header[3] == 'F'
+            && header[4] == '-';
     }
 }

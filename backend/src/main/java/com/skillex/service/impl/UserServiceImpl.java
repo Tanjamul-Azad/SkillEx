@@ -84,6 +84,11 @@ public class UserServiceImpl implements UserService {
         if (req.bio()        != null) user.setBio(req.bio());
         if (req.teachIntentText() != null) user.setTeachIntentText(req.teachIntentText().trim());
         if (req.learnIntentText() != null) user.setLearnIntentText(req.learnIntentText().trim());
+        if (req.githubUrl() != null) user.setGithubUrl(normalizeExternalUrl(req.githubUrl()));
+        if (req.linkedinUrl() != null) user.setLinkedinUrl(normalizeExternalUrl(req.linkedinUrl()));
+        if (req.facebookUrl() != null) user.setFacebookUrl(normalizeExternalUrl(req.facebookUrl()));
+        if (req.websiteUrl() != null) user.setWebsiteUrl(normalizeExternalUrl(req.websiteUrl()));
+        if (req.resumeUrl() != null) user.setResumeUrl(normalizeExternalUrl(req.resumeUrl()));
         if (req.connectionsPublic() != null) user.setConnectionsPublic(req.connectionsPublic());
         if (req.avatar()     != null) user.setAvatar(req.avatar());
         // email change — check uniqueness first
@@ -369,6 +374,21 @@ public class UserServiceImpl implements UserService {
         }
         String normalized = rawEmail.replaceAll("\\s+", "").toLowerCase(Locale.ROOT);
         return normalized.isBlank() ? null : normalized;
+    }
+
+    private String normalizeExternalUrl(String rawUrl) {
+        if (rawUrl == null) {
+            return null;
+        }
+        String normalized = rawUrl.trim();
+        if (normalized.isBlank()) {
+            return null;
+        }
+        String lower = normalized.toLowerCase(Locale.ROOT);
+        if (lower.startsWith("http://") || lower.startsWith("https://")) {
+            return normalized;
+        }
+        return "https://" + normalized;
     }
 
     private Set<String> skillIdSet(List<Skill> skills) {

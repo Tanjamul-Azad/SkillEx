@@ -19,6 +19,7 @@ import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '
 import { GoogleIcon } from '@/components/icons/GoogleIcon';
 import Logo from '@/components/ui/Logo';
 import PasswordStrengthMeter from '@/components/auth/PasswordStrengthMeter';
+import AppBackButton from '@/components/navigation/AppBackButton';
 
 const loginSchema = z.object({
   email: z.string().email({ message: 'Please enter a valid email.' }),
@@ -80,6 +81,7 @@ function AuthPage() {
 
   return (
     <main className="relative grid min-h-screen w-full grid-cols-1 overflow-hidden bg-[#050914] lg:grid-cols-12">
+      <AppBackButton fallbackTo="/" className="absolute left-4 top-4 z-40" />
       <div className="relative z-20 lg:col-span-6">
         <AuthGraphic />
       </div>

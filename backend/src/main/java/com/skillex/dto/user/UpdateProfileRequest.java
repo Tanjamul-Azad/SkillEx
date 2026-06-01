@@ -16,6 +16,11 @@ public record UpdateProfileRequest(
     @Size(max = 500)          String bio,
     @Size(max = 500)          String teachIntentText,
     @Size(max = 500)          String learnIntentText,
+    @Size(max = 600)          String githubUrl,
+    @Size(max = 600)          String linkedinUrl,
+    @Size(max = 600)          String facebookUrl,
+    @Size(max = 600)          String websiteUrl,
+    @Size(max = 600)          String resumeUrl,
     Boolean                   connectionsPublic,
     String                    avatar  // TEXT column — stores compressed base64 data-URL
 ) {}

@@ -7,6 +7,7 @@ import { Badge } from '@/components/ui/badge';
 import Logo from '@/components/ui/Logo';
 import { certificateService, type SkillCertificate } from '@/services/certificateService';
 import { useToast } from '@/hooks/use-toast';
+import AppBackButton from '@/components/navigation/AppBackButton';
 
 export default function CertificateVerifyPage() {
   const { code = '' } = useParams();
@@ -40,6 +41,7 @@ export default function CertificateVerifyPage() {
   return (
     <main className="min-h-screen bg-slate-950 px-4 py-8 text-slate-100">
       <div className="mx-auto max-w-4xl">
+        <AppBackButton fallbackTo="/" className="mb-6 border-white/10 bg-white/5 text-slate-200 hover:bg-white/10 hover:text-white" />
         <div className="mb-8 flex items-center justify-between">
           <Logo size="lg" />
           <Badge className="rounded-full bg-primary/15 px-3 py-1 text-primary">Public verification</Badge>

@@ -69,6 +69,7 @@ public class DtoMapper {
             u.getId(), u.getName(), u.getUsername(), u.getEmail(), u.getAvatar(),
             u.getUniversity(), u.getLocation(), u.getBio(),
             u.getTeachIntentText(), u.getLearnIntentText(),
+            u.getGithubUrl(), u.getLinkedinUrl(), u.getFacebookUrl(), u.getWebsiteUrl(), u.getResumeUrl(),
             safeRoleName(u),
             safeLevelName(u),
             safeInt(u.getSkillexScore()), safeInt(u.getSessionsCompleted()),

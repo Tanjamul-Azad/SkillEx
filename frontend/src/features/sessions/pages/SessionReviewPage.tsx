@@ -5,6 +5,7 @@ import { ReviewService } from '@/services/reviewService';
 import { useAuth } from '@/hooks/useAuth';
 import type { Session } from '@/types';
 import { Star, Sparkles, CheckCircle2, ArrowRight, BookOpen, Clock, RefreshCw } from 'lucide-react';
+import AppBackButton from '@/components/navigation/AppBackButton';
 
 export default function SessionReviewPage() {
   const { sessionId } = useParams<{ sessionId: string }>();
@@ -101,6 +102,7 @@ export default function SessionReviewPage() {
 
   return (
     <div className="min-h-screen bg-[#0D1B2A] text-slate-100 flex items-center justify-center p-6 font-sans">
+      <AppBackButton fallbackTo="/dashboard" className="absolute left-4 top-4 border-white/10 bg-white/5 text-slate-200 hover:bg-white/10 hover:text-white" />
       <div className="max-w-4xl w-full grid grid-cols-1 md:grid-cols-5 gap-8">
         {/* Left Side: Confetti/Congrats Card (Width 2/5) */}
         <div className="md:col-span-2 bg-[#1B263B]/40 rounded-3xl p-6 border border-white/5 flex flex-col justify-between text-center backdrop-blur-md relative overflow-hidden shadow-2xl">

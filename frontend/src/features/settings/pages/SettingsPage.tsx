@@ -30,7 +30,7 @@ import {
 import { ConfirmDialog } from '@/components/ui/ConfirmDialog';
 import {
   User, Lock, Bell, Shield, Trash2, Camera,
-  CheckCircle2, Eye, EyeOff, Zap,
+  CheckCircle2, Eye, EyeOff, Zap, Github, Linkedin, Facebook, Globe, FileUp, PencilLine,
 } from 'lucide-react';
 import { BookOpen, Sparkles, X, Plus, Loader2 } from 'lucide-react';
 import { SkillService, type SkillIntentInterpretResponse, type SkillIntentSuggestion } from '@/services/skillService';
@@ -45,6 +45,11 @@ const profileSchema = z.object({
   bio: z.string().max(300, 'Bio cannot exceed 300 characters.').optional(),
   teachIntentText: z.string().max(500, 'Teach intent cannot exceed 500 characters.').optional(),
   learnIntentText: z.string().max(500, 'Learn intent cannot exceed 500 characters.').optional(),
+  githubUrl: z.string().max(600, 'GitHub URL is too long.').optional(),
+  linkedinUrl: z.string().max(600, 'LinkedIn URL is too long.').optional(),
+  facebookUrl: z.string().max(600, 'Facebook URL is too long.').optional(),
+  websiteUrl: z.string().max(600, 'Website URL is too long.').optional(),
+  resumeUrl: z.string().max(600, 'Resume URL is too long.').optional(),
 });
 
 const passwordSchema = z.object({
@@ -106,6 +111,8 @@ export default function SettingsPage() {
     if (tab && sections.some(s => s.id === tab)) setActive(tab);
   }, [searchParams]);
   const [savingProfile, setSavingProfile] = useState(false);
+  const [profileEditMode, setProfileEditMode] = useState(false);
+  const [profileJustSaved, setProfileJustSaved] = useState(false);
   const [savingPassword, setSavingPassword] = useState(false);
   const [showCurrent, setShowCurrent] = useState(false);
   const [showNext, setShowNext] = useState(false);
@@ -126,10 +133,10 @@ export default function SettingsPage() {
   const [localAvatar, setLocalAvatar] = useState<string | null>(null);
   const [savingAvatar, setSavingAvatar] = useState(false);
   const avatarInputRef = useRef<HTMLInputElement>(null);
+  const resumeInputRef = useRef<HTMLInputElement>(null);
+  const [uploadingResume, setUploadingResume] = useState(false);
 
   // My Skills state
-  const [skillTeachText, setSkillTeachText] = useState('');
-  const [skillLearnText, setSkillLearnText] = useState('');
   const [isInterpreting, setIsInterpreting] = useState(false);
   const [interpretation, setInterpretation] = useState<SkillIntentInterpretResponse | null>(null);
   const [addingSkill, setAddingSkill] = useState(false);
@@ -171,27 +178,6 @@ export default function SettingsPage() {
       };
       img.src = dataUrl;
     });
-
-  const handleInterpretSkills = useCallback(async () => {
-    if (!skillTeachText.trim() && !skillLearnText.trim()) return;
-    setIsInterpreting(true);
-    try {
-      const result = await SkillService.interpretIntent({
-        teachText: skillTeachText || undefined,
-        learnText: skillLearnText || undefined,
-      });
-      setInterpretation(result);
-      if (result.teach?.primary || result.learn?.primary) {
-        toast({ title: 'AI suggestions ready', description: 'Review below and click Add to confirm.', variant: 'success' });
-      } else {
-        toast({ title: 'No match found', description: 'Try rephrasing or pick manually.', variant: 'destructive' });
-      }
-    } catch {
-      toast({ variant: 'destructive', title: 'Suggestion failed', description: 'Could not interpret text right now.' });
-    } finally {
-      setIsInterpreting(false);
-    }
-  }, [skillTeachText, skillLearnText, toast]);
 
   const handleAddSkill = useCallback(async (suggestion: SkillIntentSuggestion, type: 'offered' | 'wanted') => {
     const currentSkills = type === 'offered' ? (user?.skillsOffered ?? []) : (user?.skillsWanted ?? []);
@@ -467,6 +453,11 @@ export default function SettingsPage() {
       bio: user?.bio ?? '',
       teachIntentText: user?.teachIntentText ?? '',
       learnIntentText: user?.learnIntentText ?? '',
+      githubUrl: user?.githubUrl ?? '',
+      linkedinUrl: user?.linkedinUrl ?? '',
+      facebookUrl: user?.facebookUrl ?? '',
+      websiteUrl: user?.websiteUrl ?? '',
+      resumeUrl: user?.resumeUrl ?? '',
     },
   });
 
@@ -478,8 +469,60 @@ export default function SettingsPage() {
       bio: user?.bio ?? '',
       teachIntentText: user?.teachIntentText ?? '',
       learnIntentText: user?.learnIntentText ?? '',
+      githubUrl: user?.githubUrl ?? '',
+      linkedinUrl: user?.linkedinUrl ?? '',
+      facebookUrl: user?.facebookUrl ?? '',
+      websiteUrl: user?.websiteUrl ?? '',
+      resumeUrl: user?.resumeUrl ?? '',
     });
   }, [profileForm, user]);
+
+  const handleEditProfile = useCallback(() => {
+    setProfileEditMode(true);
+    setProfileJustSaved(false);
+  }, []);
+
+  const handleCancelProfileEdit = useCallback(() => {
+    profileForm.reset({
+      name: user?.name ?? '',
+      email: user?.email ?? '',
+      university: user?.university ?? '',
+      bio: user?.bio ?? '',
+      teachIntentText: user?.teachIntentText ?? '',
+      learnIntentText: user?.learnIntentText ?? '',
+      githubUrl: user?.githubUrl ?? '',
+      linkedinUrl: user?.linkedinUrl ?? '',
+      facebookUrl: user?.facebookUrl ?? '',
+      websiteUrl: user?.websiteUrl ?? '',
+      resumeUrl: user?.resumeUrl ?? '',
+    });
+    setProfileEditMode(false);
+    setProfileJustSaved(false);
+  }, [profileForm, user]);
+
+  const handleInterpretSkills = useCallback(async () => {
+    const teachIntentValue = profileForm.getValues('teachIntentText') ?? '';
+    const learnIntentValue = profileForm.getValues('learnIntentText') ?? '';
+    if (!teachIntentValue.trim() && !learnIntentValue.trim()) return;
+
+    setIsInterpreting(true);
+    try {
+      const result = await SkillService.interpretIntent({
+        teachText: teachIntentValue || undefined,
+        learnText: learnIntentValue || undefined,
+      });
+      setInterpretation(result);
+      if (result.teach?.primary || result.learn?.primary) {
+        toast({ title: 'AI suggestions ready', description: 'Review below and click Add to confirm.', variant: 'success' });
+      } else {
+        toast({ title: 'No match found', description: 'Try rephrasing or pick manually.', variant: 'destructive' });
+      }
+    } catch {
+      toast({ variant: 'destructive', title: 'Suggestion failed', description: 'Could not interpret text right now.' });
+    } finally {
+      setIsInterpreting(false);
+    }
+  }, [profileForm, toast]);
 
   /* Password form */
   const passwordForm = useForm<PasswordFormData>({
@@ -493,13 +536,22 @@ export default function SettingsPage() {
     try {
       await UserService.updateProfile(user.id, {
         name: data.name,
+        email: data.email,
         university: data.university,
         bio: data.bio ?? '',
         teachIntentText: data.teachIntentText ?? '',
         learnIntentText: data.learnIntentText ?? '',
+        githubUrl: data.githubUrl ?? '',
+        linkedinUrl: data.linkedinUrl ?? '',
+        facebookUrl: data.facebookUrl ?? '',
+        websiteUrl: data.websiteUrl ?? '',
+        resumeUrl: data.resumeUrl ?? '',
       });
       // Refresh in-memory user so the sidebar/header reflect the new name/bio
       await refreshUser();
+      profileForm.reset(data);
+      setProfileEditMode(false);
+      setProfileJustSaved(true);
       toast({ title: 'Profile updated', description: 'Your changes have been saved.', variant: 'success' });
     } catch (err) {
       toast({
@@ -511,6 +563,49 @@ export default function SettingsPage() {
       setSavingProfile(false);
     }
   };
+
+  const handleResumePick = useCallback(async (file?: File) => {
+    if (!file) return;
+    if (file.type !== 'application/pdf') {
+      toast({
+        variant: 'destructive',
+        title: 'PDF only',
+        description: 'Resume must be a PDF file.',
+      });
+      return;
+    }
+    if (file.size > 10 * 1024 * 1024) {
+      toast({
+        variant: 'destructive',
+        title: 'File too large',
+        description: 'Resume size must be 10MB or less.',
+      });
+      return;
+    }
+
+    setUploadingResume(true);
+    try {
+      const uploaded = await UserService.uploadResume(file);
+      const apiBase = import.meta.env.VITE_API_URL
+        ? import.meta.env.VITE_API_URL.replace(/\/api\/?$/, '')
+        : window.location.origin;
+      const nextUrl = uploaded.url.startsWith('http') ? uploaded.url : `${apiBase}${uploaded.url}`;
+      profileForm.setValue('resumeUrl', nextUrl, { shouldDirty: true, shouldValidate: true });
+      toast({
+        title: 'Resume uploaded',
+        description: 'Click Save Changes to publish it on your profile.',
+        variant: 'success',
+      });
+    } catch (err) {
+      toast({
+        variant: 'destructive',
+        title: 'Upload failed',
+        description: err instanceof Error ? err.message : 'Could not upload resume.',
+      });
+    } finally {
+      setUploadingResume(false);
+    }
+  }, [profileForm, toast]);
 
   const handlePasswordSave = async (data: PasswordFormData) => {
     setSavingPassword(true);
@@ -533,10 +628,30 @@ export default function SettingsPage() {
   };
 
   const charCount = profileForm.watch('bio')?.length ?? 0;
+  const teachIntentText = profileForm.watch('teachIntentText') ?? '';
+  const learnIntentText = profileForm.watch('learnIntentText') ?? '';
   const teachIntentCount = profileForm.watch('teachIntentText')?.length ?? 0;
   const learnIntentCount = profileForm.watch('learnIntentText')?.length ?? 0;
+  const profileValues = profileForm.watch();
+  const hasProfileChanges = profileForm.formState.isDirty;
   const offeredSkills = user?.skillsOffered ?? [];
   const wantedSkills = user?.skillsWanted ?? [];
+  const teachPrimary = interpretation?.teach?.primary ?? null;
+  const learnPrimary = interpretation?.learn?.primary ?? null;
+  const teachAlternatives = (interpretation?.teach?.alternatives ?? [])
+    .filter((suggestion) => {
+      if (!teachPrimary) return true;
+      if (teachPrimary.skillId && suggestion.skillId) return teachPrimary.skillId !== suggestion.skillId;
+      return teachPrimary.skillName.toLowerCase() !== suggestion.skillName.toLowerCase();
+    })
+    .slice(0, 4);
+  const learnAlternatives = (interpretation?.learn?.alternatives ?? [])
+    .filter((suggestion) => {
+      if (!learnPrimary) return true;
+      if (learnPrimary.skillId && suggestion.skillId) return learnPrimary.skillId !== suggestion.skillId;
+      return learnPrimary.skillName.toLowerCase() !== suggestion.skillName.toLowerCase();
+    })
+    .slice(0, 4);
 
   return (
     <DashboardLayout>
@@ -587,11 +702,44 @@ export default function SettingsPage() {
             {active === 'profile' && (
               <>
                 <div className="product-panel">
-                  <div className="p-5 border-b border-border/60 bg-muted/15 dark:border-white/10">
-                    <h3 className="text-lg font-extrabold font-headline text-foreground flex items-center gap-2">
-                      <User className="h-5 w-5 text-primary" /> Profile Information
-                    </h3>
-                    <p className="text-[10px] uppercase font-bold tracking-widest text-muted-foreground mt-1">Update your public profile details.</p>
+                  <div className="flex flex-col gap-4 border-b border-border/60 bg-muted/15 p-5 dark:border-white/10 sm:flex-row sm:items-center sm:justify-between">
+                    <div>
+                      <h3 className="text-lg font-extrabold font-headline text-foreground flex items-center gap-2">
+                        <User className="h-5 w-5 text-primary" /> Profile Information
+                      </h3>
+                      <p className="text-[10px] uppercase font-bold tracking-widest text-muted-foreground mt-1">
+                        {profileEditMode ? 'Edit your public profile details.' : 'Your public profile details are saved.'}
+                      </p>
+                    </div>
+                    <div className="flex flex-wrap items-center gap-3">
+                      <span
+                        className={cn(
+                          'inline-flex items-center gap-2 rounded-full border px-3 py-1.5 text-[10px] font-extrabold uppercase tracking-widest',
+                          profileEditMode
+                            ? hasProfileChanges
+                              ? 'border-amber-400/30 bg-amber-400/10 text-amber-200'
+                              : 'border-white/10 bg-white/5 text-muted-foreground'
+                            : 'border-emerald-400/30 bg-emerald-400/10 text-emerald-200'
+                        )}
+                        role="status"
+                        aria-live="polite"
+                      >
+                        <CheckCircle2 className="h-3.5 w-3.5" />
+                        {profileEditMode ? (hasProfileChanges ? 'Unsaved changes' : 'Editing') : (profileJustSaved ? 'Saved now' : 'Saved')}
+                      </span>
+                      {!profileEditMode && (
+                        <Button
+                          type="button"
+                          variant="outline"
+                          size="sm"
+                          onClick={handleEditProfile}
+                          className="rounded-xl border-white/10 bg-white/5 text-[10px] font-extrabold uppercase tracking-widest hover:bg-white/10"
+                        >
+                          <PencilLine className="mr-2 h-4 w-4" />
+                          Edit
+                        </Button>
+                      )}
+                    </div>
                   </div>
                   <div className="p-5 md:p-6">
                     {/* Avatar */}
@@ -616,8 +764,9 @@ export default function SettingsPage() {
                       </div>
                     </div>
 
-                    <Form {...profileForm}>
-                      <form onSubmit={profileForm.handleSubmit(handleProfileSave)} className="space-y-6">
+                    {profileEditMode ? (
+                      <Form {...profileForm}>
+                        <form onSubmit={profileForm.handleSubmit(handleProfileSave)} className="space-y-6">
                         <div className="grid gap-6 sm:grid-cols-2">
                           <FormField control={profileForm.control} name="name" render={({ field }) => (
                             <FormItem>
@@ -699,15 +848,185 @@ export default function SettingsPage() {
                             </FormItem>
                           )} />
                         </div>
-                        <Button
-                          type="submit"
-                          disabled={savingProfile}
-                          className="min-w-[140px] bg-primary text-primary-foreground hover:bg-primary/90 rounded-xl font-bold shadow-[0_0_20px_hsl(var(--primary)/0.2)] hover:shadow-[0_0_30px_hsl(var(--primary)/0.4)] transition-all"
-                        >
-                          {savingProfile ? 'Saving...' : <><CheckCircle2 className="mr-2 h-4 w-4" />Save Changes</>}
-                        </Button>
-                      </form>
-                    </Form>
+                        <div className="rounded-2xl border border-white/10 bg-white/[0.03] p-4 md:p-5 space-y-5">
+                          <div className="space-y-1">
+                            <h4 className="text-sm font-bold tracking-wide text-white">Public Links</h4>
+                            <p className="text-[10px] uppercase font-bold tracking-widest text-muted-foreground">These links are shown on your profile.</p>
+                          </div>
+                          <div className="grid gap-5 sm:grid-cols-2">
+                            <FormField control={profileForm.control} name="githubUrl" render={({ field }) => (
+                              <FormItem>
+                                <FormLabel className="text-[10px] uppercase font-bold tracking-widest text-muted-foreground flex items-center gap-2">
+                                  <Github className="h-3.5 w-3.5" /> GitHub
+                                </FormLabel>
+                                <FormControl><Input {...field} placeholder="github.com/username" className="appearance-none bg-black/20 border-white/10 text-white placeholder-white/30 focus:ring-primary/50 focus:border-primary/50 rounded-xl" /></FormControl>
+                                <FormMessage />
+                              </FormItem>
+                            )} />
+                            <FormField control={profileForm.control} name="linkedinUrl" render={({ field }) => (
+                              <FormItem>
+                                <FormLabel className="text-[10px] uppercase font-bold tracking-widest text-muted-foreground flex items-center gap-2">
+                                  <Linkedin className="h-3.5 w-3.5" /> LinkedIn
+                                </FormLabel>
+                                <FormControl><Input {...field} placeholder="linkedin.com/in/username" className="appearance-none bg-black/20 border-white/10 text-white placeholder-white/30 focus:ring-primary/50 focus:border-primary/50 rounded-xl" /></FormControl>
+                                <FormMessage />
+                              </FormItem>
+                            )} />
+                            <FormField control={profileForm.control} name="facebookUrl" render={({ field }) => (
+                              <FormItem>
+                                <FormLabel className="text-[10px] uppercase font-bold tracking-widest text-muted-foreground flex items-center gap-2">
+                                  <Facebook className="h-3.5 w-3.5" /> Facebook
+                                </FormLabel>
+                                <FormControl><Input {...field} placeholder="facebook.com/username" className="appearance-none bg-black/20 border-white/10 text-white placeholder-white/30 focus:ring-primary/50 focus:border-primary/50 rounded-xl" /></FormControl>
+                                <FormMessage />
+                              </FormItem>
+                            )} />
+                            <FormField control={profileForm.control} name="websiteUrl" render={({ field }) => (
+                              <FormItem>
+                                <FormLabel className="text-[10px] uppercase font-bold tracking-widest text-muted-foreground flex items-center gap-2">
+                                  <Globe className="h-3.5 w-3.5" /> Website
+                                </FormLabel>
+                                <FormControl><Input {...field} placeholder="your-portfolio.com" className="appearance-none bg-black/20 border-white/10 text-white placeholder-white/30 focus:ring-primary/50 focus:border-primary/50 rounded-xl" /></FormControl>
+                                <FormMessage />
+                              </FormItem>
+                            )} />
+                          </div>
+                          <div className="space-y-3">
+                            <FormField control={profileForm.control} name="resumeUrl" render={({ field }) => (
+                              <FormItem>
+                                <FormLabel className="text-[10px] uppercase font-bold tracking-widest text-muted-foreground">Resume URL</FormLabel>
+                                <FormControl><Input {...field} placeholder="Auto-filled after PDF upload" className="appearance-none bg-black/20 border-white/10 text-white placeholder-white/30 focus:ring-primary/50 focus:border-primary/50 rounded-xl" /></FormControl>
+                                <FormMessage />
+                              </FormItem>
+                            )} />
+                            <div className="flex flex-wrap items-center gap-3">
+                              <input
+                                ref={resumeInputRef}
+                                type="file"
+                                accept="application/pdf"
+                                className="hidden"
+                                onChange={(e) => {
+                                  const file = e.target.files?.[0];
+                                  void handleResumePick(file);
+                                  e.currentTarget.value = '';
+                                }}
+                              />
+                              <Button
+                                type="button"
+                                variant="outline"
+                                className="rounded-xl border-white/10 bg-white/5 hover:bg-white/10"
+                                disabled={uploadingResume}
+                                onClick={() => resumeInputRef.current?.click()}
+                              >
+                                <FileUp className="mr-2 h-4 w-4" />
+                                {uploadingResume ? 'Uploading...' : 'Upload Resume PDF'}
+                              </Button>
+                              {profileForm.watch('resumeUrl')?.trim() && (
+                                <Button type="button" variant="ghost" className="rounded-xl text-primary hover:text-primary" asChild>
+                                  <a href={profileForm.watch('resumeUrl')?.trim()} target="_blank" rel="noreferrer">Open Resume</a>
+                                </Button>
+                              )}
+                            </div>
+                          </div>
+                        </div>
+                          <div className="flex flex-wrap items-center gap-3">
+                            <Button
+                              type="submit"
+                              disabled={savingProfile}
+                              className="min-w-[140px] bg-primary text-primary-foreground hover:bg-primary/90 rounded-xl font-bold shadow-[0_0_20px_hsl(var(--primary)/0.2)] hover:shadow-[0_0_30px_hsl(var(--primary)/0.4)] transition-all"
+                            >
+                              {savingProfile ? 'Saving...' : <><CheckCircle2 className="mr-2 h-4 w-4" />Save Changes</>}
+                            </Button>
+                            <Button
+                              type="button"
+                              variant="outline"
+                              disabled={savingProfile}
+                              onClick={handleCancelProfileEdit}
+                              className="rounded-xl border-white/10 bg-white/5 hover:bg-white/10"
+                            >
+                              Cancel
+                            </Button>
+                          </div>
+                        </form>
+                      </Form>
+                    ) : (
+                      <div className="space-y-6">
+                        {profileJustSaved && (
+                          <div className="flex items-start gap-3 rounded-2xl border border-emerald-400/25 bg-emerald-400/10 p-4 text-emerald-100">
+                            <CheckCircle2 className="mt-0.5 h-5 w-5 shrink-0" />
+                            <div>
+                              <p className="text-sm font-extrabold">Profile saved</p>
+                              <p className="mt-1 text-xs text-emerald-100/80">Your text fields are hidden now. Use Edit when you need to change them again.</p>
+                            </div>
+                          </div>
+                        )}
+
+                        <div className="grid gap-4 sm:grid-cols-2">
+                          {[
+                            { label: 'Full Name', value: profileValues.name },
+                            { label: 'Email', value: profileValues.email },
+                            { label: 'University / Institution', value: profileValues.university },
+                            { label: 'Bio', value: profileValues.bio },
+                            { label: 'Teach Intent', value: profileValues.teachIntentText },
+                            { label: 'Learn Intent', value: profileValues.learnIntentText },
+                          ].map(({ label, value }) => (
+                            <div key={label} className={cn('rounded-2xl border border-white/10 bg-black/20 p-4', label === 'Bio' && 'sm:col-span-2')}>
+                              <p className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">{label}</p>
+                              <p className="mt-2 whitespace-pre-wrap break-words text-sm font-semibold text-white">
+                                {value?.trim() || 'Not added'}
+                              </p>
+                            </div>
+                          ))}
+                        </div>
+
+                        <div className="rounded-2xl border border-white/10 bg-white/[0.03] p-4 md:p-5">
+                          <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
+                            <div>
+                              <h4 className="text-sm font-bold tracking-wide text-white">Public Links</h4>
+                              <p className="text-[10px] uppercase font-bold tracking-widest text-muted-foreground">These links are shown on your profile.</p>
+                            </div>
+                            <Button
+                              type="button"
+                              variant="ghost"
+                              size="sm"
+                              onClick={handleEditProfile}
+                              className="rounded-xl text-primary hover:text-primary"
+                            >
+                              <PencilLine className="mr-2 h-4 w-4" />
+                              Edit links
+                            </Button>
+                          </div>
+                          <div className="grid gap-3 sm:grid-cols-2">
+                            {[
+                              { label: 'GitHub', value: profileValues.githubUrl, Icon: Github },
+                              { label: 'LinkedIn', value: profileValues.linkedinUrl, Icon: Linkedin },
+                              { label: 'Facebook', value: profileValues.facebookUrl, Icon: Facebook },
+                              { label: 'Website', value: profileValues.websiteUrl, Icon: Globe },
+                              { label: 'Resume URL', value: profileValues.resumeUrl, Icon: FileUp },
+                            ].map(({ label, value, Icon }) => (
+                              <div key={label} className={cn('rounded-xl border border-white/10 bg-black/20 p-3', label === 'Resume URL' && 'sm:col-span-2')}>
+                                <p className="flex items-center gap-2 text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
+                                  <Icon className="h-3.5 w-3.5" />
+                                  {label}
+                                </p>
+                                {value?.trim() ? (
+                                  <a
+                                    href={value.trim()}
+                                    target="_blank"
+                                    rel="noreferrer"
+                                    className="mt-2 block break-words text-sm font-semibold text-primary hover:underline"
+                                  >
+                                    {value.trim()}
+                                  </a>
+                                ) : (
+                                  <p className="mt-2 text-sm font-semibold text-white/50">Not added</p>
+                                )}
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                      </div>
+                    )}
                   </div>
                 </div>
 
@@ -753,8 +1072,11 @@ export default function SettingsPage() {
                       <div className="space-y-2">
                         <label className="text-[10px] uppercase font-bold tracking-widest text-primary/70">What can you teach?</label>
                         <textarea
-                          value={skillTeachText}
-                          onChange={(e) => { setSkillTeachText(e.target.value); setInterpretation(null); }}
+                          value={teachIntentText}
+                          onChange={(e) => {
+                            profileForm.setValue('teachIntentText', e.target.value, { shouldDirty: true, shouldTouch: true });
+                            setInterpretation(null);
+                          }}
                           placeholder="e.g. I can teach React, TypeScript and frontend architecture"
                           className="w-full resize-none rounded-xl border border-primary/20 bg-black/40 px-4 py-3 text-sm placeholder:text-white/30 text-white focus:outline-none focus:ring-2 focus:ring-primary/50 min-h-[100px] custom-scrollbar appearance-none"
                         />
@@ -762,8 +1084,11 @@ export default function SettingsPage() {
                       <div className="space-y-2">
                         <label className="text-[10px] uppercase font-bold tracking-widest text-primary/70">What do you want to learn?</label>
                         <textarea
-                          value={skillLearnText}
-                          onChange={(e) => { setSkillLearnText(e.target.value); setInterpretation(null); }}
+                          value={learnIntentText}
+                          onChange={(e) => {
+                            profileForm.setValue('learnIntentText', e.target.value, { shouldDirty: true, shouldTouch: true });
+                            setInterpretation(null);
+                          }}
                           placeholder="e.g. I want to learn digital marketing and SEO"
                           className="w-full resize-none rounded-xl border border-primary/20 bg-black/40 px-4 py-3 text-sm placeholder:text-white/30 text-white focus:outline-none focus:ring-2 focus:ring-primary/50 min-h-[100px] custom-scrollbar appearance-none"
                         />
@@ -771,7 +1096,7 @@ export default function SettingsPage() {
                     </div>
                     <Button
                       className="gap-2 bg-primary text-primary-foreground hover:bg-primary/90 rounded-xl font-bold shadow-[0_0_20px_hsl(var(--primary)/0.2)] hover:shadow-[0_0_30px_hsl(var(--primary)/0.4)] transition-all min-w-[160px]"
-                      disabled={isInterpreting || (!skillTeachText.trim() && !skillLearnText.trim())}
+                      disabled={isInterpreting || (!teachIntentText.trim() && !learnIntentText.trim())}
                       onClick={handleInterpretSkills}
                     >
                       {isInterpreting ? <><Loader2 className="h-4 w-4 animate-spin" /> Analyzing...</> : <><Sparkles className="h-4 w-4" /> Suggest Skills</>}
@@ -779,14 +1104,14 @@ export default function SettingsPage() {
 
                     {interpretation && (
                       <div className="grid gap-4 sm:grid-cols-2 pt-2">
-                        {interpretation.teach?.primary && (
+                        {teachPrimary && (
                           <div className="flex items-center justify-between rounded-2xl border border-primary/30 bg-primary/10 px-4 py-3 backdrop-blur-md shadow-[inset_0_1px_0_0_hsla(0,0%,100%,0.1)]">
                             <div>
                               <p className="text-[10px] uppercase font-bold tracking-widest text-primary/70">Teach suggestion</p>
                               <p className="font-bold text-white mt-0.5 flex items-center gap-2">
-                                {interpretation.teach.primary.skillName}
-                                <span className="text-[10px] font-bold tracking-widest text-primary">({interpretation.teach.primary.confidence}%)</span>
-                                {interpretation.teach.primary.custom && (
+                                {teachPrimary.skillName}
+                                <span className="text-[10px] font-bold tracking-widest text-primary">({teachPrimary.confidence}%)</span>
+                                {teachPrimary.custom && (
                                   <span className="rounded-full border border-primary bg-primary/20 px-2 py-0.5 text-[9px] uppercase tracking-widest font-black text-primary shadow-[0_0_10px_hsl(var(--primary)/0.3)]">AI New</span>
                                 )}
                               </p>
@@ -797,7 +1122,7 @@ export default function SettingsPage() {
                               className="h-8 rounded-lg text-xs font-bold gap-1 border-primary/30 text-primary hover:bg-primary/20 hover:text-primary shadow-[0_0_10px_hsl(var(--primary)/0.1)]"
                               disabled={addingSkill}
                               onClick={() => {
-                                const suggestion = interpretation.teach?.primary;
+                                const suggestion = teachPrimary;
                                 if (suggestion) handleAddSkill(suggestion, 'offered');
                               }}
                             >
@@ -805,14 +1130,14 @@ export default function SettingsPage() {
                             </Button>
                           </div>
                         )}
-                        {interpretation.learn?.primary && (
+                        {learnPrimary && (
                           <div className="flex items-center justify-between rounded-2xl border border-secondary/30 bg-secondary/10 px-4 py-3 backdrop-blur-md shadow-[inset_0_1px_0_0_hsla(0,0%,100%,0.1)]">
                             <div>
                               <p className="text-[10px] uppercase font-bold tracking-widest text-secondary/70">Learn suggestion</p>
                               <p className="font-bold text-white mt-0.5 flex items-center gap-2">
-                                {interpretation.learn.primary.skillName}
-                                <span className="text-[10px] font-bold tracking-widest text-secondary">({interpretation.learn.primary.confidence}%)</span>
-                                {interpretation.learn.primary.custom && (
+                                {learnPrimary.skillName}
+                                <span className="text-[10px] font-bold tracking-widest text-secondary">({learnPrimary.confidence}%)</span>
+                                {learnPrimary.custom && (
                                   <span className="rounded-full border border-secondary bg-secondary/20 px-2 py-0.5 text-[9px] uppercase tracking-widest font-black text-secondary shadow-[0_0_10px_hsl(var(--secondary)/0.3)]">AI New</span>
                                 )}
                               </p>
@@ -823,7 +1148,7 @@ export default function SettingsPage() {
                               className="h-8 rounded-lg text-xs font-bold gap-1 border-secondary/30 text-secondary hover:bg-secondary/20 hover:text-secondary shadow-[0_0_10px_hsl(var(--secondary)/0.1)]"
                               disabled={addingSkill}
                               onClick={() => {
-                                const suggestion = interpretation.learn?.primary;
+                                const suggestion = learnPrimary;
                                 if (suggestion) handleAddSkill(suggestion, 'wanted');
                               }}
                             >
@@ -831,6 +1156,52 @@ export default function SettingsPage() {
                             </Button>
                           </div>
                         )}
+                      </div>
+                    )}
+
+                    {interpretation && (teachAlternatives.length > 0 || learnAlternatives.length > 0) && (
+                      <div className="grid gap-4 sm:grid-cols-2 pt-1">
+                        <div className="rounded-2xl border border-primary/20 bg-black/30 p-3">
+                          <p className="text-[10px] uppercase font-bold tracking-widest text-primary/70 mb-2">More teach suggestions</p>
+                          {teachAlternatives.length === 0 ? (
+                            <p className="text-[10px] uppercase tracking-widest text-muted-foreground">No additional teach suggestions.</p>
+                          ) : (
+                            <div className="space-y-2">
+                              {teachAlternatives.map((suggestion, idx) => (
+                                <div key={`teach-alt-${suggestion.skillId ?? suggestion.skillName}-${idx}`} className="flex items-center justify-between rounded-xl border border-white/10 bg-black/30 px-3 py-2">
+                                  <div className="min-w-0">
+                                    <p className="truncate text-xs font-bold text-white">{suggestion.skillName}</p>
+                                    <p className="text-[10px] uppercase tracking-widest text-primary/70">{suggestion.confidence}%</p>
+                                  </div>
+                                  <Button size="sm" variant="outline" className="h-7 rounded-lg text-[10px] font-bold border-primary/30 text-primary hover:bg-primary/20" disabled={addingSkill} onClick={() => handleAddSkill(suggestion, 'offered')}>
+                                    Add
+                                  </Button>
+                                </div>
+                              ))}
+                            </div>
+                          )}
+                        </div>
+
+                        <div className="rounded-2xl border border-secondary/20 bg-black/30 p-3">
+                          <p className="text-[10px] uppercase font-bold tracking-widest text-secondary/70 mb-2">More learn suggestions</p>
+                          {learnAlternatives.length === 0 ? (
+                            <p className="text-[10px] uppercase tracking-widest text-muted-foreground">No additional learn suggestions.</p>
+                          ) : (
+                            <div className="space-y-2">
+                              {learnAlternatives.map((suggestion, idx) => (
+                                <div key={`learn-alt-${suggestion.skillId ?? suggestion.skillName}-${idx}`} className="flex items-center justify-between rounded-xl border border-white/10 bg-black/30 px-3 py-2">
+                                  <div className="min-w-0">
+                                    <p className="truncate text-xs font-bold text-white">{suggestion.skillName}</p>
+                                    <p className="text-[10px] uppercase tracking-widest text-secondary/70">{suggestion.confidence}%</p>
+                                  </div>
+                                  <Button size="sm" variant="outline" className="h-7 rounded-lg text-[10px] font-bold border-secondary/30 text-secondary hover:bg-secondary/20" disabled={addingSkill} onClick={() => handleAddSkill(suggestion, 'wanted')}>
+                                    Add
+                                  </Button>
+                                </div>
+                              ))}
+                            </div>
+                          )}
+                        </div>
                       </div>
                     )}
                   </div>

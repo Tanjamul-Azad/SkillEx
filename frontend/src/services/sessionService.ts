@@ -67,6 +67,19 @@ export const SessionService = {
   },
 
   /** PUT /api/sessions/{id}/accept — accept a proposed session time */
+  createConnected: async (data: {
+    targetUserId: string;
+    skillId?: string;
+    scheduledAt: string;
+    durationMins: number;
+    meetLink?: string;
+    notes?: string;
+    sessionType?: 'VIDEO' | 'AUDIO';
+  }): Promise<Session> => {
+    const result = await api.post<Session>('/sessions/connected', data);
+    return normalizeSession(result);
+  },
+
   acceptProposal: async (id: string): Promise<Session> => {
     const result = await api.put<Session>(`/sessions/${id}/accept`, {});
     return normalizeSession(result);

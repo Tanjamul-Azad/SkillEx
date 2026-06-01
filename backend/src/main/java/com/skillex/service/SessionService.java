@@ -16,6 +16,8 @@ public interface SessionService {
 
     SessionDto create(String requestingUserId, CreateSessionRequest req);
 
+    SessionDto createForConnection(String requestingUserId, CreateConnectedSessionRequest req);
+
     SessionDto updateNotes(String sessionId, String notes, String requestingUserId);
 
     void joinSession(String sessionId, String requestingUserId);

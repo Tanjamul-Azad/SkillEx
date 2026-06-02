@@ -7,5 +7,8 @@ import jakarta.validation.constraints.Size;
 public record CreateDiscussionRequest(
     @NotBlank @Size(max = 300) String title,
     @NotBlank @Size(max = 10000) String content,
-    @Size(max = 100) String category
+    @Size(max = 100) String category,
+    String threadType,
+    String skillId,
+    String circleId
 ) {}

@@ -13,6 +13,12 @@ import {
   Circle,
   Pin,
   Loader2,
+  ExternalLink,
+  BookOpen,
+  HelpCircle,
+  CheckCircle2,
+  Link as LinkIcon,
+  Sparkles,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
@@ -40,7 +46,19 @@ import { StoryCircle } from '../components/StoryCircle';
 import { CommunityService } from '@/services/communityService';
 import { connectionService } from '@/services/connectionService';
 import { SkillService } from '@/services/skillService';
-import type { Post, Story, TrendingSkill, SuggestedUser, Discussion, Event, SkillCircle, Skill } from '@/types';
+import type {
+  Post,
+  Story,
+  TrendingSkill,
+  SuggestedUser,
+  Discussion,
+  Event,
+  SkillCircle,
+  Skill,
+  CircleResource,
+  DiscussionReply,
+  SkillCircleDashboard,
+} from '@/types';
 import { appVisuals } from '@/lib/appVisuals';
 
 const tabs = [
@@ -49,6 +67,33 @@ const tabs = [
   { id: 'circles', label: 'Skill Circles', icon: Users },
   { id: 'discussions', label: 'Discussions', icon: MessageSquare },
 ];
+
+const EVENT_TYPES = [
+  { value: 'ANNOUNCEMENT', label: 'Announcement' },
+  { value: 'WORKSHOP', label: 'Workshop' },
+  { value: 'STUDY_SPRINT', label: 'Study Sprint' },
+  { value: 'OFFICE_HOUR', label: 'Office Hour' },
+  { value: 'HACKATHON', label: 'Hackathon' },
+  { value: 'PORTFOLIO_REVIEW', label: 'Portfolio Review' },
+];
+
+const THREAD_TYPES = [
+  { value: 'QUESTION', label: 'Question' },
+  { value: 'RESOURCE_REQUEST', label: 'Resource Request' },
+  { value: 'PROJECT_REVIEW', label: 'Project Review' },
+  { value: 'SUCCESS_STORY', label: 'Success Story' },
+  { value: 'ANNOUNCEMENT', label: 'Announcement' },
+];
+
+const RESOURCE_TYPES = ['LINK', 'FILE', 'NOTE'];
+const DIFFICULTIES = ['BEGINNER', 'MODERATE', 'ADVANCED'];
+
+const formatEnumLabel = (value?: string | null) =>
+  String(value ?? '')
+    .toLowerCase()
+    .split('_')
+    .map(part => part.charAt(0).toUpperCase() + part.slice(1))
+    .join(' ');
 
 const containerVariants = {
   hidden: { opacity: 0 },
@@ -408,15 +453,23 @@ const EventCard = React.memo(({
   event,
   currentUserId,
   busy,
+  interestBusy,
   onAttend,
+  onInterest,
+  onOpen,
 }: {
   event: Event;
   currentUserId?: string;
   busy?: boolean;
+  interestBusy?: boolean;
   onAttend: (event: Event) => Promise<void>;
+  onInterest: (event: Event) => Promise<void>;
+  onOpen: (event: Event) => void;
 }) => {
-  const attending = Boolean(currentUserId && event.attendees?.some(attendee => attendee.id === currentUserId));
-  const attendeeCount = event.attendees?.length ?? 0;
+  const attending = event.rsvpState === 'GOING' || Boolean(currentUserId && event.attendees?.some(attendee => attendee.id === currentUserId));
+  const interested = event.rsvpState === 'INTERESTED';
+  const attendeeCount = Number(event.attendeeCount ?? event.attendees?.length ?? 0);
+  const interestedCount = Number(event.interestedCount ?? 0);
 
   return (
     <div className="product-row group grid gap-4 p-4 sm:grid-cols-[minmax(0,1.4fr)_minmax(240px,0.8fr)_auto] sm:items-center">
@@ -428,8 +481,16 @@ const EventCard = React.memo(({
           <span className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
             {event.isOnline ? 'Online' : 'In person'}
           </span>
+          <span className="text-[10px] font-bold uppercase tracking-widest text-secondary">
+            {formatEnumLabel(event.eventType)}
+          </span>
+          {event.circleName && (
+            <Badge variant="outline" className="rounded-full border-secondary/20 bg-secondary/5 px-2 py-0.5 text-[10px] font-semibold text-secondary">
+              {event.circleName}
+            </Badge>
+          )}
         </div>
-        <h3 className="truncate font-headline text-lg font-extrabold text-foreground group-hover:text-primary">
+        <h3 className="truncate font-headline text-lg font-extrabold text-foreground group-hover:text-primary cursor-pointer" onClick={() => onOpen(event)}>
           {event.title}
         </h3>
         <p className="mt-1 line-clamp-2 text-sm text-muted-foreground">
@@ -455,41 +516,171 @@ const EventCard = React.memo(({
         </div>
         <div className="flex items-center gap-2">
           <Users className="h-4 w-4 text-muted-foreground" />
-          <span>{attendeeCount} attending</span>
+          <span>{attendeeCount} going · {interestedCount} interested</span>
         </div>
       </div>
 
-      <Button
-        size="sm"
-        disabled={busy || attending}
-        className={cn(
-          'rounded-xl px-5 text-[10px] font-bold uppercase tracking-widest',
-          attending ? 'bg-emerald-500/15 text-emerald-400 hover:bg-emerald-500/15' : 'bg-primary text-primary-foreground hover:bg-primary/90'
-        )}
-        onClick={() => onAttend(event)}
-      >
-        {busy ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : attending ? 'Going' : 'Register'}
-      </Button>
+      <div className="flex flex-col gap-2 sm:min-w-[150px]">
+        <Button
+          size="sm"
+          disabled={busy || attending}
+          className={cn(
+            'rounded-xl px-5 text-[10px] font-bold uppercase tracking-widest',
+            attending ? 'bg-emerald-500/15 text-emerald-400 hover:bg-emerald-500/15' : 'bg-primary text-primary-foreground hover:bg-primary/90'
+          )}
+          onClick={() => onAttend(event)}
+        >
+          {busy ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : attending ? 'Going' : 'Register'}
+        </Button>
+        <div className="grid grid-cols-2 gap-2">
+          <Button
+            size="sm"
+            variant="outline"
+            disabled={interestBusy || interested || attending}
+            className="rounded-xl text-[10px] font-bold uppercase tracking-widest"
+            onClick={() => onInterest(event)}
+          >
+            {interestBusy ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : interested ? 'Interested' : 'Interested'}
+          </Button>
+          <Button size="sm" variant="outline" className="rounded-xl text-[10px] font-bold uppercase tracking-widest" onClick={() => onOpen(event)}>
+            Details
+          </Button>
+        </div>
+      </div>
     </div>
   )
 });
 EventCard.displayName = 'EventCard';
 
+function EventDetailDialog({
+  event,
+  open,
+  onOpenChange,
+  onAttend,
+  onInterest,
+  busy,
+  interestBusy,
+}: {
+  event: Event | null;
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+  onAttend: (event: Event) => Promise<void>;
+  onInterest: (event: Event) => Promise<void>;
+  busy?: boolean;
+  interestBusy?: boolean;
+}) {
+  if (!event) return null;
+  const attendeeCount = Number(event.attendeeCount ?? event.attendees?.length ?? 0);
+  const interestedCount = Number(event.interestedCount ?? 0);
+  const going = event.rsvpState === 'GOING';
+  const interested = event.rsvpState === 'INTERESTED';
+
+  return (
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent className="sm:max-w-3xl">
+        <DialogHeader>
+          <div className="flex flex-wrap items-center gap-2">
+            <Badge className="rounded-full bg-primary/15 text-primary">{formatEnumLabel(event.eventType)}</Badge>
+            <Badge variant="outline" className="rounded-full">{formatEnumLabel(event.status)}</Badge>
+            {event.circleName && <Badge variant="outline" className="rounded-full">{event.circleName}</Badge>}
+          </div>
+          <DialogTitle className="font-headline text-2xl">{event.title}</DialogTitle>
+          <DialogDescription>{event.description || 'Skill-focused community event.'}</DialogDescription>
+        </DialogHeader>
+
+        <div className="grid gap-4 py-2 md:grid-cols-[1fr_0.8fr]">
+          <div className="space-y-4">
+            <div className="rounded-2xl border border-primary/15 bg-background/70 p-4">
+              <h4 className="mb-3 text-xs font-bold uppercase tracking-widest text-muted-foreground">Event Details</h4>
+              <div className="space-y-3 text-sm">
+                <div className="flex items-center gap-2"><Calendar className="h-4 w-4 text-primary" />{new Date(event.eventDate).toLocaleString()}</div>
+                <div className="flex items-center gap-2"><MapPin className="h-4 w-4 text-secondary" />{event.isOnline ? 'Online event' : event.location || 'Location pending'}</div>
+                {event.meetingUrl && (
+                  <a className="flex items-center gap-2 text-primary hover:underline" href={event.meetingUrl} target="_blank" rel="noreferrer">
+                    <ExternalLink className="h-4 w-4" /> Open meeting link
+                  </a>
+                )}
+              </div>
+            </div>
+            <div className="rounded-2xl border border-primary/15 bg-background/70 p-4">
+              <h4 className="mb-3 text-xs font-bold uppercase tracking-widest text-muted-foreground">Target Skills</h4>
+              <div className="flex flex-wrap gap-2">
+                {(event.skills ?? []).length > 0 ? event.skills.map(skill => (
+                  <Badge key={skill.id} variant="outline" className="rounded-full border-primary/20 bg-primary/5 text-primary">{skill.name}</Badge>
+                )) : <span className="text-sm text-muted-foreground">No skill tags yet.</span>}
+              </div>
+            </div>
+          </div>
+
+          <div className="space-y-4">
+            <div className="rounded-2xl border border-primary/15 bg-background/70 p-4">
+              <h4 className="mb-3 text-xs font-bold uppercase tracking-widest text-muted-foreground">Community Reach</h4>
+              <div className="grid grid-cols-2 gap-3">
+                <div className="rounded-xl bg-primary/10 p-3 text-center">
+                  <p className="font-headline text-2xl font-extrabold text-primary">{attendeeCount}</p>
+                  <p className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">Going</p>
+                </div>
+                <div className="rounded-xl bg-secondary/10 p-3 text-center">
+                  <p className="font-headline text-2xl font-extrabold text-secondary">{interestedCount}</p>
+                  <p className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">Interested</p>
+                </div>
+              </div>
+            </div>
+            <div className="rounded-2xl border border-primary/15 bg-background/70 p-4">
+              <h4 className="mb-3 text-xs font-bold uppercase tracking-widest text-muted-foreground">Host</h4>
+              <div className="flex items-center gap-3">
+                <Avatar className="h-10 w-10">
+                  <AvatarImage src={event.host.avatar} />
+                  <AvatarFallback>{event.host.name?.charAt(0) ?? 'U'}</AvatarFallback>
+                </Avatar>
+                <div className="min-w-0">
+                  <p className="truncate font-bold text-foreground">{event.host.name}</p>
+                  <p className="truncate text-xs text-muted-foreground">{event.host.university}</p>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <DialogFooter>
+          <Button variant="outline" onClick={() => onOpenChange(false)}>Close</Button>
+          <Button variant="outline" disabled={interestBusy || interested || going} onClick={() => onInterest(event)}>
+            {interestBusy ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Sparkles className="mr-2 h-4 w-4" />}
+            {interested ? 'Interested' : 'Interested'}
+          </Button>
+          <Button disabled={busy || going} onClick={() => onAttend(event)}>
+            {busy ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Calendar className="mr-2 h-4 w-4" />}
+            {going ? 'Going' : 'Register'}
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
 const EventsTab = () => {
   const { user } = useAuth();
   const { toast } = useToast();
+  const [searchParams] = useSearchParams();
   const [events, setEvents] = useState<Event[]>([]);
   const [skills, setSkills] = useState<Skill[]>([]);
+  const [circles, setCircles] = useState<SkillCircle[]>([]);
   const [activeFilter, setActiveFilter] = useState('All');
   const [createOpen, setCreateOpen] = useState(false);
+  const [selectedEvent, setSelectedEvent] = useState<Event | null>(null);
+  const [detailOpen, setDetailOpen] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [attendBusy, setAttendBusy] = useState<Record<string, boolean>>({});
+  const [interestBusy, setInterestBusy] = useState<Record<string, boolean>>({});
   const [eventForm, setEventForm] = useState({
     title: '',
     description: '',
     eventDate: '',
     location: '',
     isOnline: true,
+    eventType: 'WORKSHOP',
+    circleId: '',
+    meetingUrl: '',
     skillIds: [] as string[],
   });
   const filterChips = ['All', 'Online', 'In-Person'];
@@ -502,7 +693,19 @@ const EventsTab = () => {
   useEffect(() => {
     loadEvents().catch(() => {});
     SkillService.getAll().then(setSkills).catch(() => {});
+    CommunityService.getSkillCircles(0, 50).then((r) => setCircles(r.content ?? [])).catch(() => {});
   }, [loadEvents]);
+
+  useEffect(() => {
+    const eventId = searchParams.get('eventId');
+    if (!eventId) return;
+    CommunityService.getEvent(eventId)
+      .then(event => {
+        setSelectedEvent(event);
+        setDetailOpen(true);
+      })
+      .catch(() => {});
+  }, [searchParams]);
 
   const filteredEvents = events.filter(event => {
     if (activeFilter === 'All') return true;
@@ -516,6 +719,9 @@ const EventsTab = () => {
     try {
       await CommunityService.attendEvent(event.id);
       await loadEvents();
+      if (selectedEvent?.id === event.id) {
+        CommunityService.getEvent(event.id).then(setSelectedEvent).catch(() => {});
+      }
       toast({ title: 'Registration confirmed', description: `You are going to ${event.title}.`, variant: 'success' });
     } catch (error) {
       toast({
@@ -530,6 +736,33 @@ const EventsTab = () => {
         return next;
       });
     }
+  };
+
+  const handleInterest = async (event: Event) => {
+    setInterestBusy(prev => ({ ...prev, [event.id]: true }));
+    try {
+      const updated = await CommunityService.interestEvent(event.id);
+      setEvents(prev => prev.map(item => item.id === updated.id ? updated : item));
+      setSelectedEvent(prev => prev?.id === updated.id ? updated : prev);
+      toast({ title: 'Marked interested', description: `You will get updates for ${event.title}.`, variant: 'success' });
+    } catch (error) {
+      toast({
+        title: 'Could not mark interest',
+        description: error instanceof Error ? error.message : 'Please try again.',
+        variant: 'destructive',
+      });
+    } finally {
+      setInterestBusy(prev => {
+        const next = { ...prev };
+        delete next[event.id];
+        return next;
+      });
+    }
+  };
+
+  const openEvent = (event: Event) => {
+    setSelectedEvent(event);
+    setDetailOpen(true);
   };
 
   const handleCreateEvent = async () => {
@@ -550,12 +783,15 @@ const EventsTab = () => {
         eventDate: eventForm.eventDate,
         location: eventForm.isOnline ? 'Online' : eventForm.location.trim(),
         isOnline: eventForm.isOnline,
+        eventType: eventForm.eventType,
+        circleId: eventForm.circleId || undefined,
+        meetingUrl: eventForm.meetingUrl.trim() || undefined,
         coverGradient: 'from-slate-950 via-slate-900 to-primary/30',
         skillIds: eventForm.skillIds,
       });
       setEvents(prev => [created, ...prev]);
       setCreateOpen(false);
-      setEventForm({ title: '', description: '', eventDate: '', location: '', isOnline: true, skillIds: [] });
+      setEventForm({ title: '', description: '', eventDate: '', location: '', isOnline: true, eventType: 'WORKSHOP', circleId: '', meetingUrl: '', skillIds: [] });
       toast({ title: 'Event created', description: 'Your event is live in the community.', variant: 'success' });
     } catch (error) {
       toast({
@@ -612,7 +848,10 @@ const EventsTab = () => {
               event={event}
               currentUserId={user?.id}
               busy={attendBusy[event.id]}
+              interestBusy={interestBusy[event.id]}
               onAttend={handleAttend}
+              onInterest={handleInterest}
+              onOpen={openEvent}
             />
           ))}
           {filteredEvents.length === 0 && (
@@ -657,7 +896,7 @@ const EventsTab = () => {
                 />
               </div>
               <div className="space-y-2">
-                <Label>Format</Label>
+              <Label>Format</Label>
                 <div className="grid grid-cols-2 gap-2">
                   {[
                     { value: true, label: 'Online' },
@@ -678,6 +917,38 @@ const EventsTab = () => {
                 </div>
               </div>
             </div>
+            <div className="grid gap-4 sm:grid-cols-2">
+              <div className="space-y-2">
+                <Label>Event type</Label>
+                <div className="flex flex-wrap gap-2">
+                  {EVENT_TYPES.map(option => (
+                    <button
+                      key={option.value}
+                      type="button"
+                      onClick={() => setEventForm(prev => ({ ...prev, eventType: option.value }))}
+                      className={cn(
+                        'rounded-xl border px-3 py-1.5 text-[10px] font-bold uppercase tracking-widest transition-all',
+                        eventForm.eventType === option.value ? 'border-primary/40 bg-primary/15 text-primary' : 'border-border/70 bg-background/70 text-muted-foreground hover:text-primary'
+                      )}
+                    >
+                      {option.label}
+                    </button>
+                  ))}
+                </div>
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="event-circle">Skill circle</Label>
+                <select
+                  id="event-circle"
+                  value={eventForm.circleId}
+                  onChange={event => setEventForm(prev => ({ ...prev, circleId: event.currentTarget.value }))}
+                  className="h-10 w-full rounded-xl border border-input bg-background px-3 text-sm"
+                >
+                  <option value="">No circle</option>
+                  {circles.map(circle => <option key={circle.id} value={circle.id}>{circle.name}</option>)}
+                </select>
+              </div>
+            </div>
             {!eventForm.isOnline && (
               <div className="space-y-2">
                 <Label htmlFor="event-location">Location</Label>
@@ -685,6 +956,15 @@ const EventsTab = () => {
                   const value = event.currentTarget.value;
                   setEventForm(prev => ({ ...prev, location: value }));
                 }} placeholder="Campus lab, room 204" />
+              </div>
+            )}
+            {eventForm.isOnline && (
+              <div className="space-y-2">
+                <Label htmlFor="event-meeting-url">Meeting link</Label>
+                <Input id="event-meeting-url" value={eventForm.meetingUrl} onChange={event => {
+                  const value = event.currentTarget.value;
+                  setEventForm(prev => ({ ...prev, meetingUrl: value }));
+                }} placeholder="https://meet.google.com/..." />
               </div>
             )}
             <div className="space-y-2">
@@ -708,6 +988,15 @@ const EventsTab = () => {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+      <EventDetailDialog
+        event={selectedEvent}
+        open={detailOpen}
+        onOpenChange={setDetailOpen}
+        onAttend={handleAttend}
+        onInterest={handleInterest}
+        busy={selectedEvent ? attendBusy[selectedEvent.id] : false}
+        interestBusy={selectedEvent ? interestBusy[selectedEvent.id] : false}
+      />
     </div>
   )
 }
@@ -725,16 +1014,17 @@ const CircleCard = React.memo(({
   busy,
   onJoin,
   onLeave,
+  onOpen,
 }: {
   circle: SkillCircle;
   currentUserId?: string;
   busy?: boolean;
   onJoin: (circle: SkillCircle) => Promise<void>;
   onLeave: (circle: SkillCircle) => Promise<void>;
+  onOpen: (circle: SkillCircle) => void;
 }) => {
   const joined = Boolean(currentUserId && circle.members?.some(member => member.id === currentUserId));
   const [leaveConfirmOpen, setLeaveConfirmOpen] = React.useState(false);
-  const { toast } = useToast();
   return (
     <>
       <div className="group relative overflow-hidden h-full flex flex-col rounded-2xl border border-primary/15 bg-card backdrop-blur-xl transition-all duration-300 hover:border-primary/20 shadow-sm">
@@ -807,9 +1097,9 @@ const CircleCard = React.memo(({
               variant="outline" 
               size="sm"
               className="flex-1 rounded-xl text-[10px] font-bold uppercase tracking-widest border border-primary/20 border-dashed hover:border-solid hover:bg-primary/10 hover:text-primary transition-all text-muted-foreground h-10"
-              onClick={() => toast({ title: circle.name, description: `${circle.memberCount} members · ${ACTIVITY_LABELS[circle.activity] ?? circle.activity}` })}
+              onClick={() => onOpen(circle)}
             >
-              Preview
+              Workspace
             </Button>
             <Button
               size="sm"
@@ -849,20 +1139,313 @@ const CircleCard = React.memo(({
 });
 CircleCard.displayName = 'CircleCard';
 
+const CircleWorkspaceDialog = ({
+  circle,
+  open,
+  onOpenChange,
+  skills,
+}: {
+  circle: SkillCircle | null;
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+  skills: Skill[];
+}) => {
+  const { toast } = useToast();
+  const [active, setActive] = useState('dashboard');
+  const [dashboard, setDashboard] = useState<SkillCircleDashboard | null>(null);
+  const [resources, setResources] = useState<CircleResource[]>([]);
+  const [helpRequests, setHelpRequests] = useState<Discussion[]>([]);
+  const [loading, setLoading] = useState(false);
+  const [submitting, setSubmitting] = useState(false);
+  const [resourceForm, setResourceForm] = useState({ title: '', url: '', notes: '', resourceType: 'LINK', difficulty: 'BEGINNER', skillId: '' });
+  const [helpForm, setHelpForm] = useState({ title: '', content: '', skillId: '' });
+
+  const loadWorkspace = useCallback(async () => {
+    if (!circle) return;
+    setLoading(true);
+    try {
+      const [dash, resourcePage, helpPage] = await Promise.all([
+        CommunityService.getCircleDashboard(circle.id),
+        CommunityService.getCircleResources(circle.id, 0, 20),
+        CommunityService.getDiscussions(0, 20, { circleId: circle.id, threadType: 'QUESTION', status: 'OPEN' }),
+      ]);
+      setDashboard(dash);
+      setResources(resourcePage.content ?? []);
+      setHelpRequests(helpPage.content ?? []);
+    } catch (error) {
+      toast({ title: 'Could not load circle workspace', description: error instanceof Error ? error.message : 'Please try again.', variant: 'destructive' });
+    } finally {
+      setLoading(false);
+    }
+  }, [circle, toast]);
+
+  useEffect(() => {
+    if (open) {
+      loadWorkspace();
+    }
+  }, [open, loadWorkspace]);
+
+  const createResource = async () => {
+    if (!circle || !resourceForm.title.trim()) {
+      toast({ title: 'Resource title is required', variant: 'destructive' });
+      return;
+    }
+    setSubmitting(true);
+    try {
+      const created = await CommunityService.createCircleResource(circle.id, {
+        title: resourceForm.title.trim(),
+        url: resourceForm.url.trim() || undefined,
+        notes: resourceForm.notes.trim() || undefined,
+        resourceType: resourceForm.resourceType,
+        difficulty: resourceForm.difficulty,
+        skillId: resourceForm.skillId || undefined,
+      });
+      setResources(prev => [created, ...prev]);
+      setResourceForm({ title: '', url: '', notes: '', resourceType: 'LINK', difficulty: 'BEGINNER', skillId: '' });
+      toast({ title: 'Resource shared', description: 'Circle members were notified.', variant: 'success' });
+      CommunityService.getCircleDashboard(circle.id).then(setDashboard).catch(() => {});
+    } catch (error) {
+      toast({ title: 'Could not share resource', description: error instanceof Error ? error.message : 'Please join the circle first.', variant: 'destructive' });
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+  const createHelpRequest = async () => {
+    if (!circle || !helpForm.title.trim() || !helpForm.content.trim()) {
+      toast({ title: 'Help request title and details are required', variant: 'destructive' });
+      return;
+    }
+    setSubmitting(true);
+    try {
+      const created = await CommunityService.createDiscussion({
+        title: helpForm.title.trim(),
+        content: helpForm.content.trim(),
+        category: 'Help & Support',
+        threadType: 'QUESTION',
+        circleId: circle.id,
+        skillId: helpForm.skillId || undefined,
+      });
+      setHelpRequests(prev => [created, ...prev]);
+      setHelpForm({ title: '', content: '', skillId: '' });
+      toast({ title: 'Help request posted', description: 'Circle members can now answer it.', variant: 'success' });
+      CommunityService.getCircleDashboard(circle.id).then(setDashboard).catch(() => {});
+    } catch (error) {
+      toast({ title: 'Could not post help request', description: error instanceof Error ? error.message : 'Please try again.', variant: 'destructive' });
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+  if (!circle) return null;
+  const currentCircle = dashboard?.circle ?? circle;
+  const workspaceTabs = ['dashboard', 'resources', 'help desk', 'events', 'members'];
+
+  return (
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent className="max-h-[88vh] overflow-y-auto sm:max-w-5xl">
+        <DialogHeader>
+          <div className="flex items-center gap-3">
+            <div className="flex h-12 w-12 items-center justify-center rounded-2xl border border-primary/25 bg-primary/10 text-2xl">{currentCircle.icon}</div>
+            <div>
+              <DialogTitle>{currentCircle.name}</DialogTitle>
+              <DialogDescription>{currentCircle.description || 'Skill workspace for resources, help, events, and active members.'}</DialogDescription>
+            </div>
+          </div>
+        </DialogHeader>
+
+        <div className="flex gap-2 overflow-x-auto pb-2">
+          {workspaceTabs.map(tab => (
+            <Button
+              key={tab}
+              size="sm"
+              variant={active === tab ? 'default' : 'outline'}
+              className="rounded-xl text-[10px] font-bold uppercase tracking-widest"
+              onClick={() => setActive(tab)}
+            >
+              {tab}
+            </Button>
+          ))}
+        </div>
+
+        {loading && (
+          <div className="flex items-center justify-center rounded-2xl border border-primary/15 p-10 text-muted-foreground">
+            <Loader2 className="mr-2 h-4 w-4 animate-spin" /> Loading workspace
+          </div>
+        )}
+
+        {!loading && active === 'dashboard' && (
+          <div className="grid gap-4 lg:grid-cols-[1fr_0.85fr]">
+            <div className="grid gap-3 sm:grid-cols-2">
+              {[
+                { label: 'Resources', value: currentCircle.resourceCount ?? resources.length, icon: BookOpen },
+                { label: 'Open Help', value: currentCircle.openHelpCount ?? helpRequests.length, icon: HelpCircle },
+                { label: 'Upcoming Events', value: currentCircle.upcomingEventCount ?? 0, icon: Calendar },
+                { label: 'Activity Score', value: dashboard?.activityScore ?? 0, icon: Sparkles },
+              ].map(({ label, value, icon: Icon }) => (
+                <div key={label} className="rounded-2xl border border-primary/15 bg-background/70 p-4">
+                  <Icon className="mb-3 h-5 w-5 text-primary" />
+                  <p className="font-headline text-2xl font-extrabold text-foreground">{value}</p>
+                  <p className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">{label}</p>
+                </div>
+              ))}
+            </div>
+            <div className="rounded-2xl border border-primary/15 bg-background/70 p-4">
+              <h4 className="mb-3 text-xs font-bold uppercase tracking-widest text-muted-foreground">Weekly Goal</h4>
+              <p className="text-sm leading-relaxed text-foreground">{dashboard?.weeklyGoal ?? 'Share resources and help one member this week.'}</p>
+              {dashboard?.nextEvent && (
+                <div className="mt-4 rounded-xl bg-primary/10 p-3">
+                  <p className="text-[10px] font-bold uppercase tracking-widest text-primary">Next Event</p>
+                  <p className="mt-1 font-bold text-foreground">{dashboard.nextEvent.title}</p>
+                  <p className="text-xs text-muted-foreground">{new Date(dashboard.nextEvent.eventDate).toLocaleString()}</p>
+                </div>
+              )}
+            </div>
+          </div>
+        )}
+
+        {!loading && active === 'resources' && (
+          <div className="grid gap-5 lg:grid-cols-[0.9fr_1.1fr]">
+            <div className="rounded-2xl border border-primary/15 bg-background/70 p-4 space-y-3">
+              <h4 className="text-xs font-bold uppercase tracking-widest text-muted-foreground">Share Resource</h4>
+              <Input placeholder="Resource title" value={resourceForm.title} onChange={event => setResourceForm(prev => ({ ...prev, title: event.currentTarget.value }))} />
+              <Input placeholder="Link or file URL" value={resourceForm.url} onChange={event => setResourceForm(prev => ({ ...prev, url: event.currentTarget.value }))} />
+              <Textarea rows={3} placeholder="Notes, usage tips, or why this helps" value={resourceForm.notes} onChange={event => setResourceForm(prev => ({ ...prev, notes: event.currentTarget.value }))} />
+              <div className="grid gap-3 sm:grid-cols-2">
+                <select value={resourceForm.resourceType} onChange={event => setResourceForm(prev => ({ ...prev, resourceType: event.currentTarget.value }))} className="h-10 rounded-xl border border-input bg-background px-3 text-sm">
+                  {RESOURCE_TYPES.map(type => <option key={type} value={type}>{formatEnumLabel(type)}</option>)}
+                </select>
+                <select value={resourceForm.difficulty} onChange={event => setResourceForm(prev => ({ ...prev, difficulty: event.currentTarget.value }))} className="h-10 rounded-xl border border-input bg-background px-3 text-sm">
+                  {DIFFICULTIES.map(level => <option key={level} value={level}>{formatEnumLabel(level)}</option>)}
+                </select>
+              </div>
+              <select value={resourceForm.skillId} onChange={event => setResourceForm(prev => ({ ...prev, skillId: event.currentTarget.value }))} className="h-10 rounded-xl border border-input bg-background px-3 text-sm">
+                <option value="">No skill tag</option>
+                {skills.map(skill => <option key={skill.id} value={skill.id}>{skill.name}</option>)}
+              </select>
+              <Button onClick={createResource} disabled={submitting} className="w-full rounded-xl">
+                {submitting ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <LinkIcon className="mr-2 h-4 w-4" />}
+                Share resource
+              </Button>
+            </div>
+            <div className="space-y-3">
+              {resources.length === 0 && <div className="product-empty">No resources shared yet.</div>}
+              {resources.map(resource => (
+                <div key={resource.id} className="rounded-2xl border border-primary/15 bg-card p-4">
+                  <div className="flex items-start justify-between gap-3">
+                    <div className="min-w-0">
+                      <p className="font-bold text-foreground">{resource.title}</p>
+                      <p className="mt-1 line-clamp-2 text-sm text-muted-foreground">{resource.notes || 'No notes added.'}</p>
+                    </div>
+                    <Badge variant="outline" className="rounded-full">{formatEnumLabel(resource.difficulty)}</Badge>
+                  </div>
+                  <div className="mt-3 flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
+                    {resource.skill && <Badge className="rounded-full bg-primary/10 text-primary">{resource.skill.name}</Badge>}
+                    {resource.isPinned && <Badge variant="outline">Pinned</Badge>}
+                    {resource.isVerified && <Badge variant="outline">Verified</Badge>}
+                    {resource.url && <a className="ml-auto flex items-center gap-1 text-primary hover:underline" href={resource.url} target="_blank" rel="noreferrer"><ExternalLink className="h-3 w-3" /> Open</a>}
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {!loading && active === 'help desk' && (
+          <div className="grid gap-5 lg:grid-cols-[0.9fr_1.1fr]">
+            <div className="rounded-2xl border border-primary/15 bg-background/70 p-4 space-y-3">
+              <h4 className="text-xs font-bold uppercase tracking-widest text-muted-foreground">Ask Circle</h4>
+              <Input placeholder="What do you need help with?" value={helpForm.title} onChange={event => setHelpForm(prev => ({ ...prev, title: event.currentTarget.value }))} />
+              <Textarea rows={4} placeholder="Add context, what you tried, and the answer you need" value={helpForm.content} onChange={event => setHelpForm(prev => ({ ...prev, content: event.currentTarget.value }))} />
+              <select value={helpForm.skillId} onChange={event => setHelpForm(prev => ({ ...prev, skillId: event.currentTarget.value }))} className="h-10 w-full rounded-xl border border-input bg-background px-3 text-sm">
+                <option value="">No skill tag</option>
+                {skills.map(skill => <option key={skill.id} value={skill.id}>{skill.name}</option>)}
+              </select>
+              <Button onClick={createHelpRequest} disabled={submitting} className="w-full rounded-xl">
+                {submitting ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <HelpCircle className="mr-2 h-4 w-4" />}
+                Post help request
+              </Button>
+            </div>
+            <div className="space-y-3">
+              {helpRequests.length === 0 && <div className="product-empty">No open help requests.</div>}
+              {helpRequests.map(item => (
+                <div key={item.id} className="rounded-2xl border border-primary/15 bg-card p-4">
+                  <div className="flex flex-wrap items-center gap-2">
+                    <Badge className="rounded-full bg-primary/10 text-primary">{formatEnumLabel(item.status)}</Badge>
+                    {item.skill && <Badge variant="outline" className="rounded-full">{item.skill.name}</Badge>}
+                    <span className="ml-auto text-xs text-muted-foreground">{item.replies} replies</span>
+                  </div>
+                  <p className="mt-3 font-bold text-foreground">{item.title}</p>
+                  <p className="mt-1 line-clamp-2 text-sm text-muted-foreground">{item.content}</p>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {!loading && active === 'events' && (
+          <div className="rounded-2xl border border-primary/15 bg-background/70 p-5">
+            <h4 className="text-xs font-bold uppercase tracking-widest text-muted-foreground">Circle Events</h4>
+            {dashboard?.nextEvent ? (
+              <div className="mt-4 rounded-2xl border border-primary/15 bg-card p-4">
+                <p className="font-bold text-foreground">{dashboard.nextEvent.title}</p>
+                <p className="mt-1 text-sm text-muted-foreground">{new Date(dashboard.nextEvent.eventDate).toLocaleString()} · {formatEnumLabel(dashboard.nextEvent.eventType)}</p>
+              </div>
+            ) : (
+              <p className="mt-3 text-sm text-muted-foreground">No upcoming circle event yet.</p>
+            )}
+          </div>
+        )}
+
+        {!loading && active === 'members' && (
+          <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+            {(currentCircle.members ?? []).map(member => (
+              <div key={member.id} className="flex items-center gap-3 rounded-2xl border border-primary/15 bg-card p-3">
+                <Avatar className="h-10 w-10">
+                  <AvatarImage src={member.avatar} />
+                  <AvatarFallback>{member.name?.charAt(0) ?? 'U'}</AvatarFallback>
+                </Avatar>
+                <div className="min-w-0">
+                  <p className="truncate font-bold text-foreground">{member.name}</p>
+                  <p className="truncate text-xs text-muted-foreground">{member.university}</p>
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
+      </DialogContent>
+    </Dialog>
+  );
+};
+
 const SkillCirclesTab = () => {
   const { user } = useAuth();
   const { toast } = useToast();
+  const [searchParams] = useSearchParams();
   const [circles, setCircles] = useState<SkillCircle[]>([]);
   const [skills, setSkills] = useState<Skill[]>([]);
   const [createOpen, setCreateOpen] = useState(false);
+  const [workspaceOpen, setWorkspaceOpen] = useState(false);
+  const [selectedCircle, setSelectedCircle] = useState<SkillCircle | null>(null);
   const [submitting, setSubmitting] = useState(false);
   const [busy, setBusy] = useState<Record<string, boolean>>({});
-  const [circleForm, setCircleForm] = useState({ name: '', icon: 'SE', skillIds: [] as string[] });
+  const [circleForm, setCircleForm] = useState({ name: '', description: '', icon: 'SE', skillIds: [] as string[] });
 
   useEffect(() => {
     CommunityService.getSkillCircles().then((r) => setCircles(r.content ?? [])).catch(() => {});
     SkillService.getAll().then(setSkills).catch(() => {});
   }, []);
+
+  useEffect(() => {
+    const circleId = searchParams.get('circleId');
+    if (!circleId) return;
+    CommunityService.getSkillCircle(circleId)
+      .then(circle => {
+        setSelectedCircle(circle);
+        setWorkspaceOpen(true);
+      })
+      .catch(() => {});
+  }, [searchParams]);
 
   const updateCircle = (updated: SkillCircle) => {
     setCircles(prev => prev.map(circle => circle.id === updated.id ? updated : circle));
@@ -911,18 +1494,24 @@ const SkillCirclesTab = () => {
     try {
       const created = await CommunityService.createSkillCircle({
         name: circleForm.name.trim(),
+        description: circleForm.description.trim() || undefined,
         icon: circleForm.icon.trim() || 'SE',
         skillIds: circleForm.skillIds,
       });
       setCircles(prev => [created, ...prev]);
       setCreateOpen(false);
-      setCircleForm({ name: '', icon: 'SE', skillIds: [] });
+      setCircleForm({ name: '', description: '', icon: 'SE', skillIds: [] });
       toast({ title: 'Skill circle created', description: 'The circle is ready for members.', variant: 'success' });
     } catch (error) {
       toast({ title: 'Could not create circle', description: error instanceof Error ? error.message : 'Please try again.', variant: 'destructive' });
     } finally {
       setSubmitting(false);
     }
+  };
+
+  const openWorkspace = (circle: SkillCircle) => {
+    setSelectedCircle(circle);
+    setWorkspaceOpen(true);
   };
 
   return (
@@ -959,6 +1548,7 @@ const SkillCirclesTab = () => {
             busy={busy[circle.id]}
             onJoin={handleJoin}
             onLeave={handleLeave}
+            onOpen={openWorkspace}
           />
         ))}
       </div>
@@ -987,6 +1577,13 @@ const SkillCirclesTab = () => {
               </div>
             </div>
             <div className="space-y-2">
+              <Label htmlFor="circle-description">Purpose</Label>
+              <Textarea id="circle-description" rows={3} value={circleForm.description} onChange={event => {
+                const value = event.currentTarget.value;
+                setCircleForm(prev => ({ ...prev, description: value }));
+              }} placeholder="What members practice, share, and help each other with..." />
+            </div>
+            <div className="space-y-2">
               <Label>Skills</Label>
               <SkillPicker skills={skills} selected={circleForm.skillIds} onChange={ids => setCircleForm(prev => ({ ...prev, skillIds: ids }))} />
             </div>
@@ -1000,12 +1597,18 @@ const SkillCirclesTab = () => {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+      <CircleWorkspaceDialog
+        circle={selectedCircle}
+        open={workspaceOpen}
+        onOpenChange={setWorkspaceOpen}
+        skills={skills}
+      />
     </div>
   )
 }
 
 // --- DISCUSSIONS TAB ---
-const DiscussionCard = React.memo(({ discussion: d }: { discussion: Discussion }) => {
+const DiscussionCard = React.memo(({ discussion: d, onOpen }: { discussion: Discussion; onOpen: (discussion: Discussion) => void }) => {
   const [localUpvotes, setLocalUpvotes] = React.useState(d.upvotes);
   const [upvoted, setUpvoted] = React.useState(Boolean(d.isUpvotedByViewer));
 
@@ -1029,6 +1632,7 @@ const DiscussionCard = React.memo(({ discussion: d }: { discussion: Discussion }
         "group relative overflow-hidden rounded-2xl border border-primary/15 bg-card backdrop-blur-xl transition-all duration-300 hover:border-primary/20 cursor-pointer flex flex-col justify-center shadow-sm",
         d.isPinned ? "border-amber-500/30 bg-amber-500/10 hover:border-amber-500/50 shadow-[0_0_15px_rgba(245,158,11,0.1)]" : "border-primary/15 hover:border-primary/40"
       )}
+      onClick={() => onOpen(d)}
     >
       <div className="absolute inset-0 bg-gradient-to-r from-primary/5 via-transparent to-transparent opacity-0 transition-opacity duration-500 group-hover:opacity-100 pointer-events-none" />
       <div className="p-6 flex items-start gap-5 relative z-10">
@@ -1057,6 +1661,14 @@ const DiscussionCard = React.memo(({ discussion: d }: { discussion: Discussion }
             <Badge variant="secondary" className="px-2.5 py-1 text-[9px] font-bold uppercase tracking-widest bg-primary/10 text-foreground hover:bg-primary/10 hover:text-primary transition-colors border border-primary/20">
               {d.category}
             </Badge>
+            <Badge variant="outline" className="px-2.5 py-1 text-[9px] font-bold uppercase tracking-widest border-primary/20 text-primary">
+              {formatEnumLabel(d.threadType)}
+            </Badge>
+            {d.status === 'SOLVED' && (
+              <Badge variant="outline" className="border-emerald-500/40 bg-emerald-500/10 text-emerald-400 px-2.5 py-1 text-[9px] font-bold uppercase tracking-widest">
+                Solved
+              </Badge>
+            )}
             <span className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground ml-auto hidden sm:inline-block">
               {d.createdAt}
             </span>
@@ -1091,18 +1703,198 @@ const DiscussionCard = React.memo(({ discussion: d }: { discussion: Discussion }
 });
 DiscussionCard.displayName = 'DiscussionCard';
 
+function DiscussionDetailDialog({
+  discussion,
+  open,
+  onOpenChange,
+  onDiscussionChange,
+}: {
+  discussion: Discussion | null;
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+  onDiscussionChange: (discussion: Discussion) => void;
+}) {
+  const { user } = useAuth();
+  const { toast } = useToast();
+  const [replies, setReplies] = useState<DiscussionReply[]>([]);
+  const [replyText, setReplyText] = useState('');
+  const [loading, setLoading] = useState(false);
+  const [submitting, setSubmitting] = useState(false);
+
+  const loadReplies = useCallback(async () => {
+    if (!discussion) return;
+    setLoading(true);
+    try {
+      const response = await CommunityService.getDiscussionReplies(discussion.id);
+      setReplies(response.content ?? []);
+    } catch (error) {
+      toast({ title: 'Could not load replies', description: error instanceof Error ? error.message : 'Please try again.', variant: 'destructive' });
+    } finally {
+      setLoading(false);
+    }
+  }, [discussion, toast]);
+
+  useEffect(() => {
+    if (open) {
+      loadReplies();
+    }
+  }, [open, loadReplies]);
+
+  const submitReply = async () => {
+    if (!discussion || !replyText.trim()) {
+      toast({ title: 'Reply cannot be empty', variant: 'destructive' });
+      return;
+    }
+    setSubmitting(true);
+    try {
+      const reply = await CommunityService.addDiscussionReply(discussion.id, replyText.trim());
+      setReplies(prev => [...prev, reply]);
+      setReplyText('');
+      onDiscussionChange({ ...discussion, replies: discussion.replies + 1 });
+      toast({ title: 'Reply posted', variant: 'success' });
+    } catch (error) {
+      toast({ title: 'Could not post reply', description: error instanceof Error ? error.message : 'Please try again.', variant: 'destructive' });
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+  const acceptReply = async (reply: DiscussionReply) => {
+    if (!discussion) return;
+    try {
+      const updated = await CommunityService.acceptDiscussionReply(discussion.id, reply.id);
+      onDiscussionChange(updated);
+      setReplies(prev => prev.map(item => ({ ...item, isAccepted: item.id === reply.id })));
+      toast({ title: 'Answer accepted', variant: 'success' });
+    } catch (error) {
+      toast({ title: 'Could not accept answer', description: error instanceof Error ? error.message : 'Only the thread author can accept an answer.', variant: 'destructive' });
+    }
+  };
+
+  const resolve = async () => {
+    if (!discussion) return;
+    try {
+      const updated = await CommunityService.resolveDiscussion(discussion.id);
+      onDiscussionChange(updated);
+      toast({ title: 'Discussion marked solved', variant: 'success' });
+    } catch (error) {
+      toast({ title: 'Could not resolve discussion', description: error instanceof Error ? error.message : 'Only the thread author can resolve it.', variant: 'destructive' });
+    }
+  };
+
+  if (!discussion) return null;
+  const canModerateAnswer = user?.id === discussion.author.id;
+
+  return (
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent className="max-h-[88vh] overflow-y-auto sm:max-w-4xl">
+        <DialogHeader>
+          <div className="flex flex-wrap items-center gap-2">
+            <Badge className="rounded-full bg-primary/10 text-primary">{formatEnumLabel(discussion.threadType)}</Badge>
+            <Badge variant="outline" className={cn('rounded-full', discussion.status === 'SOLVED' && 'border-emerald-500/40 text-emerald-400')}>{formatEnumLabel(discussion.status)}</Badge>
+            {discussion.circleName && <Badge variant="outline" className="rounded-full">{discussion.circleName}</Badge>}
+            {discussion.skill && <Badge variant="outline" className="rounded-full">{discussion.skill.name}</Badge>}
+          </div>
+          <DialogTitle className="font-headline text-2xl">{discussion.title}</DialogTitle>
+          <DialogDescription>{discussion.content}</DialogDescription>
+        </DialogHeader>
+
+        <div className="space-y-3">
+          <div className="flex items-center gap-3 rounded-2xl border border-primary/15 bg-background/70 p-3">
+            <Avatar className="h-9 w-9">
+              <AvatarImage src={discussion.author.avatar} />
+              <AvatarFallback>{discussion.author.name?.charAt(0) ?? 'U'}</AvatarFallback>
+            </Avatar>
+            <div className="min-w-0">
+              <p className="font-bold text-foreground">{discussion.author.name}</p>
+              <p className="text-xs text-muted-foreground">{discussion.replies} replies · {discussion.views} views</p>
+            </div>
+            {canModerateAnswer && discussion.status !== 'SOLVED' && (
+              <Button size="sm" variant="outline" className="ml-auto rounded-xl" onClick={resolve}>
+                <CheckCircle2 className="mr-2 h-4 w-4" />
+                Mark solved
+              </Button>
+            )}
+          </div>
+
+          <div className="space-y-3">
+            <h4 className="text-xs font-bold uppercase tracking-widest text-muted-foreground">Replies</h4>
+            {loading && <div className="product-empty"><Loader2 className="mx-auto mb-2 h-5 w-5 animate-spin" />Loading replies</div>}
+            {!loading && replies.length === 0 && <div className="product-empty">No replies yet.</div>}
+            {replies.map(reply => (
+              <div key={reply.id} className={cn('rounded-2xl border bg-card p-4', reply.isAccepted ? 'border-emerald-500/40 bg-emerald-500/10' : 'border-primary/15')}>
+                <div className="flex items-start gap-3">
+                  <Avatar className="h-8 w-8">
+                    <AvatarImage src={reply.author.avatar} />
+                    <AvatarFallback>{reply.author.name?.charAt(0) ?? 'U'}</AvatarFallback>
+                  </Avatar>
+                  <div className="min-w-0 flex-1">
+                    <div className="flex flex-wrap items-center gap-2">
+                      <p className="font-bold text-foreground">{reply.author.name}</p>
+                      {reply.isAccepted && <Badge className="rounded-full bg-emerald-500/15 text-emerald-400">Accepted</Badge>}
+                    </div>
+                    <p className="mt-2 whitespace-pre-wrap text-sm leading-relaxed text-muted-foreground">{reply.content}</p>
+                  </div>
+                  {canModerateAnswer && !reply.isAccepted && (
+                    <Button size="sm" variant="outline" className="rounded-xl" onClick={() => acceptReply(reply)}>
+                      Accept
+                    </Button>
+                  )}
+                </div>
+              </div>
+            ))}
+          </div>
+
+          <div className="rounded-2xl border border-primary/15 bg-background/70 p-4">
+            <Label htmlFor="discussion-reply">Reply</Label>
+            <Textarea id="discussion-reply" rows={4} className="mt-2" value={replyText} onChange={event => setReplyText(event.currentTarget.value)} placeholder="Answer with steps, resources, or next actions..." />
+            <div className="mt-3 flex justify-end">
+              <Button onClick={submitReply} disabled={submitting}>
+                {submitting ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <MessageSquare className="mr-2 h-4 w-4" />}
+                Post reply
+              </Button>
+            </div>
+          </div>
+        </div>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
 const DiscussionsTab = () => {
   const { toast } = useToast();
+  const [searchParams] = useSearchParams();
   const [discussions, setDiscussions] = useState<Discussion[]>([]);
   const categories = ['All', 'General', 'Skill Tips', 'Success Stories', 'Help & Support', 'Announcements'];
   const [activeCategory, setActiveCategory] = useState('All');
+  const [activeStatus, setActiveStatus] = useState('All');
   const [createOpen, setCreateOpen] = useState(false);
+  const [detailOpen, setDetailOpen] = useState(false);
+  const [selectedDiscussion, setSelectedDiscussion] = useState<Discussion | null>(null);
   const [submitting, setSubmitting] = useState(false);
-  const [discussionForm, setDiscussionForm] = useState({ title: '', content: '', category: 'General' });
+  const [discussionForm, setDiscussionForm] = useState({ title: '', content: '', category: 'General', threadType: 'QUESTION' });
+
+  const loadDiscussions = useCallback(() => {
+    return CommunityService.getDiscussions(0, 20, {
+      category: activeCategory,
+      status: activeStatus === 'All' ? undefined : activeStatus,
+    }).then((r) => setDiscussions(r.content ?? []));
+  }, [activeCategory, activeStatus]);
 
   useEffect(() => {
-    CommunityService.getDiscussions().then((r) => setDiscussions(r.content ?? [])).catch(() => {});
-  }, []);
+    loadDiscussions().catch(() => {});
+  }, [loadDiscussions]);
+
+  useEffect(() => {
+    const discussionId = searchParams.get('discussionId');
+    if (!discussionId) return;
+    CommunityService.getDiscussion(discussionId)
+      .then(discussion => {
+        setSelectedDiscussion(discussion);
+        setDetailOpen(true);
+      })
+      .catch(() => {});
+  }, [searchParams]);
 
   const handleCreateDiscussion = async () => {
     if (!discussionForm.title.trim() || !discussionForm.content.trim()) {
@@ -1115,9 +1907,10 @@ const DiscussionsTab = () => {
         title: discussionForm.title.trim(),
         content: discussionForm.content.trim(),
         category: discussionForm.category,
+        threadType: discussionForm.threadType,
       });
       setDiscussions(prev => [created, ...prev]);
-      setDiscussionForm({ title: '', content: '', category: 'General' });
+      setDiscussionForm({ title: '', content: '', category: 'General', threadType: 'QUESTION' });
       setCreateOpen(false);
       toast({ title: 'Discussion started', description: 'The community can now respond.', variant: 'success' });
     } catch (error) {
@@ -1125,6 +1918,16 @@ const DiscussionsTab = () => {
     } finally {
       setSubmitting(false);
     }
+  };
+
+  const openDiscussion = (discussion: Discussion) => {
+    setSelectedDiscussion(discussion);
+    setDetailOpen(true);
+  };
+
+  const updateDiscussion = (updated: Discussion) => {
+    setSelectedDiscussion(prev => prev?.id === updated.id ? updated : prev);
+    setDiscussions(prev => prev.map(item => item.id === updated.id ? updated : item));
   };
 
   return (
@@ -1150,15 +1953,28 @@ const DiscussionsTab = () => {
                 {cat}
               </Button>
             ))}
+            <div className="pt-3">
+              {['All', 'OPEN', 'SOLVED'].map(status => (
+                <Button
+                  key={status}
+                  variant={activeStatus === status ? 'secondary' : 'ghost'}
+                  className={cn(
+                    "mt-2 w-full justify-start rounded-xl text-[10px] font-bold uppercase tracking-widest transition-all",
+                    activeStatus === status ? "bg-secondary text-secondary-foreground hover:bg-secondary/90" : "text-muted-foreground hover:bg-primary/5 hover:text-primary"
+                  )}
+                  onClick={() => setActiveStatus(status)}
+                >
+                  {formatEnumLabel(status)}
+                </Button>
+              ))}
+            </div>
         </div>
       </aside>
       <main className="col-span-1 lg:col-span-3 space-y-6">
-        {discussions
-          .filter(d => activeCategory === 'All' || d.category === activeCategory)
-          .map(d => (
-            <DiscussionCard key={d.id} discussion={d} />
-          ))}
-        {discussions.filter(d => activeCategory === 'All' || d.category === activeCategory).length === 0 && (
+        {discussions.map(d => (
+          <DiscussionCard key={d.id} discussion={d} onOpen={openDiscussion} />
+        ))}
+        {discussions.length === 0 && (
           <div className="rounded-2xl border border-primary/15 bg-card backdrop-blur-xl p-12 text-center">
             <MessageSquare className="h-12 w-12 text-muted-foreground/30 mx-auto mb-4" />
             <p className="font-headline text-lg font-bold text-foreground mb-2">No discussions found</p>
@@ -1199,6 +2015,24 @@ const DiscussionsTab = () => {
               </div>
             </div>
             <div className="space-y-2">
+              <Label>Thread type</Label>
+              <div className="flex flex-wrap gap-2">
+                {THREAD_TYPES.map(type => (
+                  <button
+                    key={type.value}
+                    type="button"
+                    onClick={() => setDiscussionForm(prev => ({ ...prev, threadType: type.value }))}
+                    className={cn(
+                      'rounded-xl border px-3 py-1.5 text-[10px] font-bold uppercase tracking-widest transition-all',
+                      discussionForm.threadType === type.value ? 'border-primary/40 bg-primary/15 text-primary' : 'border-border/70 bg-background/70 text-muted-foreground hover:text-primary'
+                    )}
+                  >
+                    {type.label}
+                  </button>
+                ))}
+              </div>
+            </div>
+            <div className="space-y-2">
               <Label htmlFor="discussion-content">Details</Label>
               <Textarea id="discussion-content" rows={5} value={discussionForm.content} onChange={event => {
                 const value = event.currentTarget.value;
@@ -1215,6 +2049,12 @@ const DiscussionsTab = () => {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+      <DiscussionDetailDialog
+        discussion={selectedDiscussion}
+        open={detailOpen}
+        onOpenChange={setDetailOpen}
+        onDiscussionChange={updateDiscussion}
+      />
     </div>
   )
 }

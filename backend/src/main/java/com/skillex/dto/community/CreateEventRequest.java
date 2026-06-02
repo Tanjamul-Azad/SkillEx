@@ -16,5 +16,8 @@ public record CreateEventRequest(
     @Size(max = 300) String location,
     boolean isOnline,
     @Size(max = 200) String coverGradient,
+    String eventType,
+    String circleId,
+    @Size(max = 500) String meetingUrl,
     List<String> skillIds   // optional list of skill IDs to associate
 ) {}

@@ -316,22 +316,38 @@ $eventRes = Invoke-Json -Name "Create community event" -Method Post -Path "/api/
   eventDate = (Get-Date).AddDays(2).ToString("yyyy-MM-ddTHH:mm:ss")
   location = "Online"
   isOnline = $true
+  eventType = "WORKSHOP"
+  meetingUrl = "https://meet.example.com/skillex-qa"
   coverGradient = "from-cyan-500 to-blue-600"
   skillIds = @()
 }
 $eventId = $eventRes.Json.data.id
 if ($eventId) {
+  Invoke-Json -Name "Interest community event" -Method Post -Path "/api/community/events/$eventId/interest" -Token $tokenB | Out-Null
   Invoke-Json -Name "Attend community event" -Method Post -Path "/api/community/events/$eventId/attend" -Token $tokenB | Out-Null
+  Invoke-Json -Name "Get community event detail" -Method Get -Path "/api/community/events/$eventId" -Token $tokenB | Out-Null
 }
 
 $discussionRes = Invoke-Json -Name "Create discussion" -Method Post -Path "/api/community/discussions" -Token $tokenA -Body @{
   title = "QA Discussion $suffix"
   content = "Does this flow work?"
   category = "Testing"
+  threadType = "QUESTION"
+  skillId = $firstSkillId
 }
 $discussionId = $discussionRes.Json.data.id
 if ($discussionId) {
   Invoke-Json -Name "Upvote discussion" -Method Post -Path "/api/community/discussions/$discussionId/upvote" -Token $tokenB | Out-Null
+  Invoke-Json -Name "Get discussion detail" -Method Get -Path "/api/community/discussions/$discussionId" -Token $tokenB | Out-Null
+  $replyRes = Invoke-Json -Name "Reply to discussion" -Method Post -Path "/api/community/discussions/$discussionId/replies" -Token $tokenB -Body @{
+    content = "QA reply $suffix"
+  }
+  $replyId = $replyRes.Json.data.id
+  Invoke-Json -Name "List discussion replies" -Method Get -Path "/api/community/discussions/$discussionId/replies?page=0&size=20" -Token $tokenA | Out-Null
+  if ($replyId) {
+    Invoke-Json -Name "Accept discussion reply" -Method Post -Path "/api/community/discussions/$discussionId/replies/$replyId/accept" -Token $tokenA | Out-Null
+  }
+  Invoke-Json -Name "Resolve discussion" -Method Patch -Path "/api/community/discussions/$discussionId/resolve" -Token $tokenA | Out-Null
 }
 
 $postRes = Invoke-Json -Name "Create post" -Method Post -Path "/api/community/posts" -Token $tokenA -Body @{
@@ -351,12 +367,24 @@ if ($postId) {
 
 $circleCreateRes = Invoke-Json -Name "Create skill circle" -Method Post -Path "/api/community/skill-circles" -Token $tokenA -Body @{
   name = "QA Circle $suffix"
+  description = "QA workspace for resources and help requests"
   icon = "Code"
   skillIds = @($firstSkillId)
 }
 $createdCircleId = $circleCreateRes.Json.data.id
 if ($createdCircleId) {
   Invoke-Json -Name "Join created skill circle" -Method Post -Path "/api/community/skill-circles/$createdCircleId/join" -Token $tokenB | Out-Null
+  Invoke-Json -Name "Get created skill circle" -Method Get -Path "/api/community/skill-circles/$createdCircleId" -Token $tokenA | Out-Null
+  Invoke-Json -Name "Create circle resource" -Method Post -Path "/api/community/skill-circles/$createdCircleId/resources" -Token $tokenA -Body @{
+    title = "QA Resource $suffix"
+    url = "https://example.com/resource"
+    notes = "Resource notes"
+    resourceType = "LINK"
+    difficulty = "BEGINNER"
+    skillId = $firstSkillId
+  } | Out-Null
+  Invoke-Json -Name "List circle resources" -Method Get -Path "/api/community/skill-circles/$createdCircleId/resources?page=0&size=20" -Token $tokenA | Out-Null
+  Invoke-Json -Name "Get circle dashboard" -Method Get -Path "/api/community/skill-circles/$createdCircleId/dashboard" -Token $tokenA | Out-Null
   Invoke-Json -Name "Leave created skill circle" -Method Post -Path "/api/community/skill-circles/$createdCircleId/leave" -Token $tokenB | Out-Null
 }
 

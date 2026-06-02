@@ -220,6 +220,10 @@ export default function Header({
   };
 
   const getNotificationRoute = useCallback((notification: Notification): string => {
+    if (notification.actionUrl) {
+      return notification.actionUrl;
+    }
+
     const type = String(notification.type ?? '').toLowerCase();
     const msg = String(notification.message ?? '').toLowerCase();
 

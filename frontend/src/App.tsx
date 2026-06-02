@@ -73,7 +73,7 @@ function SplashScreen({ onDone }: { onDone: () => void }) {
       window.matchMedia('(prefers-reduced-motion: reduce)').matches;
 
     const t = setTimeout(() => {
-      localStorage.setItem(SPLASH_STORAGE_KEY, '1');
+      sessionStorage.setItem(SPLASH_STORAGE_KEY, '1');
       onDone();
     }, prefersReducedMotion ? 900 : 1600);
     return () => clearTimeout(t);
@@ -171,7 +171,7 @@ function AppShell() {
 }
 
 export default function App() {
-  const [splashDone, setSplashDone] = useState(() => localStorage.getItem(SPLASH_STORAGE_KEY) === '1');
+  const [splashDone, setSplashDone] = useState(() => sessionStorage.getItem(SPLASH_STORAGE_KEY) === '1');
 
   return (
     <BrowserRouter future={{ v7_startTransition: true, v7_relativeSplatPath: true }}>

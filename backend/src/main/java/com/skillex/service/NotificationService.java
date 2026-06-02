@@ -15,4 +15,14 @@ public interface NotificationService {
     void markAllRead(String userId);
 
     NotificationDto create(String userId, String fromUserId, String type, String message);
+
+    NotificationDto create(
+        String userId,
+        String fromUserId,
+        String type,
+        String message,
+        String targetType,
+        String targetId,
+        String actionUrl
+    );
 }

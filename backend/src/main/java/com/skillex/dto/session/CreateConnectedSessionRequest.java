@@ -1,5 +1,7 @@
 package com.skillex.dto.session;
 
+// Trigger IDE compilation
+
 import jakarta.validation.constraints.Future;
 import jakarta.validation.constraints.Max;
 import jakarta.validation.constraints.Min;

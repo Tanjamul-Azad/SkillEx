@@ -34,6 +34,13 @@ public class SkillCircle {
     @Column(nullable = false, length = 200)
     private String name;
 
+    @Column(columnDefinition = "TEXT")
+    private String description;
+
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "owner_id")
+    private User owner;
+
     @Column(length = 50)
     @Builder.Default
     private String icon = "⚡";

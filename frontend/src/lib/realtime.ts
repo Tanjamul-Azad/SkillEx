@@ -39,6 +39,9 @@ function normalizeNotificationType(value: unknown): NotificationType {
     'CONNECTION_ACCEPTED',
     'SESSION_SCHEDULED',
     'REVIEW_LEFT',
+    'COMMUNITY_EVENT',
+    'CIRCLE_ACTIVITY',
+    'DISCUSSION_REPLY',
     'SYSTEM_UPDATE',
   ];
 
@@ -80,6 +83,9 @@ export function normalizeNotificationPayload(payload: unknown): Notification | n
     id,
     type: normalizeNotificationType(data.type),
     message,
+    targetType: typeof data.targetType === 'string' ? data.targetType : null,
+    targetId: typeof data.targetId === 'string' ? data.targetId : null,
+    actionUrl: typeof data.actionUrl === 'string' ? data.actionUrl : null,
     fromUser: fromUser?.id ? fromUser : undefined,
     createdAt: parseCreatedAt(data.createdAt),
     isRead: Boolean(data.isRead),

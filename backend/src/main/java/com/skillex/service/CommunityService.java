@@ -6,26 +6,49 @@ import com.skillex.dto.community.*;
 import java.util.List;
 
 /**
- * Contract for all community-related features:
+ * Contract for all community-related features in SkillEX:
  * events, discussions, posts, stories, and skill circles.
  */
 public interface CommunityService {
 
     // ── Events ──────────────────────────────────────────────────────────────
 
-    PagedResponse<CommunityDtos.EventDto> getEvents(int page, int size);
+    PagedResponse<CommunityDtos.EventDto> getEvents(String viewerId, int page, int size);
+
+    CommunityDtos.EventDto getEvent(String viewerId, String eventId);
 
     CommunityDtos.EventDto createEvent(String organizerId, CreateEventRequest req);
 
     void attendEvent(String userId, String eventId);
 
+    CommunityDtos.EventDto interestEvent(String userId, String eventId);
+
     // ── Discussions ──────────────────────────────────────────────────────────
 
-    PagedResponse<CommunityDtos.DiscussionDto> getDiscussions(String viewerId, int page, int size);
+    PagedResponse<CommunityDtos.DiscussionDto> getDiscussions(
+        String viewerId,
+        String category,
+        String threadType,
+        String status,
+        String circleId,
+        String skillId,
+        int page,
+        int size
+    );
 
     CommunityDtos.DiscussionDto createDiscussion(String authorId, CreateDiscussionRequest req);
 
+    CommunityDtos.DiscussionDto getDiscussion(String viewerId, String discussionId);
+
     CommunityDtos.DiscussionDto upvoteDiscussion(String userId, String discussionId);
+
+    PagedResponse<CommunityDtos.DiscussionReplyDto> getDiscussionReplies(String discussionId, int page, int size);
+
+    CommunityDtos.DiscussionReplyDto addDiscussionReply(String userId, String discussionId, CreateDiscussionReplyRequest req);
+
+    CommunityDtos.DiscussionDto acceptDiscussionReply(String userId, String discussionId, String replyId);
+
+    CommunityDtos.DiscussionDto resolveDiscussion(String userId, String discussionId);
 
     // ── Posts ────────────────────────────────────────────────────────────────
 
@@ -57,13 +80,21 @@ public interface CommunityService {
 
     // ── Skill Circles ────────────────────────────────────────────────────────
 
-    PagedResponse<CommunityDtos.SkillCircleDto> getSkillCircles(int page, int size);
+    PagedResponse<CommunityDtos.SkillCircleDto> getSkillCircles(String viewerId, int page, int size);
+
+    CommunityDtos.SkillCircleDto getSkillCircle(String viewerId, String circleId);
 
     CommunityDtos.SkillCircleDto createSkillCircle(String creatorId, CreateSkillCircleRequest req);
 
     CommunityDtos.SkillCircleDto joinSkillCircle(String userId, String circleId);
 
     CommunityDtos.SkillCircleDto leaveSkillCircle(String userId, String circleId);
+
+    PagedResponse<CommunityDtos.CircleResourceDto> getCircleResources(String circleId, int page, int size);
+
+    CommunityDtos.CircleResourceDto createCircleResource(String userId, String circleId, CreateCircleResourceRequest req);
+
+    CommunityDtos.SkillCircleDashboardDto getCircleDashboard(String viewerId, String circleId);
 
     // ── Trending & Suggestions ───────────────────────────────────────────────
 

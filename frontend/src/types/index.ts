@@ -10,6 +10,9 @@ export type NotificationType =
   | 'CONNECTION_ACCEPTED'
   | 'SESSION_SCHEDULED'
   | 'REVIEW_LEFT'
+  | 'COMMUNITY_EVENT'
+  | 'CIRCLE_ACTIVITY'
+  | 'DISCUSSION_REPLY'
   | 'SYSTEM_UPDATE';
 
 export interface Skill {
@@ -166,6 +169,14 @@ export interface Event {
   eventDate: string;
   location: string;
   isOnline: boolean;
+  eventType: 'ANNOUNCEMENT' | 'WORKSHOP' | 'STUDY_SPRINT' | 'OFFICE_HOUR' | 'HACKATHON' | 'PORTFOLIO_REVIEW' | string;
+  circleId?: string | null;
+  circleName?: string | null;
+  meetingUrl?: string | null;
+  rsvpState?: 'NONE' | 'INTERESTED' | 'GOING' | 'NOT_GOING' | string;
+  interestedCount?: number;
+  attendeeCount?: number;
+  status?: 'SCHEDULED' | 'CANCELLED' | 'COMPLETED' | string;
   skills: Skill[];
   attendees: User[];
   coverGradient: string;
@@ -176,6 +187,12 @@ export interface Discussion {
   title: string;
   author: User;
   category: string;
+  threadType?: 'QUESTION' | 'RESOURCE_REQUEST' | 'PROJECT_REVIEW' | 'SUCCESS_STORY' | 'ANNOUNCEMENT' | string;
+  skill?: Skill | null;
+  circleId?: string | null;
+  circleName?: string | null;
+  status?: 'OPEN' | 'SOLVED' | string;
+  acceptedReplyId?: string | null;
   content: string;
   upvotes: number;
   isUpvotedByViewer?: boolean;
@@ -195,6 +212,9 @@ export interface Notification {
   id: string;
   type: NotificationType;
   message: string;
+  targetType?: string | null;
+  targetId?: string | null;
+  actionUrl?: string | null;
   fromUser?: NotificationUserRef;
   createdAt: string;
   isRead: boolean;
@@ -206,12 +226,53 @@ export type ActivityLevel = 'VERY_ACTIVE' | 'ACTIVE' | 'QUIET';
 export interface SkillCircle {
   id: string;
   name: string;
+  description?: string | null;
+  owner?: User | null;
+  memberRole?: 'OWNER' | 'MEMBER' | 'VISITOR' | string;
   icon: string; // emoji
   activity: ActivityLevel;
   skills: Skill[];
   memberCount: number;
   members: User[]; // for avatars
   lastSession: string;
+  resourceCount?: number;
+  openHelpCount?: number;
+  upcomingEventCount?: number;
+}
+
+export interface CircleResource {
+  id: string;
+  circleId: string;
+  title: string;
+  url?: string | null;
+  notes?: string | null;
+  resourceType: 'LINK' | 'FILE' | 'NOTE' | string;
+  difficulty: 'BEGINNER' | 'MODERATE' | 'ADVANCED' | string;
+  upvotes: number;
+  isPinned: boolean;
+  isVerified: boolean;
+  skill?: Skill | null;
+  author: User;
+  createdAt: string;
+}
+
+export interface DiscussionReply {
+  id: string;
+  discussionId: string;
+  author: User;
+  content: string;
+  isAccepted: boolean;
+  createdAt: string;
+}
+
+export interface SkillCircleDashboard {
+  circle: SkillCircle;
+  nextEvent?: Event | null;
+  topResources: CircleResource[];
+  openHelpRequests: Discussion[];
+  solvedQuestions: number;
+  activityScore: number;
+  weeklyGoal: string;
 }
 
 export interface Story {

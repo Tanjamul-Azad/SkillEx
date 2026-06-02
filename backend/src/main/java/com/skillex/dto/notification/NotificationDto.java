@@ -7,6 +7,9 @@ public record NotificationDto(
     String id,
     String type,
     String message,
+    String targetType,
+    String targetId,
+    String actionUrl,
     FromUserRef fromUser,   // null for system notifications
     boolean isRead,
     LocalDateTime createdAt

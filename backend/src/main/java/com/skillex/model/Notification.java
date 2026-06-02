@@ -39,6 +39,15 @@ public class Notification {
     @Column(nullable = false, columnDefinition = "TEXT")
     private String message;
 
+    @Column(name = "target_type", length = 40)
+    private String targetType;
+
+    @Column(name = "target_id", length = 36)
+    private String targetId;
+
+    @Column(name = "action_url", length = 500)
+    private String actionUrl;
+
     // Optional — null for system-generated notifications
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "from_user_id")
@@ -58,6 +67,9 @@ public class Notification {
         CONNECTION_ACCEPTED,
         SESSION_SCHEDULED,
         REVIEW_LEFT,
+        COMMUNITY_EVENT,
+        CIRCLE_ACTIVITY,
+        DISCUSSION_REPLY,
         SYSTEM_UPDATE
     }
 }

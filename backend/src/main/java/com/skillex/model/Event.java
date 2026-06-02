@@ -55,6 +55,23 @@ public class Event {
     @Builder.Default
     private String coverGradient = "from-primary to-secondary";
 
+    @Enumerated(EnumType.STRING)
+    @Column(name = "event_type", nullable = false, length = 24)
+    @Builder.Default
+    private EventType eventType = EventType.WORKSHOP;
+
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "circle_id")
+    private SkillCircle circle;
+
+    @Column(name = "meeting_url", length = 500)
+    private String meetingUrl;
+
+    @Enumerated(EnumType.STRING)
+    @Column(nullable = false, length = 16)
+    @Builder.Default
+    private EventStatus status = EventStatus.SCHEDULED;
+
     @ManyToMany(fetch = FetchType.LAZY)
     @JoinTable(
         name = "event_skills",
@@ -76,4 +93,15 @@ public class Event {
     @CreationTimestamp
     @Column(name = "created_at", updatable = false)
     private LocalDateTime createdAt;
+
+    public enum EventType {
+        ANNOUNCEMENT,
+        WORKSHOP,
+        STUDY_SPRINT,
+        OFFICE_HOUR,
+        HACKATHON,
+        PORTFOLIO_REVIEW
+    }
+
+    public enum EventStatus { SCHEDULED, CANCELLED, COMPLETED }
 }

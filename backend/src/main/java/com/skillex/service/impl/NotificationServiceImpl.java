@@ -55,6 +55,20 @@ public class NotificationServiceImpl implements NotificationService {
     @Override
     @Transactional
     public NotificationDto create(String userId, String fromUserId, String type, String message) {
+        return create(userId, fromUserId, type, message, null, null, null);
+    }
+
+    @Override
+    @Transactional
+    public NotificationDto create(
+        String userId,
+        String fromUserId,
+        String type,
+        String message,
+        String targetType,
+        String targetId,
+        String actionUrl
+    ) {
         User user = userRepository.findById(userId)
             .orElseThrow(() -> new EntityNotFoundException("User not found: " + userId));
         User fromUser = fromUserId != null
@@ -66,6 +80,9 @@ public class NotificationServiceImpl implements NotificationService {
         notification.setFromUser(fromUser);
         notification.setType(Notification.NotificationType.valueOf(type.toUpperCase()));
         notification.setMessage(message);
+        notification.setTargetType(targetType);
+        notification.setTargetId(targetId);
+        notification.setActionUrl(actionUrl);
         notification.setIsRead(false);
         NotificationDto dto = mapper.toNotification(notificationRepository.save(notification));
         // Push real-time via WebSocket (non-blocking; falls back gracefully if WS is down)

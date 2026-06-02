@@ -41,10 +41,19 @@ public class CommunityController {
 
     @GetMapping("/events")
     public ResponseEntity<ApiResponse<PagedResponse<CommunityDtos.EventDto>>> getEvents(
+        HttpServletRequest request,
         @RequestParam(defaultValue = "0") int page,
         @RequestParam(defaultValue = "20") int size
     ) {
-        return ResponseEntity.ok(ApiResponse.ok(communityService.getEvents(page, size)));
+        return ResponseEntity.ok(ApiResponse.ok(communityService.getEvents(currentUserId(request), page, size)));
+    }
+
+    @GetMapping("/events/{eventId}")
+    public ResponseEntity<ApiResponse<CommunityDtos.EventDto>> getEvent(
+        HttpServletRequest request,
+        @PathVariable String eventId
+    ) {
+        return ResponseEntity.ok(ApiResponse.ok(communityService.getEvent(currentUserId(request), eventId)));
     }
 
     @PostMapping("/events")
@@ -67,16 +76,31 @@ public class CommunityController {
         return ResponseEntity.ok(ApiResponse.ok(null));
     }
 
+    @PostMapping("/events/{eventId}/interest")
+    public ResponseEntity<ApiResponse<CommunityDtos.EventDto>> interestEvent(
+        HttpServletRequest request,
+        @PathVariable String eventId
+    ) {
+        String userId = currentUserId(request);
+        return ResponseEntity.ok(ApiResponse.ok(communityService.interestEvent(userId, eventId)));
+    }
+
     // ── Discussions ──────────────────────────────────────────────────────────
 
     @GetMapping("/discussions")
     public ResponseEntity<ApiResponse<PagedResponse<CommunityDtos.DiscussionDto>>> getDiscussions(
         HttpServletRequest request,
+        @RequestParam(required = false) String category,
+        @RequestParam(required = false) String threadType,
+        @RequestParam(required = false) String status,
+        @RequestParam(required = false) String circleId,
+        @RequestParam(required = false) String skillId,
         @RequestParam(defaultValue = "0") int page,
         @RequestParam(defaultValue = "20") int size
     ) {
         String viewerId = currentUserId(request);
-        return ResponseEntity.ok(ApiResponse.ok(communityService.getDiscussions(viewerId, page, size)));
+        return ResponseEntity.ok(ApiResponse.ok(communityService.getDiscussions(
+            viewerId, category, threadType, status, circleId, skillId, page, size)));
     }
 
     @PostMapping("/discussions")
@@ -89,6 +113,15 @@ public class CommunityController {
             .body(ApiResponse.created(communityService.createDiscussion(userId, req)));
     }
 
+    @GetMapping("/discussions/{discussionId}")
+    public ResponseEntity<ApiResponse<CommunityDtos.DiscussionDto>> getDiscussion(
+        HttpServletRequest request,
+        @PathVariable String discussionId
+    ) {
+        String viewerId = currentUserId(request);
+        return ResponseEntity.ok(ApiResponse.ok(communityService.getDiscussion(viewerId, discussionId)));
+    }
+
     @PostMapping("/discussions/{discussionId}/upvote")
     public ResponseEntity<ApiResponse<CommunityDtos.DiscussionDto>> upvoteDiscussion(
         HttpServletRequest request,
@@ -96,6 +129,45 @@ public class CommunityController {
     ) {
         String userId = currentUserId(request);
         return ResponseEntity.ok(ApiResponse.ok(communityService.upvoteDiscussion(userId, discussionId)));
+    }
+
+    @GetMapping("/discussions/{discussionId}/replies")
+    public ResponseEntity<ApiResponse<PagedResponse<CommunityDtos.DiscussionReplyDto>>> getDiscussionReplies(
+        @PathVariable String discussionId,
+        @RequestParam(defaultValue = "0") int page,
+        @RequestParam(defaultValue = "20") int size
+    ) {
+        return ResponseEntity.ok(ApiResponse.ok(communityService.getDiscussionReplies(discussionId, page, size)));
+    }
+
+    @PostMapping("/discussions/{discussionId}/replies")
+    public ResponseEntity<ApiResponse<CommunityDtos.DiscussionReplyDto>> addDiscussionReply(
+        HttpServletRequest request,
+        @PathVariable String discussionId,
+        @RequestBody @Valid CreateDiscussionReplyRequest req
+    ) {
+        String userId = currentUserId(request);
+        return ResponseEntity.status(HttpStatus.CREATED)
+            .body(ApiResponse.created(communityService.addDiscussionReply(userId, discussionId, req)));
+    }
+
+    @PostMapping("/discussions/{discussionId}/replies/{replyId}/accept")
+    public ResponseEntity<ApiResponse<CommunityDtos.DiscussionDto>> acceptDiscussionReply(
+        HttpServletRequest request,
+        @PathVariable String discussionId,
+        @PathVariable String replyId
+    ) {
+        String userId = currentUserId(request);
+        return ResponseEntity.ok(ApiResponse.ok(communityService.acceptDiscussionReply(userId, discussionId, replyId)));
+    }
+
+    @PatchMapping("/discussions/{discussionId}/resolve")
+    public ResponseEntity<ApiResponse<CommunityDtos.DiscussionDto>> resolveDiscussion(
+        HttpServletRequest request,
+        @PathVariable String discussionId
+    ) {
+        String userId = currentUserId(request);
+        return ResponseEntity.ok(ApiResponse.ok(communityService.resolveDiscussion(userId, discussionId)));
     }
 
     // ── Posts ────────────────────────────────────────────────────────────────
@@ -215,10 +287,19 @@ public class CommunityController {
 
     @GetMapping({"/skill-circles", "/circles"})
     public ResponseEntity<ApiResponse<PagedResponse<CommunityDtos.SkillCircleDto>>> getSkillCircles(
+        HttpServletRequest request,
         @RequestParam(defaultValue = "0") int page,
         @RequestParam(defaultValue = "20") int size
     ) {
-        return ResponseEntity.ok(ApiResponse.ok(communityService.getSkillCircles(page, size)));
+        return ResponseEntity.ok(ApiResponse.ok(communityService.getSkillCircles(currentUserId(request), page, size)));
+    }
+
+    @GetMapping({"/skill-circles/{circleId}", "/circles/{circleId}"})
+    public ResponseEntity<ApiResponse<CommunityDtos.SkillCircleDto>> getSkillCircle(
+        HttpServletRequest request,
+        @PathVariable String circleId
+    ) {
+        return ResponseEntity.ok(ApiResponse.ok(communityService.getSkillCircle(currentUserId(request), circleId)));
     }
 
     @PostMapping({"/skill-circles", "/circles"})
@@ -247,6 +328,34 @@ public class CommunityController {
     ) {
         String userId = currentUserId(request);
         return ResponseEntity.ok(ApiResponse.ok(communityService.leaveSkillCircle(userId, circleId)));
+    }
+
+    @GetMapping({"/skill-circles/{circleId}/resources", "/circles/{circleId}/resources"})
+    public ResponseEntity<ApiResponse<PagedResponse<CommunityDtos.CircleResourceDto>>> getCircleResources(
+        @PathVariable String circleId,
+        @RequestParam(defaultValue = "0") int page,
+        @RequestParam(defaultValue = "20") int size
+    ) {
+        return ResponseEntity.ok(ApiResponse.ok(communityService.getCircleResources(circleId, page, size)));
+    }
+
+    @PostMapping({"/skill-circles/{circleId}/resources", "/circles/{circleId}/resources"})
+    public ResponseEntity<ApiResponse<CommunityDtos.CircleResourceDto>> createCircleResource(
+        HttpServletRequest request,
+        @PathVariable String circleId,
+        @RequestBody @Valid CreateCircleResourceRequest req
+    ) {
+        String userId = currentUserId(request);
+        return ResponseEntity.status(HttpStatus.CREATED)
+            .body(ApiResponse.created(communityService.createCircleResource(userId, circleId, req)));
+    }
+
+    @GetMapping({"/skill-circles/{circleId}/dashboard", "/circles/{circleId}/dashboard"})
+    public ResponseEntity<ApiResponse<CommunityDtos.SkillCircleDashboardDto>> getCircleDashboard(
+        HttpServletRequest request,
+        @PathVariable String circleId
+    ) {
+        return ResponseEntity.ok(ApiResponse.ok(communityService.getCircleDashboard(currentUserId(request), circleId)));
     }
 
     // ── Trending & Suggestions ───────────────────────────────────────────────

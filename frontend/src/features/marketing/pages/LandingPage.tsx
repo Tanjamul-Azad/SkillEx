@@ -400,9 +400,9 @@ const HowItWorksSection = () => {
 
 const SkillChainSection = () => {
   const chainMembers = [
-    { learner: learners[0], teaches: 'Video Editing', learns: 'Guitar', angle: -90 },
-    { learner: learners[1], teaches: 'Guitar', learns: 'Python', angle: 30 },
-    { learner: learners[2], teaches: 'Python', learns: 'Video Editing', angle: 150 },
+    { learner: learners[0], role: 'Learn', teaches: 'Video Editing', learns: 'Guitar', angle: -90 },
+    { learner: learners[1], role: 'Teach', teaches: 'Guitar', learns: 'Python', angle: 30 },
+    { learner: learners[2], role: 'Build', teaches: 'Python', learns: 'Video Editing', angle: 150 },
   ];
   const radius = 140;
   const cx = 180;
@@ -415,14 +415,14 @@ const SkillChainSection = () => {
         <SectionHeader
           align="left"
           label="Skill chain"
-          title={<>A triangle exchange keeps every <span className="text-gradient">student included</span>.</>}
-          description="A perfect one-to-one swap is not always available. Skill chains let Rahim teach Nadia, Nadia teach Karim, and Karim teach Rahim so everyone gives and receives value."
+          title={<>A skill circle turns matching into <span className="text-gradient">real progress</span>.</>}
+          description="The triangle is not a group chat. It is a focused loop where members learn, teach, and build proof through resources, help requests, and live events."
         />
         <motion.ul variants={stagger} className="mt-7 space-y-3">
           {[
-            'Each student teaches one skill and learns another',
-            'The exchange can work even when two students are not a direct match',
-            'Reviews and scores keep the chain trustworthy',
+            'Learn from people who are practicing the same skill',
+            'Teach through help desk answers, resources, and office hours',
+            'Build portfolio proof from circle challenges and events',
           ].map((point) => (
             <motion.li key={point} variants={fadeUp} className="flex items-start gap-3 text-sm leading-6 text-muted-foreground">
               <span className="mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-secondary/20 text-secondary">
@@ -432,10 +432,16 @@ const SkillChainSection = () => {
             </motion.li>
           ))}
         </motion.ul>
-        <motion.div variants={fadeUp} className="mt-8">
+        <motion.div variants={fadeUp} className="mt-8 flex flex-wrap gap-3">
           <Button asChild variant="outline" className="rounded-xl border-primary/30 bg-white/[0.03] hover:bg-primary/5 hover:border-primary/50">
             <Link to="/match">
-              Explore skill matches
+              Find skill matches
+              <ArrowRight className="ml-2 h-4 w-4" />
+            </Link>
+          </Button>
+          <Button asChild className="rounded-xl">
+            <Link to="/community?tab=circles">
+              Join a skill circle
               <ArrowRight className="ml-2 h-4 w-4" />
             </Link>
           </Button>
@@ -514,7 +520,7 @@ const SkillChainSection = () => {
             Skill
           </motion.text>
           <motion.text x={cx} y={cy + 12} textAnchor="middle" fontSize="11" fill="hsl(var(--primary))" fontWeight="800">
-            Chain
+            Circle
           </motion.text>
 
           {chainMembers.map((member, index) => {
@@ -533,7 +539,7 @@ const SkillChainSection = () => {
                 <circle cx={x} cy={y} r="30" fill="hsl(var(--card))" stroke="hsl(var(--primary) / 0.45)" strokeWidth="1.5" />
                 <image href={member.learner.avatar} x={x - 22} y={y - 22} width="44" height="44" clipPath={`url(#chainClip${index})`} />
                 <text x={x} y={y + 46} textAnchor="middle" fontSize="10" fill="hsl(var(--foreground))" fontWeight="700">
-                  {member.learner.name.split(' ')[0]}
+                  {member.role}
                 </text>
                 <text x={x} y={y + 60} textAnchor="middle" fontSize="9" fill="hsl(var(--primary))" fontWeight="600">
                   Teaches {member.teaches}
@@ -545,6 +551,18 @@ const SkillChainSection = () => {
             );
           })}
         </svg>
+        <div className="absolute bottom-4 left-4 right-4 grid grid-cols-3 gap-2 text-center">
+          {[
+            ['Next event', 'Office hour'],
+            ['Active circle', 'Python AI'],
+            ['Solved help', '24 threads'],
+          ].map(([label, value]) => (
+            <div key={label} className="rounded-xl border border-white/10 bg-black/35 px-2 py-2 backdrop-blur">
+              <p className="text-[9px] font-bold uppercase tracking-widest text-muted-foreground">{label}</p>
+              <p className="mt-1 truncate text-xs font-bold text-foreground">{value}</p>
+            </div>
+          ))}
+        </div>
         <div className="hidden">
           {learners.map((learner, index) => (
             <div

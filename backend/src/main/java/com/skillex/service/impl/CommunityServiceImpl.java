@@ -6,6 +6,7 @@ import com.skillex.dto.skill.SkillSearchResultDto;
 import com.skillex.model.*;
 import com.skillex.repository.*;
 import com.skillex.service.CommunityService;
+import com.skillex.service.CommunityNotificationService;
 import com.skillex.service.CreditService;
 import com.skillex.service.DtoMapper;
 import com.skillex.service.AccountRestrictionService;
@@ -36,9 +37,12 @@ public class CommunityServiceImpl implements CommunityService {
     private final SkillCircleRepository skillCircleRepository;
     private final UserRepository userRepository;
     private final SkillRepository skillRepository;
+    private final EventRsvpRepository eventRsvpRepository;
     private final PostLikeRepository postLikeRepository;
     private final DiscussionUpvoteRepository discussionUpvoteRepository;
+    private final DiscussionReplyRepository discussionReplyRepository;
     private final CommentRepository commentRepository;
+    private final SkillCircleResourceRepository skillCircleResourceRepository;
     private final ConnectionRepository connectionRepository;
     private final UserSkillOfferedRepository offeredRepo;
     private final SkillService skillService;
@@ -46,14 +50,34 @@ public class CommunityServiceImpl implements CommunityService {
     private final ApplicationEventPublisher eventPublisher;
     private final AccountRestrictionService restrictionService;
     private final CreditService creditService;
+    private final CommunityNotificationService communityNotificationService;
 
     // ── Events ──────────────────────────────────────────────────────────────
 
     @Override
     @Transactional(readOnly = true)
-    public PagedResponse<CommunityDtos.EventDto> getEvents(int page, int size) {
+    public PagedResponse<CommunityDtos.EventDto> getEvents(String viewerId, int page, int size) {
         var pageable = PageRequest.of(page, size, Sort.by("eventDate").ascending());
-        return PagedResponse.of(eventRepository.findAll(pageable).map(mapper::toEvent));
+        Page<Event> eventPage = eventRepository.findAll(pageable);
+        List<CommunityDtos.EventDto> content = eventPage.getContent().stream()
+            .map(event -> mapEvent(event, viewerId))
+            .toList();
+        return new PagedResponse<>(
+            content,
+            eventPage.getNumber(),
+            eventPage.getSize(),
+            eventPage.getTotalElements(),
+            eventPage.getTotalPages(),
+            eventPage.isLast()
+        );
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public CommunityDtos.EventDto getEvent(String viewerId, String eventId) {
+        Event event = eventRepository.findById(eventId)
+            .orElseThrow(() -> new EntityNotFoundException("Event not found: " + eventId));
+        return mapEvent(event, viewerId);
     }
 
     @Override
@@ -69,11 +93,20 @@ public class CommunityServiceImpl implements CommunityService {
         event.setLocation(req.location());
         event.setIsOnline(req.isOnline());
         event.setCoverGradient(req.coverGradient());
+        event.setMeetingUrl(req.meetingUrl());
+        event.setEventType(parseEnum(req.eventType(), Event.EventType.WORKSHOP, Event.EventType.class));
+        event.setStatus(Event.EventStatus.SCHEDULED);
+        if (req.circleId() != null && !req.circleId().isBlank()) {
+            event.setCircle(skillCircleRepository.findById(req.circleId())
+                .orElseThrow(() -> new EntityNotFoundException("SkillCircle not found: " + req.circleId())));
+        }
         if (req.skillIds() != null) {
             List<Skill> skills = skillRepository.findAllById(req.skillIds());
             event.setSkills(skills);
         }
-        return mapper.toEvent(eventRepository.save(event));
+        Event saved = eventRepository.save(event);
+        communityNotificationService.notifyEventCreated(saved);
+        return mapEvent(saved, organizerId);
     }
 
     @Override
@@ -86,15 +119,47 @@ public class CommunityServiceImpl implements CommunityService {
             event.getAttendees().add(user);
             eventRepository.save(event);
         }
+        upsertRsvp(event, user, EventRsvp.RsvpState.GOING);
+    }
+
+    @Override
+    @Transactional
+    public CommunityDtos.EventDto interestEvent(String userId, String eventId) {
+        User user = findUser(userId);
+        Event event = eventRepository.findById(eventId)
+            .orElseThrow(() -> new EntityNotFoundException("Event not found: " + eventId));
+        upsertRsvp(event, user, EventRsvp.RsvpState.INTERESTED);
+        return mapEvent(event, userId);
     }
 
     // ── Discussions ──────────────────────────────────────────────────────────
 
     @Override
     @Transactional(readOnly = true)
-    public PagedResponse<CommunityDtos.DiscussionDto> getDiscussions(String viewerId, int page, int size) {
+    public PagedResponse<CommunityDtos.DiscussionDto> getDiscussions(
+        String viewerId,
+        String category,
+        String threadType,
+        String status,
+        String circleId,
+        String skillId,
+        int page,
+        int size
+    ) {
         var pageable = PageRequest.of(page, size, Sort.by("createdAt").descending());
-        Page<Discussion> discussionPage = discussionRepository.findAll(pageable);
+        String normalizedCategory = category == null || category.isBlank() || "All".equalsIgnoreCase(category)
+            ? null
+            : category;
+        Discussion.ThreadType parsedThreadType = parseEnum(threadType, null, Discussion.ThreadType.class);
+        Discussion.DiscussionStatus parsedStatus = parseEnum(status, null, Discussion.DiscussionStatus.class);
+        Page<Discussion> discussionPage = discussionRepository.searchCommunityThreads(
+            normalizedCategory,
+            parsedThreadType,
+            parsedStatus,
+            blankToNull(circleId),
+            blankToNull(skillId),
+            pageable
+        );
         List<Discussion> discussions = discussionPage.getContent();
         Set<String> upvotedIds = Set.of();
         if (viewerId != null && !viewerId.isBlank() && !discussions.isEmpty()) {
@@ -128,17 +193,47 @@ public class CommunityServiceImpl implements CommunityService {
         discussion.setAuthor(author);
         discussion.setTitle(req.title());
         discussion.setContent(req.content());
-        discussion.setCategory(req.category());
+        discussion.setCategory(req.category() == null || req.category().isBlank() ? "General" : req.category());
+        discussion.setThreadType(parseEnum(req.threadType(), Discussion.ThreadType.QUESTION, Discussion.ThreadType.class));
+        discussion.setStatus(Discussion.DiscussionStatus.OPEN);
+        if (req.skillId() != null && !req.skillId().isBlank()) {
+            discussion.setSkill(skillRepository.findById(req.skillId()).orElse(null));
+        }
+        if (req.circleId() != null && !req.circleId().isBlank()) {
+            discussion.setCircle(skillCircleRepository.findById(req.circleId())
+                .orElseThrow(() -> new EntityNotFoundException("SkillCircle not found: " + req.circleId())));
+        }
         discussion.setUpvotes(0);
         discussion.setReplies(0);
         discussion.setViews(0);
         discussion.setIsPinned(false);
-        CommunityDtos.DiscussionDto result = mapper.toDiscussion(discussionRepository.save(discussion));
+        Discussion saved = discussionRepository.save(discussion);
+        CommunityDtos.DiscussionDto result = mapper.toDiscussion(saved);
+
+        if (saved.getCircle() != null) {
+            communityNotificationService.notifyCircleActivity(
+                saved.getCircle(),
+                authorId,
+                author.getName() + " started a discussion in " + saved.getCircle().getName() + ": " + saved.getTitle()
+            );
+        }
 
         eventPublisher.publishEvent(new ReputationUpdateEvent(
             authorId, ReputationUpdateEvent.Trigger.COMMUNITY_INTERACTION));
 
         return result;
+    }
+
+    @Override
+    @Transactional
+    public CommunityDtos.DiscussionDto getDiscussion(String viewerId, String discussionId) {
+        Discussion discussion = discussionRepository.findById(discussionId)
+            .orElseThrow(() -> new EntityNotFoundException("Discussion not found: " + discussionId));
+        boolean upvoted = viewerId != null
+            && !viewerId.isBlank()
+            && discussionUpvoteRepository.existsByIdDiscussionIdAndIdUserId(discussionId, viewerId);
+        discussion.setViews(discussion.getViews() + 1);
+        return mapper.toDiscussion(discussion, upvoted);
     }
 
     @Override
@@ -164,6 +259,77 @@ public class CommunityServiceImpl implements CommunityService {
         discussionUpvoteRepository.save(upvote);
         discussion.setUpvotes(discussion.getUpvotes() + 1);
         return mapper.toDiscussion(discussionRepository.save(discussion), true);
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public PagedResponse<CommunityDtos.DiscussionReplyDto> getDiscussionReplies(String discussionId, int page, int size) {
+        if (!discussionRepository.existsById(discussionId)) {
+            throw new EntityNotFoundException("Discussion not found: " + discussionId);
+        }
+        return PagedResponse.of(discussionReplyRepository
+            .findByDiscussionIdOrderByCreatedAtAsc(discussionId, PageRequest.of(page, size))
+            .map(mapper::toDiscussionReply));
+    }
+
+    @Override
+    @Transactional
+    public CommunityDtos.DiscussionReplyDto addDiscussionReply(String userId, String discussionId, CreateDiscussionReplyRequest req) {
+        restrictionService.assertCanUseAccount(userId, "COMMENTING");
+        Discussion discussion = discussionRepository.findById(discussionId)
+            .orElseThrow(() -> new EntityNotFoundException("Discussion not found: " + discussionId));
+        User author = findUser(userId);
+        DiscussionReply reply = DiscussionReply.builder()
+            .discussion(discussion)
+            .author(author)
+            .content(req.content())
+            .isAccepted(false)
+            .build();
+        DiscussionReply saved = discussionReplyRepository.saveAndFlush(reply);
+        discussion.setReplies(discussion.getReplies() + 1);
+        discussionRepository.save(discussion);
+        communityNotificationService.notifyDiscussionReply(discussion, saved);
+
+        eventPublisher.publishEvent(new ReputationUpdateEvent(
+            userId, ReputationUpdateEvent.Trigger.COMMUNITY_INTERACTION));
+
+        return mapper.toDiscussionReply(saved);
+    }
+
+    @Override
+    @Transactional
+    public CommunityDtos.DiscussionDto acceptDiscussionReply(String userId, String discussionId, String replyId) {
+        Discussion discussion = discussionRepository.findById(discussionId)
+            .orElseThrow(() -> new EntityNotFoundException("Discussion not found: " + discussionId));
+        if (!discussion.getAuthor().getId().equals(userId)) {
+            throw new IllegalArgumentException("Only the discussion author can accept an answer.");
+        }
+        DiscussionReply reply = discussionReplyRepository.findById(replyId)
+            .orElseThrow(() -> new EntityNotFoundException("Discussion reply not found: " + replyId));
+        if (!reply.getDiscussion().getId().equals(discussionId)) {
+            throw new IllegalArgumentException("This reply does not belong to the discussion.");
+        }
+        discussionReplyRepository.clearAcceptedForDiscussion(discussionId);
+        reply.setIsAccepted(true);
+        discussionReplyRepository.save(reply);
+        discussion.setAcceptedReply(reply);
+        discussion.setStatus(Discussion.DiscussionStatus.SOLVED);
+        Discussion saved = discussionRepository.save(discussion);
+        communityNotificationService.notifyAnswerAccepted(saved, reply, userId);
+        return mapper.toDiscussion(saved, discussionUpvoteRepository.existsByIdDiscussionIdAndIdUserId(discussionId, userId));
+    }
+
+    @Override
+    @Transactional
+    public CommunityDtos.DiscussionDto resolveDiscussion(String userId, String discussionId) {
+        Discussion discussion = discussionRepository.findById(discussionId)
+            .orElseThrow(() -> new EntityNotFoundException("Discussion not found: " + discussionId));
+        if (!discussion.getAuthor().getId().equals(userId)) {
+            throw new IllegalArgumentException("Only the discussion author can resolve this discussion.");
+        }
+        discussion.setStatus(Discussion.DiscussionStatus.SOLVED);
+        return mapper.toDiscussion(discussionRepository.save(discussion),
+            discussionUpvoteRepository.existsByIdDiscussionIdAndIdUserId(discussionId, userId));
     }
 
     // ── Posts ────────────────────────────────────────────────────────────────
@@ -408,9 +574,28 @@ public class CommunityServiceImpl implements CommunityService {
 
     @Override
     @Transactional(readOnly = true)
-    public PagedResponse<CommunityDtos.SkillCircleDto> getSkillCircles(int page, int size) {
+    public PagedResponse<CommunityDtos.SkillCircleDto> getSkillCircles(String viewerId, int page, int size) {
         var pageable = PageRequest.of(page, size, Sort.by("memberCount").descending());
-        return PagedResponse.of(skillCircleRepository.findAll(pageable).map(mapper::toSkillCircle));
+        Page<SkillCircle> circlePage = skillCircleRepository.findAll(pageable);
+        List<CommunityDtos.SkillCircleDto> content = circlePage.getContent().stream()
+            .map(circle -> mapSkillCircle(circle, viewerId))
+            .toList();
+        return new PagedResponse<>(
+            content,
+            circlePage.getNumber(),
+            circlePage.getSize(),
+            circlePage.getTotalElements(),
+            circlePage.getTotalPages(),
+            circlePage.isLast()
+        );
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public CommunityDtos.SkillCircleDto getSkillCircle(String viewerId, String circleId) {
+        SkillCircle circle = skillCircleRepository.findById(circleId)
+            .orElseThrow(() -> new EntityNotFoundException("SkillCircle not found: " + circleId));
+        return mapSkillCircle(circle, viewerId);
     }
 
     @Override
@@ -420,6 +605,8 @@ public class CommunityServiceImpl implements CommunityService {
         User creator = findUser(creatorId);
         SkillCircle circle = new SkillCircle();
         circle.setName(req.name());
+        circle.setDescription(req.description());
+        circle.setOwner(creator);
         if (req.icon() != null && !req.icon().isBlank()) {
             circle.setIcon(req.icon());
         }
@@ -433,7 +620,7 @@ public class CommunityServiceImpl implements CommunityService {
         }
 
         SkillCircle saved = skillCircleRepository.save(circle);
-        return mapper.toSkillCircle(saved);
+        return mapSkillCircle(saved, creatorId);
     }
 
     @Override
@@ -449,7 +636,7 @@ public class CommunityServiceImpl implements CommunityService {
             circle.setMemberCount(circle.getMemberCount() + 1);
             skillCircleRepository.save(circle);
         }
-        return mapper.toSkillCircle(circle);
+        return mapSkillCircle(circle, userId);
     }
 
     @Override
@@ -460,24 +647,102 @@ public class CommunityServiceImpl implements CommunityService {
 
         int removed = skillCircleRepository.deleteMember(circleId, userId);
         if (removed > 0) {
+            circle.getMembers().removeIf(member -> userId.equals(member.getId()));
             circle.setMemberCount(Math.max(0, circle.getMemberCount() - 1));
             skillCircleRepository.save(circle);
         }
 
-        return new CommunityDtos.SkillCircleDto(
-            circle.getId(),
-            circle.getName(),
-            circle.getIcon(),
-            circle.getMemberCount(),
-            circle.getLastSession(),
-            circle.getActivity().name(),
-            circle.getSkills().stream()
-                .map(skill -> new CommunityDtos.SkillRef(skill.getId(), skill.getName(), skill.getIcon(), skill.getCategory()))
-                .toList(),
-            circle.getMembers().stream()
-                .filter(member -> !member.getId().equals(userId))
-                .map(mapper::toSummary)
-                .toList()
+        return mapSkillCircle(circle, userId);
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public PagedResponse<CommunityDtos.CircleResourceDto> getCircleResources(String circleId, int page, int size) {
+        if (!skillCircleRepository.existsById(circleId)) {
+            throw new EntityNotFoundException("SkillCircle not found: " + circleId);
+        }
+        return PagedResponse.of(skillCircleResourceRepository
+            .findByCircleIdOrderByIsPinnedDescCreatedAtDesc(circleId, PageRequest.of(page, size))
+            .map(mapper::toCircleResource));
+    }
+
+    @Override
+    @Transactional
+    public CommunityDtos.CircleResourceDto createCircleResource(String userId, String circleId, CreateCircleResourceRequest req) {
+        restrictionService.assertCanUseAccount(userId, "COMMUNITY");
+        User author = findUser(userId);
+        SkillCircle circle = skillCircleRepository.findById(circleId)
+            .orElseThrow(() -> new EntityNotFoundException("SkillCircle not found: " + circleId));
+        if (circle.getMembers().stream().noneMatch(member -> member.getId().equals(userId))) {
+            throw new IllegalArgumentException("Join this skill circle before adding resources.");
+        }
+
+        SkillCircleResource resource = new SkillCircleResource();
+        resource.setCircle(circle);
+        resource.setAuthor(author);
+        resource.setTitle(req.title());
+        resource.setUrl(req.url());
+        resource.setNotes(req.notes());
+        resource.setResourceType(parseEnum(req.resourceType(), SkillCircleResource.ResourceType.LINK, SkillCircleResource.ResourceType.class));
+        resource.setDifficulty(parseEnum(req.difficulty(), SkillCircleResource.Difficulty.BEGINNER, SkillCircleResource.Difficulty.class));
+        resource.setUpvotes(0);
+        resource.setIsPinned(false);
+        resource.setIsVerified(false);
+        if (req.skillId() != null && !req.skillId().isBlank()) {
+            resource.setSkill(skillRepository.findById(req.skillId()).orElse(null));
+        }
+
+        SkillCircleResource saved = skillCircleResourceRepository.save(resource);
+        communityNotificationService.notifyCircleActivity(
+            circle,
+            userId,
+            author.getName() + " shared a resource in " + circle.getName() + ": " + saved.getTitle()
+        );
+        return mapper.toCircleResource(saved);
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public CommunityDtos.SkillCircleDashboardDto getCircleDashboard(String viewerId, String circleId) {
+        SkillCircle circle = skillCircleRepository.findById(circleId)
+            .orElseThrow(() -> new EntityNotFoundException("SkillCircle not found: " + circleId));
+        CommunityDtos.SkillCircleDto circleDto = mapSkillCircle(circle, viewerId);
+        CommunityDtos.EventDto nextEvent = eventRepository
+            .findByCircleIdAndEventDateAfterOrderByEventDateAsc(circleId, LocalDateTime.now(), PageRequest.of(0, 1))
+            .stream()
+            .findFirst()
+            .map(event -> mapEvent(event, viewerId))
+            .orElse(null);
+        List<CommunityDtos.CircleResourceDto> topResources = skillCircleResourceRepository
+            .findTop5ByCircleIdOrderByIsPinnedDescUpvotesDescCreatedAtDesc(circleId)
+            .stream()
+            .map(mapper::toCircleResource)
+            .toList();
+        List<CommunityDtos.DiscussionDto> openHelpRequests = discussionRepository.searchCommunityThreads(
+                null,
+                Discussion.ThreadType.QUESTION,
+                Discussion.DiscussionStatus.OPEN,
+                circleId,
+                null,
+                PageRequest.of(0, 5, Sort.by("createdAt").descending())
+            )
+            .getContent()
+            .stream()
+            .map(mapper::toDiscussion)
+            .toList();
+        long solvedQuestions = discussionRepository.countByCircleIdAndStatus(circleId, Discussion.DiscussionStatus.SOLVED);
+        int activityScore = (int) Math.min(100,
+            circleDto.resourceCount() * 8 + circleDto.openHelpCount() * 6 + solvedQuestions * 10 + circleDto.upcomingEventCount() * 12
+        );
+        String weeklyGoal = "Share 2 resources, solve 1 help request, and run 1 practice session.";
+        return new CommunityDtos.SkillCircleDashboardDto(
+            circleDto,
+            nextEvent,
+            topResources,
+            openHelpRequests,
+            solvedQuestions,
+            activityScore,
+            weeklyGoal
         );
     }
 
@@ -604,6 +869,56 @@ public class CommunityServiceImpl implements CommunityService {
     @Transactional(readOnly = true)
     public long getOnlineCount() {
         return userRepository.countByIsOnlineTrue();
+    }
+
+    private CommunityDtos.EventDto mapEvent(Event event, String viewerId) {
+        String rsvpState = "NONE";
+        if (viewerId != null && !viewerId.isBlank()) {
+            rsvpState = eventRsvpRepository.findById(new EventRsvp.EventRsvpId(event.getId(), viewerId))
+                .map(rsvp -> rsvp.getState().name())
+                .orElseGet(() -> event.getAttendees().stream().anyMatch(user -> viewerId.equals(user.getId())) ? "GOING" : "NONE");
+        }
+        long interestedCount = eventRsvpRepository.countByEvent_IdAndState(event.getId(), EventRsvp.RsvpState.INTERESTED);
+        int attendeeCount = event.getAttendees() == null ? 0 : event.getAttendees().size();
+        return mapper.toEvent(event, rsvpState, interestedCount, attendeeCount);
+    }
+
+    private void upsertRsvp(Event event, User user, EventRsvp.RsvpState state) {
+        EventRsvp.EventRsvpId id = new EventRsvp.EventRsvpId(event.getId(), user.getId());
+        EventRsvp rsvp = eventRsvpRepository.findById(id).orElseGet(() -> EventRsvp.builder()
+            .id(id)
+            .event(event)
+            .user(user)
+            .build());
+        rsvp.setState(state);
+        eventRsvpRepository.save(rsvp);
+    }
+
+    private CommunityDtos.SkillCircleDto mapSkillCircle(SkillCircle circle, String viewerId) {
+        long resourceCount = skillCircleResourceRepository.countByCircleId(circle.getId());
+        long openHelpCount = discussionRepository.countByCircleIdAndThreadTypeAndStatus(
+            circle.getId(),
+            Discussion.ThreadType.QUESTION,
+            Discussion.DiscussionStatus.OPEN
+        );
+        long upcomingEventCount = eventRepository.countByCircleIdAndEventDateAfter(circle.getId(), LocalDateTime.now());
+        return mapper.toSkillCircle(circle, viewerId, resourceCount, openHelpCount, upcomingEventCount);
+    }
+
+    private String blankToNull(String value) {
+        return value == null || value.isBlank() ? null : value;
+    }
+
+    private <E extends Enum<E>> E parseEnum(String value, E fallback, Class<E> enumType) {
+        if (value == null || value.isBlank()) {
+            return fallback;
+        }
+        String normalized = value.trim().toUpperCase(Locale.ROOT).replace('-', '_').replace(' ', '_');
+        try {
+            return Enum.valueOf(enumType, normalized);
+        } catch (IllegalArgumentException ex) {
+            return fallback;
+        }
     }
 
     private User findUser(String id) {

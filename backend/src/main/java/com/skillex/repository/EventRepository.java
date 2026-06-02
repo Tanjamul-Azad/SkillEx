@@ -14,4 +14,8 @@ public interface EventRepository extends JpaRepository<Event, String> {
     Page<Event> findByEventDateAfterOrderByEventDateAsc(LocalDateTime from, Pageable pageable);
 
     Page<Event> findByHostId(String hostId, Pageable pageable);
+
+    Page<Event> findByCircleIdAndEventDateAfterOrderByEventDateAsc(String circleId, LocalDateTime from, Pageable pageable);
+
+    long countByCircleIdAndEventDateAfter(String circleId, LocalDateTime from);
 }

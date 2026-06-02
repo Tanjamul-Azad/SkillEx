@@ -1,4 +1,16 @@
-import type { Event, Discussion, Post, Story, SkillCircle, Comment, TrendingSkill, SuggestedUser } from '@/types';
+import type {
+  Event,
+  Discussion,
+  Post,
+  Story,
+  SkillCircle,
+  Comment,
+  TrendingSkill,
+  SuggestedUser,
+  CircleResource,
+  DiscussionReply,
+  SkillCircleDashboard,
+} from '@/types';
 import { api } from './api';
 
 export interface PagedResponse<T> {
@@ -29,6 +41,8 @@ const normalizeDiscussion = (discussion: Discussion): Discussion => ({
   upvotes: Number(discussion.upvotes ?? 0),
   replies: Number(discussion.replies ?? 0),
   views: Number(discussion.views ?? 0),
+  status: discussion.status ?? 'OPEN',
+  threadType: discussion.threadType ?? 'QUESTION',
 });
 
 const normalizeDiscussionPage = (page: PagedResponse<Discussion>): PagedResponse<Discussion> => ({
@@ -45,12 +59,18 @@ export const CommunityService = {
   getEvents: (page = 0, size = 20): Promise<PagedResponse<Event>> =>
     api.get<PagedResponse<Event>>(`/community/events?page=${page}&size=${size}`),
 
+  getEvent: (eventId: string): Promise<Event> =>
+    api.get<Event>(`/community/events/${eventId}`),
+
   createEvent: (data: {
     title: string;
     description?: string;
     eventDate: string;
     location?: string;
     isOnline: boolean;
+    eventType?: string;
+    circleId?: string;
+    meetingUrl?: string;
     coverGradient?: string;
     skillIds?: string[];
   }): Promise<Event> =>
@@ -59,15 +79,55 @@ export const CommunityService = {
   attendEvent: (eventId: string): Promise<void> =>
     api.post<void>(`/community/events/${eventId}/attend`, {}),
 
-  // ── Discussions ────────────────────────────────────────────────────────────
-  getDiscussions: async (page = 0, size = 20): Promise<PagedResponse<Discussion>> =>
-    normalizeDiscussionPage(await api.get<PagedResponse<Discussion>>(`/community/discussions?page=${page}&size=${size}`)),
+  interestEvent: (eventId: string): Promise<Event> =>
+    api.post<Event>(`/community/events/${eventId}/interest`, {}),
 
-  createDiscussion: async (data: { title: string; content: string; category?: string }): Promise<Discussion> =>
+  // ── Discussions ────────────────────────────────────────────────────────────
+  getDiscussions: async (
+    page = 0,
+    size = 20,
+    filters: {
+      category?: string;
+      threadType?: string;
+      status?: string;
+      circleId?: string;
+      skillId?: string;
+    } = {},
+  ): Promise<PagedResponse<Discussion>> => {
+    const params = new URLSearchParams({ page: String(page), size: String(size) });
+    Object.entries(filters).forEach(([key, value]) => {
+      if (value && value !== 'All') params.set(key, value);
+    });
+    return normalizeDiscussionPage(await api.get<PagedResponse<Discussion>>(`/community/discussions?${params.toString()}`));
+  },
+
+  createDiscussion: async (data: {
+    title: string;
+    content: string;
+    category?: string;
+    threadType?: string;
+    skillId?: string;
+    circleId?: string;
+  }): Promise<Discussion> =>
     normalizeDiscussion(await api.post<Discussion>('/community/discussions', data)),
+
+  getDiscussion: async (discussionId: string): Promise<Discussion> =>
+    normalizeDiscussion(await api.get<Discussion>(`/community/discussions/${discussionId}`)),
 
   upvoteDiscussion: async (discussionId: string): Promise<Discussion> =>
     normalizeDiscussion(await api.post<Discussion>(`/community/discussions/${discussionId}/upvote`, {})),
+
+  getDiscussionReplies: (discussionId: string, page = 0, size = 20): Promise<PagedResponse<DiscussionReply>> =>
+    api.get<PagedResponse<DiscussionReply>>(`/community/discussions/${discussionId}/replies?page=${page}&size=${size}`),
+
+  addDiscussionReply: (discussionId: string, content: string): Promise<DiscussionReply> =>
+    api.post<DiscussionReply>(`/community/discussions/${discussionId}/replies`, { content }),
+
+  acceptDiscussionReply: async (discussionId: string, replyId: string): Promise<Discussion> =>
+    normalizeDiscussion(await api.post<Discussion>(`/community/discussions/${discussionId}/replies/${replyId}/accept`, {})),
+
+  resolveDiscussion: async (discussionId: string): Promise<Discussion> =>
+    normalizeDiscussion(await api.patch<Discussion>(`/community/discussions/${discussionId}/resolve`, {})),
 
   // ── Posts ──────────────────────────────────────────────────────────────────
   getPosts: async (page = 0, size = 20): Promise<PagedResponse<Post>> =>
@@ -112,7 +172,26 @@ export const CommunityService = {
   getSkillCircles: (page = 0, size = 20): Promise<PagedResponse<SkillCircle>> =>
     api.get<PagedResponse<SkillCircle>>(`/community/skill-circles?page=${page}&size=${size}`),
 
-  createSkillCircle: (data: { name: string; icon?: string; skillIds?: string[] }): Promise<SkillCircle> =>
+  getSkillCircle: (circleId: string): Promise<SkillCircle> =>
+    api.get<SkillCircle>(`/community/skill-circles/${circleId}`),
+
+  getCircleDashboard: (circleId: string): Promise<SkillCircleDashboard> =>
+    api.get<SkillCircleDashboard>(`/community/skill-circles/${circleId}/dashboard`),
+
+  getCircleResources: (circleId: string, page = 0, size = 20): Promise<PagedResponse<CircleResource>> =>
+    api.get<PagedResponse<CircleResource>>(`/community/skill-circles/${circleId}/resources?page=${page}&size=${size}`),
+
+  createCircleResource: (circleId: string, data: {
+    title: string;
+    url?: string;
+    notes?: string;
+    resourceType?: string;
+    difficulty?: string;
+    skillId?: string;
+  }): Promise<CircleResource> =>
+    api.post<CircleResource>(`/community/skill-circles/${circleId}/resources`, data),
+
+  createSkillCircle: (data: { name: string; description?: string; icon?: string; skillIds?: string[] }): Promise<SkillCircle> =>
     api.post<SkillCircle>('/community/skill-circles', data),
 
   joinCircle: (circleId: string): Promise<SkillCircle> =>

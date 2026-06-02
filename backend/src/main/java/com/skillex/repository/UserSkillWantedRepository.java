@@ -20,6 +20,9 @@ public interface UserSkillWantedRepository
     @Query("SELECT usw FROM UserSkillWanted usw JOIN FETCH usw.skill WHERE usw.id.userId IN :userIds")
     List<UserSkillWanted> findByIdUserIdIn(@Param("userIds") Collection<String> userIds);
 
+    @Query("SELECT DISTINCT usw.id.userId FROM UserSkillWanted usw WHERE usw.id.skillId IN :skillIds")
+    List<String> findUserIdsBySkillIds(@Param("skillIds") Collection<String> skillIds);
+
     boolean existsByIdUserIdAndIdSkillId(String userId, String skillId);
 
     @Modifying(clearAutomatically = true, flushAutomatically = true)

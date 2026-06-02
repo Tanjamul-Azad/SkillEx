@@ -18,6 +18,14 @@ public final class CommunityDtos {
         LocalDateTime eventDate,
         String location,
         boolean isOnline,
+        String eventType,
+        String circleId,
+        String circleName,
+        String meetingUrl,
+        String rsvpState,
+        int interestedCount,
+        int attendeeCount,
+        String status,
         String coverGradient,
         List<SkillRef> skills,
         List<UserSummaryDto> attendees,
@@ -30,6 +38,12 @@ public final class CommunityDtos {
         String content,
         UserSummaryDto author,
         String category,
+        String threadType,
+        SkillRef skill,
+        String circleId,
+        String circleName,
+        String status,
+        String acceptedReplyId,
         int upvotes,
         boolean isUpvotedByViewer,
         int replies,
@@ -65,12 +79,53 @@ public final class CommunityDtos {
     public record SkillCircleDto(
         String id,
         String name,
+        String description,
+        UserSummaryDto owner,
+        String memberRole,
         String icon,
         int memberCount,
         LocalDateTime lastSession,
         String activity,
+        long resourceCount,
+        long openHelpCount,
+        long upcomingEventCount,
         List<SkillRef> skills,
         List<UserSummaryDto> members
+    ) {}
+
+    public record CircleResourceDto(
+        String id,
+        String circleId,
+        String title,
+        String url,
+        String notes,
+        String resourceType,
+        String difficulty,
+        int upvotes,
+        boolean isPinned,
+        boolean isVerified,
+        SkillRef skill,
+        UserSummaryDto author,
+        LocalDateTime createdAt
+    ) {}
+
+    public record DiscussionReplyDto(
+        String id,
+        String discussionId,
+        UserSummaryDto author,
+        String content,
+        boolean isAccepted,
+        LocalDateTime createdAt
+    ) {}
+
+    public record SkillCircleDashboardDto(
+        SkillCircleDto circle,
+        EventDto nextEvent,
+        List<CircleResourceDto> topResources,
+        List<DiscussionDto> openHelpRequests,
+        long solvedQuestions,
+        int activityScore,
+        String weeklyGoal
     ) {}
 
     public record SkillRef(String id, String name, String icon, String category) {}

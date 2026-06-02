@@ -1,6 +1,6 @@
 package com.skillex.service.impl;
 
-import com.skillex.dto.session.CreateConnectedSessionRequest;
+import com.skillex.dto.session.CreateConnectedSessionRequest; // touch
 import com.skillex.dto.session.CreateSessionRequest;
 import com.skillex.model.Connection;
 import com.skillex.model.Exchange;

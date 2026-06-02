@@ -1335,3 +1335,19 @@
     transform: translateX(100%);
   }
 }
+
+/* Custom styling for native date/time pickers to match premium dark UI */
+input[type="date"]::-webkit-calendar-picker-indicator,
+input[type="time"]::-webkit-calendar-picker-indicator {
+  filter: invert(0.8) sepia(100%) saturate(1000%) hue-rotate(130deg);
+  cursor: pointer;
+  border-radius: 6px;
+  padding: 4px;
+  transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+input[type="date"]::-webkit-calendar-picker-indicator:hover,
+input[type="time"]::-webkit-calendar-picker-indicator:hover {
+  background: rgba(0, 245, 212, 0.15);
+  filter: invert(1) brightness(1.2);
+}

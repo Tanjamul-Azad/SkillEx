@@ -545,24 +545,58 @@ export default function ConnectionsPage() {
                   <div className="grid grid-cols-2 gap-3">
                     <div className="space-y-1.5">
                       <Label htmlFor="meeting-date">Date</Label>
-                      <Input
-                        id="meeting-date"
-                        type="date"
-                        value={meetingDate}
-                        min={new Date().toISOString().split('T')[0]}
-                        onChange={(event) => setMeetingDate(event.target.value)}
-                        className="rounded-xl"
-                      />
+                      <div className="relative">
+                        <CalendarDays className="absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-primary pointer-events-none z-20" />
+                        <Input
+                          id="meeting-date"
+                          type="date"
+                          value={meetingDate}
+                          min={new Date().toISOString().split('T')[0]}
+                          onChange={(event) => setMeetingDate(event.target.value)}
+                          onClick={(e) => {
+                            try {
+                              e.currentTarget.showPicker();
+                            } catch {
+                              // Some browsers do not expose showPicker for date inputs.
+                            }
+                          }}
+                          onFocus={(e) => {
+                            try {
+                              e.currentTarget.showPicker();
+                            } catch {
+                              // Some browsers do not expose showPicker for date inputs.
+                            }
+                          }}
+                          className="rounded-xl pl-10 bg-background relative z-10 cursor-pointer"
+                        />
+                      </div>
                     </div>
                     <div className="space-y-1.5">
                       <Label htmlFor="meeting-time">Time</Label>
-                      <Input
-                        id="meeting-time"
-                        type="time"
-                        value={meetingTime}
-                        onChange={(event) => setMeetingTime(event.target.value)}
-                        className="rounded-xl"
-                      />
+                      <div className="relative">
+                        <Clock className="absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-primary pointer-events-none z-20" />
+                        <Input
+                          id="meeting-time"
+                          type="time"
+                          value={meetingTime}
+                          onChange={(event) => setMeetingTime(event.target.value)}
+                          onClick={(e) => {
+                            try {
+                              e.currentTarget.showPicker();
+                            } catch {
+                              // Some browsers do not expose showPicker for time inputs.
+                            }
+                          }}
+                          onFocus={(e) => {
+                            try {
+                              e.currentTarget.showPicker();
+                            } catch {
+                              // Some browsers do not expose showPicker for time inputs.
+                            }
+                          }}
+                          className="rounded-xl pl-10 bg-background relative z-10 cursor-pointer"
+                        />
+                      </div>
                     </div>
                   </div>
 

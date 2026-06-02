@@ -133,6 +133,21 @@ export const useAgoraSession = (sessionId: string) => {
       });
     };
 
+    const setupAutoplayListener = (user: IAgoraRTCRemoteUser) => {
+      const resumeAudio = () => {
+        try {
+          user.audioTrack?.play();
+          console.log('[Agora] Successfully played remote audio track after user interaction');
+        } catch (e) {
+          console.warn('[Agora] Failed to play remote audio track on interaction:', e);
+        }
+        document.removeEventListener('click', resumeAudio);
+        document.removeEventListener('touchstart', resumeAudio);
+      };
+      document.addEventListener('click', resumeAudio);
+      document.addEventListener('touchstart', resumeAudio);
+    };
+
     const handleUserPublished = async (user: IAgoraRTCRemoteUser, mediaType: 'audio' | 'video') => {
       await client.subscribe(user, mediaType);
       
@@ -143,18 +158,36 @@ export const useAgoraSession = (sessionId: string) => {
         return [...prev, user];
       });
 
-      if (mediaType === 'audio') {
-        user.audioTrack?.play();
+      if (mediaType === 'audio' && user.audioTrack) {
+        try {
+          const playResult = user.audioTrack.play() as any;
+          if (playResult && typeof playResult.catch === 'function') {
+            playResult.catch((err: any) => {
+              console.warn('[Agora] Autoplay blocked remote audio track (Promise).', err);
+              setupAutoplayListener(user);
+            });
+          }
+        } catch (err) {
+          console.warn('[Agora] Autoplay blocked remote audio track (Sync).', err);
+          setupAutoplayListener(user);
+        }
       }
     };
 
-    const handleUserUnpublished = (user: IAgoraRTCRemoteUser, _mediaType: 'audio' | 'video') => {
+    const handleUserUnpublished = (user: IAgoraRTCRemoteUser, mediaType: 'audio' | 'video') => {
+      if (mediaType === 'audio') {
+        user.audioTrack?.stop();
+      } else if (mediaType === 'video') {
+        user.videoTrack?.stop();
+      }
       setRemoteUsers((prev) => {
         return prev.map((u) => (u.uid === user.uid ? user : u));
       });
     };
 
     const handleUserLeft = (user: IAgoraRTCRemoteUser) => {
+      user.audioTrack?.stop();
+      user.videoTrack?.stop();
       setRemoteUsers((prev) => prev.filter((u) => u.uid !== user.uid));
     };
 
@@ -267,7 +300,12 @@ export const useAgoraSession = (sessionId: string) => {
       setAudioEnabled(false);
     } else {
       try {
-        audioTrack = await AgoraRTC.createMicrophoneAudioTrack({ microphoneId: activeMicId });
+        audioTrack = await AgoraRTC.createMicrophoneAudioTrack({
+          microphoneId: activeMicId,
+          AEC: true,
+          ANS: true,
+          AGC: true
+        });
         localAudioTrackRef.current = audioTrack;
         setLocalAudioTrack(audioTrack);
         await audioTrack.setEnabled(true);
@@ -411,7 +449,12 @@ export const useAgoraSession = (sessionId: string) => {
         if (!activeMicId) {
           throw new Error('No microphone found.');
         }
-        const audioTrack = await AgoraRTC.createMicrophoneAudioTrack({ microphoneId: activeMicId });
+        const audioTrack = await AgoraRTC.createMicrophoneAudioTrack({
+          microphoneId: activeMicId,
+          AEC: true,
+          ANS: true,
+          AGC: true
+        });
         localAudioTrackRef.current = audioTrack;
         setLocalAudioTrack(audioTrack);
         if (clientRef.current && joinedRef.current) {

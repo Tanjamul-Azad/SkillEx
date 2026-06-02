@@ -265,17 +265,19 @@ public class NoteGenerationService {
                 5) Action items must be owner-oriented, testable, and specific.
                 6) If no explicit resources were mentioned, return an empty list.
 
-                Return ONLY valid JSON (no markdown fences, no extra keys) with this exact schema:
-                {
-                  "summary": "3-5 sentence executive brief with context + outcomes",
-                  "keyConcepts": [
-                    "[Insight] ...",
-                    "[Decision] ...",
-                    "[Open Question] ..."
-                  ],
-                  "actionItems": ["[Owner] action -> expected outcome", "..."],
-                  "resourcesMentioned": ["resource/tool/link", "..."]
-                }
+                 Return ONLY valid JSON (no markdown fences, no extra keys).
+                 CRITICAL: Do NOT use raw unescaped double quotes inside string values (like "Allows simple programs like 'print "Hello"' to run"). Instead, use single quotes or escape them.
+                 JSON Schema:
+                 {
+                   "summary": "3-5 sentence executive brief with context + outcomes",
+                   "keyConcepts": [
+                     "[Insight] ...",
+                     "[Decision] ...",
+                     "[Open Question] ..."
+                   ],
+                   "actionItems": ["[Owner] action -> expected outcome", "..."],
+                   "resourcesMentioned": ["resource/tool/link", "..."]
+                 }
 
                 Transcript:
                 %s
@@ -412,25 +414,134 @@ public class NoteGenerationService {
     }
 
     private Map<String, String> tryParseJsonSections(String rawText) {
+        if (rawText == null || rawText.isBlank()) {
+            return Map.of();
+        }
         try {
             String body = rawText.trim();
+            // Robustly extract the JSON substring between the first '{' and the last '}'
+            int firstBrace = body.indexOf('{');
+            int lastBrace = body.lastIndexOf('}');
+            if (firstBrace != -1 && lastBrace != -1 && lastBrace > firstBrace) {
+                body = body.substring(firstBrace, lastBrace + 1);
+            }
+
             if (body.startsWith("```")) {
                 body = body.replaceFirst("^```(?:json)?\\s*", "").replaceFirst("\\s*```$", "").trim();
             }
-            JsonNode root = objectMapper.readTree(body);
-            if (!root.isObject()) {
-                return Map.of();
-            }
 
-            Map<String, String> parsed = new LinkedHashMap<>();
-            parsed.put("summary", normalizeSectionText(root.path("summary").asText("")));
-            parsed.put("keyConcepts", parseJsonListAsBullets(root.path("keyConcepts")));
-            parsed.put("actionItems", parseJsonListAsBullets(root.path("actionItems")));
-            parsed.put("resourcesMentioned", parseJsonListAsBullets(root.path("resourcesMentioned")));
-            return parsed;
+            try {
+                JsonNode root = objectMapper.readTree(body);
+                if (root.isObject()) {
+                    Map<String, String> parsed = new LinkedHashMap<>();
+                    parsed.put("summary", normalizeSectionText(root.path("summary").asText("")));
+                    parsed.put("keyConcepts", parseJsonListAsBullets(root.path("keyConcepts")));
+                    parsed.put("actionItems", parseJsonListAsBullets(root.path("actionItems")));
+                    parsed.put("resourcesMentioned", parseJsonListAsBullets(root.path("resourcesMentioned")));
+                    return parsed;
+                }
+            } catch (Exception parseException) {
+                log.warn("[AI-Notes] Standard JSON parsing failed. Attempting robust regex extraction fallback.", parseException);
+                return parseJsonUsingRegex(body);
+            }
         } catch (Exception ignore) {
-            return Map.of();
         }
+        return Map.of();
+    }
+
+    private Map<String, String> parseJsonUsingRegex(String json) {
+        Map<String, String> parsed = new LinkedHashMap<>();
+        parsed.put("summary", "");
+        parsed.put("keyConcepts", "");
+        parsed.put("actionItems", "");
+        parsed.put("resourcesMentioned", "");
+
+        try {
+            String summaryVal = extractFieldContent(json, "summary", "keyConcepts");
+            parsed.put("summary", cleanRegexExtractedValue(summaryVal));
+
+            String keyConceptsVal = extractFieldContent(json, "keyConcepts", "actionItems");
+            parsed.put("keyConcepts", cleanRegexExtractedList(keyConceptsVal));
+
+            String actionItemsVal = extractFieldContent(json, "actionItems", "resourcesMentioned");
+            parsed.put("actionItems", cleanRegexExtractedList(actionItemsVal));
+
+            String resourcesVal = extractFieldContent(json, "resourcesMentioned", null);
+            parsed.put("resourcesMentioned", cleanRegexExtractedList(resourcesVal));
+        } catch (Exception e) {
+            log.error("[AI-Notes] Regex JSON extractor fallback failed.", e);
+        }
+        return parsed;
+    }
+
+    private String extractFieldContent(String json, String currentKey, String nextKey) {
+        String startMarker = "\"" + currentKey + "\"";
+        int startIdx = json.indexOf(startMarker);
+        if (startIdx == -1) {
+            return "";
+        }
+        int valueStart = json.indexOf(":", startIdx + startMarker.length());
+        if (valueStart == -1) {
+            return "";
+        }
+        valueStart += 1; // skip ':'
+
+        int endIdx;
+        if (nextKey != null) {
+            String endMarker = "\"" + nextKey + "\"";
+            endIdx = json.indexOf(endMarker, valueStart);
+        } else {
+            endIdx = json.lastIndexOf("}");
+        }
+
+        if (endIdx == -1 || endIdx <= valueStart) {
+            return json.substring(valueStart).trim();
+        }
+
+        return json.substring(valueStart, endIdx).trim();
+    }
+
+    private String cleanRegexExtractedValue(String raw) {
+        if (raw == null || raw.isBlank()) return "";
+        String val = raw.trim();
+        if (val.startsWith("\"")) {
+            val = val.substring(1);
+        }
+        val = val.replaceAll(",\\s*$", "").trim();
+        if (val.endsWith("\"")) {
+            val = val.substring(0, val.length() - 1);
+        }
+        return val.replace("\\\"", "\"").replace("\\\\", "\\").trim();
+    }
+
+    private String cleanRegexExtractedList(String raw) {
+        if (raw == null || raw.isBlank()) return "";
+        String val = raw.trim();
+        val = val.replaceAll(",\\s*$", "").trim();
+        if (val.startsWith("[")) {
+            val = val.substring(1);
+        }
+        if (val.endsWith("]")) {
+            val = val.substring(0, val.length() - 1);
+        }
+        val = val.trim();
+
+        String[] lines = val.split("\",\\s*\"|\",?\\s*\\n\\s*\"");
+        List<String> items = new ArrayList<>();
+        for (String line : lines) {
+            String clean = line.trim();
+            if (clean.startsWith("\"")) {
+                clean = clean.substring(1);
+            }
+            if (clean.endsWith("\"")) {
+                clean = clean.substring(0, clean.length() - 1);
+            }
+            clean = clean.replace("\\\"", "\"").trim();
+            if (!clean.isBlank()) {
+                items.add("- " + clean);
+            }
+        }
+        return String.join("\n", items);
     }
 
     private String parseJsonListAsBullets(JsonNode node) {

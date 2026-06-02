@@ -136,6 +136,7 @@ export const useAgoraSession = (sessionId: string) => {
     const setupAutoplayListener = (user: IAgoraRTCRemoteUser) => {
       const resumeAudio = () => {
         try {
+          user.audioTrack?.stop(); // Destroy any existing HTML5 audio nodes for this track first to prevent duplicate playbacks!
           user.audioTrack?.play();
           console.log('[Agora] Successfully played remote audio track after user interaction');
         } catch (e) {
@@ -160,6 +161,7 @@ export const useAgoraSession = (sessionId: string) => {
 
       if (mediaType === 'audio' && user.audioTrack) {
         try {
+          user.audioTrack.stop(); // Destroy existing audio nodes for this track to prevent double-play echo!
           const playResult = user.audioTrack.play() as any;
           if (playResult && typeof playResult.catch === 'function') {
             playResult.catch((err: any) => {

@@ -29,44 +29,33 @@ const buttonVariants = cva(
         // Solid primary — standard UI button (high contrast)
         default:
           "bg-foreground text-background font-medium " +
-          "shadow-[0_1px_2px_hsl(var(--foreground)/0.10)] " +
-          "hover:-translate-y-[2px] " +
-          "hover:bg-foreground/90 " +
-          "hover:shadow-[0_4px_10px_hsl(var(--foreground)/0.15)]",
+          "shadow-sm border border-foreground/10 " +
+          "hover:bg-foreground/90 hover:shadow-md",
         // Destructive — same pattern, red tones
         destructive:
           "bg-destructive text-destructive-foreground " +
-          "shadow-[0_1px_3px_hsl(var(--destructive)/0.25)] " +
-          "hover:-translate-y-[3px] " +
-          "hover:bg-destructive/90 " +
-          "hover:shadow-[0_4px_14px_hsl(var(--destructive)/0.28),0_1px_4px_hsl(var(--destructive)/0.18)]",
+          "shadow-sm " +
+          "hover:bg-destructive/90",
         // Outline — border sharpens to primary, bg gets a very subtle fill
         outline:
-          "border border-border bg-background text-foreground " +
-          "hover:-translate-y-[3px] " +
-          "hover:border-primary/50 " +
-          "hover:bg-primary/[0.04] " +
-          "hover:shadow-[0_4px_14px_hsl(0_0%_0%/0.07),0_1px_3px_hsl(0_0%_0%/0.05)]",
+          "border border-border bg-background/50 text-foreground backdrop-blur-sm " +
+          "hover:bg-muted hover:border-border hover:text-foreground hover:shadow-sm",
         // Secondary — same lift pattern as default
         secondary:
-          "bg-secondary text-secondary-foreground " +
-          "shadow-[0_1px_3px_hsl(var(--secondary)/0.25)] " +
-          "hover:-translate-y-[3px] " +
-          "hover:bg-secondary/85 " +
-          "hover:shadow-[0_4px_14px_hsl(var(--secondary)/0.28),0_1px_4px_hsl(var(--secondary)/0.18)]",
-        // Ghost — understated, just a muted bg fill + slight lift
+          "bg-muted text-foreground border border-border/50 " +
+          "shadow-sm " +
+          "hover:bg-muted/80",
+        // Ghost — understated, just a muted bg fill
         ghost:
-          "hover:bg-muted hover:text-foreground hover:-translate-y-px",
+          "hover:bg-muted/80 hover:text-foreground",
         // Link — underline animation only, no translate
         link:
           "text-primary underline-offset-4 hover:underline active:scale-100 rounded-none",
         // Solid Highlight CTA — primary fill, glow shadow, slight scale
         gradient:
-          "bg-primary text-primary-foreground font-bold " +
-          "shadow-[0_2px_12px_hsl(var(--primary)/0.35),0_1px_4px_hsl(var(--primary)/0.20)] " +
-          "hover:-translate-y-[3px] hover:scale-[1.02] " +
-          "hover:shadow-[0_6px_20px_hsl(var(--primary)/0.40),0_2px_6px_hsl(var(--primary)/0.25)] " +
-          "active:scale-[0.97]",
+          "bg-primary text-primary-foreground font-semibold " +
+          "shadow-[0_4px_12px_hsl(var(--primary)/0.25)] " +
+          "hover:bg-primary/90 hover:shadow-[0_6px_20px_hsl(var(--primary)/0.4)] hover:translate-y-[-0.5px]",
       },
       size: {
         default: "h-10 px-5 py-2",

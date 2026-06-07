@@ -88,7 +88,7 @@ function Start-MySqlServiceIfNeeded {
 function Start-XamppMySqlIfNeeded {
     $roots = @()
     if ($env:XAMPP_HOME) { $roots += $env:XAMPP_HOME }
-    $roots += @("F:\\Xamp", "C:\\xampp")
+    $roots += @("D:\\xamp", "F:\\Xamp", "C:\\xampp")
     $roots = $roots | Select-Object -Unique
 
     foreach ($root in $roots) {
@@ -136,11 +136,20 @@ function Confirm-DatabaseExists {
 
     $roots = @()
     if ($env:XAMPP_HOME) { $roots += $env:XAMPP_HOME }
-    $roots += @("F:\\Xamp", "C:\\xampp")
+    $roots += @("D:\\xamp", "F:\\Xamp", "C:\\xampp")
     $roots = $roots | Select-Object -Unique
 
     $mysqlExe = $null
+    $mysqlCommand = Get-Command mysql.exe -ErrorAction SilentlyContinue
+    if (-not $mysqlCommand) {
+        $mysqlCommand = Get-Command mysql -ErrorAction SilentlyContinue
+    }
+    if ($mysqlCommand -and $mysqlCommand.Source) {
+        $mysqlExe = $mysqlCommand.Source
+    }
+
     foreach ($root in $roots) {
+        if ($mysqlExe) { break }
         $candidate = Join-Path $root "mysql\\bin\\mysql.exe"
         if (Test-Path $candidate) {
             $mysqlExe = $candidate

@@ -100,6 +100,8 @@ export const PostCard = React.memo(({ post, onDelete }: PostCardProps) => {
       setLocalCommentCount(n => n + 1);
       setCommentText('');
     } catch {
+
+
       toast({ title: 'Failed to add comment', variant: 'destructive' });
     } finally {
       setSubmittingComment(false);
@@ -129,17 +131,16 @@ export const PostCard = React.memo(({ post, onDelete }: PostCardProps) => {
 
   return (
     <>
-      <div className="group overflow-hidden rounded-2xl border border-primary/15 bg-card transition-all duration-300 hover:border-primary/35 relative shadow-sm">
-        <div className="absolute inset-0 bg-gradient-to-br from-primary/5 via-transparent to-transparent opacity-0 transition-opacity duration-500 group-hover:opacity-100 pointer-events-none" />
-        <div className="p-4 sm:p-5 relative z-10">
+      <div className="group py-5 px-3 border-b border-border/40 bg-transparent transition-all duration-300 relative">
+        <div className="relative z-10">
           <div className="flex items-center gap-4">
-            <Avatar className="h-12 w-12 ring-2 ring-primary/20 transition-all duration-300 group-hover:ring-primary/40 group-hover:scale-105 shadow-[0_0_10px_hsl(var(--primary)/0.2)] cursor-pointer" onClick={() => navigate(`/profile/${post.author.id}`)}>
+            <Avatar className="h-10 w-10 ring-1 ring-border transition-all duration-300 group-hover:scale-105 cursor-pointer" onClick={() => navigate(`/profile/${post.author.id}`)}>
               <AvatarImage src={post.author.avatar} className="object-cover" />
-              <AvatarFallback className="bg-primary/20 text-primary font-bold">{post.author.name.charAt(0)}</AvatarFallback>
+              <AvatarFallback className="bg-primary/20 text-primary font-bold text-xs">{post.author.name.charAt(0)}</AvatarFallback>
             </Avatar>
             <div className="flex flex-col">
-              <p className="font-headline font-extrabold text-foreground text-base leading-tight hover:text-primary transition-colors cursor-pointer" onClick={() => navigate(`/profile/${post.author.id}`)}>{post.author.name}</p>
-              <p className="text-[10px] uppercase font-bold tracking-widest text-muted-foreground mt-1">{timeAgo(post.createdAt)}</p>
+              <p className="font-headline font-extrabold text-foreground text-sm sm:text-base leading-tight hover:underline cursor-pointer" onClick={() => navigate(`/profile/${post.author.id}`)}>{post.author.name}</p>
+              <p className="text-[9px] uppercase font-bold tracking-widest text-muted-foreground mt-0.5">{timeAgo(post.createdAt)}</p>
             </div>
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
@@ -169,7 +170,7 @@ export const PostCard = React.memo(({ post, onDelete }: PostCardProps) => {
             </DropdownMenu>
           </div>
 
-          <div className="mt-4 text-sm leading-relaxed text-foreground/90 whitespace-pre-wrap">
+          <div className="mt-3 text-sm leading-relaxed text-foreground/90 whitespace-pre-wrap pl-1">
             {post.type === 'achievement' && `🏆 ${authorName} ${post.content}`}
             {post.type === 'exchange' && post.exchangePartners && `✅ ${post.exchangePartners[0].name} and ${post.exchangePartners[1].name} ${post.content}`}
             {post.type === 'question' && `❓ ${post.author.name} ${post.content}`}
@@ -178,7 +179,7 @@ export const PostCard = React.memo(({ post, onDelete }: PostCardProps) => {
 
           {/* Tagged Skill Badge */}
           {post.skill && (
-            <div className="mt-3">
+            <div className="mt-3 pl-1">
               <Badge variant="secondary" className="bg-primary/10 text-primary border-primary/20 text-[9px] font-bold uppercase tracking-widest px-2 py-0.5 rounded-md">
                 <Tag className="h-2.5 w-2.5 mr-1" /> {post.skill.name}
               </Badge>
@@ -193,7 +194,7 @@ export const PostCard = React.memo(({ post, onDelete }: PostCardProps) => {
 
           {/* Media content */}
           {post.mediaUrl && (
-            <div className="mt-4 relative rounded-xl overflow-hidden border border-primary/15 bg-background cursor-pointer" onClick={handleVideoToggle}>
+            <div className="mt-4 relative rounded-xl overflow-hidden border border-primary/15 bg-background cursor-pointer max-w-xl" onClick={handleVideoToggle}>
               {post.mediaUrl.match(/\.(mp4|webm|ogg)$/i) ? (
                 <div className="relative aspect-[16/10] bg-card group/video">
                   <video 
@@ -217,48 +218,48 @@ export const PostCard = React.memo(({ post, onDelete }: PostCardProps) => {
             </div>
           )}
 
-          <div className="mt-6 flex items-center gap-1.5 border-t border-primary/10 pt-4">
+          <div className="mt-4 flex items-center gap-1.5 border-t border-border/10 pt-3 pl-1">
             <Button
               variant="ghost"
               size="sm"
               className={cn(
-                'rounded-xl text-[10px] uppercase font-bold tracking-widest transition-all px-4',
+                'rounded-xl text-[10px] uppercase font-bold tracking-widest transition-all px-3 h-8',
                 liked ? 'text-primary bg-primary/10' : 'text-muted-foreground hover:text-primary hover:bg-primary/5'
               )}
               onClick={handleLike}
             >
-              <Heart className={cn('mr-2 h-4 w-4 transition-all', liked && 'fill-current scale-110')} />
+              <Heart className={cn('mr-1.5 h-3.5 w-3.5 transition-all', liked && 'fill-current scale-110')} />
               {localLikes}
             </Button>
             <Button
               variant="ghost"
               size="sm"
               className={cn(
-                'rounded-xl text-[10px] uppercase font-bold tracking-widest text-muted-foreground hover:text-primary hover:bg-primary/5 transition-all px-4',
+                'rounded-xl text-[10px] uppercase font-bold tracking-widest text-muted-foreground hover:text-primary hover:bg-primary/5 transition-all px-3 h-8',
                 commentsOpen && 'text-primary bg-primary/10'
               )}
               onClick={() => setCommentsOpen(!commentsOpen)}
             >
-              <MessageSquare className="mr-2 h-4 w-4" />
+              <MessageSquare className="mr-1.5 h-3.5 w-3.5" />
               {localCommentCount}
             </Button>
             <Button
               variant="ghost"
               size="sm"
-              className="rounded-xl text-[10px] uppercase font-bold tracking-widest text-muted-foreground hover:text-primary hover:bg-primary/5 transition-all px-4 sm:ml-0"
+              className="rounded-xl text-[10px] uppercase font-bold tracking-widest text-muted-foreground hover:text-primary hover:bg-primary/5 transition-all px-3 h-8"
               onClick={() => {
                 const url = `${window.location.origin}/post/${post.id}`;
                 navigator.clipboard.writeText(url);
                 toast({ title: 'Link copied', description: 'Post link copied to clipboard.' });
               }}
             >
-              <Share2 className="h-4 w-4" />
+              <Share2 className="h-3.5 w-3.5" />
             </Button>
             <Button
               variant="ghost"
               size="sm"
               className={cn(
-                'ml-auto rounded-xl text-[10px] uppercase font-bold tracking-widest transition-all px-4',
+                'ml-auto rounded-xl text-[10px] uppercase font-bold tracking-widest transition-all px-3 h-8',
                 saved ? 'text-primary' : 'text-muted-foreground hover:text-primary hover:bg-primary/5'
               )}
               onClick={() => {
@@ -269,7 +270,7 @@ export const PostCard = React.memo(({ post, onDelete }: PostCardProps) => {
                 });
               }}
             >
-              <Bookmark className={cn('h-4 w-4', saved && 'fill-current')} />
+              <Bookmark className={cn('h-3.5 w-3.5', saved && 'fill-current')} />
             </Button>
           </div>
 
@@ -279,23 +280,23 @@ export const PostCard = React.memo(({ post, onDelete }: PostCardProps) => {
                 initial={{ opacity: 0, height: 0 }}
                 animate={{ opacity: 1, height: 'auto' }}
                 exit={{ opacity: 0, height: 0 }}
-                className="mt-4 border-t border-primary/10 pt-4 overflow-hidden"
+                className="mt-3 border-t border-border/10 pt-3 overflow-hidden"
               >
-                <div className="space-y-4 max-h-64 overflow-y-auto pr-2 custom-scrollbar">
+                <div className="space-y-3 max-h-64 overflow-y-auto pr-2 custom-scrollbar">
                   {loadingComments ? (
                     <div className="flex justify-center py-4">
                       <Loader2 className="h-4 w-4 animate-spin text-primary" />
                     </div>
                   ) : postComments.length === 0 ? (
-                    <p className="text-center py-4 text-[10px] uppercase tracking-widest font-bold text-muted-foreground">No comments yet. Start the conversation!</p>
+                    <p className="text-center py-4 text-[10px] uppercase tracking-widest font-bold text-muted-foreground">No comments yet.</p>
                   ) : (
                     postComments.map((comment) => (
                       <div key={comment.id} className="flex gap-3 group/comment">
-                        <Avatar className="h-8 w-8 shrink-0 cursor-pointer" onClick={() => navigate(`/profile/${comment.author.id}`)}>
+                        <Avatar className="h-7 w-7 shrink-0 cursor-pointer" onClick={() => navigate(`/profile/${comment.author.id}`)}>
                           <AvatarImage src={comment.author.avatar ?? undefined} />
                           <AvatarFallback className="text-[10px] font-bold">{comment.author.name.charAt(0)}</AvatarFallback>
                         </Avatar>
-                        <div className="flex-1 rounded-2xl bg-background border border-primary/15 px-4 py-2 group-hover/comment:bg-primary/5 transition-colors">
+                        <div className="flex-1 rounded-xl bg-muted/20 border border-border/30 px-3 py-1.5 transition-colors">
                           <div className="flex items-center justify-between">
                             <span className="text-[10px] font-bold text-foreground hover:text-primary cursor-pointer transition-colors" onClick={() => navigate(`/profile/${comment.author.id}`)}>{comment.author.name}</span>
                             <span className="text-[8px] uppercase tracking-tighter text-muted-foreground font-bold">{timeAgo(comment.createdAt)}</span>
@@ -307,8 +308,8 @@ export const PostCard = React.memo(({ post, onDelete }: PostCardProps) => {
                   )}
                 </div>
                 {user && (
-                  <div className="mt-4 flex gap-3 items-center">
-                    <Avatar className="h-8 w-8 shrink-0">
+                  <div className="mt-3 flex gap-3 items-center">
+                    <Avatar className="h-7 w-7 shrink-0">
                       <AvatarImage src={user.avatar} />
                       <AvatarFallback>{user.name.charAt(0)}</AvatarFallback>
                     </Avatar>
@@ -318,7 +319,7 @@ export const PostCard = React.memo(({ post, onDelete }: PostCardProps) => {
                         value={commentText}
                         onChange={(e) => setCommentText(e.target.value)}
                         placeholder="Add a comment..."
-                        className="w-full bg-background border border-primary/15 rounded-xl px-4 py-2 text-xs focus:outline-none focus:ring-1 focus:ring-primary/50 text-foreground placeholder:text-muted-foreground/60"
+                        className="w-full bg-background border border-border/50 rounded-xl px-3 py-1.5 text-xs focus:outline-none focus:ring-1 focus:ring-primary/50 text-foreground placeholder:text-muted-foreground/60"
                         onKeyDown={(e) => e.key === 'Enter' && handleAddComment()}
                       />
                       <button 
@@ -326,7 +327,7 @@ export const PostCard = React.memo(({ post, onDelete }: PostCardProps) => {
                         disabled={!commentText.trim() || submittingComment}
                         className="absolute right-2 top-1/2 -translate-y-1/2 text-primary hover:text-primary/80 disabled:text-muted-foreground transition-colors"
                       >
-                        <Send className="h-4 w-4" />
+                        <Send className="h-3.5 w-3.5" />
                       </button>
                     </div>
                   </div>

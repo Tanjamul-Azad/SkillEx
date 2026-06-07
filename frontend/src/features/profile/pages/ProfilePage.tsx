@@ -42,6 +42,7 @@ import {
   LinkIcon,
   FileText,
   Trash2,
+  AlertTriangle,
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Link, Navigate, useNavigate as useNav, useSearchParams } from 'react-router-dom';
@@ -161,8 +162,8 @@ function SkillSection({
 
   return (
     <motion.div variants={itemVariants}>
-      <section id={id} className={cn('relative h-full overflow-hidden rounded-3xl border border-border/60 bg-background/30 p-5 transition-colors duration-300 hover:border-primary/20 dark:border-white/10 dark:bg-white/[0.03]', emphasized && 'border-primary/30 bg-primary/5')}>
-        <div className={cn("absolute inset-x-5 top-0 h-px opacity-60", variant === 'offer' ? 'bg-primary' : 'bg-secondary')} />
+      <section id={id} className={cn('relative h-full overflow-hidden rounded-2xl border border-border/50 bg-card p-6 transition-all duration-300 hover:border-primary/25', emphasized && 'border-primary/30 ring-1 ring-primary/10 bg-primary/[0.02]')}>
+        <div className={cn("absolute inset-x-5 top-0 h-px opacity-40", variant === 'offer' ? 'bg-primary' : 'bg-secondary')} />
         <div className="relative z-10 mb-5 flex items-center gap-3">
           <div className={cn("flex h-8 w-8 items-center justify-center rounded-xl", variant === 'offer' ? 'bg-primary/10 text-primary' : 'bg-secondary/10 text-secondary')}>
               <Icon className="w-4 h-4" />
@@ -175,7 +176,7 @@ function SkillSection({
             <Button
               size="icon"
               variant="ghost"
-              className="ml-auto h-8 w-8 rounded-full border border-white/10 bg-white/5 hover:bg-primary hover:border-primary hover:text-primary-foreground transition-all"
+              className="ml-auto h-8 w-8 rounded-full border border-border/30 bg-muted/40 hover:bg-primary hover:border-primary hover:text-primary-foreground transition-all"
               onClick={onAdd}
               aria-label={`Add skill to ${title}`}
             >
@@ -185,7 +186,7 @@ function SkillSection({
         </div>
         <div className="relative z-10">
           {skills.length === 0 ? (
-          <div className="flex flex-col items-start justify-center gap-3 rounded-2xl border border-dashed border-border/60 bg-background/30 px-4 py-7 dark:border-white/10 dark:bg-black/10">
+          <div className="flex flex-col items-start justify-center gap-3 rounded-xl border border-dashed border-border/40 bg-muted/10 px-4 py-7">
               <div className="space-y-1">
                 <p className="text-xs font-medium text-muted-foreground">{emptyText}</p>
               </div>
@@ -199,7 +200,7 @@ function SkillSection({
             <div className="space-y-5">
               <div className="flex flex-wrap gap-2">
                 {displayed.map((skill) => (
-                  <div key={skill.id} className="flex flex-col gap-1 rounded-2xl border border-border/50 bg-background/40 p-2 dark:border-white/10 dark:bg-black/10">
+                  <div key={skill.id} className="flex flex-col gap-1 rounded-xl border border-border/40 bg-muted/20 p-2.5">
                     <div className="flex flex-wrap items-center gap-2">
                       <SkillBadge skill={skill} />
                       {variant === 'offer' && <SkillTrustBadge userId={profileUserId} skillId={skill.id} />}
@@ -249,10 +250,10 @@ function ReviewCard({ review }: { review: Review }) {
 
   return (
     <motion.div variants={itemVariants} className="h-full">
-      <div className="app-card app-card-hover h-full p-5 group relative overflow-hidden">
+      <div className="surface-raised h-full p-5 group relative overflow-hidden border border-border/50 rounded-xl transition-all duration-300">
         <div className="absolute inset-0 bg-gradient-to-br from-primary/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-700 pointer-events-none" />
         <div className="relative z-10 flex items-start gap-5">
-          <Avatar className="w-12 h-12 shrink-0 ring-1 ring-white/10 group-hover:ring-primary/40 transition-all duration-500 shadow-sm bg-black/60">
+          <Avatar className="w-12 h-12 shrink-0 ring-1 ring-border group-hover:ring-primary/30 transition-all duration-300 bg-muted">
             <AvatarImage src={reviewer?.avatar} alt={reviewer?.name} className="object-cover" />
             <AvatarFallback className="font-extrabold text-muted-foreground bg-gradient-to-br from-white/5 to-white/10">{reviewer?.name?.charAt(0) ?? '?'}</AvatarFallback>
           </Avatar>
@@ -264,15 +265,15 @@ function ReviewCard({ review }: { review: Review }) {
               >
                 {reviewer?.name ?? 'Anonymous User'}
               </Link>
-              <div className="flex items-center gap-1 shrink-0 bg-white/5 px-2.5 py-1 rounded-lg border border-white/10 shadow-[inset_0_1px_0_0_hsla(0,0%,100%,0.05)]">
+              <div className="flex items-center gap-1 shrink-0 bg-muted/40 px-2.5 py-1 rounded-lg border border-border/40">
                 {[...Array(5)].map((_, i) => (
                   <Star
                     key={i}
                     className={cn(
-                      'w-3 h-3 transition-colors duration-300',
+                      'w-3 h-3',
                       i < review.rating
-                        ? 'fill-warning text-warning drop-shadow-[0_0_5px_rgba(250,204,21,0.5)]'
-                        : 'fill-white/10 text-white/10'
+                        ? 'fill-warning text-warning drop-shadow-[0_0_8px_rgba(250,204,21,0.5)]'
+                        : 'fill-foreground/10 text-foreground/10'
                     )}
                   />
                 ))}
@@ -283,7 +284,7 @@ function ReviewCard({ review }: { review: Review }) {
               {review.comment}
             </p>
             <div className="flex flex-wrap items-center gap-3 mt-4">
-              <span className="text-[9px] font-bold tracking-widest uppercase text-muted-foreground/60 border border-white/5 px-2 py-1 rounded-md bg-black/20">
+              <span className="text-[9px] font-bold tracking-widest uppercase text-muted-foreground/60 border border-border/40 px-2 py-1 rounded-md bg-muted/20">
                 {new Date(review.createdAt).toLocaleDateString('en-US', {
                   month: 'short',
                   day: 'numeric',
@@ -293,7 +294,7 @@ function ReviewCard({ review }: { review: Review }) {
               {review.tags && review.tags.length > 0 && (
                 <div className="flex gap-2 text-[9px] text-primary/60 font-bold uppercase tracking-widest">
                   {review.tags.slice(0, 3).map(tag => (
-                    <span key={tag} className="border border-primary/20 bg-primary/5 px-2 py-1 rounded-md shadow-[inset_0_1px_0_0_hsla(0,0%,100%,0.02)]">
+                    <span key={tag} className="border border-primary/20 bg-primary/5 px-2 py-1 rounded-md">
                       #{tag}
                     </span>
                   ))}
@@ -435,15 +436,6 @@ export default function ProfilePage() {
   }, [userId]);
 
   useEffect(() => {
-    if (!currentUser || !profileUser) return;
-    if (currentUser.id !== profileUser.id) return;
-
-    setProfileUser(currentUser);
-    setOfferedSkills(currentUser.skillsOffered ?? []);
-    setWantedSkills(currentUser.skillsWanted ?? []);
-  }, [currentUser, profileUser]);
-
-  useEffect(() => {
     if (!profileUser || !currentUser || profileUser.id === currentUser.id) {
       setConnectionRelationship(null);
       return;
@@ -557,6 +549,19 @@ export default function ProfilePage() {
     userReviews.length > 0
       ? userReviews.reduce((sum, r) => sum + r.rating, 0) / userReviews.length
       : profileUser.rating;
+  const profileCompletionChecklist = [
+    { label: 'username', missing: !profileUser.username?.trim() },
+    { label: 'university', missing: !profileUser.university?.trim() },
+    { label: 'location', missing: !profileUser.location?.trim() },
+    { label: 'bio', missing: !profileUser.bio?.trim() },
+    { label: 'one skill to teach', missing: offeredSkills.length === 0 },
+    { label: 'one skill to learn', missing: wantedSkills.length === 0 },
+  ];
+  const missingProfileItems = profileCompletionChecklist.filter((item) => item.missing);
+  const profileCompletionTotal = profileCompletionChecklist.length;
+  const profileCompletionDone = profileCompletionTotal - missingProfileItems.length;
+  const profileCompletionPercent = Math.round((profileCompletionDone / profileCompletionTotal) * 100);
+  const shouldShowCompletionWarning = isOwnProfile && missingProfileItems.length > 0;
 
   const openConnectDialog = () => {
     setConnectMessage(`Hi ${profileUser.name.split(' ')[0]}, I found your profile on SkillEX and would love to connect.`);
@@ -686,13 +691,43 @@ export default function ProfilePage() {
   return (
     <DashboardLayout>
       <div className="product-page space-y-5">
+        {shouldShowCompletionWarning && (
+          <motion.div
+            initial={{ opacity: 0, y: -8 }}
+            animate={{ opacity: 1, y: 0 }}
+            className="rounded-2xl border border-amber-500/30 bg-amber-500/10 p-4 shadow-sm"
+          >
+            <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
+              <div className="flex min-w-0 gap-3">
+                <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border border-amber-500/25 bg-amber-500/15 text-amber-500">
+                  <AlertTriangle className="h-5 w-5" />
+                </div>
+                <div className="min-w-0">
+                  <h2 className="text-sm font-bold text-foreground">Complete your profile</h2>
+                  <p className="mt-1 text-sm leading-6 text-muted-foreground">
+                    Your profile is {profileCompletionPercent}% complete. Add {missingProfileItems.map((item) => item.label).join(', ')} so matching, credits, and trust signals work properly.
+                  </p>
+                  <div className="mt-3 h-2 max-w-md overflow-hidden rounded-full bg-amber-500/15">
+                    <div
+                      className="h-full rounded-full bg-amber-500 transition-all"
+                      style={{ width: `${profileCompletionPercent}%` }}
+                    />
+                  </div>
+                </div>
+              </div>
+              <Button asChild size="sm" className="shrink-0 rounded-xl">
+                <Link to="/settings">Update profile</Link>
+              </Button>
+            </div>
+          </motion.div>
+        )}
         {/* ── Premium Profile Header ── */}
         <motion.div
           initial={{ opacity: 0, y: -16 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.5, ease: 'easeOut' }}
         >
-          <div className="product-panel relative group">
+          <div className="surface-flat overflow-hidden rounded-2xl border border-border/50 shadow-sm relative group">
             {/* Cover banner with glassmorphic layers */}
             <div
               className="relative h-48 sm:h-60 w-full bg-muted overflow-hidden"
@@ -785,20 +820,20 @@ export default function ProfilePage() {
                         Message
                       </Button>
                       {connectionLoading ? (
-                        <Button size="sm" disabled className="bg-white/5 border-white/5 text-muted-foreground flex-1 sm:flex-none text-[10px] uppercase tracking-widest font-bold">
+                        <Button size="sm" disabled className="bg-muted/40 border border-border/30 text-muted-foreground flex-1 sm:flex-none text-[10px] uppercase tracking-widest font-bold">
                           Loading...
                         </Button>
                       ) : isConnected ? (
-                        <Button size="sm" disabled className="bg-emerald-500/10 text-emerald-500 border-emerald-500/20 shadow-[0_0_15px_rgba(16,185,129,0.15)] flex-1 sm:flex-none text-[10px] uppercase tracking-widest font-bold opacity-100">
+                        <Button size="sm" disabled className="bg-emerald-500/10 text-emerald-500 border border-emerald-500/20 shadow-[0_0_15px_rgba(16,185,129,0.15)] flex-1 sm:flex-none text-[10px] uppercase tracking-widest font-bold opacity-100">
                           <CheckCircle className="w-4 h-4 mr-2" />
                           Connected
                         </Button>
                       ) : isPendingSent ? (
-                        <Button size="sm" disabled className="bg-white/5 border-white/5 text-muted-foreground flex-1 sm:flex-none text-[10px] uppercase tracking-widest font-bold">
+                        <Button size="sm" disabled className="bg-muted/40 border border-border/30 text-muted-foreground flex-1 sm:flex-none text-[10px] uppercase tracking-widest font-bold">
                           Pending
                         </Button>
                       ) : isPendingReceived ? (
-                        <Button size="sm" className="bg-primary/20 hover:bg-primary/30 text-primary border border-primary/30 hover:border-primary/50 shadow-[0_0_20px_hsl(var(--primary)/0.2)] flex-1 sm:flex-none text-[10px] uppercase tracking-widest font-bold transition-all" onClick={handleAcceptIncomingConnection} disabled={connectionBusy}>
+                        <Button size="sm" className="bg-primary/20 hover:bg-primary/30 text-primary border border-primary/30 hover:border-primary/50 flex-1 sm:flex-none text-[10px] uppercase tracking-widest font-bold transition-all" onClick={handleAcceptIncomingConnection} disabled={connectionBusy}>
                           <UserPlus className="w-4 h-4 mr-2" />
                           {connectionBusy ? 'Accepting...' : 'Accept'}
                         </Button>
@@ -856,7 +891,7 @@ export default function ProfilePage() {
                         href={profileUser.githubUrl}
                         target="_blank"
                         rel="noreferrer"
-                        className="inline-flex items-center gap-1.5 rounded-full border border-white/10 bg-white/[0.03] px-3 py-1.5 text-[10px] font-bold uppercase tracking-widest text-muted-foreground transition-colors hover:border-primary/30 hover:bg-primary/10 hover:text-primary"
+                        className="inline-flex items-center gap-1.5 rounded-full border border-border/40 bg-muted/20 px-3 py-1.5 text-[10px] font-bold uppercase tracking-widest text-muted-foreground transition-colors hover:border-primary/30 hover:bg-primary/10 hover:text-primary"
                       >
                         <Github className="h-3.5 w-3.5" />
                         GitHub
@@ -867,7 +902,7 @@ export default function ProfilePage() {
                         href={profileUser.linkedinUrl}
                         target="_blank"
                         rel="noreferrer"
-                        className="inline-flex items-center gap-1.5 rounded-full border border-white/10 bg-white/[0.03] px-3 py-1.5 text-[10px] font-bold uppercase tracking-widest text-muted-foreground transition-colors hover:border-primary/30 hover:bg-primary/10 hover:text-primary"
+                        className="inline-flex items-center gap-1.5 rounded-full border border-border/40 bg-muted/20 px-3 py-1.5 text-[10px] font-bold uppercase tracking-widest text-muted-foreground transition-colors hover:border-primary/30 hover:bg-primary/10 hover:text-primary"
                       >
                         <Linkedin className="h-3.5 w-3.5" />
                         LinkedIn
@@ -878,7 +913,7 @@ export default function ProfilePage() {
                         href={profileUser.facebookUrl}
                         target="_blank"
                         rel="noreferrer"
-                        className="inline-flex items-center gap-1.5 rounded-full border border-white/10 bg-white/[0.03] px-3 py-1.5 text-[10px] font-bold uppercase tracking-widest text-muted-foreground transition-colors hover:border-primary/30 hover:bg-primary/10 hover:text-primary"
+                        className="inline-flex items-center gap-1.5 rounded-full border border-border/40 bg-muted/20 px-3 py-1.5 text-[10px] font-bold uppercase tracking-widest text-muted-foreground transition-colors hover:border-primary/30 hover:bg-primary/10 hover:text-primary"
                       >
                         <Facebook className="h-3.5 w-3.5" />
                         Facebook
@@ -889,7 +924,7 @@ export default function ProfilePage() {
                         href={profileUser.websiteUrl}
                         target="_blank"
                         rel="noreferrer"
-                        className="inline-flex items-center gap-1.5 rounded-full border border-white/10 bg-white/[0.03] px-3 py-1.5 text-[10px] font-bold uppercase tracking-widest text-muted-foreground transition-colors hover:border-primary/30 hover:bg-primary/10 hover:text-primary"
+                        className="inline-flex items-center gap-1.5 rounded-full border border-border/40 bg-muted/20 px-3 py-1.5 text-[10px] font-bold uppercase tracking-widest text-muted-foreground transition-colors hover:border-primary/30 hover:bg-primary/10 hover:text-primary"
                       >
                         <Globe className="h-3.5 w-3.5" />
                         Website
@@ -911,7 +946,7 @@ export default function ProfilePage() {
               </div>
 
               {/* Signal rail */}
-              <div className="mt-7 border-t border-border/70 pt-5 dark:border-white/10">
+              <div className="mt-7 border-t border-border/40 pt-5">
                 <div className="grid grid-cols-2 gap-x-6 gap-y-3 md:grid-cols-4">
                 <StatCard
                   icon={Play}
@@ -940,7 +975,7 @@ export default function ProfilePage() {
                 </div>
               </div>
 
-              <div className="mt-5 rounded-2xl border border-primary/15 bg-primary/[0.06] px-4 py-3">
+              <div className="mt-5 rounded-xl border border-border/40 bg-muted/20 px-4 py-3">
                 <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
                   <div className="min-w-0">
                     <p className="text-[10px] font-bold uppercase tracking-widest text-primary">Skill XP</p>
@@ -953,14 +988,14 @@ export default function ProfilePage() {
                       <span>{progress?.xpIntoLevel ?? 0} XP this level</span>
                       <span>{progress?.xpForNextLevel ?? 100} next</span>
                     </div>
-                    <div className="h-2 overflow-hidden rounded-full bg-background/70">
+                    <div className="h-2 overflow-hidden rounded-full bg-muted">
                       <div
                         className="h-full rounded-full bg-primary transition-all"
                         style={{ width: `${Math.max(0, Math.min(100, progress?.levelProgressPercent ?? 0))}%` }}
                       />
                     </div>
                   </div>
-                  <Badge className="w-fit rounded-full bg-amber-500/10 text-amber-500">
+                  <Badge className="w-fit rounded-full bg-amber-500/10 text-amber-500 border-none">
                     Longest {progress?.longestStreakDays ?? 0}d
                   </Badge>
                 </div>
@@ -984,12 +1019,12 @@ export default function ProfilePage() {
               {showcaseVideos.map((video, idx) => (
                 <div
                   key={video.id}
-                  className="snap-start shrink-0 relative w-40 h-64 sm:w-48 sm:h-72 bg-black/40 border border-white/10 rounded-[1.5rem] overflow-hidden cursor-pointer group hover:border-primary/40 transition-all shadow-[inset_0_1px_0_0_hsla(0,0%,100%,0.05)]"
+                  className="snap-start shrink-0 relative w-40 h-64 sm:w-48 sm:h-72 bg-muted/30 border border-border/50 rounded-2xl overflow-hidden cursor-pointer group hover:border-primary/30 transition-all"
                   onClick={() => { setShowcaseIndex(idx); setShowcaseOpen(true); }}
                 >
                   <video src={video.url} className="w-full h-full object-cover opacity-60 group-hover:opacity-90 group-hover:scale-105 transition-all duration-700" muted playsInline />
-                  <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-black/20 to-transparent flex flex-col justify-end p-4">
-                    <div className="p-2.5 bg-white/10 rounded-full w-max backdrop-blur-md mb-2 group-hover:bg-primary group-hover:text-primary-foreground transition-all duration-300 border border-white/10 group-hover:border-primary/50 group-hover:shadow-[0_0_15px_hsl(var(--primary)/0.5)]">
+                  <div className="absolute inset-0 bg-gradient-to-t from-black/95 via-black/20 to-transparent flex flex-col justify-end p-4">
+                    <div className="p-2.5 bg-white/10 rounded-full w-max backdrop-blur-md mb-2 group-hover:bg-primary group-hover:text-primary-foreground transition-all duration-300 border border-white/10 group-hover:border-primary/50">
                       <Play className="w-4 h-4 text-white group-hover:text-current ml-0.5" />
                     </div>
                     <p className="text-white font-extrabold text-sm leading-tight drop-shadow-md line-clamp-2">
@@ -1082,8 +1117,8 @@ export default function ProfilePage() {
           {/* ── Reviews Tab ── */}
           <TabsContent value="reviews" className="mt-6">
             {userReviews.length === 0 ? (
-              <div className="p-12 text-center bg-black/20 backdrop-blur-xl border border-white/5 border-dashed rounded-[2rem]">
-                <div className="w-16 h-16 mx-auto rounded-full bg-white/5 border border-white/10 flex items-center justify-center mb-4">
+              <div className="p-12 text-center border border-border/40 border-dashed rounded-2xl">
+                <div className="w-16 h-16 mx-auto rounded-full bg-muted/40 border border-border/30 flex items-center justify-center mb-4">
                   <Star className="w-8 h-8 text-muted-foreground/30" />
                 </div>
                 <p className="text-[11px] font-bold uppercase tracking-widest text-muted-foreground mb-6">No reviews yet.</p>
@@ -1103,9 +1138,9 @@ export default function ProfilePage() {
               >
                 {/* Rating summary */}
                 <motion.div variants={itemVariants}>
-                  <div className="p-8 bg-black/40 backdrop-blur-xl border border-white/5 rounded-[2rem] shadow-[inset_0_1px_0_0_hsla(0,0%,100%,0.05)] flex flex-col sm:flex-row items-center gap-8">
+                  <div className="p-8 surface-flat border border-border/50 rounded-2xl shadow-sm flex flex-col sm:flex-row items-center gap-8">
                     <div className="text-center sm:min-w-[150px]">
-                      <div className="text-6xl font-extrabold font-headline tracking-tighter text-white drop-shadow-sm mb-2">{avgRating.toFixed(1)}</div>
+                      <div className="text-6xl font-extrabold font-headline tracking-tighter text-foreground drop-shadow-sm mb-2">{avgRating.toFixed(1)}</div>
                       <div className="flex items-center gap-1 justify-center mb-3">
                         {[...Array(5)].map((_, i) => (
                           <Star
@@ -1114,7 +1149,7 @@ export default function ProfilePage() {
                               'w-4 h-4',
                               i < Math.round(avgRating)
                                 ? 'fill-warning text-warning drop-shadow-[0_0_8px_rgba(250,204,21,0.5)]'
-                                : 'fill-white/10 text-white/10'
+                                : 'fill-muted/20 text-muted-foreground/20'
                             )}
                           />
                         ))}
@@ -1124,7 +1159,7 @@ export default function ProfilePage() {
                       </div>
                     </div>
                     
-                    <div className="hidden sm:block w-px h-24 bg-gradient-to-b from-transparent via-white/10 to-transparent" />
+                    <div className="hidden sm:block w-px h-24 bg-gradient-to-b from-transparent via-border/50 to-transparent" />
                     
                     <div className="flex-1 w-full max-w-sm space-y-3">
                       {[5, 4, 3, 2, 1].map((star) => {
@@ -1137,7 +1172,7 @@ export default function ProfilePage() {
                               {star}
                             </span>
                             <Star className="w-3.5 h-3.5 fill-warning text-warning shrink-0 opacity-80" />
-                            <div className="h-1.5 flex-1 bg-black/50 rounded-full overflow-hidden border border-white/5">
+                            <div className="h-1.5 flex-1 bg-muted rounded-full overflow-hidden border border-border/20">
                               <motion.div 
                                 initial={{ width: 0 }}
                                 animate={{ width: `${userReviews.length ? (count / userReviews.length) * 100 : 0}%` }}
@@ -1164,8 +1199,8 @@ export default function ProfilePage() {
           <TabsContent value="activity" className="mt-6">
             <div className="space-y-6">
               {userPosts.length === 0 ? (
-                <div className="p-12 text-center bg-black/40 backdrop-blur-xl border border-white/5 border-dashed rounded-[2rem] shadow-[inset_0_1px_0_0_hsla(0,0%,100%,0.05)]">
-                  <div className="w-16 h-16 mx-auto rounded-full bg-white/5 border border-white/10 flex items-center justify-center mb-4">
+                <div className="p-12 text-center border border-border/40 border-dashed rounded-2xl">
+                  <div className="w-16 h-16 mx-auto rounded-full bg-muted/40 border border-border/30 flex items-center justify-center mb-4">
                     <Zap className="w-8 h-8 text-muted-foreground/30" />
                   </div>
                   <p className="text-[11px] font-bold uppercase tracking-widest text-muted-foreground">No recent activity</p>
@@ -1205,8 +1240,8 @@ export default function ProfilePage() {
               </div>
 
               {portfolioProofs.length === 0 ? (
-                <div className="rounded-[2rem] border border-dashed border-white/10 bg-black/30 p-10 text-center">
-                  <div className="mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-2xl border border-white/10 bg-white/5">
+                <div className="rounded-2xl border border-dashed border-border/45 bg-muted/10 p-10 text-center">
+                  <div className="mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-2xl border border-border/40 bg-muted/30">
                     <LinkIcon className="h-6 w-6 text-muted-foreground" />
                   </div>
                   <p className="text-sm font-semibold text-foreground">
@@ -1221,11 +1256,11 @@ export default function ProfilePage() {
                   {portfolioProofs.map((proof) => {
                     const ProofIcon = proofIconFor(proof.proofType);
                     return (
-                      <div key={proof.id} className="group rounded-[1.5rem] border border-white/10 bg-black/35 p-5 transition-colors hover:border-primary/30">
+                      <div key={proof.id} className="group rounded-2xl border border-border/50 bg-card p-5 transition-all duration-300 hover:border-primary/25">
                         <div className="flex items-start justify-between gap-3">
                           <div className="min-w-0">
                             <div className="mb-3 flex flex-wrap items-center gap-2">
-                              <Badge className="rounded-full bg-primary/10 text-primary">
+                              <Badge className="rounded-full bg-primary/10 text-primary border-none">
                                 <ProofIcon className="mr-1.5 h-3.5 w-3.5" />
                                 {proof.proofType.split('_').join(' ')}
                               </Badge>
@@ -1233,7 +1268,7 @@ export default function ProfilePage() {
                                 <Badge variant="outline" className="rounded-full border-amber-500/30 text-amber-500">Featured</Badge>
                               )}
                               {proof.skill && (
-                                <Badge variant="secondary" className="rounded-full">
+                                <Badge variant="secondary" className="rounded-full border-none">
                                   {proof.skill.icon} {proof.skill.name}
                                 </Badge>
                               )}
@@ -1256,7 +1291,7 @@ export default function ProfilePage() {
                           )}
                         </div>
 
-                        <div className="mt-4 flex items-center justify-between gap-3 border-t border-white/10 pt-4">
+                        <div className="mt-4 flex items-center justify-between gap-3 border-t border-border/40 pt-4">
                           <span className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
                             {new Date(proof.createdAt).toLocaleDateString()}
                           </span>
@@ -1277,7 +1312,7 @@ export default function ProfilePage() {
 
           <TabsContent value="credentials" className="mt-6">
             <div className="grid gap-6 lg:grid-cols-[1.1fr_0.9fr]">
-              <Card className="app-card overflow-hidden">
+              <Card className="surface-flat border border-border/50 rounded-2xl overflow-hidden shadow-none">
                 <CardHeader>
                   <CardTitle className="flex items-center gap-2 text-sm uppercase tracking-widest">
                     <Award className="h-4 w-4 text-primary" />
@@ -1286,16 +1321,16 @@ export default function ProfilePage() {
                 </CardHeader>
                 <CardContent className="space-y-3">
                   {certificates.length === 0 ? (
-                    <div className="rounded-2xl border border-white/10 bg-white/[0.03] p-6 text-sm text-muted-foreground">
+                    <div className="rounded-xl border border-border/40 bg-muted/15 p-6 text-sm text-muted-foreground">
                       Career certificates unlock automatically after real sessions, reviews, trust score, and safety checks.
                     </div>
                   ) : certificates.map((certificate) => (
-                    <div key={certificate.id} className="rounded-2xl border border-white/10 bg-white/[0.04] p-4">
+                    <div key={certificate.id} className="rounded-xl border border-border/40 bg-muted/20 p-4">
                       <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
                         <div>
                           <div className="flex items-center gap-2">
                             <p className="font-bold text-foreground">{certificate.title}</p>
-                            <Badge className={cn('rounded-full text-[10px]', certificate.status === 'ACTIVE' ? 'bg-emerald-500/15 text-emerald-300' : 'bg-red-500/15 text-red-300')}>
+                            <Badge className={cn('rounded-full text-[10px] border-none', certificate.status === 'ACTIVE' ? 'bg-emerald-500/15 text-emerald-400' : 'bg-red-500/15 text-red-400')}>
                               {certificate.status}
                             </Badge>
                           </div>
@@ -1327,7 +1362,7 @@ export default function ProfilePage() {
                 </CardContent>
               </Card>
 
-              <Card className="app-card overflow-hidden">
+              <Card className="surface-flat border border-border/50 rounded-2xl overflow-hidden shadow-none">
                 <CardHeader>
                   <CardTitle className="flex items-center gap-2 text-sm uppercase tracking-widest">
                     <CheckCircle className="h-4 w-4 text-primary" />
@@ -1336,13 +1371,13 @@ export default function ProfilePage() {
                 </CardHeader>
                 <CardContent>
                   {badges.length === 0 ? (
-                    <div className="rounded-2xl border border-white/10 bg-white/[0.03] p-6 text-sm text-muted-foreground">
+                    <div className="rounded-xl border border-border/40 bg-muted/15 p-6 text-sm text-muted-foreground">
                       Badges appear after proof upload, reliable sessions, strong reviews, community help, or verified skills.
                     </div>
                   ) : (
                     <div className="grid gap-3 sm:grid-cols-2">
                       {badges.map((badge) => (
-                        <div key={badge.id} className="rounded-2xl border border-white/10 bg-white/[0.04] p-4">
+                        <div key={badge.id} className="rounded-xl border border-border/40 bg-muted/20 p-4">
                           <p className="font-bold text-foreground">{badge.name}</p>
                           <p className="mt-1 text-xs text-muted-foreground">{badge.skillName ?? badge.category}</p>
                           <p className="mt-3 line-clamp-2 text-xs text-muted-foreground">{badge.description}</p>
@@ -1365,7 +1400,7 @@ export default function ProfilePage() {
               exit={{ opacity: 0, y: 12 }}
               transition={{ delay: 0.3 }}
             >
-              <div className="p-6 bg-black/40 backdrop-blur-xl border border-primary/20 bg-gradient-to-r from-primary/10 to-transparent rounded-[2rem] shadow-[0_0_30px_hsl(var(--primary)/0.15)] flex flex-col sm:flex-row items-center justify-between gap-6 relative overflow-hidden group">
+              <div className="p-6 border border-primary/15 bg-gradient-to-r from-primary/[0.03] to-transparent rounded-2xl shadow-sm flex flex-col sm:flex-row items-center justify-between gap-6 relative overflow-hidden group">
                 <div className="absolute inset-0 bg-gradient-to-r from-primary/5 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-700 pointer-events-none" />
                 <div className="relative z-10 text-center sm:text-left">
                   <h3 className="text-sm font-bold font-headline text-white tracking-wide">
@@ -1385,18 +1420,18 @@ export default function ProfilePage() {
                 </div>
                 <div className="relative z-10 shrink-0 w-full sm:w-auto">
                   {connectionLoading ? (
-                    <Button disabled className="w-full sm:w-auto rounded-xl text-[10px] font-bold uppercase tracking-widest shadow-none bg-white/5 border border-white/10 text-muted-foreground">Syncing...</Button>
+                    <Button disabled className="w-full sm:w-auto rounded-xl text-[10px] font-bold uppercase tracking-widest shadow-none bg-muted/40 border border-border/30 text-muted-foreground">Syncing...</Button>
                   ) : isConnected ? (
-                    <Button disabled className="w-full sm:w-auto rounded-xl text-[10px] font-bold uppercase tracking-widest bg-emerald-500/10 text-emerald-500 border border-emerald-500/20 shadow-[0_0_15px_rgba(16,185,129,0.15)]">Connected</Button>
+                    <Button disabled className="w-full sm:w-auto rounded-xl text-[10px] font-bold uppercase tracking-widest bg-emerald-500/10 text-emerald-500 border border-emerald-500/20 opacity-100">Connected</Button>
                   ) : isPendingSent ? (
-                    <Button disabled className="w-full sm:w-auto rounded-xl text-[10px] font-bold uppercase tracking-widest bg-white/5 border border-white/10 text-muted-foreground">Pending</Button>
+                    <Button disabled className="w-full sm:w-auto rounded-xl text-[10px] font-bold uppercase tracking-widest bg-muted/40 border border-border/30 text-muted-foreground">Pending</Button>
                   ) : isPendingReceived ? (
-                    <Button className="w-full sm:w-auto rounded-xl text-[10px] font-bold uppercase tracking-widest bg-primary/20 text-primary border border-primary/30 hover:border-primary/50 shadow-[0_0_20px_hsl(var(--primary)/0.2)] transition-all" onClick={handleAcceptIncomingConnection} disabled={connectionBusy}>
+                    <Button className="w-full sm:w-auto rounded-xl text-[10px] font-bold uppercase tracking-widest bg-primary/20 text-primary border border-primary/30 hover:border-primary/50 transition-all" onClick={handleAcceptIncomingConnection} disabled={connectionBusy}>
                       <UserPlus className="w-4 h-4 mr-2" />
                       {connectionBusy ? 'Accepting...' : 'Accept Request'}
                     </Button>
                   ) : (
-                    <Button className="w-full sm:w-auto rounded-xl text-[10px] font-bold uppercase tracking-widest bg-primary text-primary-foreground shadow-[0_0_20px_hsl(var(--primary)/0.3)] hover:bg-primary/90 transition-all border-0" onClick={openConnectDialog} disabled={connectionBusy}>
+                    <Button className="w-full sm:w-auto rounded-xl text-[10px] font-bold uppercase tracking-widest bg-primary text-primary-foreground hover:bg-primary/90 transition-all border-0" onClick={openConnectDialog} disabled={connectionBusy}>
                       <UserPlus className="w-4 h-4 mr-2 drop-shadow-sm" />
                       Connect
                     </Button>
@@ -1406,7 +1441,6 @@ export default function ProfilePage() {
             </motion.div>
           )}
         </AnimatePresence>
-      </div>
 
       {/* Connection Request Dialog */}
       {!isOwnProfile && (
@@ -1700,6 +1734,7 @@ export default function ProfilePage() {
         onClose={() => setShowcaseOpen(false)}
         initialIndex={showcaseIndex}
       />
+      </div>
     </DashboardLayout>
   );
 }

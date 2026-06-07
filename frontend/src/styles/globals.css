@@ -4,23 +4,23 @@
 
 @layer components {
   .app-shell {
-    @apply rounded-2xl border border-border/70 bg-card/95 text-card-foreground shadow-card backdrop-blur-xl;
+    @apply rounded-xl border border-border bg-card text-card-foreground shadow-lg;
   }
 
   .dark .app-shell {
-    @apply border-white/10 bg-card/75 shadow-[0_20px_60px_-28px_rgba(0,0,0,0.85)];
+    @apply border-white/5 bg-card shadow-[0_20px_60px_-28px_rgba(0,0,0,0.85)];
   }
 
   .app-card {
-    @apply rounded-2xl border border-border/70 bg-card shadow-card transition-all duration-300;
+    @apply rounded-xl border border-border bg-card shadow-sm transition-all duration-300;
   }
 
   .dark .app-card {
-    @apply border-white/10 bg-card/80 shadow-[inset_0_1px_0_0_hsla(0,0%,100%,0.04)];
+    @apply border-white/5 bg-card/40;
   }
 
   .app-card-hover {
-    @apply hover:border-primary/25 hover:bg-card/90;
+    @apply hover:border-primary/30 hover:bg-card/60 dark:hover:bg-card/25;
   }
 
   .app-kicker {
@@ -28,43 +28,43 @@
   }
 
   .app-media {
-    @apply overflow-hidden rounded-xl border border-border/70 bg-muted;
+    @apply overflow-hidden rounded-lg border border-border bg-muted;
   }
 
   .dark .app-media {
-    @apply border-white/10 bg-white/5;
+    @apply border-white/5 bg-white/5;
   }
 
   .product-page {
-    @apply mx-auto w-full max-w-7xl px-4 py-5 md:px-6 md:py-6;
+    @apply mx-auto w-full max-w-7xl px-4 py-6 md:px-6 md:py-8;
   }
 
   .product-panel {
-    @apply overflow-hidden rounded-2xl border border-border/70 bg-card/65 shadow-[inset_0_1px_0_0_hsla(0,0%,100%,0.035)] backdrop-blur-xl;
+    @apply overflow-hidden rounded-xl border border-border bg-card shadow-sm;
   }
 
   .dark .product-panel {
-    @apply border-white/10 bg-card/55;
+    @apply border-white/5 bg-card/30;
   }
 
   .product-row {
-    @apply border-b border-border/60 transition-colors last:border-b-0 hover:bg-primary/[0.035];
+    @apply border-b border-border/50 transition-colors last:border-b-0 hover:bg-muted/30;
   }
 
   .dark .product-row {
-    @apply border-white/10 hover:bg-white/[0.035];
+    @apply border-white/5 hover:bg-white/[0.02];
   }
 
   .product-kpi {
-    @apply rounded-xl border border-border/70 bg-background/45 p-4;
+    @apply rounded-xl border border-border bg-card p-4 transition-all;
   }
 
   .dark .product-kpi {
-    @apply border-white/10 bg-white/[0.025];
+    @apply border-white/5 bg-white/[0.01];
   }
 
   .product-tab {
-    @apply relative h-10 rounded-none border-b-2 border-transparent px-2 text-sm font-bold text-muted-foreground transition-colors hover:text-foreground;
+    @apply relative h-10 rounded-none border-b-2 border-transparent px-2 text-sm font-semibold text-muted-foreground transition-colors hover:text-foreground;
   }
 
   .product-tab-active {
@@ -72,15 +72,15 @@
   }
 
   .product-header {
-    @apply flex flex-col gap-4 rounded-2xl border border-border/70 bg-card/65 p-4 shadow-[inset_0_1px_0_0_hsla(0,0%,100%,0.035)] backdrop-blur-xl md:flex-row md:items-center md:justify-between md:p-5;
+    @apply flex flex-col gap-4 py-4 md:flex-row md:items-center md:justify-between border-b border-border/50 mb-6;
   }
 
   .dark .product-header {
-    @apply border-white/10 bg-card/55;
+    @apply border-white/5;
   }
 
   .product-title {
-    @apply font-headline text-2xl font-extrabold tracking-tight text-foreground md:text-3xl;
+    @apply font-headline text-3xl font-extrabold tracking-tight text-foreground;
   }
 
   .product-subtitle {
@@ -88,11 +88,7 @@
   }
 
   .product-toolbar {
-    @apply flex flex-col gap-3 rounded-2xl border border-border/70 bg-card/55 p-2 shadow-[inset_0_1px_0_0_hsla(0,0%,100%,0.03)] md:flex-row md:items-center md:justify-between;
-  }
-
-  .dark .product-toolbar {
-    @apply border-white/10 bg-card/45;
+    @apply flex flex-col gap-3 p-1 md:flex-row md:items-center md:justify-between mb-4;
   }
 
   .product-table {
@@ -100,27 +96,27 @@
   }
 
   .product-th {
-    @apply border-b border-border/60 px-4 py-3 text-left text-[11px] font-extrabold uppercase tracking-widest text-muted-foreground;
+    @apply border-b border-border/50 px-4 py-3.5 text-left text-[11px] font-bold uppercase tracking-wider text-muted-foreground bg-muted/20;
   }
 
   .dark .product-th {
-    @apply border-white/10;
+    @apply border-white/5 bg-white/[0.01];
   }
 
   .product-td {
-    @apply border-b border-border/50 px-4 py-3 align-middle;
+    @apply border-b border-border/40 px-4 py-4 align-middle;
   }
 
   .dark .product-td {
-    @apply border-white/10;
+    @apply border-white/5;
   }
 
   .product-empty {
-    @apply rounded-2xl border border-dashed border-border/70 bg-background/40 p-6 text-center text-sm text-muted-foreground;
+    @apply rounded-xl border border-dashed border-border/70 bg-muted/10 p-8 text-center text-sm text-muted-foreground;
   }
 
   .dark .product-empty {
-    @apply border-white/10 bg-white/[0.025];
+    @apply border-white/10 bg-white/[0.01];
   }
 }
 
@@ -747,45 +743,45 @@
       box-shadow 0.24s cubic-bezier(0.16, 1, 0.3, 1);
   }
 
-  .surface-base {
-    @apply border border-border/60 bg-card/75 backdrop-blur-xl;
-    box-shadow: var(--shadow-sm);
+  .surface-flat {
+    @apply bg-background border-none shadow-none;
   }
 
-  .surface-elevated {
-    @apply border border-border/70 bg-card/85 backdrop-blur-2xl;
-    box-shadow: var(--shadow-md);
+  .surface-flat {
+    @apply bg-background text-foreground;
   }
 
-  /* Glass morphism variants (Premium frosted glass) */
+  .surface-raised {
+    @apply border border-border bg-card text-card-foreground shadow-sm transition-all duration-300;
+  }
+
+  .dark .surface-raised {
+    @apply border-white/5 bg-card/25;
+  }
+
+  .surface-floating {
+    @apply border border-border bg-card/95 text-card-foreground shadow-xl backdrop-blur-xl;
+  }
+
+  .dark .surface-floating {
+    @apply border-white/10 bg-card/90;
+  }
+
+  /* Glass morphism variants - restricted to Floating/Hero states */
   .glass {
-    background: rgba(255, 255, 255, 0.03); 
-    backdrop-filter: blur(12px); 
-    border: 1px solid rgba(0, 245, 212, 0.15); /* A very thin Teal-tinted border */
+    @apply bg-card/20 backdrop-blur-xl border border-white/5;
     transition:
       background-color 0.24s cubic-bezier(0.16, 1, 0.3, 1),
       border-color 0.24s cubic-bezier(0.16, 1, 0.3, 1),
       box-shadow 0.24s cubic-bezier(0.16, 1, 0.3, 1);
-  }
-  :root:not(.dark) .dashboard-theme .glass {
-    border: 1px solid rgba(106, 138, 131, 0.25); /* Muted sage border */
   }
 
   .glass-subtle {
-    @apply backdrop-blur-lg bg-background/40 dark:bg-black/20 border border-border/40 dark:border-white/5;
-    transition:
-      background-color 0.24s cubic-bezier(0.16, 1, 0.3, 1),
-      border-color 0.24s cubic-bezier(0.16, 1, 0.3, 1),
-      box-shadow 0.24s cubic-bezier(0.16, 1, 0.3, 1);
+    @apply backdrop-blur-md bg-background/30 dark:bg-card/10 border border-border/30 dark:border-white/5;
   }
 
   .glass-strong {
-    @apply backdrop-blur-3xl bg-background/80 dark:bg-black/60 border border-border/80 dark:border-white/20;
-    transition:
-      background-color 0.24s cubic-bezier(0.16, 1, 0.3, 1),
-      border-color 0.24s cubic-bezier(0.16, 1, 0.3, 1),
-      box-shadow 0.24s cubic-bezier(0.16, 1, 0.3, 1);
-    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
+    @apply backdrop-blur-3xl bg-card/90 dark:bg-card/85 border border-border dark:border-white/10 shadow-xl;
   }
 
   /* Gradient text */

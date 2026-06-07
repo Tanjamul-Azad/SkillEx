@@ -42,6 +42,7 @@ import {
   LinkIcon,
   FileText,
   Trash2,
+  AlertTriangle,
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Link, Navigate, useNavigate as useNav, useSearchParams } from 'react-router-dom';
@@ -435,15 +436,6 @@ export default function ProfilePage() {
   }, [userId]);
 
   useEffect(() => {
-    if (!currentUser || !profileUser) return;
-    if (currentUser.id !== profileUser.id) return;
-
-    setProfileUser(currentUser);
-    setOfferedSkills(currentUser.skillsOffered ?? []);
-    setWantedSkills(currentUser.skillsWanted ?? []);
-  }, [currentUser, profileUser]);
-
-  useEffect(() => {
     if (!profileUser || !currentUser || profileUser.id === currentUser.id) {
       setConnectionRelationship(null);
       return;
@@ -557,6 +549,19 @@ export default function ProfilePage() {
     userReviews.length > 0
       ? userReviews.reduce((sum, r) => sum + r.rating, 0) / userReviews.length
       : profileUser.rating;
+  const profileCompletionChecklist = [
+    { label: 'username', missing: !profileUser.username?.trim() },
+    { label: 'university', missing: !profileUser.university?.trim() },
+    { label: 'location', missing: !profileUser.location?.trim() },
+    { label: 'bio', missing: !profileUser.bio?.trim() },
+    { label: 'one skill to teach', missing: offeredSkills.length === 0 },
+    { label: 'one skill to learn', missing: wantedSkills.length === 0 },
+  ];
+  const missingProfileItems = profileCompletionChecklist.filter((item) => item.missing);
+  const profileCompletionTotal = profileCompletionChecklist.length;
+  const profileCompletionDone = profileCompletionTotal - missingProfileItems.length;
+  const profileCompletionPercent = Math.round((profileCompletionDone / profileCompletionTotal) * 100);
+  const shouldShowCompletionWarning = isOwnProfile && missingProfileItems.length > 0;
 
   const openConnectDialog = () => {
     setConnectMessage(`Hi ${profileUser.name.split(' ')[0]}, I found your profile on SkillEX and would love to connect.`);
@@ -686,6 +691,36 @@ export default function ProfilePage() {
   return (
     <DashboardLayout>
       <div className="product-page space-y-5">
+        {shouldShowCompletionWarning && (
+          <motion.div
+            initial={{ opacity: 0, y: -8 }}
+            animate={{ opacity: 1, y: 0 }}
+            className="rounded-2xl border border-amber-500/30 bg-amber-500/10 p-4 shadow-sm"
+          >
+            <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
+              <div className="flex min-w-0 gap-3">
+                <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border border-amber-500/25 bg-amber-500/15 text-amber-500">
+                  <AlertTriangle className="h-5 w-5" />
+                </div>
+                <div className="min-w-0">
+                  <h2 className="text-sm font-bold text-foreground">Complete your profile</h2>
+                  <p className="mt-1 text-sm leading-6 text-muted-foreground">
+                    Your profile is {profileCompletionPercent}% complete. Add {missingProfileItems.map((item) => item.label).join(', ')} so matching, credits, and trust signals work properly.
+                  </p>
+                  <div className="mt-3 h-2 max-w-md overflow-hidden rounded-full bg-amber-500/15">
+                    <div
+                      className="h-full rounded-full bg-amber-500 transition-all"
+                      style={{ width: `${profileCompletionPercent}%` }}
+                    />
+                  </div>
+                </div>
+              </div>
+              <Button asChild size="sm" className="shrink-0 rounded-xl">
+                <Link to="/settings">Update profile</Link>
+              </Button>
+            </div>
+          </motion.div>
+        )}
         {/* ── Premium Profile Header ── */}
         <motion.div
           initial={{ opacity: 0, y: -16 }}

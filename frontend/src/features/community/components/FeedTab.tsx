@@ -6,7 +6,6 @@ import { Button } from '@/components/ui/button';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { useAuth } from '@/hooks/useAuth';
 import { useToast } from '@/hooks/use-toast';
-import { cn } from '@/lib/utils';
 import { PostCard } from './PostCard';
 import { PostComposer } from './PostComposer';
 import { StoryCircle } from './StoryCircle';

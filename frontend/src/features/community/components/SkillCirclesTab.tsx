@@ -9,8 +9,6 @@ import {
   Sparkles,
   Link as LinkIcon,
   ExternalLink,
-  MessageSquare,
-  CheckCircle2,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';

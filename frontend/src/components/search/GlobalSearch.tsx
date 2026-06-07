@@ -270,16 +270,16 @@ export default function GlobalSearch({ className }: { className?: string }) {
 
   return (
     <div ref={rootRef} className={cn('relative w-full max-w-[680px]', className)}>
-      <div className="surface-base relative overflow-hidden rounded-2xl px-2 py-1.5 theme-transition focus-within:border-primary/45 focus-within:shadow-glow-sm">
+      <div className="relative overflow-hidden rounded-2xl border border-border/70 bg-card px-2 py-1.5 shadow-sm theme-transition focus-within:border-primary/45 focus-within:shadow-[0_0_0_3px_hsl(var(--primary)/0.12)] dark:border-white/10 dark:bg-slate-950">
         <div className="flex items-center gap-2">
-          <div className="inline-flex shrink-0 items-center rounded-lg border border-border/60 bg-muted/40 p-0.5">
+          <div className="inline-flex shrink-0 items-center rounded-lg border border-border/70 bg-muted p-0.5 dark:border-white/10 dark:bg-slate-900">
             <button
               type="button"
               onClick={() => setMode('people')}
               className={cn(
                 'inline-flex h-7 items-center gap-1.5 rounded-md px-2 text-[11px] font-semibold transition-colors',
                 mode === 'people'
-                  ? 'bg-background text-foreground shadow-sm'
+                  ? 'bg-background text-foreground shadow-sm dark:bg-slate-800'
                   : 'text-muted-foreground hover:text-foreground'
               )}
             >
@@ -292,7 +292,7 @@ export default function GlobalSearch({ className }: { className?: string }) {
               className={cn(
                 'inline-flex h-7 items-center gap-1.5 rounded-md px-2 text-[11px] font-semibold transition-colors',
                 mode === 'skills'
-                  ? 'bg-background text-foreground shadow-sm'
+                  ? 'bg-background text-foreground shadow-sm dark:bg-slate-800'
                   : 'text-muted-foreground hover:text-foreground'
               )}
             >
@@ -335,7 +335,7 @@ export default function GlobalSearch({ className }: { className?: string }) {
             animate={{ opacity: 1, y: 0, scale: 1 }}
             exit={{ opacity: 0, y: 6, scale: 0.98 }}
             transition={{ duration: 0.16 }}
-            className="surface-elevated absolute left-0 right-0 top-[calc(100%+8px)] z-50 max-h-[min(70vh,640px)] overflow-y-auto rounded-2xl p-3 shadow-2xl"
+            className="absolute left-0 right-0 top-[calc(100%+8px)] z-50 max-h-[min(70vh,640px)] overflow-y-auto rounded-2xl border border-border/70 bg-popover p-3 shadow-2xl dark:border-white/10 dark:bg-slate-950"
           >
             <div className="mb-2 flex items-center justify-between px-1">
               <p className="text-xs font-semibold text-muted-foreground">
@@ -347,7 +347,7 @@ export default function GlobalSearch({ className }: { className?: string }) {
             </div>
 
             {loading && (
-              <div className="flex items-center gap-2 rounded-xl border border-border/50 bg-muted/30 px-3 py-3 text-sm text-muted-foreground">
+              <div className="flex items-center gap-2 rounded-xl border border-border/70 bg-muted px-3 py-3 text-sm text-muted-foreground dark:border-white/10 dark:bg-slate-900">
                 <Loader2 className="h-4 w-4 animate-spin" />
                 Fetching live results...
               </div>
@@ -377,7 +377,7 @@ export default function GlobalSearch({ className }: { className?: string }) {
                   return (
                     <div
                       key={person.id}
-                      className="rounded-xl border border-border/50 bg-muted/20 p-3 transition-colors hover:border-primary/40 hover:bg-primary/5"
+                      className="rounded-xl border border-border/70 bg-card p-3 transition-colors hover:border-primary/40 hover:bg-primary/5 dark:border-white/10 dark:bg-slate-900"
                     >
                       <div className="flex items-start gap-3">
                       <Avatar className="h-11 w-11 ring-2 ring-border/70">
@@ -454,7 +454,7 @@ export default function GlobalSearch({ className }: { className?: string }) {
                     type="button"
                     key={post.id}
                     onClick={handleOpenFeed}
-                    className="w-full rounded-xl border border-border/50 bg-muted/20 p-3 text-left transition-colors hover:border-primary/40 hover:bg-primary/5"
+                    className="w-full rounded-xl border border-border/70 bg-card p-3 text-left transition-colors hover:border-primary/40 hover:bg-primary/5 dark:border-white/10 dark:bg-slate-900"
                   >
                     <div className="flex items-center gap-2">
                       <Badge variant="secondary" className="text-[10px] uppercase tracking-wide">

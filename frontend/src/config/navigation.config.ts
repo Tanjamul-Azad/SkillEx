@@ -35,6 +35,7 @@ export const dashboardNav: NavGroup[] = [
       { label: 'Match',      href: '/match',       icon: 'Zap',             requiresAuth: true },
       { label: 'Connections',href: '/connections', icon: 'UserPlus',        requiresAuth: true },
       { label: 'Community',  href: '/community',   icon: 'Users',           requiresAuth: true },
+      { label: 'Certificates', href: '/certificates', icon: 'Award',         requiresAuth: true },
       { label: 'Messages',   href: '/messages',    icon: 'MessageSquare',   requiresAuth: true },
       { label: 'Admin',      href: '/admin',       icon: 'Shield',          requiresAuth: true, requiresAdmin: true },
     ],
@@ -57,6 +58,7 @@ export const protectedRoutes: string[] = [
   '/match',
   '/connections',
   '/community',
+  '/certificates',
   '/profile',
   '/settings',
 ];

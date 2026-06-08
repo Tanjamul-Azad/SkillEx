@@ -38,6 +38,7 @@ export default function Footer() {
       { name: 'How it Works', href: '/#how-it-works', sectionId: 'how-it-works' },
       { name: 'Match Demo', href: '/#match-demo', sectionId: 'match-demo' },
       { name: 'Skill Chains', href: '/#skill-chain', sectionId: 'skill-chain' },
+      { name: 'Impact', href: '/impact' },
       { name: 'FAQ', href: '/#faq', sectionId: 'faq' },
     ],
     Company: [

@@ -18,6 +18,7 @@ const DashboardPage = React.lazy(() => import('./features/dashboard/pages/Dashbo
 const MatchPage = React.lazy(() => import('./features/match/pages/MatchPage'));
 const ConnectionsPage = React.lazy(() => import('./features/connections/pages/ConnectionsPage'));
 const CommunityPage = React.lazy(() => import('./features/community/pages/CommunityPage'));
+const CertificatesPage = React.lazy(() => import('./features/certificates/pages/CertificatesPage'));
 const ProfilePage = React.lazy(() => import('./features/profile/pages/ProfilePage'));
 const SettingsPage = React.lazy(() => import('./features/settings/pages/SettingsPage'));
 const MessagesPage = React.lazy(() => import('./features/messages/pages/MessagesPage'));
@@ -29,6 +30,7 @@ const CareersPage = React.lazy(() => import('./features/marketing/pages/CareersP
 const TermsPage = React.lazy(() => import('./features/marketing/pages/TermsPage'));
 const PrivacyPage = React.lazy(() => import('./features/marketing/pages/PrivacyPage'));
 const TrustPage = React.lazy(() => import('./features/marketing/pages/TrustPage'));
+const ImpactPage = React.lazy(() => import('./features/marketing/pages/ImpactPage'));
 const SessionRoomPage = React.lazy(() => import('./features/sessions/pages/SessionRoomPage'));
 const SessionReviewPage = React.lazy(() => import('./features/sessions/pages/SessionReviewPage'));
 const AdminDashboardPage = React.lazy(() => import('./features/admin/pages/AdminDashboardPage'));
@@ -49,6 +51,7 @@ const preloadCurrentRoute = () => {
   else if (path === '/match') import('./features/match/pages/MatchPage');
   else if (path === '/connections') import('./features/connections/pages/ConnectionsPage');
   else if (path === '/community') import('./features/community/pages/CommunityPage');
+  else if (path === '/certificates') import('./features/certificates/pages/CertificatesPage');
   else if (path.startsWith('/profile/')) import('./features/profile/pages/ProfilePage');
   else if (path === '/settings') import('./features/settings/pages/SettingsPage');
   else if (path === '/onboarding') import('./features/onboarding/pages/OnboardingPage');
@@ -137,6 +140,7 @@ function AppShell() {
           <Route path="/match" element={<MatchPage />} />
           <Route path="/connections" element={<ConnectionsPage />} />
           <Route path="/community" element={<CommunityPage />} />
+          <Route path="/certificates" element={<CertificatesPage />} />
           <Route path="/profile/:userId" element={<ProfilePage />} />
           <Route path="/settings" element={<SettingsPage />} />
           <Route path="/messages" element={<MessagesPage />} />
@@ -150,6 +154,7 @@ function AppShell() {
           <Route path="/terms" element={<TermsPage />} />
           <Route path="/privacy" element={<PrivacyPage />} />
           <Route path="/trust" element={<TrustPage />} />
+          <Route path="/impact" element={<ImpactPage />} />
           <Route path="/verify/certificate/:code" element={<CertificateVerifyPage />} />
           <Route path="/admin" element={adminOnly(<AdminDashboardPage />)} />
           <Route path="/admin/reports" element={adminOnly(<AdminReportsPage />)} />

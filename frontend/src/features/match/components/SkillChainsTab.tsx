@@ -1,6 +1,5 @@
 import React, { useState, useMemo, FC, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Link } from 'react-router-dom';
 import {
   ArrowRight,
   ArrowLeftRight,
@@ -18,7 +17,7 @@ import {
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
-import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
+import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { useAuth } from '@/hooks/useAuth';
 import { useToast } from '@/hooks/use-toast';
 import { useTopCycles } from '@/hooks/useTopCycles';
@@ -95,14 +94,14 @@ function estimatedTime(cycle: ExchangeCycleData) {
 
 function ChainAvatarPath({ cycle, currentUserId, compact = false }: { cycle: ExchangeCycleData; currentUserId?: string; compact?: boolean }) {
   return (
-    <div className="flex min-w-0 items-center gap-2 overflow-x-auto pb-1">
+    <div className={cn('flex min-w-0 items-center gap-2 pb-1', compact ? 'overflow-x-auto' : 'overflow-hidden')}>
       {cycle.hops.map((hop, index) => {
         const isCurrent = hop.fromUserId === currentUserId;
         return (
           <React.Fragment key={`${hop.fromUserId}-${hop.toUserId}-${hop.primarySkillName}-${index}`}>
-            <div className="flex shrink-0 flex-col items-center gap-2">
+            <div className={cn('flex flex-col items-center gap-2', compact ? 'shrink-0' : 'min-w-0 flex-1')}>
               <Avatar className={cn(
-                compact ? 'h-9 w-9' : 'h-12 w-12',
+                compact ? 'h-9 w-9' : 'h-11 w-11',
                 'border border-border bg-background ring-2 ring-background',
                 isCurrent && 'border-primary ring-primary/30'
               )}>
@@ -111,7 +110,7 @@ function ChainAvatarPath({ cycle, currentUserId, compact = false }: { cycle: Exc
                 </AvatarFallback>
               </Avatar>
               {!compact && (
-                <div className="max-w-[110px] text-center">
+                <div className="w-full min-w-0 text-center">
                   <p className="truncate text-xs font-bold">{isCurrent ? 'You' : hop.fromUserName}</p>
                   <p className="mt-1 truncate text-[10px] font-semibold text-primary">Offers {hop.primarySkillName}</p>
                 </div>
@@ -149,6 +148,168 @@ function ChainMetric({ icon: Icon, value, label }: { icon: React.FC<{ className?
       <Icon className="mb-3 h-5 w-5 text-primary" />
       <p className="font-headline text-2xl font-extrabold tabular-nums">{value}</p>
       <p className="mt-1 text-xs text-muted-foreground">{label}</p>
+    </div>
+  );
+}
+
+function ChainLoopVisualizer({
+  item,
+  currentUserId,
+}: {
+  item: ScoredCycleDto;
+  currentUserId?: string;
+}) {
+  const { cycle, score } = item;
+  const nodes = cycle.hops.map((hop, index) => {
+    const angle = -Math.PI / 2 + (index / cycle.hops.length) * Math.PI * 2;
+    const radiusX = 32;
+    const radiusY = 30;
+    return {
+      id: hop.fromUserId,
+      name: hop.fromUserName,
+      offers: hop.primarySkillName,
+      wants: cycle.hops.find((candidate) => candidate.toUserId === hop.fromUserId)?.primarySkillName,
+      x: 50 + Math.cos(angle) * radiusX,
+      y: 50 + Math.sin(angle) * radiusY,
+      isCurrent: hop.fromUserId === currentUserId,
+    };
+  });
+
+  const closedLoopLabel = `${cycle.hops.length}-person circular economy`;
+
+  return (
+    <div className="space-y-5">
+      <div className="relative h-[390px] overflow-hidden rounded-xl border border-border/60 bg-background/50 sm:h-[420px]">
+          <div className="absolute left-4 top-4 z-10 flex flex-wrap items-center gap-2">
+            <Badge className="rounded-full border border-primary/25 bg-primary/10 text-primary">
+              Animated loop
+            </Badge>
+            <Badge variant="outline" className="rounded-full bg-background/70">
+              {closedLoopLabel}
+            </Badge>
+          </div>
+
+          <svg className="absolute inset-0 h-full w-full" viewBox="0 0 100 100" aria-hidden="true">
+            <defs>
+              <linearGradient id="skill-chain-loop-gradient" x1="0" y1="0" x2="1" y2="1">
+                <stop offset="0%" stopColor="hsl(var(--primary))" stopOpacity="0.9" />
+                <stop offset="55%" stopColor="hsl(var(--secondary))" stopOpacity="0.85" />
+                <stop offset="100%" stopColor="hsl(var(--primary))" stopOpacity="0.55" />
+              </linearGradient>
+            </defs>
+            <motion.circle
+              cx="50"
+              cy="50"
+              r="33"
+              fill="none"
+              stroke="hsl(var(--border))"
+              strokeWidth="0.6"
+              strokeDasharray="2 3"
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 0.65 }}
+              transition={{ duration: 0.4 }}
+            />
+            {nodes.map((node, index) => {
+              const next = nodes[(index + 1) % nodes.length];
+              return (
+                <React.Fragment key={`${node.id}-${next.id}`}>
+                  <motion.line
+                    x1={node.x}
+                    y1={node.y}
+                    x2={next.x}
+                    y2={next.y}
+                    stroke="url(#skill-chain-loop-gradient)"
+                    strokeWidth="1.15"
+                    strokeLinecap="round"
+                    initial={{ pathLength: 0, opacity: 0 }}
+                    animate={{ pathLength: 1, opacity: 0.82 }}
+                    transition={{ delay: index * 0.18, duration: 0.55, ease: 'easeOut' }}
+                  />
+                  <motion.circle
+                    r="1.15"
+                    fill="hsl(var(--secondary))"
+                    initial={{ cx: node.x, cy: node.y, opacity: 0 }}
+                    animate={{ cx: [node.x, next.x], cy: [node.y, next.y], opacity: [0, 1, 0] }}
+                    transition={{
+                      delay: 0.8 + index * 0.22,
+                      duration: 1.15,
+                      repeat: Infinity,
+                      repeatDelay: Math.max(1.6, nodes.length * 0.22),
+                      ease: 'easeInOut',
+                    }}
+                  />
+                </React.Fragment>
+              );
+            })}
+          </svg>
+
+          <div className="absolute left-1/2 top-1/2 z-10 flex h-20 w-20 -translate-x-1/2 -translate-y-1/2 flex-col items-center justify-center rounded-full border border-primary/25 bg-card/90 text-center shadow-lg backdrop-blur sm:h-24 sm:w-24">
+            <p className="font-headline text-2xl font-extrabold text-primary sm:text-3xl">{score}</p>
+            <p className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">chain score</p>
+          </div>
+
+          {nodes.map((node, index) => (
+            <div
+              key={node.id}
+              className="absolute z-20"
+              style={{ left: `${node.x}%`, top: `${node.y}%`, transform: 'translate(-50%, -50%)' }}
+            >
+              <motion.div
+                initial={{ opacity: 0, scale: 0.82, y: 8 }}
+                animate={{ opacity: 1, scale: 1, y: 0 }}
+                transition={{ delay: 0.16 + index * 0.12, duration: 0.35, ease: 'easeOut' }}
+                className={cn(
+                  'w-20 rounded-xl border bg-card/95 p-1.5 text-center shadow-sm backdrop-blur sm:w-32 sm:p-2.5',
+                  node.isCurrent ? 'border-primary/45 ring-2 ring-primary/20' : 'border-border/70',
+                )}
+              >
+                <Avatar className="mx-auto h-7 w-7 border border-border bg-background sm:h-9 sm:w-9">
+                  <AvatarFallback className={cn('text-[10px] font-extrabold', node.isCurrent ? 'bg-primary/15 text-primary' : 'bg-muted text-foreground')}>
+                    {node.isCurrent ? 'YOU' : initials(node.name)}
+                  </AvatarFallback>
+                </Avatar>
+                <p className="mt-1.5 truncate text-[10px] font-extrabold text-foreground sm:mt-2 sm:text-xs">{node.isCurrent ? 'You' : node.name}</p>
+                <p className="mt-1 truncate text-[10px] font-semibold text-primary">Offers {node.offers}</p>
+                {node.wants && (
+                  <p className="mt-0.5 hidden truncate text-[10px] text-muted-foreground sm:block">Needs {node.wants}</p>
+                )}
+              </motion.div>
+            </div>
+          ))}
+        </div>
+
+      <div className="grid gap-3 lg:grid-cols-[0.8fr_1.2fr]">
+        <div className="rounded-xl border border-border/60 bg-muted/20 p-4">
+          <p className="text-xs font-bold uppercase tracking-widest text-muted-foreground">Closed-loop story</p>
+          <p className="mt-2 text-sm leading-relaxed text-muted-foreground">
+            Every person teaches one skill and receives another, so the platform creates a circular exchange without requiring money.
+          </p>
+        </div>
+        <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-1">
+          {cycle.hops.map((hop, index) => (
+            <motion.div
+              key={`${hop.fromUserId}-${hop.toUserId}-${hop.primarySkillName}`}
+              initial={{ opacity: 0, x: 12 }}
+              animate={{ opacity: 1, x: 0 }}
+              transition={{ delay: 0.24 + index * 0.1 }}
+              className="flex items-center gap-3 rounded-xl border border-border/50 bg-card p-3"
+            >
+              <span className="grid h-8 w-8 shrink-0 place-items-center rounded-lg border border-primary/25 bg-primary/10 text-xs font-bold text-primary">
+                {index + 1}
+              </span>
+              <div className="min-w-0 flex-1">
+                <p className="truncate text-sm font-bold text-foreground">{hop.fromUserName} teaches {hop.toUserName}</p>
+                <p className="truncate text-xs text-muted-foreground">{hop.primarySkillName}</p>
+              </div>
+              {index === cycle.hops.length - 1 ? (
+                <RotateCcw className="h-4 w-4 shrink-0 text-primary" />
+              ) : (
+                <ArrowRight className="h-4 w-4 shrink-0 text-muted-foreground" />
+              )}
+            </motion.div>
+          ))}
+        </div>
+      </div>
     </div>
   );
 }
@@ -229,6 +390,7 @@ function ChainTableRow({
           className="h-9 rounded-xl px-2.5 text-xs font-bold shadow-none"
           disabled={!target}
           onClick={() => onAction(cycle)}
+          title={!target ? 'Add more skills to your profile to unlock this chain action' : undefined}
         >
           {target?.actionLabel ?? 'Unavailable'}
         </Button>
@@ -331,12 +493,12 @@ export const SkillChainsTab: FC = () => {
           </div>
         </div>
 
-        <div className="grid lg:grid-cols-[minmax(0,0.95fr)_minmax(340px,1fr)]">
-          <div className="border-b border-border/70 p-5 lg:border-b-0 lg:border-r dark:border-white/10">
+        <div className="grid xl:grid-cols-[1.45fr_0.85fr]">
+          <div className="border-b border-border/70 p-5 dark:border-white/10 xl:border-b-0 xl:border-r">
             <div className="mb-5 flex items-center justify-between gap-3">
               <p className="text-base font-bold">Best path</p>
               {selectedCycle && (
-                <Badge className="rounded-xl border border-secondary/35 bg-secondary/10 px-3 py-1 text-secondary hover:bg-secondary/10">
+                <Badge className="hidden rounded-xl border border-secondary/35 bg-secondary/10 px-3 py-1 text-secondary hover:bg-secondary/10 sm:inline-flex">
                   {selectedCycle.score}% match
                 </Badge>
               )}
@@ -344,7 +506,7 @@ export const SkillChainsTab: FC = () => {
 
             {selectedCycle ? (
               <>
-                <ChainAvatarPath cycle={selectedCycle.cycle} currentUserId={user?.id} />
+                <ChainLoopVisualizer item={selectedCycle} currentUserId={user?.id} />
                 <div className="mt-5 grid grid-cols-3 gap-3 border-t border-border/70 pt-4 text-sm text-muted-foreground dark:border-white/10">
                   <span className="flex items-center gap-2"><Users className="h-4 w-4" /> {selectedCycle.cycle.userIds.length} people</span>
                   <span className="flex items-center gap-2"><ArrowLeftRight className="h-4 w-4" /> {Math.max(1, selectedCycle.cycle.hops.length - 1)} swaps</span>

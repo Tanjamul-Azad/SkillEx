@@ -412,7 +412,7 @@ export default function ConnectionsPage() {
                               >
                                 {partner.name}
                               </button>
-                              <p className="truncate text-xs text-muted-foreground">@{partner.username ?? 'user'} · {partner.university ?? 'SkillEX member'}</p>
+                              <p className="truncate text-xs text-muted-foreground">@{partner.username ?? partner.name.toLowerCase().replace(/\s+/g, '')} · {partner.university ?? 'SkillEX member'}</p>
                             </div>
                           </div>
                         </td>

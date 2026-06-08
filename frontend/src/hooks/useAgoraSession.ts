@@ -138,7 +138,6 @@ export const useAgoraSession = (sessionId: string) => {
         try {
           user.audioTrack?.stop(); // Destroy any existing HTML5 audio nodes for this track first to prevent duplicate playbacks!
           user.audioTrack?.play();
-          console.log('[Agora] Successfully played remote audio track after user interaction');
         } catch (e) {
           console.warn('[Agora] Failed to play remote audio track on interaction:', e);
         }
@@ -162,9 +161,14 @@ export const useAgoraSession = (sessionId: string) => {
       if (mediaType === 'audio' && user.audioTrack) {
         try {
           user.audioTrack.stop(); // Destroy existing audio nodes for this track to prevent double-play echo!
-          const playResult = user.audioTrack.play() as any;
-          if (playResult && typeof playResult.catch === 'function') {
-            playResult.catch((err: any) => {
+          const playResult = user.audioTrack.play() as unknown;
+          if (
+            playResult
+            && typeof playResult === 'object'
+            && 'catch' in playResult
+            && typeof playResult.catch === 'function'
+          ) {
+            playResult.catch((err: unknown) => {
               console.warn('[Agora] Autoplay blocked remote audio track (Promise).', err);
               setupAutoplayListener(user);
             });

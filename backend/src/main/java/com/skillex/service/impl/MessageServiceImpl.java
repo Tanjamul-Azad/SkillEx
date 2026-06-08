@@ -15,6 +15,7 @@ import com.skillex.service.AccountRestrictionService;
 import com.skillex.service.MessageService;
 import jakarta.persistence.EntityNotFoundException;
 import lombok.RequiredArgsConstructor;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
@@ -33,6 +34,14 @@ public class MessageServiceImpl implements MessageService {
     private final ConnectionRepository connectionRepository;
     private final ExchangeRepository exchangeRepository;
     private final AccountRestrictionService restrictionService;
+
+    /**
+     * When false (demo default), any authenticated user may message any other user.
+     * Set app.messaging.require-relationship=true in production to require an accepted
+     * connection or exchange first.
+     */
+    @Value("${app.messaging.require-relationship:false}")
+    private boolean requireRelationship;
 
     // ── Queries ──────────────────────────────────────────────────────────────
 
@@ -132,6 +141,9 @@ public class MessageServiceImpl implements MessageService {
     }
 
     private void assertCanMessage(String senderId, String receiverId) {
+        if (!requireRelationship) {
+            return;
+        }
         boolean connected = !connectionRepository.findPairByStatuses(
             senderId,
             receiverId,

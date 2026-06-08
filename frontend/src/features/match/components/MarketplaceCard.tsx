@@ -9,10 +9,15 @@ import { Badge } from '@/components/ui/badge';
 import type { User } from '@/types';
 import { RequestExchangeDialog } from '@/features/match/components/RequestExchangeDialog';
 import { exchangeService, type ExchangeRelationship } from '@/services/exchangeService';
+import { UserService } from '@/services/userService';
+import { useToast } from '@/hooks/use-toast';
 
 export const MarketplaceCard: FC<{ profile: User }> = React.memo(({ profile }) => {
   const [requestOpen, setRequestOpen] = useState(false);
   const [exchangeRelation, setExchangeRelation] = useState<ExchangeRelationship | null>(null);
+  const [dialogTarget, setDialogTarget] = useState<User | null>(null);
+  const [loadingProfile, setLoadingProfile] = useState(false);
+  const { toast } = useToast();
 
   useEffect(() => {
     let active = true;
@@ -168,22 +173,38 @@ export const MarketplaceCard: FC<{ profile: User }> = React.memo(({ profile }) =
             </Button>
           ) : (
             <Button
-              onClick={() => setRequestOpen(true)}
+              onClick={async () => {
+                setLoadingProfile(true);
+                try {
+                  const fullProfile = await UserService.getById(profile.id);
+                  setDialogTarget(fullProfile);
+                  setRequestOpen(true);
+                } catch {
+                  toast({
+                    variant: 'destructive',
+                    title: 'Could not open request',
+                    description: 'The full profile could not be loaded. Please try again.',
+                  });
+                } finally {
+                  setLoadingProfile(false);
+                }
+              }}
               variant="gradient"
               size="sm"
               className="col-span-2 h-9 rounded-xl text-xs font-bold shadow-none"
               aria-label={`Connect with ${profile.name}`}
+              disabled={loadingProfile}
             >
-              Connect <ArrowUpRight className="ml-1 h-3.5 w-3.5" />
+              {loadingProfile ? 'Loading…' : <><span>Connect</span><ArrowUpRight className="ml-1 h-3.5 w-3.5" /></>}
             </Button>
           )}
         </div>
       </Card>
 
       <RequestExchangeDialog
-        open={requestOpen}
+        open={requestOpen && !!dialogTarget}
         onClose={() => setRequestOpen(false)}
-        targetUser={profile}
+        targetUser={dialogTarget ?? profile}
         onSuccess={() => {
           setExchangeRelation({
             targetUserId: profile.id,

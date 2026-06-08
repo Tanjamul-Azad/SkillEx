@@ -97,8 +97,10 @@ public class CommunityServiceImpl implements CommunityService {
         event.setEventType(parseEnum(req.eventType(), Event.EventType.WORKSHOP, Event.EventType.class));
         event.setStatus(Event.EventStatus.SCHEDULED);
         if (req.circleId() != null && !req.circleId().isBlank()) {
-            event.setCircle(skillCircleRepository.findById(req.circleId())
-                .orElseThrow(() -> new EntityNotFoundException("SkillCircle not found: " + req.circleId())));
+            SkillCircle circle = skillCircleRepository.findById(req.circleId())
+                .orElseThrow(() -> new EntityNotFoundException("SkillCircle not found: " + req.circleId()));
+            assertCircleMember(circle, organizerId, "Join this skill circle before creating circle events.");
+            event.setCircle(circle);
         }
         if (req.skillIds() != null) {
             List<Skill> skills = skillRepository.findAllById(req.skillIds());
@@ -115,6 +117,9 @@ public class CommunityServiceImpl implements CommunityService {
         User user  = findUser(userId);
         Event event = eventRepository.findById(eventId)
             .orElseThrow(() -> new EntityNotFoundException("Event not found: " + eventId));
+        if (event.getCircle() != null) {
+            assertCircleMember(event.getCircle(), userId, "Join this skill circle before registering for its events.");
+        }
         if (!event.getAttendees().contains(user)) {
             event.getAttendees().add(user);
             eventRepository.save(event);
@@ -128,6 +133,9 @@ public class CommunityServiceImpl implements CommunityService {
         User user = findUser(userId);
         Event event = eventRepository.findById(eventId)
             .orElseThrow(() -> new EntityNotFoundException("Event not found: " + eventId));
+        if (event.getCircle() != null) {
+            assertCircleMember(event.getCircle(), userId, "Join this skill circle before following its events.");
+        }
         upsertRsvp(event, user, EventRsvp.RsvpState.INTERESTED);
         return mapEvent(event, userId);
     }
@@ -152,6 +160,11 @@ public class CommunityServiceImpl implements CommunityService {
             : category;
         Discussion.ThreadType parsedThreadType = parseEnum(threadType, null, Discussion.ThreadType.class);
         Discussion.DiscussionStatus parsedStatus = parseEnum(status, null, Discussion.DiscussionStatus.class);
+        if (circleId != null && !circleId.isBlank()) {
+            SkillCircle circle = skillCircleRepository.findById(circleId)
+                .orElseThrow(() -> new EntityNotFoundException("SkillCircle not found: " + circleId));
+            assertCircleMember(circle, viewerId, "Join this skill circle before opening its help desk.");
+        }
         Page<Discussion> discussionPage = discussionRepository.searchCommunityThreads(
             normalizedCategory,
             parsedThreadType,
@@ -200,8 +213,10 @@ public class CommunityServiceImpl implements CommunityService {
             discussion.setSkill(skillRepository.findById(req.skillId()).orElse(null));
         }
         if (req.circleId() != null && !req.circleId().isBlank()) {
-            discussion.setCircle(skillCircleRepository.findById(req.circleId())
-                .orElseThrow(() -> new EntityNotFoundException("SkillCircle not found: " + req.circleId())));
+            SkillCircle circle = skillCircleRepository.findById(req.circleId())
+                .orElseThrow(() -> new EntityNotFoundException("SkillCircle not found: " + req.circleId()));
+            assertCircleMember(circle, authorId, "Join this skill circle before posting in it.");
+            discussion.setCircle(circle);
         }
         discussion.setUpvotes(0);
         discussion.setReplies(0);
@@ -211,11 +226,7 @@ public class CommunityServiceImpl implements CommunityService {
         CommunityDtos.DiscussionDto result = mapper.toDiscussion(saved);
 
         if (saved.getCircle() != null) {
-            communityNotificationService.notifyCircleActivity(
-                saved.getCircle(),
-                authorId,
-                author.getName() + " started a discussion in " + saved.getCircle().getName() + ": " + saved.getTitle()
-            );
+            communityNotificationService.notifyCircleDiscussionCreated(saved);
         }
 
         eventPublisher.publishEvent(new ReputationUpdateEvent(
@@ -229,6 +240,7 @@ public class CommunityServiceImpl implements CommunityService {
     public CommunityDtos.DiscussionDto getDiscussion(String viewerId, String discussionId) {
         Discussion discussion = discussionRepository.findById(discussionId)
             .orElseThrow(() -> new EntityNotFoundException("Discussion not found: " + discussionId));
+        assertDiscussionAccess(discussion, viewerId);
         boolean upvoted = viewerId != null
             && !viewerId.isBlank()
             && discussionUpvoteRepository.existsByIdDiscussionIdAndIdUserId(discussionId, viewerId);
@@ -242,6 +254,7 @@ public class CommunityServiceImpl implements CommunityService {
         restrictionService.assertCanUseAccount(userId, "COMMUNITY");
         Discussion discussion = discussionRepository.findById(discussionId)
             .orElseThrow(() -> new EntityNotFoundException("Discussion not found: " + discussionId));
+        assertDiscussionAccess(discussion, userId);
         User user = findUser(userId);
         boolean alreadyUpvoted = discussionUpvoteRepository.existsByIdDiscussionIdAndIdUserId(discussionId, userId);
 
@@ -263,10 +276,10 @@ public class CommunityServiceImpl implements CommunityService {
 
     @Override
     @Transactional(readOnly = true)
-    public PagedResponse<CommunityDtos.DiscussionReplyDto> getDiscussionReplies(String discussionId, int page, int size) {
-        if (!discussionRepository.existsById(discussionId)) {
-            throw new EntityNotFoundException("Discussion not found: " + discussionId);
-        }
+    public PagedResponse<CommunityDtos.DiscussionReplyDto> getDiscussionReplies(String viewerId, String discussionId, int page, int size) {
+        Discussion discussion = discussionRepository.findById(discussionId)
+            .orElseThrow(() -> new EntityNotFoundException("Discussion not found: " + discussionId));
+        assertDiscussionAccess(discussion, viewerId);
         return PagedResponse.of(discussionReplyRepository
             .findByDiscussionIdOrderByCreatedAtAsc(discussionId, PageRequest.of(page, size))
             .map(mapper::toDiscussionReply));
@@ -278,6 +291,7 @@ public class CommunityServiceImpl implements CommunityService {
         restrictionService.assertCanUseAccount(userId, "COMMENTING");
         Discussion discussion = discussionRepository.findById(discussionId)
             .orElseThrow(() -> new EntityNotFoundException("Discussion not found: " + discussionId));
+        assertDiscussionAccess(discussion, userId);
         User author = findUser(userId);
         DiscussionReply reply = DiscussionReply.builder()
             .discussion(discussion)
@@ -301,6 +315,7 @@ public class CommunityServiceImpl implements CommunityService {
     public CommunityDtos.DiscussionDto acceptDiscussionReply(String userId, String discussionId, String replyId) {
         Discussion discussion = discussionRepository.findById(discussionId)
             .orElseThrow(() -> new EntityNotFoundException("Discussion not found: " + discussionId));
+        assertDiscussionAccess(discussion, userId);
         if (!discussion.getAuthor().getId().equals(userId)) {
             throw new IllegalArgumentException("Only the discussion author can accept an answer.");
         }
@@ -324,6 +339,7 @@ public class CommunityServiceImpl implements CommunityService {
     public CommunityDtos.DiscussionDto resolveDiscussion(String userId, String discussionId) {
         Discussion discussion = discussionRepository.findById(discussionId)
             .orElseThrow(() -> new EntityNotFoundException("Discussion not found: " + discussionId));
+        assertDiscussionAccess(discussion, userId);
         if (!discussion.getAuthor().getId().equals(userId)) {
             throw new IllegalArgumentException("Only the discussion author can resolve this discussion.");
         }
@@ -918,6 +934,28 @@ public class CommunityServiceImpl implements CommunityService {
             return Enum.valueOf(enumType, normalized);
         } catch (IllegalArgumentException ex) {
             return fallback;
+        }
+    }
+
+    private void assertDiscussionAccess(Discussion discussion, String userId) {
+        if (discussion.getCircle() == null) {
+            return;
+        }
+        assertCircleMember(
+            discussion.getCircle(),
+            userId,
+            "Join this skill circle before opening or replying to its help desk threads."
+        );
+    }
+
+    private void assertCircleMember(SkillCircle circle, String userId, String message) {
+        if (userId == null || userId.isBlank()) {
+            throw new IllegalArgumentException(message);
+        }
+        boolean member = circle.getMembers().stream()
+            .anyMatch(existing -> userId.equals(existing.getId()));
+        if (!member) {
+            throw new IllegalArgumentException(message);
         }
     }
 

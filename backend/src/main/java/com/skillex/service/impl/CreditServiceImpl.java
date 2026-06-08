@@ -15,6 +15,7 @@ import com.skillex.repository.UserRepository;
 import com.skillex.service.CreditService;
 import jakarta.persistence.EntityNotFoundException;
 import lombok.RequiredArgsConstructor;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -26,6 +27,14 @@ public class CreditServiceImpl implements CreditService {
     private final CreditTransactionRepository transactionRepository;
     private final UserRepository userRepository;
     private final AdminAuditLogRepository auditRepository;
+
+    /**
+     * Minimum profile-completeness percent required (alongside a verified email) to
+     * release the one-time starter credit grant. Lowered from a strict 80 to a demo-
+     * friendly default so seeded/real accounts reliably receive starter credits.
+     */
+    @Value("${app.credits.starter-grant-min-completeness:50}")
+    private int starterGrantMinCompleteness;
 
     @Override
     @Transactional
@@ -188,7 +197,7 @@ public class CreditServiceImpl implements CreditService {
         if (hasText(user.getBio())) filled++;
         if (user.getSkillsOffered() != null && !user.getSkillsOffered().isEmpty()) filled++;
         if (user.getSkillsWanted() != null && !user.getSkillsWanted().isEmpty()) filled++;
-        return (filled * 100 / total) >= 80;
+        return (filled * 100 / total) >= starterGrantMinCompleteness;
     }
 
     private boolean hasText(String value) {

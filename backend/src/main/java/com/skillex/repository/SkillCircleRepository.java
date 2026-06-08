@@ -14,6 +14,8 @@ public interface SkillCircleRepository extends JpaRepository<SkillCircle, String
 
     Page<SkillCircle> findAllByOrderByMemberCountDesc(Pageable pageable);
 
+    boolean existsByIdAndMembers_Id(String circleId, String userId);
+
     @Modifying
     @Query(value = "DELETE FROM skill_circle_members WHERE circle_id = :circleId AND user_id = :userId", nativeQuery = true)
     int deleteMember(@Param("circleId") String circleId, @Param("userId") String userId);

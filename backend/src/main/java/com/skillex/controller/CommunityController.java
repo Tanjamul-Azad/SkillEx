@@ -133,11 +133,12 @@ public class CommunityController {
 
     @GetMapping("/discussions/{discussionId}/replies")
     public ResponseEntity<ApiResponse<PagedResponse<CommunityDtos.DiscussionReplyDto>>> getDiscussionReplies(
+        HttpServletRequest request,
         @PathVariable String discussionId,
         @RequestParam(defaultValue = "0") int page,
         @RequestParam(defaultValue = "20") int size
     ) {
-        return ResponseEntity.ok(ApiResponse.ok(communityService.getDiscussionReplies(discussionId, page, size)));
+        return ResponseEntity.ok(ApiResponse.ok(communityService.getDiscussionReplies(currentUserId(request), discussionId, page, size)));
     }
 
     @PostMapping("/discussions/{discussionId}/replies")

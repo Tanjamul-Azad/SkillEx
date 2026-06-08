@@ -52,6 +52,12 @@ if (Test-Path $ensureMysql) {
     & powershell -NoProfile -ExecutionPolicy Bypass -File $ensureMysql
 }
 
+# Ensure Ollama (local LLM for AI session notes) is running. Optional — never blocks.
+$ensureOllama = Join-Path $Root "scripts\dev\ensure-ollama.ps1"
+if (Test-Path $ensureOllama) {
+    & powershell -NoProfile -ExecutionPolicy Bypass -File $ensureOllama
+}
+
 # Set JAVA_HOME and launch Spring Boot via Gradle.
 $env:JAVA_HOME = "C:\Users\User\.jdk\jdk-21.0.8"
 $env:GRADLE_USER_HOME = Join-Path $Root "backend\.gradle-user-home"

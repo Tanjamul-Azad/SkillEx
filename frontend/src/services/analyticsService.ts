@@ -26,6 +26,21 @@ export interface PlatformAnalytics {
   totalSessions: number;
 }
 
+export interface ImpactStats {
+  learners: number;
+  skillsExchanged: number;
+  hoursTaught: number;
+  tuitionValueSavedUsd: number;
+  mentorCertificates: number;
+  skillCircles: number;
+  communityThreads: number;
+  connectionsMade: number;
+  skillsInCatalog: number;
+  topSkills: SkillInsight[];
+}
+
 export const analyticsService = {
   platform: (limit = 5) => api.get<PlatformAnalytics>(`/analytics/platform?limit=${limit}`),
+  /** Public "economy at a glance" impact snapshot (no auth required). */
+  impact: (topSkills = 6) => api.get<ImpactStats>(`/analytics/impact?topSkills=${topSkills}`),
 };

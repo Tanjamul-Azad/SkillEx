@@ -1,5 +1,6 @@
 package com.skillex.service;
 
+import com.skillex.dto.analytics.ImpactStatsDto;
 import com.skillex.dto.analytics.PlatformAnalyticsDto;
 
 /**
@@ -22,4 +23,13 @@ public interface AnalyticsService {
      * @return populated {@link PlatformAnalyticsDto}
      */
     PlatformAnalyticsDto getPlatformAnalytics(int limit);
+
+    /**
+     * Build a public "economy at a glance" impact snapshot: learners, skills
+     * exchanged, hours taught, tuition value saved, and community totals.
+     *
+     * @param topSkillsLimit number of top skills to include
+     * @return populated {@link ImpactStatsDto}
+     */
+    ImpactStatsDto getImpactStats(int topSkillsLimit);
 }

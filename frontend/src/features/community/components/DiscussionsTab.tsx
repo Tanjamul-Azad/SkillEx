@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { ArrowUp, Pin, MessageSquare, Plus, Loader2, CheckCircle2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -103,7 +103,7 @@ const DiscussionCard = React.memo(({ discussion: d, onOpen }: DiscussionCardProp
               </Badge>
             )}
             <span className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground ml-auto hidden sm:inline-block">
-              {d.createdAt}
+              {d.createdAt ? (() => { const dt = new Date(d.createdAt); return isNaN(dt.getTime()) ? 'Recently' : dt.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }); })() : 'Recently'}
             </span>
           </div>
           <h3 className="font-headline font-extrabold text-lg sm:text-xl leading-snug text-foreground group-hover:text-primary transition-colors pr-2 line-clamp-2 drop-shadow-sm">
@@ -126,7 +126,7 @@ const DiscussionCard = React.memo(({ discussion: d, onOpen }: DiscussionCardProp
                 <span className="h-1.5 w-1.5 rounded-full bg-primary/15" />
                 {d.views} <span className="hidden sm:inline">views</span>
               </div>
-              <span className="sm:hidden ml-auto text-[10px]">{d.createdAt}</span>
+              <span className="sm:hidden ml-auto text-[10px]">{d.createdAt ? (() => { const dt = new Date(d.createdAt); return isNaN(dt.getTime()) ? 'Recently' : dt.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }); })() : 'Recently'}</span>
             </div>
           </div>
         </div>
@@ -311,7 +311,7 @@ export const DiscussionsTab = () => {
 
   const loadDiscussions = useCallback(() => {
     return CommunityService.getDiscussions(0, 20, {
-      category: activeCategory,
+      category: activeCategory === 'All' ? undefined : activeCategory,
       status: activeStatus === 'All' ? undefined : activeStatus,
     }).then((r) => setDiscussions(r.content ?? []));
   }, [activeCategory, activeStatus]);
@@ -365,10 +365,76 @@ export const DiscussionsTab = () => {
     setDiscussions(prev => prev.map(item => item.id === updated.id ? updated : item));
   };
 
+  const discussionStats = useMemo(() => {
+    const solved = discussions.filter(discussion => discussion.status === 'SOLVED').length;
+    const pinned = discussions.filter(discussion => discussion.isPinned).length;
+    const replies = discussions.reduce((sum, discussion) => sum + (discussion.replies ?? 0), 0);
+    const views = discussions.reduce((sum, discussion) => sum + (discussion.views ?? 0), 0);
+    const hotThread = discussions
+      .slice()
+      .sort((a, b) => (b.upvotes + b.replies) - (a.upvotes + a.replies))[0];
+
+    return { solved, pinned, replies, views, hotThread };
+  }, [discussions]);
+
   return (
-    <div className="grid grid-cols-1 lg:grid-cols-4 gap-8">
+    <div className="space-y-6">
+      <div className="product-panel overflow-hidden">
+        <div className="flex flex-col gap-4 p-5 md:flex-row md:items-center md:justify-between">
+          <div>
+            <div className="flex flex-wrap items-center gap-2">
+              <Badge className="rounded-full border border-primary/20 bg-primary/10 text-primary">
+                <MessageSquare className="mr-1 h-3 w-3" />
+                Community triage
+              </Badge>
+              <Badge variant="outline" className="rounded-full">
+                {activeCategory} / {formatEnumLabel(activeStatus)}
+              </Badge>
+            </div>
+            <h2 className="mt-3 font-headline text-2xl font-extrabold text-foreground">Discussions</h2>
+            <p className="mt-1 max-w-2xl text-sm leading-relaxed text-muted-foreground">
+              Questions, resource requests, reviews, and success stories with solved-state tracking.
+            </p>
+          </div>
+          <Button className="rounded-xl text-[10px] font-bold uppercase tracking-widest" onClick={() => setCreateOpen(true)}>
+            <Plus className="mr-2 h-3.5 w-3.5" />
+            New discussion
+          </Button>
+        </div>
+        <div className="grid border-t border-border/50 bg-muted/10 sm:grid-cols-2 lg:grid-cols-5">
+          {[
+            { label: 'Threads', value: discussions.length, icon: MessageSquare },
+            { label: 'Solved', value: discussionStats.solved, icon: CheckCircle2 },
+            { label: 'Pinned', value: discussionStats.pinned, icon: Pin },
+            { label: 'Replies', value: discussionStats.replies, icon: ArrowUp },
+            { label: 'Views', value: discussionStats.views, icon: MessageSquare },
+          ].map(item => {
+            const Icon = item.icon;
+            return (
+              <div key={item.label} className="flex items-center gap-3 border-b border-border/50 p-4 last:border-b-0 sm:border-r sm:last:border-r-0 lg:border-b-0">
+                <div className="flex h-9 w-9 items-center justify-center rounded-lg border border-primary/20 bg-primary/10 text-primary">
+                  <Icon className="h-4 w-4" />
+                </div>
+                <div>
+                  <p className="font-headline text-xl font-extrabold text-foreground">{item.value}</p>
+                  <p className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">{item.label}</p>
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      </div>
+
+      <div className="grid grid-cols-1 gap-8 lg:grid-cols-4">
       <aside className="col-span-1">
-        <div className="surface-raised rounded-xl p-4 space-y-2">
+        <div className="surface-raised rounded-xl p-4 space-y-2 lg:sticky lg:top-4">
+            {discussionStats.hotThread && (
+              <div className="mb-4 rounded-xl border border-primary/20 bg-primary/5 p-3">
+                <p className="text-[10px] font-bold uppercase tracking-widest text-primary">Hot thread</p>
+                <p className="mt-2 line-clamp-2 text-sm font-bold text-foreground">{discussionStats.hotThread.title}</p>
+                <p className="mt-1 text-xs text-muted-foreground">{discussionStats.hotThread.replies} replies</p>
+              </div>
+            )}
             <Button className="mb-3 w-full rounded-xl text-[10px] font-bold uppercase tracking-widest" onClick={() => setCreateOpen(true)}>
               <Plus className="mr-2 h-3.5 w-3.5" />
               New discussion
@@ -417,6 +483,7 @@ export const DiscussionsTab = () => {
           </div>
         )}
       </main>
+      </div>
       <Dialog open={createOpen} onOpenChange={setCreateOpen}>
         <DialogContent className="sm:max-w-2xl">
           <DialogHeader>

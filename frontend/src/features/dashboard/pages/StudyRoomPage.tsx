@@ -111,8 +111,9 @@ export default function StudyRoomPage() {
   }, [sessionId, user, navigate, toast]);
 
   // ── Session Countdown Timer ───────────────────────────────────────────────
+  // FIX 3: also run timer when status is 'in_progress' (same fix as Complete button)
   useEffect(() => {
-    if (!session || session.status !== 'scheduled') return;
+    if (!session || (session.status !== 'scheduled' && session.status !== 'in_progress')) return;
 
     const timer = setInterval(() => {
       const scheduled = new Date(session.scheduledAt);
@@ -463,7 +464,8 @@ export default function StudyRoomPage() {
             </div>
 
             {/* End & Complete Session Button */}
-            {session.status === 'scheduled' && (
+            {/* FIX 3: also show when status is 'in_progress' so the button doesn't vanish after joining */}
+            {(session.status === 'scheduled' || session.status === 'in_progress') && (
               <Button
                 onClick={handleCompleteSession}
                 className="bg-emerald-600 hover:bg-emerald-500 text-white font-semibold text-xs h-8 px-3 rounded-lg flex items-center gap-1.5 shadow-lg shadow-emerald-950/20"

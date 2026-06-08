@@ -16,6 +16,7 @@
 import { useEffect, useRef, useCallback, useState } from 'react';
 import { Client, type IMessage, type StompSubscription } from '@stomp/stompjs';
 import SockJS from 'sockjs-client';
+import { TokenStore } from '@/services/http/ApiClient';
 
 // Derive WebSocket base from VITE_API_URL (strip /api suffix) or fall back to
 // the current page origin — this works in every deployment without hardcoding.
@@ -48,7 +49,12 @@ export function useWebSocket(token: string | null): WebSocketHook {
       onConnect: () => setConnected(true),
       onDisconnect: () => setConnected(false),
       onStompError: (frame) => {
+        const msg = (frame.headers['message'] ?? '').toLowerCase();
         console.warn('[ws] STOMP error:', frame.headers['message']);
+        if (msg.includes('expired') || msg.includes('invalid') || msg.includes('unauthorized')) {
+          TokenStore.clear();
+          client.deactivate();
+        }
       },
     });
 

@@ -24,7 +24,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
 
   return (
     <div className="min-h-screen bg-background text-foreground">
-      <aside className="fixed inset-y-0 left-0 hidden w-64 border-r bg-card/80 p-4 lg:block">
+      <aside className="fixed inset-y-0 left-0 hidden w-64 border-r border-border/60 bg-sidebar/95 p-4 shadow-[1px_0_0_0_hsl(var(--border)/0.5)] backdrop-blur-xl lg:block">
         <Link to="/dashboard" className="mb-6 flex items-center gap-2 rounded-xl px-2 py-2 text-lg font-extrabold">
           <Shield className="h-5 w-5 text-primary" />
           SkillEX Admin
@@ -38,8 +38,8 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
                 key={item.href}
                 to={item.href}
                 className={cn(
-                  'flex items-center gap-3 rounded-xl px-3 py-2 text-sm font-semibold text-muted-foreground hover:bg-muted hover:text-foreground',
-                  active && 'bg-primary/10 text-primary'
+                  'flex items-center gap-3 rounded-xl px-3 py-2 text-sm font-semibold text-muted-foreground transition-colors hover:bg-muted hover:text-foreground',
+                  active && 'bg-primary/10 text-primary shadow-[inset_0_0_0_1px_hsl(var(--primary)/0.2)]'
                 )}
               >
                 <Icon className="h-4 w-4" />
@@ -50,7 +50,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
         </nav>
       </aside>
       <main className="min-h-screen p-4 lg:ml-64 lg:p-8">
-        <div className="mx-auto max-w-6xl">
+        <div className="mx-auto max-w-7xl">
           <AppBackButton fallbackTo="/dashboard" className="mb-4" />
           {children}
         </div>

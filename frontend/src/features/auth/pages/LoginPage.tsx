@@ -397,6 +397,7 @@ function LoginForm() {
 function RegisterForm({ setFormType }: { setFormType: (type: 'login') => void }) {
   const { register } = useAuth();
   const { toast } = useToast();
+  const navigate = useNavigate();
   const [isLoading, setIsLoading] = React.useState(false);
   const [showPassword, setShowPassword] = React.useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = React.useState(false);
@@ -430,10 +431,10 @@ function RegisterForm({ setFormType }: { setFormType: (type: 'login') => void })
       } else {
         toast({
           title: 'Account Created!',
-          description: 'Your account is ready. Sign in with your new credentials.',
+          description: 'Your account is ready. Complete your profile to get started.',
           variant: 'success',
         });
-        setFormType('login');
+        navigate('/onboarding');
       }
       setIsLoading(false);
     } else {

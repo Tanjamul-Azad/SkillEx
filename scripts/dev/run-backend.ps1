@@ -52,6 +52,17 @@ if (Test-Path $ensureMysql) {
     & powershell -NoProfile -ExecutionPolicy Bypass -File $ensureMysql
 }
 
+<<<<<<< HEAD
+# Ensure Ollama (local LLM for AI session notes) is running. Optional — never blocks.
+$ensureOllama = Join-Path $Root "scripts\dev\ensure-ollama.ps1"
+if (Test-Path $ensureOllama) {
+    & powershell -NoProfile -ExecutionPolicy Bypass -File $ensureOllama
+}
+
+# Set JAVA_HOME and launch Spring Boot via Gradle.
+$env:JAVA_HOME = "C:\Users\User\.jdk\jdk-21.0.8"
+$env:GRADLE_USER_HOME = Join-Path $Root "backend\.gradle-user-home"
+=======
 # Set JAVA_HOME when Java is available on PATH. This keeps moved project folders
 # from depending on a hardcoded JDK path from another machine.
 $javaCommand = Get-Command javac -ErrorAction SilentlyContinue
@@ -73,6 +84,7 @@ if ($javaCommand -and $javaCommand.Source) {
 $env:GRADLE_USER_HOME = Join-Path $Root ".codex-logs\gradle-user-home"
 New-Item -ItemType Directory -Force -Path $env:GRADLE_USER_HOME | Out-Null
 Write-Host "[run-backend] GRADLE_USER_HOME: $env:GRADLE_USER_HOME" -ForegroundColor Cyan
+>>>>>>> a6c29646776fa92890ef4043f7456856daaa0353
 Set-Location (Join-Path $Root "backend")
 
 $gradleExecutable = $null

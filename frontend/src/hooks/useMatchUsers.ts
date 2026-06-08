@@ -39,7 +39,6 @@ export function useMatchUsers(options: UseMatchUsersOptions = {}) {
       setLoading(true);
       setError(null);
       const params = new URLSearchParams();
-      if (options.search) params.set('q', options.search);
       if (options.limit)  params.set('limit', String(options.limit));
       const qs = params.toString();
       const list = await api.get<MatchUser[]>(`/match/users${qs ? `?${qs}` : ''}`);
@@ -49,7 +48,7 @@ export function useMatchUsers(options: UseMatchUsersOptions = {}) {
     } finally {
       setLoading(false);
     }
-  }, [options.search, options.limit]);
+  }, [options.limit]);
 
   useEffect(() => { fetch(); }, [fetch]);
 

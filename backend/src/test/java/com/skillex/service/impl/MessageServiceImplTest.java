@@ -16,6 +16,7 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.security.access.AccessDeniedException;
+import org.springframework.test.util.ReflectionTestUtils;
 
 import java.util.List;
 import java.util.Optional;
@@ -48,6 +49,7 @@ class MessageServiceImplTest {
             exchangeRepository,
             restrictionService
         );
+        ReflectionTestUtils.setField(service, "requireRelationship", true);
     }
 
     @Test

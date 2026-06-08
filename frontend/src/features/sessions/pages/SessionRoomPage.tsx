@@ -7,13 +7,16 @@ import { useAuth } from '@/hooks/useAuth';
 import { SessionService } from '@/services/sessionService';
 import { TokenStore } from '@/services/http/ApiClient';
 import type { Session } from '@/types';
-import { 
-  Video, VideoOff, Mic, MicOff, Monitor, PhoneOff, 
+import {
+  Video, VideoOff, Mic, MicOff, Monitor, PhoneOff,
   FileText, MessageSquare, Sparkles, Loader2, Save, Volume2, Settings, Download,
   Palette, Hand, Send, Trash2, CheckCircle
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import AppBackButton from '@/components/navigation/AppBackButton';
+// FIX 2: import toast + ConfirmDialog to replace raw window.alert/confirm calls
+import { useToast } from '@/hooks/use-toast';
+import { ConfirmDialog } from '@/components/ui/ConfirmDialog';
 
 interface ChatMessage {
   id: number;
@@ -71,10 +74,15 @@ export default function SessionRoomPage() {
   const [chatInput, setChatInput] = useState('');
   const chatEndRef = useRef<HTMLDivElement>(null);
 
-  const [translateEnabled] = useState(false);
-  const [targetLanguage] = useState('bn');
-  const [translatedTranscriptMap, setTranslatedTranscriptMap] = useState<Record<number, string>>({});
-  const [translatingMap, setTranslatingMap] = useState<Record<number, boolean>>({});
+  // FIX 2: toast hook for non-blocking error messages (replaces window.alert)
+  const { toast } = useToast();
+
+  // FIX 2: ConfirmDialog state — one open flag per action that needs a confirm prompt
+  const [cancelConfirmOpen, setCancelConfirmOpen] = useState(false);
+  const [completeConfirmOpen, setCompleteConfirmOpen] = useState(false);
+
+  // FIX 1: separate non-fatal "video unavailable" state from the fatal roomError
+  const [videoUnavailable, setVideoUnavailable] = useState(false);
 
   // Interactive Whiteboard states
   const canvasRef = useRef<HTMLCanvasElement>(null);
@@ -122,6 +130,13 @@ export default function SessionRoomPage() {
   const [roomError, setRoomError] = useState<string | null>(null);
   const [endingCall, setEndingCall] = useState(false);
   const [completingSession, setCompletingSession] = useState(false);
+
+  // FIX 1: If the Agora hook itself surfaces a joinError (e.g. from screen-share or
+  // internal retry), promote it to the non-fatal videoUnavailable flag rather than
+  // letting it go unshown (joinError is no longer part of effectiveRoomError).
+  useEffect(() => {
+    if (joinError) setVideoUnavailable(true);
+  }, [joinError]);
 
   const [speechLanguage, setSpeechLanguage] = useState('en-US');
   const {
@@ -176,44 +191,8 @@ export default function SessionRoomPage() {
     }
   }, [localAudioTrack, hearSelf, audioEnabled]);
 
-  // Translation effect
-  useEffect(() => {
-    if (!translateEnabled) return;
-    transcript.forEach((msg) => {
-      if (translatedTranscriptMap[msg.id] || translatingMap[msg.id]) return;
-      
-      const translateMessage = async () => {
-        setTranslatingMap((prev) => ({ ...prev, [msg.id]: true }));
-        try {
-          const response = await fetch(
-            `https://api.mymemory.translated.net/get?q=${encodeURIComponent(msg.content)}&langpair=auto|${targetLanguage}`
-          );
-          if (!response.ok) throw new Error('API limit or failure');
-          const data = await response.json();
-          const translatedText = data.responseData?.translatedText || '';
-          if (translatedText) {
-            setTranslatedTranscriptMap((prev) => ({ ...prev, [msg.id]: translatedText }));
-          }
-        } catch {
-          // simple dictionary mock translations
-          const textLower = msg.content.toLowerCase().trim();
-          let fallback = '';
-          if (targetLanguage === 'bn') {
-            if (textLower.includes('hello') || textLower.includes('hi')) fallback = 'হ্যালো 👋';
-            else if (textLower.includes('how are you')) fallback = 'আপনি কেমন আছেন?';
-            else if (textLower.includes('thank you')) fallback = 'ধন্যবাদ!';
-            else fallback = `[অনুবাদ]: ${msg.content}`;
-          } else {
-            fallback = `[Translated to ${targetLanguage.toUpperCase()}]: ${msg.content}`;
-          }
-          setTranslatedTranscriptMap((prev) => ({ ...prev, [msg.id]: fallback }));
-        } finally {
-          setTranslatingMap((prev) => ({ ...prev, [msg.id]: false }));
-        }
-      };
-      void translateMessage();
-    });
-  }, [transcript, translateEnabled, targetLanguage, translatedTranscriptMap, translatingMap]);
+  // FIX 4: Dead translate code removed — translateEnabled was always false,
+  // the mymemory.translated.net effect never ran. State declarations removed above.
 
   // Send ephemeral chat message
   const sendInRoomChatMessage = (e?: React.FormEvent) => {
@@ -518,6 +497,8 @@ export default function SessionRoomPage() {
   }, [transcript]);
 
   // Auto join Agora room when session is loaded
+  // FIX 1: Agora join failures are NON-FATAL — the room renders with a small inline
+  // banner instead of replacing the whole UI. Session-load / auth errors stay fatal.
   useEffect(() => {
     if (!sessionId) return;
     let cancelled = false;
@@ -525,17 +506,42 @@ export default function SessionRoomPage() {
     const bootRoom = async () => {
       try {
         setRoomError(null);
-        await setStreamRole('host');
+        setVideoUnavailable(false);
+
+        // Step 1: authenticate with the backend to get the Agora token.
+        // A 403 / session-not-found error here is FATAL — user shouldn't be in the room.
         const res = await SessionService.joinRoom(sessionId);
-        await joinChannel(res.token, res.uid, res.appId);
+
         if (cancelled) return;
-        const snapshot = await SessionService.getPresence(sessionId);
-        if (!cancelled && snapshot) {
-          setPresence(snapshot as PresencePayload);
+
+        // Step 2: join the Agora channel with the obtained credentials.
+        // This can fail if the App ID is misconfigured or the network blocks Agora.
+        // We treat this as NON-FATAL: transcription + AI notes still work.
+        try {
+          await setStreamRole('host');
+          await joinChannel(res.token, res.uid, res.appId);
+        } catch (agoraErr) {
+          if (cancelled) return;
+          console.warn('[SessionRoom] Agora video join failed (non-fatal):', agoraErr);
+          setVideoUnavailable(true);
+          // Do NOT set roomError — keep the room open for transcription + notes
+        }
+
+        if (cancelled) return;
+
+        // Step 3: load presence snapshot regardless of Agora status
+        try {
+          const snapshot = await SessionService.getPresence(sessionId);
+          if (!cancelled && snapshot) {
+            setPresence(snapshot as PresencePayload);
+          }
+        } catch {
+          // presence is best-effort; ignore failures
         }
       } catch (err) {
+        // This catch covers Step 1 (auth/session-load) — keep this FATAL
         if (cancelled) return;
-        console.error('Failed to authenticate with Agora room', err);
+        console.error('[SessionRoom] Fatal: failed to authenticate session room', err);
         const message = err instanceof Error ? err.message : 'You cannot join this live room right now.';
         setRoomError(message);
       }
@@ -617,12 +623,10 @@ export default function SessionRoomPage() {
     }
   };
 
-  // Terminate call session room
-  const handleEndCall = async () => {
+  // FIX 2: handleEndCall — ConfirmDialog replaces window.confirm; toast replaces window.alert
+  // The actual async work is extracted to a helper that runs only after the user confirms.
+  const executeCancelSession = async () => {
     if (!sessionId) return;
-    const confirmCancel = window.confirm('Cancel this session call? This will mark the session as cancelled.');
-    if (!confirmCancel) return;
-
     let cancelFailed: unknown = null;
     try {
       setEndingCall(true);
@@ -651,18 +655,25 @@ export default function SessionRoomPage() {
       navigate('/dashboard');
     } catch (err) {
       console.error('Failed to cancel session', err);
-      alert('Session cancel korte problem hocche. Please refresh diye abar try korun.');
+      toast({
+        title: "Couldn't cancel the session.",
+        description: 'Please refresh and try again.',
+        variant: 'destructive',
+      });
     } finally {
       setEndingCall(false);
     }
   };
 
-  // Successfully complete session call room
-  const handleCompleteSession = async () => {
+  // Opens the ConfirmDialog; the actual work runs in executeCancelSession via onConfirm
+  const handleEndCall = () => {
     if (!sessionId) return;
-    const confirmComplete = window.confirm('Mark this session exchange as successfully completed? This will trigger your AI study summaries.');
-    if (!confirmComplete) return;
+    setCancelConfirmOpen(true);
+  };
 
+  // FIX 2: handleCompleteSession — ConfirmDialog replaces window.confirm; toast replaces window.alert
+  const executeCompleteSession = async () => {
+    if (!sessionId) return;
     try {
       setCompletingSession(true);
 
@@ -693,12 +704,23 @@ export default function SessionRoomPage() {
       navigate(`/sessions/${sessionId}/review`);
     } catch (err) {
       console.error('Failed to complete session', err);
-      alert('Session complete korte problem hocche. Please refresh diye abar try korun.');
+      toast({
+        title: "Couldn't complete the session.",
+        description: 'Please refresh and try again.',
+        variant: 'destructive',
+      });
     } finally {
       setCompletingSession(false);
     }
   };
 
+  // Opens the ConfirmDialog; the actual work runs in executeCompleteSession via onConfirm
+  const handleCompleteSession = () => {
+    if (!sessionId) return;
+    setCompleteConfirmOpen(true);
+  };
+
+  // FIX 2: toast replaces raw window.alert for export errors
   const handleExportNotes = async (format: 'md' | 'pdf') => {
     if (!sessionId || !aiNotes) return;
     try {
@@ -706,7 +728,11 @@ export default function SessionRoomPage() {
       await SessionService.exportNotesDocument(sessionId, format);
     } catch (error) {
       console.error(error);
-      alert('Notes export korte problem hocche. Please abar try korun.');
+      toast({
+        title: "Couldn't export notes.",
+        description: 'Please try again.',
+        variant: 'destructive',
+      });
     } finally {
       setExportingFormat(null);
     }
@@ -756,7 +782,9 @@ export default function SessionRoomPage() {
           ? 'Learner'
           : 'Participant'
       : 'Participant';
-  const effectiveRoomError = roomError || joinError;
+  // FIX 1: roomError is fatal (session not found / 403); joinError from the Agora hook
+  // is a video-layer error and treated as non-fatal (surfaced via videoUnavailable banner).
+  const effectiveRoomError = roomError;
   const participantIds = presence?.participantUserIds ?? [];
   const partnerConnectedByPresence = Boolean(
     user?.id &&
@@ -837,9 +865,17 @@ export default function SessionRoomPage() {
       <div className="flex flex-1 overflow-hidden">
         {/* Left Hand: WebRTC Stream Column */}
         <div className="flex-1 flex flex-col p-6 overflow-hidden">
+          {/* FIX 1: Fatal room error (auth/session-not-found) — shown inline in video column */}
           {effectiveRoomError && (
             <div className="mb-4 rounded-xl border border-red-500/40 bg-red-500/10 px-4 py-3 text-xs text-red-200">
               {effectiveRoomError}
+            </div>
+          )}
+          {/* FIX 1: Non-fatal Agora video failure — transcription + AI notes still work */}
+          {videoUnavailable && !effectiveRoomError && (
+            <div className="mb-4 rounded-xl border border-slate-600/50 bg-slate-800/60 px-4 py-3 text-xs text-slate-300 flex items-center gap-2">
+              <VideoOff className="h-4 w-4 shrink-0 text-slate-400" />
+              Live video unavailable — running in audio + notes mode.
             </div>
           )}
           {mediaWarning && (
@@ -1497,6 +1533,30 @@ export default function SessionRoomPage() {
           </div>
         </div>
       </div>
+
+      {/* FIX 2: Cancel session confirmation dialog (replaces window.confirm) */}
+      <ConfirmDialog
+        open={cancelConfirmOpen}
+        onOpenChange={setCancelConfirmOpen}
+        title="Cancel this session?"
+        description="This will mark the session as cancelled and end the call for both participants."
+        confirmLabel="Yes, cancel session"
+        cancelLabel="Keep going"
+        variant="destructive"
+        onConfirm={() => { void executeCancelSession(); }}
+      />
+
+      {/* FIX 2: Complete session confirmation dialog (replaces window.confirm) */}
+      <ConfirmDialog
+        open={completeConfirmOpen}
+        onOpenChange={setCompleteConfirmOpen}
+        title="Complete this session?"
+        description="This will mark the exchange as successfully completed and trigger your AI study summaries."
+        confirmLabel="Complete session"
+        cancelLabel="Not yet"
+        variant="default"
+        onConfirm={() => { void executeCompleteSession(); }}
+      />
 
       {/* Google Meet-Style Hardware Device Selection Dialog */}
       {showSettings && (

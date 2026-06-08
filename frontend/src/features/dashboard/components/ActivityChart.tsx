@@ -51,6 +51,13 @@ export function ActivityChart({ data, trend, total, loading = false }: ActivityC
 
       <CardContent className="relative z-0 mt-1 p-0">
         <div className="absolute inset-0 bg-gradient-to-t from-primary/10 to-transparent pointer-events-none" />
+        {!loading && !hasData && (
+          <div className="absolute inset-0 z-10 flex items-center justify-center">
+            <p className="px-6 text-center text-xs text-muted-foreground">
+              Complete your first exchange or session to see your activity here.
+            </p>
+          </div>
+        )}
         <div className="h-[165px] w-full">
           <ResponsiveContainer width="100%" height="100%">
             <AreaChart data={data} margin={{ top: 8, right: 10, left: 0, bottom: 8 }}>

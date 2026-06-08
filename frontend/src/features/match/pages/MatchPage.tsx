@@ -25,7 +25,7 @@ import {
 } from '@/components/ui/select';
 import { cn } from '@/lib/utils';
 import type { User } from '@/types';
-import { Link } from 'react-router-dom';
+import { Link, useSearchParams } from 'react-router-dom';
 import DashboardLayout from '@/components/layout/DashboardLayout';
 import {
   FilterSidebar,
@@ -79,8 +79,12 @@ const MARKETPLACE_PAGE_SIZE_OPTIONS = [16, 24, 36, 48] as const;
 export default function MatchPage() {
   useDocumentTitle('Find a Match');
   const { user } = useAuth();
+  const [searchParams, setSearchParams] = useSearchParams();
+  const initialTab = searchParams.get('tab');
   const [view, setView] = useState<'grid' | 'list'>('grid');
-  const [activeTab, setActiveTab] = useState<'direct' | 'chain' | 'marketplace'>('direct');
+  const [activeTab, setActiveTab] = useState<'direct' | 'chain' | 'marketplace'>(
+    initialTab === 'chain' || initialTab === 'marketplace' ? initialTab : 'direct'
+  );
   const [sortOption, setSortOption] = useState('best');
   const [filters, setFilters] = useState<Filters>(defaultFilters);
   const [mobileSheetOpen, setMobileSheetOpen] = useState(false);
@@ -95,6 +99,13 @@ export default function MatchPage() {
   const [connectedUserIds, setConnectedUserIds] = useState<Set<string>>(new Set());
 
   const { users, loading } = useMatchUsers({ search: filters.search, limit: 50 });
+
+  useEffect(() => {
+    const tab = searchParams.get('tab');
+    if (tab === 'direct' || tab === 'chain' || tab === 'marketplace') {
+      setActiveTab(tab);
+    }
+  }, [searchParams]);
 
   useEffect(() => {
     if (!user?.id) {
@@ -374,7 +385,15 @@ export default function MatchPage() {
                     <Button
                       key={tab.id}
                       variant="ghost"
-                      onClick={() => setActiveTab(tab.id as 'direct' | 'chain' | 'marketplace')}
+                      onClick={() => {
+                        const nextTab = tab.id as 'direct' | 'chain' | 'marketplace';
+                        setActiveTab(nextTab);
+                        setSearchParams(prev => {
+                          const next = new URLSearchParams(prev);
+                          next.set('tab', nextTab);
+                          return next;
+                        });
+                      }}
                       className={cn(
                         "relative h-9 shrink-0 rounded-xl px-3 text-xs font-bold transition-colors",
                         activeTab === tab.id ? 'bg-primary text-primary-foreground shadow-sm hover:bg-primary' : 'text-muted-foreground hover:bg-muted/60 hover:text-foreground'

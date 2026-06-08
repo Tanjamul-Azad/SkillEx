@@ -42,7 +42,7 @@ public interface CommunityService {
 
     CommunityDtos.DiscussionDto upvoteDiscussion(String userId, String discussionId);
 
-    PagedResponse<CommunityDtos.DiscussionReplyDto> getDiscussionReplies(String discussionId, int page, int size);
+    PagedResponse<CommunityDtos.DiscussionReplyDto> getDiscussionReplies(String viewerId, String discussionId, int page, int size);
 
     CommunityDtos.DiscussionReplyDto addDiscussionReply(String userId, String discussionId, CreateDiscussionReplyRequest req);
 

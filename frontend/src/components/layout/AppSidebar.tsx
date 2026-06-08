@@ -30,7 +30,7 @@ import { Button } from '@/components/ui/button';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import {
-  LayoutDashboard, Zap, Users, User, Settings, LogOut,
+  Award, LayoutDashboard, Zap, Users, User, Settings, LogOut,
   ChevronLeft, ChevronRight, X, MessageSquare,
   UserPlus, Shield,
 } from 'lucide-react';
@@ -42,6 +42,7 @@ import type { LucideIcon } from 'lucide-react';
 
 /* ── Icon registry (maps string names from navigation.config → components) ── */
 const ICON_MAP: Record<string, LucideIcon> = {
+  Award,
   LayoutDashboard,
   Zap,
   Users,

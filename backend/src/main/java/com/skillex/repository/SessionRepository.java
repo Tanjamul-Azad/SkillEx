@@ -65,4 +65,8 @@ public interface SessionRepository extends JpaRepository<Session, String> {
 
     /** Platform-wide count of all completed sessions. */
     long countByStatus(SessionStatus status);
+
+    /** Platform-wide sum of taught minutes across sessions in a given status. */
+    @Query("SELECT COALESCE(SUM(s.durationMins), 0) FROM Session s WHERE s.status = :status")
+    long sumDurationMinsByStatus(@Param("status") SessionStatus status);
 }

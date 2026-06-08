@@ -1551,7 +1551,7 @@ export default function DashboardPage() {
     try {
       setSessionsLoading(true);
       const res = await SessionService.getAll(0, 50);
-      setSessions(res.content);
+      setSessions(res.content ?? []);
     } catch {
       // ignore
     } finally {
@@ -2413,6 +2413,11 @@ export default function DashboardPage() {
             <div className="rounded-2xl border border-primary/20 bg-primary/10 p-4">
               <p className="text-[10px] font-bold uppercase tracking-widest text-primary">Balance</p>
               <p className="mt-2 font-headline text-3xl font-extrabold">{creditBalance}</p>
+              {creditBalance === 0 && (
+                <p className="mt-1.5 text-[10px] text-muted-foreground">
+                  Complete your profile to unlock 20 starter credits.
+                </p>
+              )}
             </div>
             <div className="rounded-2xl border border-border/60 bg-muted/20 p-4">
               <p className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">Earned</p>

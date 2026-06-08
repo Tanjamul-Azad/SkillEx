@@ -39,13 +39,20 @@ public class DataSeeder {
     private final EventRepository            eventRepository;
     private final DiscussionRepository       discussionRepository;
     private final SkillCircleRepository      circleRepository;
+    private final ConnectionRepository       connectionRepository;
     private final PasswordEncoder            passwordEncoder;
+
+    /** Marker account: presence means this seeder already ran. */
+    private static final String SEED_MARKER_EMAIL = "rahim@buet.ac.bd";
 
     @EventListener(ApplicationReadyEvent.class)
     @Transactional
     public void seed() {
-        if (userRepository.count() > 0) {
-            log.info("[DataSeeder] Users already exist — skipping seed.");
+        // NOTE: Flyway migrations (V9 chain users, V28 admin) always insert a few rows,
+        // so a plain count()>0 guard would skip this richer seed forever. Guard on our own
+        // marker account instead, so the demo data seeds on top of the migration baseline.
+        if (userRepository.existsByEmail(SEED_MARKER_EMAIL)) {
+            log.info("[DataSeeder] Demo showcase data already present — skipping seed.");
             return;
         }
 
@@ -61,7 +68,10 @@ public class DataSeeder {
         String demoPass  = passwordEncoder.encode("Demo1234!");
         String adminPass = passwordEncoder.encode("Admin1234!");
 
-        saveUser("Admin User",    "admin@skillex.app",   adminPass, "SkiilEX HQ",  User.UserRole.ADMIN,   User.UserLevel.MASTER,       1500, 30,  new BigDecimal("5.00"), true,  "Platform administrator and community manager.");
+        // V28 migration already inserts the admin account — only create it if missing.
+        if (!userRepository.existsByEmail("admin@skillex.app")) {
+            saveUser("Admin User",    "admin@skillex.app",   adminPass, "SkiilEX HQ",  User.UserRole.ADMIN,   User.UserLevel.MASTER,       1500, 30,  new BigDecimal("5.00"), true,  "Platform administrator and community manager.");
+        }
         User u1    = saveUser("Rahim Ahmed",   "rahim@buet.ac.bd",    demoPass,  "BUET",         User.UserRole.STUDENT, User.UserLevel.SKILLED,      900,  15,  new BigDecimal("4.80"), true,  "CS student passionate about algorithms and music.");
         User u2    = saveUser("Nadia Islam",   "nadia@du.ac.bd",      demoPass,  "DU",           User.UserRole.STUDENT, User.UserLevel.PRACTITIONER, 750,  12,  new BigDecimal("4.70"), false, "Design enthusiast and Figma power-user.");
         User u3    = saveUser("Karim Hassan",  "karim@nsu.edu.bd",    demoPass,  "NSU",          User.UserRole.STUDENT, User.UserLevel.LEARNER,      550,  8,   new BigDecimal("4.60"), true,  "Python dev by day, guitarist by night.");
@@ -186,8 +196,27 @@ public class DataSeeder {
                    List.of(findSkill(skills, "English Writing"), findSkill(skills, "French Language")),
                    List.of(u6, u10));
 
+        // ── 6. Accepted connections ───────────────────────────────────────────
+        // So the dashboard "connections" panel and 1:1 messaging look alive out of the box.
+        saveAcceptedConnection(u1, u2, "Loved your Figma walkthrough — let's swap Python for design tips!");
+        saveAcceptedConnection(u1, u3, "Guitar for Python? I'm in.");
+        saveAcceptedConnection(u2, u4, "Your photography is stunning. Coffee + critique?");
+        saveAcceptedConnection(u5, u1, "Web dev study buddy — let's pair up this week.");
+        saveAcceptedConnection(u3, u8, "Music jam + production session sometime?");
+        saveAcceptedConnection(u7, u4, "UI/UX peer review group — want to join?");
+
         log.info("[DataSeeder] ✅ Demo data seeded. Login with any demo account using password: Demo1234!");
         log.info("[DataSeeder]    Admin: admin@skillex.app / Admin1234!");
+    }
+
+    private void saveAcceptedConnection(User requester, User receiver, String message) {
+        connectionRepository.save(Connection.builder()
+            .requester(requester)
+            .receiver(receiver)
+            .message(message)
+            .status(Connection.ConnectionStatus.ACCEPTED)
+            .respondedAt(LocalDateTime.now())
+            .build());
     }
 
     // ── Helpers ──────────────────────────────────────────────────────────────

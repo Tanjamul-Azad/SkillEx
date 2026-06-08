@@ -10,6 +10,7 @@ import com.skillex.model.SkillCircle;
 import com.skillex.model.User;
 import com.skillex.repository.ConnectionRepository;
 import com.skillex.repository.EventRsvpRepository;
+import com.skillex.repository.DiscussionReplyRepository;
 import com.skillex.repository.UserSkillOfferedRepository;
 import com.skillex.repository.UserSkillWantedRepository;
 import lombok.RequiredArgsConstructor;
@@ -30,6 +31,7 @@ public class CommunityNotificationService {
     private final UserSkillOfferedRepository offeredRepository;
     private final UserSkillWantedRepository wantedRepository;
     private final EventRsvpRepository eventRsvpRepository;
+    private final DiscussionReplyRepository discussionReplyRepository;
 
     public void notifyEventCreated(Event event) {
         String hostId = event.getHost().getId();
@@ -70,20 +72,45 @@ public class CommunityNotificationService {
         notifyMany(recipients, actorId, "CIRCLE_ACTIVITY", message, "CIRCLE", circle.getId(), circleUrl(circle.getId()));
     }
 
+    public void notifyCircleDiscussionCreated(Discussion discussion) {
+        if (discussion.getCircle() == null) {
+            return;
+        }
+        String actorId = discussion.getAuthor().getId();
+        SkillCircle circle = discussion.getCircle();
+        Set<String> recipients = new LinkedHashSet<>();
+        circle.getMembers().stream().map(User::getId).forEach(recipients::add);
+        recipients.remove(actorId);
+
+        String message = discussion.getThreadType() == Discussion.ThreadType.QUESTION
+            ? discussion.getAuthor().getName() + " needs help in " + circle.getName() + ": " + discussion.getTitle()
+            : discussion.getAuthor().getName() + " posted in " + circle.getName() + ": " + discussion.getTitle();
+        notifyMany(
+            recipients,
+            actorId,
+            "CIRCLE_ACTIVITY",
+            message,
+            "DISCUSSION",
+            discussion.getId(),
+            circleDiscussionUrl(circle.getId(), discussion.getId())
+        );
+    }
+
     public void notifyDiscussionReply(Discussion discussion, DiscussionReply reply) {
         String authorId = reply.getAuthor().getId();
-        String discussionOwnerId = discussion.getAuthor().getId();
-        if (!authorId.equals(discussionOwnerId)) {
-            notificationService.create(
-                discussionOwnerId,
-                authorId,
-                "DISCUSSION_REPLY",
-                reply.getAuthor().getName() + " replied to your discussion: " + discussion.getTitle(),
-                "DISCUSSION",
-                discussion.getId(),
-                discussionUrl(discussion.getId())
-            );
-        }
+        Set<String> recipients = new LinkedHashSet<>();
+        recipients.add(discussion.getAuthor().getId());
+        recipients.addAll(discussionReplyRepository.findParticipantUserIdsByDiscussionId(discussion.getId()));
+        recipients.remove(authorId);
+        notifyMany(
+            recipients,
+            authorId,
+            "DISCUSSION_REPLY",
+            reply.getAuthor().getName() + " replied to: " + discussion.getTitle(),
+            "DISCUSSION",
+            discussion.getId(),
+            discussionActionUrl(discussion)
+        );
     }
 
     public void notifyAnswerAccepted(Discussion discussion, DiscussionReply acceptedReply, String actorId) {
@@ -96,7 +123,7 @@ public class CommunityNotificationService {
                 "Your answer was accepted: " + discussion.getTitle(),
                 "DISCUSSION",
                 discussion.getId(),
-                discussionUrl(discussion.getId())
+                discussionActionUrl(discussion)
             );
         }
     }
@@ -134,5 +161,15 @@ public class CommunityNotificationService {
 
     private String discussionUrl(String discussionId) {
         return "/community?tab=discussions&discussionId=" + discussionId;
+    }
+
+    private String circleDiscussionUrl(String circleId, String discussionId) {
+        return "/community?tab=circles&circleId=" + circleId + "&helpId=" + discussionId;
+    }
+
+    private String discussionActionUrl(Discussion discussion) {
+        return discussion.getCircle() == null
+            ? discussionUrl(discussion.getId())
+            : circleDiscussionUrl(discussion.getCircle().getId(), discussion.getId());
     }
 }

@@ -129,10 +129,10 @@ const EventCard = React.memo(({
             size="sm"
             variant="outline"
             disabled={interestBusy || interested || attending}
-            className="rounded-xl text-[10px] font-bold uppercase tracking-widest"
+            className={cn("rounded-xl text-[10px] font-bold uppercase tracking-widest", interested && "border-secondary/40 bg-secondary/10 text-secondary")}
             onClick={() => onInterest(event)}
           >
-            {interestBusy ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : interested ? 'Interested' : 'Interested'}
+            {interestBusy ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : interested ? 'Interested' : '+ Interested'}
           </Button>
           <Button size="sm" variant="outline" className="rounded-xl text-[10px] font-bold uppercase tracking-widest" onClick={() => onOpen(event)}>
             Details
@@ -238,9 +238,9 @@ function EventDetailDialog({
 
         <DialogFooter>
           <Button variant="outline" onClick={() => onOpenChange(false)}>Close</Button>
-          <Button variant="outline" disabled={interestBusy || interested || going} onClick={() => onInterest(event)}>
+          <Button variant="outline" disabled={interestBusy || interested || going} className={cn(interested && "border-secondary/40 bg-secondary/10 text-secondary")} onClick={() => onInterest(event)}>
             {interestBusy ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Sparkles className="mr-2 h-4 w-4" />}
-            {interested ? 'Interested' : 'Interested'}
+            {interested ? 'Interested' : '+ Interested'}
           </Button>
           <Button disabled={busy || going} onClick={() => onAttend(event)}>
             {busy ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Calendar className="mr-2 h-4 w-4" />}
@@ -278,6 +278,11 @@ export const EventsTab = () => {
     skillIds: [] as string[],
   });
   const filterChips = ['All', 'Online', 'In-Person'];
+  const memberCircles = circles.filter(circle =>
+    circle.memberRole === 'OWNER'
+    || circle.memberRole === 'MEMBER'
+    || circle.members?.some(member => member.id === user?.id)
+  );
 
   const loadEvents = useCallback(async () => {
     const response = await CommunityService.getEvents();
@@ -539,8 +544,9 @@ export const EventsTab = () => {
                   className="h-10 w-full rounded-xl border border-input bg-background px-3 text-sm"
                 >
                   <option value="">No circle</option>
-                  {circles.map(circle => <option key={circle.id} value={circle.id}>{circle.name}</option>)}
+                  {memberCircles.map(circle => <option key={circle.id} value={circle.id}>{circle.name}</option>)}
                 </select>
+                <p className="text-xs text-muted-foreground">Only circles you have joined can host circle events.</p>
               </div>
             </div>
             {!eventForm.isOnline && (

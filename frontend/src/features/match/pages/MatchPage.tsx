@@ -332,13 +332,13 @@ export default function MatchPage() {
             setMobileSheetOpen={setMobileSheetOpen}
           />
         )}
-        <div className="min-w-0 flex-1 p-4 md:p-6">
+        <div className="min-w-0 flex-1 px-4 pb-6 pt-5 md:px-6 md:pb-8 md:pt-7">
           <div className={cn('mx-auto w-full', activeTab === 'chain' ? 'max-w-7xl' : 'max-w-6xl')}>
             {activeTab !== 'chain' && (
               <motion.div
                 initial={{ opacity: 0, y: -14 }}
                 animate={{ opacity: 1, y: 0 }}
-                className="relative overflow-hidden rounded-2xl border border-border/70 bg-card p-4 shadow-sm md:p-5"
+                className="relative overflow-hidden rounded-2xl border border-border/70 bg-card p-4 shadow-sm dark:border-white/10 dark:bg-slate-950 md:p-5"
               >
                 <div className="relative z-10">
                   <div className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
@@ -351,15 +351,15 @@ export default function MatchPage() {
                       </p>
                     </div>
                     <div className="grid grid-cols-3 gap-2 text-center text-xs">
-                      <div className="rounded-xl border border-border/70 bg-background/60 px-3 py-2">
+                      <div className="rounded-xl border border-border/70 bg-background px-3 py-2 dark:border-white/10 dark:bg-slate-900">
                         <p className="font-headline text-lg font-bold text-foreground">{filteredMatches.length}</p>
                         <p className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">Matches</p>
                       </div>
-                      <div className="rounded-xl border border-border/70 bg-background/60 px-3 py-2">
+                      <div className="rounded-xl border border-border/70 bg-background px-3 py-2 dark:border-white/10 dark:bg-slate-900">
                         <p className="font-headline text-lg font-bold text-primary">{bestMatch?.compatibilityScore ?? 0}%</p>
                         <p className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">Best</p>
                       </div>
-                      <div className="rounded-xl border border-border/70 bg-background/60 px-3 py-2">
+                      <div className="rounded-xl border border-border/70 bg-background px-3 py-2 dark:border-white/10 dark:bg-slate-900">
                         <p className="font-headline text-lg font-bold text-foreground">{activeFilterCount}</p>
                         <p className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">Filters</p>
                       </div>
@@ -369,7 +369,7 @@ export default function MatchPage() {
                     <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
                     <Input
                       placeholder="Search by skill, name, role, city, or interest..."
-                      className="h-10 rounded-xl border-border/70 bg-background/70 pl-10 text-sm"
+                      className="h-10 rounded-xl border-border/70 bg-background pl-10 text-sm shadow-sm dark:border-white/10 dark:bg-slate-900"
                       value={filters.search}
                       onChange={(e) => setFilters({ ...filters, search: e.target.value })}
                     />
@@ -379,7 +379,7 @@ export default function MatchPage() {
             )}
 
             <div className={cn('relative', activeTab === 'chain' ? 'mt-0' : 'mt-5')}>
-              <div className="flex flex-col gap-3 rounded-2xl border border-border/70 bg-card p-2 md:flex-row md:items-center md:justify-between">
+              <div className="flex flex-col gap-3 rounded-2xl border border-border/70 bg-card p-2 shadow-sm dark:border-white/10 dark:bg-slate-950 md:flex-row md:items-center md:justify-between">
                 <div className="flex gap-1 overflow-x-auto">
                   {[{ id: 'direct', label: 'Direct Matches' }, { id: 'chain', label: 'Skill Chains' }, { id: 'marketplace', label: 'Marketplace' }].map(tab => (
                     <Button
@@ -440,7 +440,7 @@ export default function MatchPage() {
                     {activeTab === 'direct' ? (
                       <>
                         {bestMatch && <AIBestMatchCard match={bestMatch} currentUser={user} />}
-                        <div className="my-5 flex flex-col items-start gap-3 rounded-2xl border border-border/70 bg-card p-3 md:flex-row md:items-center md:justify-between">
+                        <div className="my-5 flex flex-col items-start gap-3 rounded-2xl border border-border/70 bg-card p-3 shadow-sm dark:border-white/10 dark:bg-slate-950 md:flex-row md:items-center md:justify-between">
                           <p className="px-1 text-[11px] font-bold uppercase tracking-widest text-muted-foreground">
                             Showing {otherMatches.length} other matches
                           </p>

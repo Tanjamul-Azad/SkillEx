@@ -69,7 +69,7 @@ export const AIBestMatchCard: FC<AIBestMatchCardProps> = React.memo(({ match, cu
       <motion.div
         initial={{ opacity: 0, y: 8 }}
         animate={{ opacity: 1, y: 0 }}
-        className="group relative mb-4 overflow-hidden rounded-2xl surface-raised hover:border-primary/30"
+        className="group relative mb-4 overflow-hidden rounded-2xl border border-border/70 bg-card shadow-sm transition-all duration-300 hover:border-primary/30 dark:border-white/10 dark:bg-slate-950"
       >
         <div className="relative z-20 p-4 md:p-5">
           <div className="mb-4 flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
@@ -88,7 +88,7 @@ export const AIBestMatchCard: FC<AIBestMatchCardProps> = React.memo(({ match, cu
           </div>
 
           <div className="grid grid-cols-1 gap-3 lg:grid-cols-[minmax(240px,0.8fr)_minmax(0,1.2fr)]">
-            <div className="rounded-xl border border-border/60 bg-muted/15 p-3">
+            <div className="rounded-xl border border-border/70 bg-background p-3 dark:border-white/10 dark:bg-slate-900">
               <div className="flex items-center gap-3">
                 <Avatar className="h-12 w-12 bg-card ring-2 ring-primary/15">
                   <AvatarImage src={match.avatar ?? undefined} className="object-cover" />
@@ -123,7 +123,7 @@ export const AIBestMatchCard: FC<AIBestMatchCardProps> = React.memo(({ match, cu
 
             <div className="grid gap-3">
               <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
-                <div className="rounded-xl border border-border/60 bg-muted/15 p-3">
+                <div className="rounded-xl border border-border/70 bg-background p-3 dark:border-white/10 dark:bg-slate-900">
                   <h4 className="mb-3 text-[10px] font-bold uppercase tracking-widest text-muted-foreground">Match Metrics</h4>
                   <div className="space-y-2.5">
                     <div className="space-y-1.5">
@@ -143,7 +143,7 @@ export const AIBestMatchCard: FC<AIBestMatchCardProps> = React.memo(({ match, cu
                   </div>
                 </div>
 
-                <div className="min-h-[104px] rounded-xl border border-border/60 bg-muted/15 p-3">
+                <div className="min-h-[104px] rounded-xl border border-border/70 bg-background p-3 dark:border-white/10 dark:bg-slate-900">
                   <SkillGraphCard
                     offeredSkills={match.wantsToLearnFromYou ?? []}
                     wantedSkills={match.teachesYou ?? []}
@@ -153,7 +153,7 @@ export const AIBestMatchCard: FC<AIBestMatchCardProps> = React.memo(({ match, cu
               </div>
 
               {match.matchReasons.length > 0 && (
-                <div className="rounded-xl border border-border/60 bg-muted/15 p-3">
+                <div className="rounded-xl border border-border/70 bg-background p-3 dark:border-white/10 dark:bg-slate-900">
                   <h4 className="mb-2 flex items-center gap-2 text-[10px] font-bold uppercase tracking-widest text-primary/80">
                     <Zap className="h-3 w-3" /> Why this match?
                   </h4>

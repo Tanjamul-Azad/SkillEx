@@ -8,14 +8,11 @@ INSERT INTO users (
     bio,
     role,
     level,
-    skill_level,
     skillex_score,
     sessions_completed,
     rating,
-    is_active,
     is_online,
     connections_public,
-    created_at,
     updated_at,
     joined_at
 ) VALUES (
@@ -28,14 +25,11 @@ INSERT INTO users (
     'Platform administrator and community manager.',
     'ADMIN',
     'MASTER',
-    'EXPERT',
     1500,
     30,
     5.00,
     TRUE,
     TRUE,
-    TRUE,
-    CURRENT_TIMESTAMP,
     CURRENT_TIMESTAMP,
     CURRENT_TIMESTAMP
 )
@@ -43,9 +37,7 @@ ON DUPLICATE KEY UPDATE
     role = 'ADMIN',
     password_hash = VALUES(password_hash),
     level = 'MASTER',
-    skill_level = 'EXPERT',
     skillex_score = GREATEST(skillex_score, VALUES(skillex_score)),
     sessions_completed = GREATEST(sessions_completed, VALUES(sessions_completed)),
     rating = GREATEST(rating, VALUES(rating)),
-    is_active = TRUE,
     updated_at = CURRENT_TIMESTAMP;

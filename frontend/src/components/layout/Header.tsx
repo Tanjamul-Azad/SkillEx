@@ -295,7 +295,7 @@ export default function Header({
       role="banner"
     >
       {/* Glassmorphism surface */}
-      <div className="theme-transition absolute inset-0 border-b border-border/40 bg-background/40 shadow-sm backdrop-blur-2xl" />
+      <div className="theme-transition absolute inset-0 border-b border-border/70 bg-background shadow-sm" />
       {/* Top shimmer line */}
       <div className="absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-primary/40 to-transparent" />
       {/* Bottom separator */}

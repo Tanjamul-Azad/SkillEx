@@ -16,6 +16,12 @@ Stop-Servers
 
 if ($Stop) { exit 0 }
 
+$pathValue = [System.Environment]::GetEnvironmentVariable("Path", "Process")
+if (-not [string]::IsNullOrWhiteSpace($pathValue)) {
+    [System.Environment]::SetEnvironmentVariable("PATH", $null, "Process")
+    [System.Environment]::SetEnvironmentVariable("Path", $pathValue, "Process")
+}
+
 Write-Host ""
 Write-Host "  Starting SkiilEX..." -ForegroundColor Green
 Write-Host "  Backend  -> http://localhost:8080" -ForegroundColor Cyan
@@ -23,4 +29,13 @@ Write-Host "  Frontend -> http://localhost:3000" -ForegroundColor Magenta
 Write-Host "  Press Ctrl+C to stop both servers" -ForegroundColor Yellow
 Write-Host ""
 
-npm run dev
+$npmCommand = Get-Command npm.cmd -ErrorAction SilentlyContinue
+if (-not $npmCommand) {
+    $npmCommand = Get-Command npm -ErrorAction SilentlyContinue
+}
+
+if (-not $npmCommand) {
+    throw "npm was not found. Install Node.js or add npm to PATH."
+}
+
+& $npmCommand.Source run dev

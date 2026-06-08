@@ -27,4 +27,13 @@ if (-not $ready) {
 
 Write-Host "[run-frontend] Backend ready. Starting Vite." -ForegroundColor Green
 Set-Location (Join-Path $Root "frontend")
-npm run dev
+$npmCommand = Get-Command npm.cmd -ErrorAction SilentlyContinue
+if (-not $npmCommand) {
+    $npmCommand = Get-Command npm -ErrorAction SilentlyContinue
+}
+
+if (-not $npmCommand) {
+    throw "[run-frontend] npm was not found. Install Node.js or add npm to PATH."
+}
+
+& $npmCommand.Source run dev

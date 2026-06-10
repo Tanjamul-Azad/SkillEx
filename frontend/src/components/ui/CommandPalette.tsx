@@ -81,6 +81,15 @@ export function CommandPalette({ open, onClose }: CommandPaletteProps) {
         category: 'navigate',
       },
       {
+        id: 'nav-search',
+        label: 'Global Search',
+        description: 'Find mentors, skills, discussions, and circles',
+        icon: Search,
+        action: () => go('/search'),
+        kbd: ['⌘', 'K'],
+        category: 'navigate',
+      },
+      {
         id: 'nav-match',
         label: 'Find a Match',
         description: 'Discover people to exchange skills with',

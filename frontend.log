@@ -1,0 +1,12 @@
+
+> skillex-root@0.1.0 dev:frontend
+> powershell -NoProfile -ExecutionPolicy Bypass -File .\scripts\dev\run-frontend.ps1
+
+[run-frontend] Waiting for backend at http://localhost:8080/ws/info
+[run-frontend] Backend did not become ready within 90 seconds.
+At F:\Xamp\htdocs\SkiilEX\scripts\dev\run-frontend.ps1:25 char:5
++     throw "[run-frontend] Backend did not become ready within $Timeou ...
++     ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    + CategoryInfo          : OperationStopped: ([run-frontend] ...hin 90 seconds.:String) [], RuntimeException
+    + FullyQualifiedErrorId : [run-frontend] Backend did not become ready within 90 seconds.
+ 

@@ -32,10 +32,11 @@ public class NoteGenerationProcessor {
             String destination = "/topic/session/" + sessionId + "/notes";
             messagingTemplate.convertAndSend(destination, Map.of(
                 "sessionId", sessionId,
-                "summary", note.getSummary(),
-                "keyConcepts", note.getKeyConcepts(),
-                "actionItems", note.getActionItems(),
-                "resourcesMentioned", note.getResourcesMentioned(),
+                "summary", nullSafe(note.getSummary()),
+                "detailedNotes", nullSafe(note.getDetailedNotes()),
+                "keyConcepts", nullSafe(note.getKeyConcepts()),
+                "actionItems", nullSafe(note.getActionItems()),
+                "resourcesMentioned", nullSafe(note.getResourcesMentioned()),
                 "generatedAt", note.getGeneratedAt().toString()
             ));
             
@@ -50,5 +51,9 @@ public class NoteGenerationProcessor {
                 "error", "Failed to generate notes: " + e.getMessage()
             ));
         }
+    }
+
+    private static String nullSafe(String value) {
+        return value == null ? "" : value;
     }
 }

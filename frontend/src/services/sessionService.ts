@@ -172,6 +172,7 @@ export const SessionService = {
     actionItems: string;
     resourcesMentioned: string;
     summary: string;
+    detailedNotes: string;
     generatedAt: string;
   }> => {
     return api.get(`/sessions/${sessionId}/notes`);

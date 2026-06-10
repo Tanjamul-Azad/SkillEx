@@ -4,7 +4,7 @@ import { SessionService } from '@/services/sessionService';
 import { ReviewService } from '@/services/reviewService';
 import { useAuth } from '@/hooks/useAuth';
 import type { Session } from '@/types';
-import { Star, Sparkles, CheckCircle2, ArrowRight, BookOpen, Clock, RefreshCw } from 'lucide-react';
+import { Star, Sparkles, CheckCircle2, ArrowRight, BookOpen, Clock, RefreshCw, Zap } from 'lucide-react';
 import AppBackButton from '@/components/navigation/AppBackButton';
 
 export default function SessionReviewPage() {
@@ -22,6 +22,7 @@ export default function SessionReviewPage() {
     actionItems: string;
     resourcesMentioned: string;
     summary: string;
+    detailedNotes: string;
     generatedAt: string;
   } | null>(null);
   const [submitting, setSubmitting] = useState(false);
@@ -175,14 +176,24 @@ export default function SessionReviewPage() {
                 placeholder="Leave private review feedback for your swap partner..."
               />
 
-              <button
-                type="submit"
-                disabled={submitting}
-                className="w-full bg-gradient-to-r from-[#00C9C8]/80 to-[#009291]/80 hover:from-[#00C9C8] hover:to-[#009291] text-white py-3 rounded-xl text-xs font-bold transition duration-300 flex items-center justify-center gap-2"
-              >
-                {submitting ? 'Submitting...' : 'Submit Feedback'}
-                <ArrowRight className="h-4 w-4" />
-              </button>
+              <div className="grid grid-cols-2 gap-2">
+                <button
+                  type="submit"
+                  disabled={submitting}
+                  className="bg-gradient-to-r from-[#00C9C8]/80 to-[#009291]/80 hover:from-[#00C9C8] hover:to-[#009291] text-white py-3 rounded-xl text-xs font-bold transition duration-300 flex items-center justify-center gap-2"
+                >
+                  {submitting ? 'Submitting...' : 'Submit'}
+                  <ArrowRight className="h-4 w-4" />
+                </button>
+                <button
+                  type="button"
+                  onClick={() => sessionId && navigate(`/sessions/${sessionId}/study-materials`)}
+                  className="bg-gradient-to-r from-indigo-500/80 to-purple-500/80 hover:from-indigo-500 hover:to-purple-500 text-white py-3 rounded-xl text-xs font-bold transition duration-300 flex items-center justify-center gap-2"
+                >
+                  <Zap className="h-4 w-4" />
+                  Study
+                </button>
+              </div>
             </form>
           </div>
         </div>
@@ -201,6 +212,13 @@ export default function SessionReviewPage() {
                   <h4 className="font-bold text-[#00C9C8] mb-1">Executive Summary</h4>
                   <p className="whitespace-pre-wrap">{aiNotes.summary}</p>
                 </div>
+
+                {aiNotes.detailedNotes && (
+                  <div className="bg-[#1B263B]/40 p-4 rounded-2xl border border-white/5">
+                    <h4 className="font-bold text-[#00C9C8] mb-1">Detailed Walkthrough</h4>
+                    <p className="whitespace-pre-wrap">{aiNotes.detailedNotes}</p>
+                  </div>
+                )}
 
                 <div className="bg-[#1B263B]/40 p-4 rounded-2xl border border-white/5">
                   <h4 className="font-bold text-[#00C9C8] mb-1">Concepts Learned</h4>

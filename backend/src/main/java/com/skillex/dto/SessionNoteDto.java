@@ -8,5 +8,6 @@ public record SessionNoteDto(
     String actionItems,
     String resourcesMentioned,
     String summary,
+    String detailedNotes,
     LocalDateTime generatedAt
 ) {}

@@ -65,6 +65,7 @@ import { skillTrustService, type SkillTrust } from '@/services/skillTrustService
 import { skillCheckService } from '@/services/skillCheckService';
 import { certificateService, type SkillCertificate, type UserBadge } from '@/services/certificateService';
 import { progressService } from '@/services/progressService';
+import { VerifiedBadge } from '@/components/trust/VerifiedBadge';
 
 const containerVariants = {
   hidden: { opacity: 0 },
@@ -100,24 +101,6 @@ function StatCard({
   );
 }
 
-function SkillTrustBadge({ userId, skillId }: { userId?: string; skillId: string }) {
-  const [trust, setTrust] = useState<SkillTrust | null>(null);
-
-  useEffect(() => {
-    if (!userId || !skillId) return;
-    skillTrustService.get(userId, skillId)
-      .then(setTrust)
-      .catch(() => setTrust(null));
-  }, [skillId, userId]);
-
-  if (!trust) return null;
-
-  return (
-    <span className="rounded-full border border-primary/15 bg-primary/5 px-2 py-0.5 text-[9px] font-bold uppercase tracking-widest text-primary">
-      Trust {trust.score}%
-    </span>
-  );
-}
 
 function SkillSection({
   title,
@@ -203,7 +186,15 @@ function SkillSection({
                   <div key={skill.id} className="flex flex-col gap-1 rounded-xl border border-border/40 bg-muted/20 p-2.5">
                     <div className="flex flex-wrap items-center gap-2">
                       <SkillBadge skill={skill} />
-                      {variant === 'offer' && <SkillTrustBadge userId={profileUserId} skillId={skill.id} />}
+                      {variant === 'offer' && profileUserId && (
+                        <VerifiedBadge
+                          userId={profileUserId}
+                          skillId={skill.id}
+                          skillName={skill.name}
+                          size="sm"
+                          showDetails={true}
+                        />
+                      )}
                     </div>
                     {variant === 'offer' && !isOwner && profileUserId && (
                       <Button

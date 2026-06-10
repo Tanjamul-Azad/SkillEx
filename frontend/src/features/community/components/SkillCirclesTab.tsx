@@ -4,7 +4,6 @@ import {
   BarChart3,
   Calendar,
   BookOpen,
-<<<<<<< HEAD
   CheckCircle2,
   ExternalLink,
   Globe2,
@@ -19,12 +18,6 @@ import {
   Sparkles,
   Terminal,
   UsersRound,
-=======
-  HelpCircle,
-  Sparkles,
-  Link as LinkIcon,
-  ExternalLink,
->>>>>>> a6c29646776fa92890ef4043f7456856daaa0353
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';

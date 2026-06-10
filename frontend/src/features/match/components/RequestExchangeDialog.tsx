@@ -23,6 +23,7 @@ import { exchangeService } from '@/services/exchangeService';
 import { matchExplanationService, type MatchExplanation } from '@/services/matchExplanationService';
 import { creditService, type CreditWallet } from '@/services/creditService';
 import { skillCheckService } from '@/services/skillCheckService';
+import { VerifiedBadge } from '@/components/trust/VerifiedBadge';
 
 const schema = z.object({
   offeredSkillId: z.string().optional(),
@@ -201,11 +202,20 @@ export function RequestExchangeDialog({ open, onClose, targetUser, onSuccess }: 
                   <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-2 flex items-center gap-1">
                     <BookOpen className="h-3 w-3" /> They can teach
                   </p>
-                  <div className="flex flex-wrap gap-1.5">
+                  <div className="space-y-2">
                     {targetUser.skillsOffered?.slice(0, 4).map((s) => (
-                      <Badge key={s.id} variant="secondary" className="text-xs capitalize">
-                        {s.icon} {s.name}
-                      </Badge>
+                      <div key={s.id} className="flex items-center justify-between gap-2">
+                        <Badge variant="secondary" className="text-xs capitalize">
+                          {s.icon} {s.name}
+                        </Badge>
+                        <VerifiedBadge
+                          userId={targetUser.id}
+                          skillId={s.id}
+                          skillName={s.name}
+                          size="sm"
+                          showDetails={true}
+                        />
+                      </div>
                     ))}
                   </div>
                 </div>

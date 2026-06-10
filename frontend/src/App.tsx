@@ -33,6 +33,7 @@ const TrustPage = React.lazy(() => import('./features/marketing/pages/TrustPage'
 const ImpactPage = React.lazy(() => import('./features/marketing/pages/ImpactPage'));
 const SessionRoomPage = React.lazy(() => import('./features/sessions/pages/SessionRoomPage'));
 const SessionReviewPage = React.lazy(() => import('./features/sessions/pages/SessionReviewPage'));
+const SessionStudyMaterialsPage = React.lazy(() => import('./features/sessions/pages/SessionStudyMaterialsPage'));
 const AdminDashboardPage = React.lazy(() => import('./features/admin/pages/AdminDashboardPage'));
 const AdminReportsPage = React.lazy(() => import('./features/admin/pages/AdminReportsPage'));
 const AdminRulesPage = React.lazy(() => import('./features/admin/pages/AdminRulesPage'));
@@ -40,6 +41,11 @@ const AdminUserPage = React.lazy(() => import('./features/admin/pages/AdminUserP
 const AdminSkillsPendingPage = React.lazy(() => import('./features/admin/pages/AdminSkillsPendingPage'));
 const AdminAuditPage = React.lazy(() => import('./features/admin/pages/AdminAuditPage'));
 const CertificateVerifyPage = React.lazy(() => import('./features/certificates/pages/CertificateVerifyPage'));
+const SkillGapAnalyzerPage = React.lazy(() => import('./features/ai/pages/SkillGapAnalyzerPage'));
+const LearningPathsPage = React.lazy(() => import('./features/ai/pages/LearningPathsPage'));
+const TutorBotPage = React.lazy(() => import('./features/ai/pages/TutorBotPage'));
+const ProfileAssistantPage = React.lazy(() => import('./features/profile/pages/ProfileAssistantPage'));
+const SearchPage = React.lazy(() => import('./features/search/pages/SearchPage'));
 
 
 // Helper for preloading the current route chunk
@@ -148,6 +154,7 @@ function AppShell() {
           <Route path="/study-room/:sessionId" element={<StudyRoomPage />} />
           <Route path="/sessions/:sessionId" element={<SessionRoomPage />} />
           <Route path="/sessions/:sessionId/review" element={<SessionReviewPage />} />
+          <Route path="/sessions/:sessionId/study-materials" element={<SessionStudyMaterialsPage />} />
           <Route path="/onboarding" element={<OnboardingPage />} />
           <Route path="/about" element={<AboutPage />} />
           <Route path="/careers" element={<CareersPage />} />
@@ -156,6 +163,11 @@ function AppShell() {
           <Route path="/trust" element={<TrustPage />} />
           <Route path="/impact" element={<ImpactPage />} />
           <Route path="/verify/certificate/:code" element={<CertificateVerifyPage />} />
+          <Route path="/ai/skill-gap" element={<SkillGapAnalyzerPage />} />
+          <Route path="/ai/learning-paths" element={<LearningPathsPage />} />
+          <Route path="/ai/tutor/:skillId" element={<TutorBotPage />} />
+          <Route path="/profile-assistant" element={<ProfileAssistantPage />} />
+          <Route path="/search" element={<SearchPage />} />
           <Route path="/admin" element={adminOnly(<AdminDashboardPage />)} />
           <Route path="/admin/reports" element={adminOnly(<AdminReportsPage />)} />
           <Route path="/admin/cases/:caseId" element={adminOnly(<AdminReportsPage />)} />

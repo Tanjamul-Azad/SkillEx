@@ -44,6 +44,7 @@ interface SessionNotes {
   actionItems: string;
   resourcesMentioned: string;
   summary: string;
+  detailedNotes: string;
   generatedAt: string;
 }
 
@@ -1323,6 +1324,14 @@ export default function SessionRoomPage() {
                         </h4>
                         <p className="text-xs leading-relaxed text-slate-200 whitespace-pre-wrap">{aiNotes.summary}</p>
                       </div>
+
+                      {/* Detailed Walkthrough */}
+                      {aiNotes.detailedNotes && (
+                        <div className="bg-white/5 border border-white/5 p-4 rounded-2xl space-y-2">
+                          <h4 className="text-xs font-bold text-[#00C9C8] uppercase tracking-wider">Detailed Walkthrough</h4>
+                          <p className="text-xs leading-relaxed text-slate-200 whitespace-pre-wrap">{aiNotes.detailedNotes}</p>
+                        </div>
+                      )}
 
                       {/* Key Concepts */}
                       <div className="bg-white/5 border border-white/5 p-4 rounded-2xl space-y-2">

@@ -166,16 +166,12 @@ export const useAgoraSession = (sessionId: string) => {
         try {
           user.audioTrack.stop(); // Destroy existing audio nodes for this track to prevent double-play echo!
           const playResult = user.audioTrack.play() as unknown;
-<<<<<<< HEAD
           if (
             playResult
             && typeof playResult === 'object'
             && 'catch' in playResult
             && typeof playResult.catch === 'function'
           ) {
-=======
-          if (hasCatchHandler(playResult)) {
->>>>>>> a6c29646776fa92890ef4043f7456856daaa0353
             playResult.catch((err: unknown) => {
               console.warn('[Agora] Autoplay blocked remote audio track (Promise).', err);
               setupAutoplayListener(user);

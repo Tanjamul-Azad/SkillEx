@@ -41,6 +41,15 @@ export const dashboardNav: NavGroup[] = [
     ],
   },
   {
+    label: 'Learn',
+    items: [
+      { label: 'Skill Gap',      href: '/ai/skill-gap',       icon: 'Target',        requiresAuth: true },
+      { label: 'Learning Paths', href: '/ai/learning-paths',  icon: 'Route',         requiresAuth: true },
+      { label: 'Group Sessions', href: '/group-sessions',     icon: 'GraduationCap', requiresAuth: true },
+      { label: 'Search',         href: '/search',             icon: 'Search',        requiresAuth: true },
+    ],
+  },
+  {
     label: 'Account',
     items: [
       { label: 'Profile',   href: '/profile',   icon: 'User',     requiresAuth: true },
@@ -61,4 +70,10 @@ export const protectedRoutes: string[] = [
   '/certificates',
   '/profile',
   '/settings',
+  '/messages',
+  '/ai/skill-gap',
+  '/ai/learning-paths',
+  '/ai/assessment',
+  '/group-sessions',
+  '/search',
 ];

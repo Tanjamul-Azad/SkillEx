@@ -25,6 +25,7 @@ import { cn } from '@/lib/utils';
 import type { User } from '@/types';
 import type { ExchangeCycleData, ScoredCycleDto } from '@/features/match/components/ExchangeChainCard';
 import { RequestExchangeDialog } from '@/features/match/components/RequestExchangeDialog';
+import { MatchService, type ChainActivationHop } from '@/services/matchService';
 
 const UUID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 
@@ -433,7 +434,50 @@ export const SkillChainsTab: FC = () => {
     }
   }, [filter, multiChains, perfectSwaps, sortedCycles, user?.id]);
 
+  const [activatingChain, setActivatingChain] = useState(false);
+
+  const activateWholeChain = useCallback(async (cycle: ExchangeCycleData) => {
+    if (activatingChain) return;
+    const hops: ChainActivationHop[] = [];
+    for (const hop of cycle.hops) {
+      const skillId = hop.matchingSkillIds?.find(isPersistedId);
+      if (!skillId) {
+        toast({
+          variant: 'destructive',
+          title: 'Chain not ready',
+          description: 'One of the hops has no confirmed skill yet — try another chain.',
+        });
+        return;
+      }
+      hops.push({ fromUserId: hop.fromUserId, toUserId: hop.toUserId, skillId });
+    }
+
+    setActivatingChain(true);
+    try {
+      const result = await MatchService.activateChain(hops);
+      toast({
+        title: result.exchangesCreated > 0 ? 'Chain started' : 'Chain already in motion',
+        description: result.summary,
+      });
+    } catch (error) {
+      toast({
+        variant: 'destructive',
+        title: 'Could not start chain',
+        description: error instanceof Error ? error.message : undefined,
+      });
+    } finally {
+      setActivatingChain(false);
+    }
+  }, [activatingChain, toast]);
+
   const openChainRequest = useCallback((cycle: ExchangeCycleData) => {
+    const isParticipant = Boolean(user?.id && cycle.userIds.includes(user.id));
+    if (isParticipant) {
+      // Participants kick off the whole ring — one pending swap per hop.
+      void activateWholeChain(cycle);
+      return;
+    }
+
     const target = chainTarget(cycle, user?.id);
     if (!target) {
       toast({
@@ -468,7 +512,7 @@ export const SkillChainsTab: FC = () => {
       joinedAt: new Date().toISOString(),
     });
     setJoinDialogOpen(true);
-  }, [toast, user?.id]);
+  }, [activateWholeChain, toast, user?.id]);
 
   return (
     <div className="space-y-5">

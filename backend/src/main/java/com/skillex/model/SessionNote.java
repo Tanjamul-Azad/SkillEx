@@ -42,6 +42,10 @@ public class SessionNote {
     @Column(columnDefinition = "TEXT")
     private String summary;
 
+    /** Long-form, chronological "what actually happened" study guide. The main shareable artifact. */
+    @Column(name = "detailed_notes", columnDefinition = "LONGTEXT")
+    private String detailedNotes;
+
     @Column(name = "raw_transcript", columnDefinition = "TEXT")
     private String rawTranscript;
 
@@ -55,12 +59,13 @@ public class SessionNote {
     /**
      * Explicit constructor for Note synthesis
      */
-    public SessionNote(Session session, String keyConcepts, String actionItems, String resourcesMentioned, String summary, String rawTranscript) {
+    public SessionNote(Session session, String keyConcepts, String actionItems, String resourcesMentioned, String summary, String detailedNotes, String rawTranscript) {
         this.session = session;
         this.keyConcepts = keyConcepts;
         this.actionItems = actionItems;
         this.resourcesMentioned = resourcesMentioned;
         this.summary = summary;
+        this.detailedNotes = detailedNotes;
         this.rawTranscript = rawTranscript;
         this.generatedAt = LocalDateTime.now();
     }
@@ -70,12 +75,14 @@ public class SessionNote {
             String actionItems,
             String resourcesMentioned,
             String summary,
+            String detailedNotes,
             String rawTranscript
     ) {
         this.keyConcepts = keyConcepts;
         this.actionItems = actionItems;
         this.resourcesMentioned = resourcesMentioned;
         this.summary = summary;
+        this.detailedNotes = detailedNotes;
         this.rawTranscript = rawTranscript;
         this.generatedAt = LocalDateTime.now();
     }
@@ -89,6 +96,7 @@ public class SessionNote {
         return (keyConcepts == null || keyConcepts.isBlank())
             && (actionItems == null || actionItems.isBlank())
             && (resourcesMentioned == null || resourcesMentioned.isBlank())
+            && (detailedNotes == null || detailedNotes.isBlank())
             && (summary == null || summary.isBlank());
     }
 
@@ -108,6 +116,9 @@ public class SessionNote {
         
         if (summary != null && !summary.isBlank()) {
             sb.append("## Executive Summary\n").append(summary).append("\n\n");
+        }
+        if (detailedNotes != null && !detailedNotes.isBlank()) {
+            sb.append("## Detailed Session Walkthrough\n").append(detailedNotes).append("\n\n");
         }
         if (keyConcepts != null && !keyConcepts.isBlank()) {
             sb.append("## Key Concepts Learned\n").append(keyConcepts).append("\n\n");
@@ -131,6 +142,7 @@ public class SessionNote {
         count += getWordCount(actionItems);
         count += getWordCount(resourcesMentioned);
         count += getWordCount(summary);
+        count += getWordCount(detailedNotes);
         return count;
     }
 

@@ -279,6 +279,7 @@ public class SessionRoomController {
                         note.getActionItems(),
                         note.getResourcesMentioned(),
                         note.getSummary(),
+                        note.getDetailedNotes(),
                         note.getGeneratedAt()
                 )))
                 .orElseGet(() -> ResponseEntity.status(HttpStatus.NOT_FOUND).build());

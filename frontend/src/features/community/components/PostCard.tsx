@@ -57,6 +57,7 @@ export const PostCard = React.memo(({ post, onDelete }: PostCardProps) => {
   const [submittingComment, setSubmittingComment] = useState(false);
   const [localCommentCount, setLocalCommentCount] = useState(post.comments);
   const [videoPlaying, setVideoPlaying] = useState(false);
+  const [lightboxOpen, setLightboxOpen] = useState(false);
   const [reportOpen, setReportOpen] = useState(false);
   const videoRef = useRef<HTMLVideoElement>(null);
   const { toast } = useToast();
@@ -113,7 +114,7 @@ export const PostCard = React.memo(({ post, onDelete }: PostCardProps) => {
     try {
       await CommunityService.deletePost(post.id);
       onDelete?.(post.id);
-      toast({ title: 'Post deleted', variant: 'destructive' });
+      toast({ title: 'Post deleted', description: 'Your post was removed from the feed.' });
     } catch {
       toast({ title: 'Failed to delete post', variant: 'destructive' });
       setDeleting(false);
@@ -194,14 +195,14 @@ export const PostCard = React.memo(({ post, onDelete }: PostCardProps) => {
 
           {/* Media content */}
           {post.mediaUrl && (
-            <div className="mt-4 relative rounded-xl overflow-hidden border border-primary/15 bg-background cursor-pointer max-w-xl" onClick={handleVideoToggle}>
-              {post.mediaUrl.match(/\.(mp4|webm|ogg)$/i) ? (
-                <div className="relative aspect-[16/10] bg-card group/video">
-                  <video 
-                    ref={videoRef} 
-                    src={post.mediaUrl} 
-                    className="w-full h-full object-cover" 
-                    playsInline 
+            post.mediaUrl.match(/\.(mp4|webm|ogg)$/i) ? (
+              <div className="mt-4 relative max-w-xl cursor-pointer overflow-hidden rounded-xl border border-border/40 bg-card" onClick={handleVideoToggle}>
+                <div className="relative aspect-video group/video">
+                  <video
+                    ref={videoRef}
+                    src={post.mediaUrl}
+                    className="h-full w-full object-cover"
+                    playsInline
                     loop
                   />
                   <div className={cn("absolute inset-0 bg-card backdrop-blur-[2px] flex items-center justify-center transition-opacity duration-300", videoPlaying && "opacity-0 pointer-events-none")}>
@@ -210,12 +211,22 @@ export const PostCard = React.memo(({ post, onDelete }: PostCardProps) => {
                      </div>
                   </div>
                 </div>
-              ) : (
-                <div className="aspect-[16/10] bg-card">
-                  <img src={post.mediaUrl} alt="Post content" className="h-full w-full object-cover opacity-90 hover:opacity-100 transition-opacity duration-300" />
-                </div>
-              )}
-            </div>
+              </div>
+            ) : (
+              <button
+                type="button"
+                aria-label="View image at full size"
+                className="mt-4 block w-full max-w-xl overflow-hidden rounded-xl border border-border/40 bg-card text-left"
+                onClick={() => setLightboxOpen(true)}
+              >
+                <img
+                  src={post.mediaUrl}
+                  alt="Post attachment"
+                  loading="lazy"
+                  className="w-full max-h-[28rem] object-cover transition-opacity duration-300 hover:opacity-95"
+                />
+              </button>
+            )
           )}
 
           <div className="mt-4 flex items-center gap-1.5 border-t border-border/10 pt-3 pl-1">
@@ -348,10 +359,24 @@ export const PostCard = React.memo(({ post, onDelete }: PostCardProps) => {
           </DialogHeader>
           <DialogFooter className="gap-3 sm:gap-0">
             <Button variant="ghost" onClick={() => setDeleteConfirmOpen(false)} className="rounded-xl font-bold uppercase tracking-widest text-[10px]">Cancel</Button>
-            <Button variant="destructive" onClick={handleDelete} className="rounded-xl font-bold uppercase tracking-widest text-[10px] bg-destructive/20 text-destructive border border-destructive/30 hover:bg-destructive hover:text-primary transition-all">Delete</Button>
+            <Button variant="destructive" onClick={handleDelete} className="rounded-xl font-bold uppercase tracking-widest text-[10px] bg-destructive/20 text-destructive border border-destructive/30 hover:bg-destructive hover:text-destructive-foreground transition-all">Delete</Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      {post.mediaUrl && (
+        <Dialog open={lightboxOpen} onOpenChange={setLightboxOpen}>
+          <DialogContent className="max-w-4xl border-border/40 bg-background/95 p-2 sm:p-3">
+            <DialogTitle className="sr-only">Post image</DialogTitle>
+            <DialogDescription className="sr-only">Full-size view of the image attached to this post.</DialogDescription>
+            <img
+              src={post.mediaUrl}
+              alt="Post attachment at full size"
+              className="mx-auto max-h-[80vh] w-auto max-w-full rounded-lg object-contain"
+            />
+          </DialogContent>
+        </Dialog>
+      )}
 
       <ReportDialog
         open={reportOpen}

@@ -4,7 +4,6 @@ import {
   BarChart3,
   Calendar,
   BookOpen,
-<<<<<<< HEAD
   CheckCircle2,
   ExternalLink,
   Globe2,
@@ -19,12 +18,6 @@ import {
   Sparkles,
   Terminal,
   UsersRound,
-=======
-  HelpCircle,
-  Sparkles,
-  Link as LinkIcon,
-  ExternalLink,
->>>>>>> a6c29646776fa92890ef4043f7456856daaa0353
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
@@ -56,6 +49,78 @@ import type {
   DiscussionReply,
   Event,
 } from '@/types';
+
+// ─── Skill recommendation engine ─────────────────────────────────────────────
+// Maps lower-case keywords (found in the purpose text) to skill category names.
+const CATEGORY_KEYWORDS: Record<string, string[]> = {
+  Programming: [
+    'java','spring','springboot','kotlin','python','django','flask','c++','c#','nodejs',
+    'express','php','laravel','ruby','rails','swift','objective-c','rust','go','golang',
+    'code','coding','programming','software','backend','api','rest','microservice',
+    'algorithm','data structure','oop','functional',
+  ],
+  'Web Development': [
+    'html','css','javascript','typescript','react','vue','angular','svelte','nextjs',
+    'nuxt','gatsby','webpack','vite','frontend','web','ui','ux','tailwind','bootstrap',
+    'responsive','dom','browser','fullstack','full-stack','full stack',
+  ],
+  'Data Science': [
+    'data','dataset','pandas','numpy','matplotlib','seaborn','sql','database','postgres',
+    'mongodb','mysql','etl','pipeline','analytics','statistics','excel','tableau','powerbi',
+    'bi','visualization','dashboards',
+  ],
+  'AI/ML': [
+    'machine learning','ml','deep learning','neural','ai','llm','gpt','bert','transformers',
+    'tensorflow','pytorch','keras','scikit','model','training','inference','nlp','cv','computer vision',
+  ],
+  Design: [
+    'design','figma','sketch','photoshop','illustrator','xd','adobe','ui design','ux design',
+    'graphic','logo','branding','typography','wireframe','prototype','colour','color','visual',
+  ],
+  'Blockchain': [
+    'blockchain','solidity','ethereum','web3','crypto','nft','smart contract','defi','token','ledger',
+  ],
+  'Public Speaking': [
+    'speak','speech','presentation','debate','communication','storytelling','pitch','rhetoric','toastmaster',
+  ],
+  'English Writing': [
+    'english','write','writing','grammar','ielts','toefl','essay','content','copywriting','blog','journalism',
+  ],
+  'Video Editing': [
+    'video','edit','premiere','after effects','davinci','motion','animation','youtube','shorts','reel','film',
+  ],
+  Photography: [
+    'photo','photography','camera','lens','lightroom','raw','portrait','landscape','shoot',
+  ],
+  Music: [
+    'music','guitar','piano','drum','bass','chord','melody','compose','audio','sound','mixing','producer',
+  ],
+};
+
+/**
+ * Given a purpose string and a full skill list, returns skills whose
+ * category matches any keyword found in the text — excluding already-selected ones.
+ */
+function deriveSuggestedSkills(
+  text: string,
+  skills: Skill[],
+  selectedIds: string[],
+  maxResults = 8,
+): Skill[] {
+  if (!text.trim()) return [];
+  const lower = text.toLowerCase();
+  const matchedCategories = new Set<string>();
+  for (const [category, keywords] of Object.entries(CATEGORY_KEYWORDS)) {
+    if (keywords.some(kw => lower.includes(kw))) {
+      matchedCategories.add(category);
+    }
+  }
+  if (matchedCategories.size === 0) return [];
+  return skills
+    .filter(s => matchedCategories.has(s.category) && !selectedIds.includes(s.id))
+    .slice(0, maxResults);
+}
+// ──────────────────────────────────────────────────────────────────────────────
 
 const RESOURCE_TYPES = ['LINK', 'FILE', 'NOTE'];
 const DIFFICULTIES = ['BEGINNER', 'MODERATE', 'ADVANCED'];
@@ -866,6 +931,13 @@ export const SkillCirclesTab = () => {
   const [submitting, setSubmitting] = useState(false);
   const [busy, setBusy] = useState<Record<string, boolean>>({});
   const [circleForm, setCircleForm] = useState({ name: '', description: '', icon: 'SE', skillIds: [] as string[] });
+  const [circleFilter, setCircleFilter] = useState<'all' | 'joined' | 'explore'>('all');
+
+  // Recommended skills based on BOTH circle name and purpose text
+  const suggestedSkills = useMemo(
+    () => deriveSuggestedSkills(`${circleForm.name} ${circleForm.description}`, skills, circleForm.skillIds),
+    [circleForm.name, circleForm.description, skills, circleForm.skillIds],
+  );
 
   useEffect(() => {
     CommunityService.getSkillCircles().then((r) => setCircles(r.content ?? [])).catch(() => {});
@@ -1019,29 +1091,84 @@ export const SkillCirclesTab = () => {
           })}
         </div>
       </div>
-      <div className="grid grid-cols-1 gap-5 md:grid-cols-2 xl:grid-cols-3">
-        <button
-          type="button"
-          onClick={() => setCreateOpen(true)}
-          className="group flex min-h-[286px] cursor-pointer flex-col items-center justify-center rounded-xl border-2 border-dashed border-border/70 bg-card p-6 text-center transition-all duration-300 hover:border-primary/45 hover:bg-primary/5"
-        >
-          <div className="flex h-14 w-14 items-center justify-center rounded-2xl border border-border bg-muted/50 transition-all duration-300 group-hover:scale-105 group-hover:border-primary/30">
-            <Plus className="h-7 w-7 text-muted-foreground transition-colors group-hover:text-primary" />
-          </div>
-          <h3 className="mt-5 font-headline text-lg font-extrabold text-foreground transition-colors group-hover:text-primary">Create New Circle</h3>
-          <p className="mt-2 text-[10px] font-bold uppercase tracking-widest text-muted-foreground group-hover:text-primary transition-colors">Start a new community</p>
-        </button>
-        {circles.map(circle => (
-          <CircleCard
-            key={circle.id}
-            circle={circle}
-            currentUserId={user?.id}
-            busy={busy[circle.id]}
-            onJoin={handleJoin}
-            onLeave={handleLeave}
-            onOpen={openWorkspace}
-          />
+
+      {/* ── Filter tabs ── */}
+      <div className="flex flex-wrap items-center gap-2">
+        {([
+          { id: 'all',     label: 'All circles',   count: circles.length },
+          { id: 'joined',  label: 'My circles',    count: circles.filter(c => c.memberRole === 'OWNER' || c.memberRole === 'MEMBER' || c.members?.some(m => m.id === user?.id)).length },
+          { id: 'explore', label: 'Explore',       count: circles.filter(c => c.memberRole !== 'OWNER' && c.memberRole !== 'MEMBER' && !c.members?.some(m => m.id === user?.id)).length },
+        ] as const).map(tab => (
+          <button
+            key={tab.id}
+            type="button"
+            onClick={() => setCircleFilter(tab.id)}
+            className={cn(
+              'flex items-center gap-2 rounded-xl border px-4 py-2 text-[10px] font-bold uppercase tracking-widest transition-all',
+              circleFilter === tab.id
+                ? 'border-primary/40 bg-primary/15 text-primary'
+                : 'border-border/70 bg-background/70 text-muted-foreground hover:border-primary/30 hover:text-primary'
+            )}
+          >
+            {tab.label}
+            <span className={cn(
+              'flex h-4 min-w-[1rem] items-center justify-center rounded-full px-1 text-[9px] font-extrabold',
+              circleFilter === tab.id ? 'bg-primary text-primary-foreground' : 'bg-muted text-muted-foreground'
+            )}>
+              {tab.count}
+            </span>
+          </button>
         ))}
+      </div>
+      <div className="grid grid-cols-1 gap-5 md:grid-cols-2 xl:grid-cols-3">
+        {/* Create New Circle card — hidden in Explore view */}
+        {circleFilter !== 'explore' && (
+          <button
+            type="button"
+            onClick={() => setCreateOpen(true)}
+            className="group flex min-h-[286px] cursor-pointer flex-col items-center justify-center rounded-xl border-2 border-dashed border-border/70 bg-card p-6 text-center transition-all duration-300 hover:border-primary/45 hover:bg-primary/5"
+          >
+            <div className="flex h-14 w-14 items-center justify-center rounded-2xl border border-border bg-muted/50 transition-all duration-300 group-hover:scale-105 group-hover:border-primary/30">
+              <Plus className="h-7 w-7 text-muted-foreground transition-colors group-hover:text-primary" />
+            </div>
+            <h3 className="mt-5 font-headline text-lg font-extrabold text-foreground transition-colors group-hover:text-primary">Create New Circle</h3>
+            <p className="mt-2 text-[10px] font-bold uppercase tracking-widest text-muted-foreground group-hover:text-primary transition-colors">Start a new community</p>
+          </button>
+        )}
+        {circles
+          .filter(circle => {
+            const isMember = circle.memberRole === 'OWNER' || circle.memberRole === 'MEMBER' || circle.members?.some(m => m.id === user?.id);
+            if (circleFilter === 'joined')  return isMember;
+            if (circleFilter === 'explore') return !isMember;
+            return true;
+          })
+          .map(circle => (
+            <CircleCard
+              key={circle.id}
+              circle={circle}
+              currentUserId={user?.id}
+              busy={busy[circle.id]}
+              onJoin={handleJoin}
+              onLeave={handleLeave}
+              onOpen={openWorkspace}
+            />
+          ))
+        }
+        {/* Empty state for filtered views */}
+        {circleFilter === 'joined' && circles.filter(c => c.memberRole === 'OWNER' || c.memberRole === 'MEMBER' || c.members?.some(m => m.id === user?.id)).length === 0 && (
+          <div className="col-span-full product-empty">
+            <UsersRound className="mx-auto mb-3 h-8 w-8 text-muted-foreground/40" />
+            <p className="font-bold text-foreground">No circles joined yet</p>
+            <p className="mt-1 text-sm text-muted-foreground">Switch to Explore to discover and join your first circle.</p>
+          </div>
+        )}
+        {circleFilter === 'explore' && circles.filter(c => c.memberRole !== 'OWNER' && c.memberRole !== 'MEMBER' && !c.members?.some(m => m.id === user?.id)).length === 0 && (
+          <div className="col-span-full product-empty">
+            <Sparkles className="mx-auto mb-3 h-8 w-8 text-muted-foreground/40" />
+            <p className="font-bold text-foreground">You’ve joined every circle!</p>
+            <p className="mt-1 text-sm text-muted-foreground">Create a new circle to expand the community.</p>
+          </div>
+        )}
       </div>
 
       <Dialog open={createOpen} onOpenChange={setCreateOpen}>
@@ -1074,6 +1201,36 @@ export const SkillCirclesTab = () => {
                 setCircleForm(prev => ({ ...prev, description: value }));
               }} placeholder="What members practice, share, and help each other with..." />
             </div>
+
+            {/* ── AI-style skill recommendation strip ── */}
+            {suggestedSkills.length > 0 && (
+              <div className="space-y-2">
+                <div className="flex items-center gap-2">
+                  <Sparkles className="h-3.5 w-3.5 text-primary" />
+                  <span className="text-[10px] font-bold uppercase tracking-widest text-primary">
+                    Recommended skills
+                  </span>
+                </div>
+                <div className="flex flex-wrap gap-2">
+                  {suggestedSkills.map(skill => (
+                    <button
+                      key={skill.id}
+                      type="button"
+                      onClick={() => {
+                        if (!circleForm.skillIds.includes(skill.id) && circleForm.skillIds.length < 4) {
+                          setCircleForm(prev => ({ ...prev, skillIds: [...prev.skillIds, skill.id] }));
+                        }
+                      }}
+                      className="flex items-center gap-1.5 rounded-xl border border-primary/30 bg-primary/10 px-3 py-1.5 text-[10px] font-bold uppercase tracking-widest text-primary transition-all hover:bg-primary/20 hover:scale-105 active:scale-95"
+                    >
+                      <Plus className="h-3 w-3" />
+                      {skill.name}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            )}
+
             <div className="space-y-2">
               <Label>Skills</Label>
               <SkillPicker skills={skills} selected={circleForm.skillIds} onChange={ids => setCircleForm(prev => ({ ...prev, skillIds: ids }))} />

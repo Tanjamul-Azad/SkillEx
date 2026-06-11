@@ -10,6 +10,7 @@ import com.skillex.service.CommunityNotificationService;
 import com.skillex.service.CreditService;
 import com.skillex.service.DtoMapper;
 import com.skillex.service.AccountRestrictionService;
+import com.skillex.service.ProgressService;
 import com.skillex.service.SkillService;
 import com.skillex.service.reputation.ReputationUpdateEvent;
 import jakarta.persistence.EntityNotFoundException;
@@ -51,6 +52,7 @@ public class CommunityServiceImpl implements CommunityService {
     private final AccountRestrictionService restrictionService;
     private final CreditService creditService;
     private final CommunityNotificationService communityNotificationService;
+    private final ProgressService progressService;
 
     // ── Events ──────────────────────────────────────────────────────────────
 
@@ -81,6 +83,46 @@ public class CommunityServiceImpl implements CommunityService {
     }
 
     @Override
+    @Transactional(readOnly = true)
+    public PagedResponse<CommunityDtos.EventDto> getUserEvents(String userId, String relation, int page, int size) {
+        if (!userRepository.existsById(userId)) {
+            throw new EntityNotFoundException("User not found: " + userId);
+        }
+        var pageable = PageRequest.of(page, size, Sort.by("eventDate").descending());
+        var unsortedPageable = PageRequest.of(page, size);
+        String normalizedRelation = relation == null ? "rsvp" : relation.toLowerCase(Locale.ROOT);
+        Page<Event> eventPage = switch (normalizedRelation) {
+            case "hosted" -> eventRepository.findByHostId(userId, pageable);
+            case "going" -> eventRsvpRepository.findEventsByUserAndStates(
+                userId,
+                List.of(EventRsvp.RsvpState.GOING),
+                unsortedPageable
+            );
+            case "interested" -> eventRsvpRepository.findEventsByUserAndStates(
+                userId,
+                List.of(EventRsvp.RsvpState.INTERESTED),
+                unsortedPageable
+            );
+            default -> eventRsvpRepository.findEventsByUserAndStates(
+                userId,
+                List.of(EventRsvp.RsvpState.GOING, EventRsvp.RsvpState.INTERESTED),
+                unsortedPageable
+            );
+        };
+        List<CommunityDtos.EventDto> content = eventPage.getContent().stream()
+            .map(event -> mapEvent(event, userId))
+            .toList();
+        return new PagedResponse<>(
+            content,
+            eventPage.getNumber(),
+            eventPage.getSize(),
+            eventPage.getTotalElements(),
+            eventPage.getTotalPages(),
+            eventPage.isLast()
+        );
+    }
+
+    @Override
     @Transactional
     public CommunityDtos.EventDto createEvent(String organizerId, CreateEventRequest req) {
         restrictionService.assertCanUseAccount(organizerId, "COMMUNITY");
@@ -108,23 +150,38 @@ public class CommunityServiceImpl implements CommunityService {
         }
         Event saved = eventRepository.save(event);
         communityNotificationService.notifyEventCreated(saved);
+        progressService.awardXp(organizerId, "EVENT_CREATED", saved.getId(), 15, "Hosted a community event: " + saved.getTitle() + ".");
         return mapEvent(saved, organizerId);
     }
 
     @Override
     @Transactional
-    public void attendEvent(String userId, String eventId) {
+    public CommunityDtos.EventDto attendEvent(String userId, String eventId) {
         User user  = findUser(userId);
         Event event = eventRepository.findById(eventId)
             .orElseThrow(() -> new EntityNotFoundException("Event not found: " + eventId));
         if (event.getCircle() != null) {
             assertCircleMember(event.getCircle(), userId, "Join this skill circle before registering for its events.");
         }
-        if (!event.getAttendees().contains(user)) {
+        EventRsvp.RsvpState previousState = currentRsvpState(event, userId);
+        if (previousState == EventRsvp.RsvpState.GOING) {
+            // Toggle off: cancel the registration
+            event.getAttendees().removeIf(attendee -> userId.equals(attendee.getId()));
+            eventRepository.save(event);
+            upsertRsvp(event, user, EventRsvp.RsvpState.NOT_GOING);
+            return mapEvent(event, userId);
+        }
+        assertEventNotPast(event);
+        boolean alreadyAttending = event.getAttendees().stream()
+            .anyMatch(attendee -> userId.equals(attendee.getId()));
+        if (!alreadyAttending) {
             event.getAttendees().add(user);
             eventRepository.save(event);
         }
         upsertRsvp(event, user, EventRsvp.RsvpState.GOING);
+        communityNotificationService.notifyEventRsvp(event, user, EventRsvp.RsvpState.GOING);
+        progressService.awardXp(userId, "EVENT_GOING", eventId, 5, "Registered for " + event.getTitle() + ".");
+        return mapEvent(event, userId);
     }
 
     @Override
@@ -136,7 +193,19 @@ public class CommunityServiceImpl implements CommunityService {
         if (event.getCircle() != null) {
             assertCircleMember(event.getCircle(), userId, "Join this skill circle before following its events.");
         }
+        EventRsvp.RsvpState previousState = currentRsvpState(event, userId);
+        if (previousState == EventRsvp.RsvpState.GOING) {
+            return mapEvent(event, userId);
+        }
+        if (previousState == EventRsvp.RsvpState.INTERESTED) {
+            // Toggle off: stop following this event
+            upsertRsvp(event, user, EventRsvp.RsvpState.NOT_GOING);
+            return mapEvent(event, userId);
+        }
+        assertEventNotPast(event);
         upsertRsvp(event, user, EventRsvp.RsvpState.INTERESTED);
+        communityNotificationService.notifyEventRsvp(event, user, EventRsvp.RsvpState.INTERESTED);
+        progressService.awardXp(userId, "EVENT_INTERESTED", eventId, 2, "Followed updates for " + event.getTitle() + ".");
         return mapEvent(event, userId);
     }
 
@@ -231,6 +300,7 @@ public class CommunityServiceImpl implements CommunityService {
 
         eventPublisher.publishEvent(new ReputationUpdateEvent(
             authorId, ReputationUpdateEvent.Trigger.COMMUNITY_INTERACTION));
+        progressService.awardXp(authorId, "DISCUSSION_CREATED", saved.getId(), 8, "Started a community discussion.");
 
         return result;
     }
@@ -306,6 +376,7 @@ public class CommunityServiceImpl implements CommunityService {
 
         eventPublisher.publishEvent(new ReputationUpdateEvent(
             userId, ReputationUpdateEvent.Trigger.COMMUNITY_INTERACTION));
+        progressService.awardXp(userId, "DISCUSSION_REPLY", saved.getId(), 5, "Helped in a community discussion.");
 
         return mapper.toDiscussionReply(saved);
     }
@@ -463,6 +534,7 @@ public class CommunityServiceImpl implements CommunityService {
 
         eventPublisher.publishEvent(new ReputationUpdateEvent(
             authorId, ReputationUpdateEvent.Trigger.COMMUNITY_INTERACTION));
+        progressService.awardXp(authorId, "COMMUNITY_POST", result.id(), 10, "Shared a community post.");
 
         return result;
     }
@@ -520,6 +592,13 @@ public class CommunityServiceImpl implements CommunityService {
             5,
             "Earned credits because a skill-tagged community contribution reached 10 upvotes."
         );
+        progressService.awardXp(
+            post.getAuthor().getId(),
+            "COMMUNITY_POST_UPVOTED",
+            post.getId(),
+            15,
+            "Community contribution reached 10 upvotes."
+        );
     }
 
     @Override
@@ -572,6 +651,7 @@ public class CommunityServiceImpl implements CommunityService {
 
         eventPublisher.publishEvent(new ReputationUpdateEvent(
             userId, ReputationUpdateEvent.Trigger.COMMUNITY_INTERACTION));
+        progressService.awardXp(userId, "COMMUNITY_COMMENT", saved.getId(), 3, "Commented on a community post.");
 
         return mapper.toComment(saved);
     }
@@ -908,6 +988,23 @@ public class CommunityServiceImpl implements CommunityService {
             .build());
         rsvp.setState(state);
         eventRsvpRepository.save(rsvp);
+    }
+
+    private void assertEventNotPast(Event event) {
+        if (event.getEventDate() != null && event.getEventDate().isBefore(LocalDateTime.now())) {
+            throw new IllegalArgumentException("This event has already taken place.");
+        }
+        if (event.getStatus() == Event.EventStatus.CANCELLED) {
+            throw new IllegalArgumentException("This event was cancelled.");
+        }
+    }
+
+    private EventRsvp.RsvpState currentRsvpState(Event event, String userId) {
+        return eventRsvpRepository.findById(new EventRsvp.EventRsvpId(event.getId(), userId))
+            .map(EventRsvp::getState)
+            .orElseGet(() -> event.getAttendees().stream().anyMatch(user -> userId.equals(user.getId()))
+                ? EventRsvp.RsvpState.GOING
+                : EventRsvp.RsvpState.NOT_GOING);
     }
 
     private CommunityDtos.SkillCircleDto mapSkillCircle(SkillCircle circle, String viewerId) {

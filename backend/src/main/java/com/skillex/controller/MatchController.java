@@ -1,14 +1,18 @@
 package com.skillex.controller;
 
 import com.skillex.dto.common.ApiResponse;
+import com.skillex.dto.match.ChainActivationRequest;
+import com.skillex.dto.match.ChainActivationResultDto;
 import com.skillex.dto.match.MatchExplanationDto;
 import com.skillex.dto.user.MatchCompatibilityDto;
 import com.skillex.dto.user.MatchUserDto;
 import com.skillex.service.MatchExplanationService;
 import com.skillex.service.MatchService;
+import com.skillex.service.SkillChainOrchestrationService;
 import com.skillex.service.match.graph.ExchangeChain;
 import com.skillex.service.match.graph.ExchangeCycle;
 import com.skillex.service.match.graph.ScoredCycle;
+import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;
@@ -27,6 +31,7 @@ public class MatchController {
 
     private final MatchService matchService;
     private final MatchExplanationService matchExplanationService;
+    private final SkillChainOrchestrationService chainOrchestrationService;
 
     /** GET /api/match/users?limit=20 — ranked compatible users */
     @GetMapping("/users")
@@ -150,6 +155,21 @@ public class MatchController {
     ) {
         return ResponseEntity.ok(ApiResponse.ok(
             matchService.findTopCycles(userId(auth), limit)));
+    }
+
+    /**
+     * POST /api/match/chains/activate — set a detected cycle in motion.
+     *
+     * <p>Creates one pending CHAIN_SWAP exchange per hop and notifies every
+     * participant. Caller must be part of the chain.
+     */
+    @PostMapping("/chains/activate")
+    public ResponseEntity<ApiResponse<ChainActivationResultDto>> activateChain(
+        Authentication auth,
+        @Valid @RequestBody ChainActivationRequest request
+    ) {
+        return ResponseEntity.ok(ApiResponse.ok(
+            chainOrchestrationService.activateChain(userId(auth), request)));
     }
 
     private String userId(Authentication auth) {

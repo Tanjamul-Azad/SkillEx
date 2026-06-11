@@ -22,7 +22,9 @@ const POST_TYPES = [
   { id: 'question', label: 'Question', icon: HelpCircle },
   { id: 'showcase', label: 'Showcase', icon: Tag },
 ] as const;
-const MAX_MEDIA_SIZE_BYTES = 20 * 1024 * 1024;
+// Must match backend FileController limits: JPG/PNG/WebP/GIF, 5 MB max
+const MAX_MEDIA_SIZE_BYTES = 5 * 1024 * 1024;
+const ALLOWED_IMAGE_TYPES = ['image/jpeg', 'image/png', 'image/webp', 'image/gif'];
 
 type PostType = typeof POST_TYPES[number]['id'];
 
@@ -51,13 +53,13 @@ export const PostComposer = React.memo(({ onPost }: PostComposerProps) => {
   const handleAttach = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file) {
-      if (!file.type.startsWith('image/') && !file.type.startsWith('video/')) {
-        toast({ title: 'Unsupported file', description: 'Attach an image or video file.', variant: 'destructive' });
+      if (!ALLOWED_IMAGE_TYPES.includes(file.type)) {
+        toast({ title: 'Unsupported file', description: 'Attach a JPG, PNG, WebP, or GIF image.', variant: 'destructive' });
         e.target.value = '';
         return;
       }
       if (file.size > MAX_MEDIA_SIZE_BYTES) {
-        toast({ title: 'File too large', description: 'Please attach media under 20 MB.', variant: 'destructive' });
+        toast({ title: 'File too large', description: 'Images must be 5 MB or smaller.', variant: 'destructive' });
         e.target.value = '';
         return;
       }
@@ -159,6 +161,18 @@ export const PostComposer = React.memo(({ onPost }: PostComposerProps) => {
                     </div>
 
                     <div className="flex items-center gap-2">
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        className={cn(
+                          'rounded-xl text-[10px] uppercase font-bold tracking-widest transition-all',
+                          attachedFile ? 'text-primary bg-primary/10 border border-primary/20' : 'text-muted-foreground hover:bg-primary/5 hover:text-primary'
+                        )}
+                        onClick={() => fileInputRef.current?.click()}
+                      >
+                        <ImageIcon className="mr-2 h-3 w-3" />
+                        {attachedFile ? 'Photo added' : 'Photo'}
+                      </Button>
                       <DropdownMenu open={showSkillSelector} onOpenChange={setShowSkillSelector}>
                         <DropdownMenuTrigger asChild>
                           <Button 
@@ -219,14 +233,10 @@ export const PostComposer = React.memo(({ onPost }: PostComposerProps) => {
                     </div>
                   </div>
 
-                  {/* Attached image/video preview */}
+                  {/* Attached image preview */}
                   {attachedPreview && (
                     <div className="relative mt-4 rounded-xl overflow-hidden border border-primary/15 group/img shadow-sm">
-                      {attachedFile?.type.startsWith('video/') ? (
-                        <video src={attachedPreview} className="w-full max-h-52 object-cover opacity-80 group-hover/img:opacity-100 transition-opacity" muted loop playsInline autoPlay />
-                      ) : (
-                        <img src={attachedPreview} alt="attachment preview" className="w-full max-h-52 object-cover opacity-80 group-hover/img:opacity-100 transition-opacity" />
-                      )}
+                      <img src={attachedPreview} alt="attachment preview" className="w-full max-h-52 object-cover opacity-80 group-hover/img:opacity-100 transition-opacity" />
                       <button
                         type="button"
                         onClick={() => {
@@ -247,12 +257,12 @@ export const PostComposer = React.memo(({ onPost }: PostComposerProps) => {
           </div>
         </div>
         {/* Hidden file input */}
-        <input ref={fileInputRef} type="file" accept="image/*,video/*" className="hidden" onChange={handleAttach} />
+        <input ref={fileInputRef} type="file" accept="image/jpeg,image/png,image/webp,image/gif" className="hidden" onChange={handleAttach} />
         {!focused && (
           <div className="mt-4 flex justify-between border-t border-primary/10 pt-4">
             <div className="flex gap-2">
               <Button variant="ghost" size="sm" className="text-[10px] uppercase font-bold tracking-widest text-muted-foreground hover:text-primary hover:bg-primary/5 rounded-xl transition-all" onClick={() => fileInputRef.current?.click()}>
-                <ImageIcon className="mr-2 h-4 w-4" /> Photo / Video
+                <ImageIcon className="mr-2 h-4 w-4" /> Photo
               </Button>
               <Button variant="ghost" size="sm" className="text-[10px] uppercase font-bold tracking-widest text-muted-foreground hover:text-primary hover:bg-primary/5 rounded-xl transition-all" onClick={() => { setPostType('question'); setFocused(true); }}>
                 <HelpCircle className="mr-2 h-4 w-4" /> Ask Question

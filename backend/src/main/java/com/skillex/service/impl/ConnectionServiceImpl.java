@@ -80,7 +80,10 @@ public class ConnectionServiceImpl implements ConnectionService {
             receiver.getId(),
             requester.getId(),
             "CONNECTION_REQUEST",
-            requester.getName() + " sent you a connection request."
+            requester.getName() + " sent you a connection request.",
+            "CONNECTION",
+            saved.getId(),
+            "/connections"
         );
 
         return mapper.toConnection(saved);
@@ -160,7 +163,10 @@ public class ConnectionServiceImpl implements ConnectionService {
                 saved.getRequester().getId(),
                 saved.getReceiver().getId(),
                 "CONNECTION_ACCEPTED",
-                saved.getReceiver().getName() + " accepted your connection request."
+                saved.getReceiver().getName() + " accepted your connection request.",
+                "CONNECTION",
+                saved.getId(),
+                "/connections"
             );
             sendAutoConnectionMessage(saved);
         }

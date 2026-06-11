@@ -4,12 +4,13 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
 import {
   User as UserIcon, PencilLine, Camera, CheckCircle2,
-  Github, Linkedin, Facebook, Globe, FileUp, Zap
+  Github, Linkedin, Facebook, Globe, FileUp, Zap, BrainCircuit, Loader2
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Badge } from '@/components/ui/badge';
+import { Checkbox } from '@/components/ui/checkbox';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import {
   Form, FormControl, FormField, FormItem, FormLabel, FormMessage, FormDescription,
@@ -19,7 +20,12 @@ import {
   DialogHeader, DialogTitle,
 } from '@/components/ui/dialog';
 import { UserService } from '@/services/userService';
-import { api } from '@/services/api';
+import {
+  resumeProfileService,
+  type ResumeProfile,
+  type ResumeSkillSuggestion,
+} from '@/services/resumeProfileService';
+import { api, ApiError } from '@/services/api';
 import type { User } from '@/types';
 import { cn } from '@/lib/utils';
 
@@ -39,6 +45,38 @@ const profileSchema = z.object({
 
 type ProfileFormData = z.infer<typeof profileSchema>;
 
+const skillSuggestionKey = (skill: ResumeSkillSuggestion) =>
+  `${skill.name.trim().toLowerCase()}::${skill.category.trim().toLowerCase()}`;
+
+const toResumeHref = (url?: string | null) => {
+  const value = url?.trim();
+  if (!value) return '';
+  if (value.startsWith('http')) return value;
+  if (!value.startsWith('/')) return value;
+  const apiBase = import.meta.env.VITE_API_URL
+    ? import.meta.env.VITE_API_URL.replace(/\/api\/?$/, '')
+    : window.location.origin;
+  return `${apiBase}${value}`;
+};
+
+const resumeScanFailureMessage = (err: unknown) => {
+  if (err instanceof ApiError) {
+    const serverMessage =
+      err.data != null && typeof err.data === 'object' && 'message' in err.data
+        ? String((err.data as Record<string, unknown>).message ?? '')
+        : err.message;
+    if (
+      err.status === 404 ||
+      serverMessage.toLowerCase().includes('route not found') ||
+      serverMessage.toLowerCase().includes('unexpected error')
+    ) {
+      return 'Resume scanner endpoint is not available on the running backend. Restart the backend, then scan again.';
+    }
+    return serverMessage || err.message;
+  }
+  return err instanceof Error ? err.message : 'Could not analyze resume.';
+};
+
 interface ProfileTabProps {
   user: User | null;
   refreshUser: () => Promise<void>;
@@ -57,6 +95,14 @@ export default function ProfileTab({ user, refreshUser, toast }: ProfileTabProps
   const [localAvatar, setLocalAvatar] = useState<string | null>(null);
   const [savingAvatar, setSavingAvatar] = useState(false);
   const [uploadingResume, setUploadingResume] = useState(false);
+  const [resumeProfile, setResumeProfile] = useState<ResumeProfile | null>(null);
+  const [resumeReviewOpen, setResumeReviewOpen] = useState(false);
+  const [applyingResumeProfile, setApplyingResumeProfile] = useState(false);
+  const [applyResumeBio, setApplyResumeBio] = useState(true);
+  const [applyResumeTeachIntent, setApplyResumeTeachIntent] = useState(true);
+  const [applyResumeLearnIntent, setApplyResumeLearnIntent] = useState(true);
+  const [selectedOfferedResumeSkills, setSelectedOfferedResumeSkills] = useState<Set<string>>(new Set());
+  const [selectedWantedResumeSkills, setSelectedWantedResumeSkills] = useState<Set<string>>(new Set());
 
   const avatarInputRef = useRef<HTMLInputElement>(null);
   const resumeInputRef = useRef<HTMLInputElement>(null);
@@ -93,6 +139,22 @@ export default function ProfileTab({ user, refreshUser, toast }: ProfileTabProps
       resumeUrl: user?.resumeUrl ?? '',
     });
   }, [user, profileForm]);
+
+  useEffect(() => {
+    let active = true;
+    void resumeProfileService.getLatest()
+      .then((profile) => {
+        if (active && profile) {
+          setResumeProfile(profile);
+        }
+      })
+      .catch(() => {
+        // A missing resume scan should not block profile editing.
+      });
+    return () => {
+      active = false;
+    };
+  }, []);
 
   const handleEditProfile = () => {
     setProfileEditMode(true);
@@ -172,10 +234,34 @@ export default function ProfileTab({ user, refreshUser, toast }: ProfileTabProps
     }
   };
 
+  const primeResumeReview = (profile: ResumeProfile) => {
+    setResumeProfile(profile);
+    setSelectedOfferedResumeSkills(new Set((profile.suggestedOfferedSkills ?? []).map(skillSuggestionKey)));
+    setSelectedWantedResumeSkills(new Set((profile.suggestedWantedSkills ?? []).map(skillSuggestionKey)));
+    setApplyResumeBio(true);
+    setApplyResumeTeachIntent(true);
+    setApplyResumeLearnIntent(true);
+    setResumeReviewOpen(true);
+  };
+
+  const toggleResumeSkill = (type: 'offered' | 'wanted', key: string) => {
+    const setter = type === 'offered' ? setSelectedOfferedResumeSkills : setSelectedWantedResumeSkills;
+    setter((current) => {
+      const next = new Set(current);
+      if (next.has(key)) {
+        next.delete(key);
+      } else {
+        next.add(key);
+      }
+      return next;
+    });
+  };
+
   const handleResumePick = async (file?: File) => {
     if (!file) return;
-    if (file.type !== 'application/pdf') {
-      toast({ variant: 'destructive', title: 'PDF only', description: 'Resume must be a PDF file.' });
+    const allowedTypes = ['application/pdf', 'image/png', 'image/jpeg', 'image/webp'];
+    if (!allowedTypes.includes(file.type)) {
+      toast({ variant: 'destructive', title: 'Unsupported file', description: 'Upload a PDF, PNG, JPG, or WebP resume.' });
       return;
     }
     if (file.size > 10 * 1024 * 1024) {
@@ -185,25 +271,62 @@ export default function ProfileTab({ user, refreshUser, toast }: ProfileTabProps
 
     setUploadingResume(true);
     try {
-      const uploaded = await UserService.uploadResume(file);
-      const apiBase = import.meta.env.VITE_API_URL
-        ? import.meta.env.VITE_API_URL.replace(/\/api\/?$/, '')
-        : window.location.origin;
-      const nextUrl = uploaded.url.startsWith('http') ? uploaded.url : `${apiBase}${uploaded.url}`;
+      const analyzed = await resumeProfileService.analyze(file);
+      const resumeUrl = analyzed.resumeUrl ?? '';
+      const nextUrl = toResumeHref(resumeUrl);
       profileForm.setValue('resumeUrl', nextUrl, { shouldDirty: true, shouldValidate: true });
+      primeResumeReview(analyzed);
       toast({
-        title: 'Resume uploaded',
-        description: 'Click Save Changes to publish it on your profile.',
+        title: 'Resume scanned',
+        description: 'Review the extracted profile data before applying it.',
         variant: 'success',
       });
     } catch (err) {
       toast({
         variant: 'destructive',
-        title: 'Upload failed',
-        description: err instanceof Error ? err.message : 'Could not upload resume.',
+        title: 'Resume scan failed',
+        description: resumeScanFailureMessage(err),
       });
     } finally {
       setUploadingResume(false);
+    }
+  };
+
+  const applyResumeProfile = async () => {
+    if (!resumeProfile) return;
+    setApplyingResumeProfile(true);
+    try {
+      const offeredSkills = (resumeProfile.suggestedOfferedSkills ?? [])
+        .filter((skill) => selectedOfferedResumeSkills.has(skillSuggestionKey(skill)))
+        .map(({ name, category, level, evidence }) => ({ name, category, level, evidence }));
+      const wantedSkills = (resumeProfile.suggestedWantedSkills ?? [])
+        .filter((skill) => selectedWantedResumeSkills.has(skillSuggestionKey(skill)))
+        .map(({ name, category, level, evidence }) => ({ name, category, level, evidence }));
+
+      await resumeProfileService.apply({
+        applyBio: applyResumeBio,
+        applyTeachIntent: applyResumeTeachIntent,
+        applyLearnIntent: applyResumeLearnIntent,
+        offeredSkills,
+        wantedSkills,
+      });
+      await refreshUser();
+      setResumeReviewOpen(false);
+      setProfileEditMode(false);
+      setProfileJustSaved(true);
+      toast({
+        title: 'Profile filled from resume',
+        description: 'Selected profile fields and skills are now saved.',
+        variant: 'success',
+      });
+    } catch (err) {
+      toast({
+        variant: 'destructive',
+        title: 'Could not apply resume data',
+        description: err instanceof Error ? err.message : 'Please try again.',
+      });
+    } finally {
+      setApplyingResumeProfile(false);
     }
   };
 
@@ -416,7 +539,7 @@ export default function ProfileTab({ user, refreshUser, toast }: ProfileTabProps
                       <input
                         ref={resumeInputRef}
                         type="file"
-                        accept="application/pdf"
+                        accept="application/pdf,image/png,image/jpeg,image/webp"
                         className="hidden"
                         onChange={(e) => {
                           const file = e.target.files?.[0];
@@ -431,15 +554,28 @@ export default function ProfileTab({ user, refreshUser, toast }: ProfileTabProps
                         disabled={uploadingResume}
                         onClick={() => resumeInputRef.current?.click()}
                       >
-                        <FileUp className="mr-2 h-4 w-4" />
-                        {uploadingResume ? 'Uploading...' : 'Upload Resume PDF'}
+                        {uploadingResume ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <BrainCircuit className="mr-2 h-4 w-4" />}
+                        {uploadingResume ? 'Scanning...' : 'Scan CV & Fill Profile'}
                       </Button>
+                      {resumeProfile && (
+                        <Button
+                          type="button"
+                          variant="outline"
+                          className="rounded-xl border-primary/20 bg-primary/10 text-primary hover:bg-primary/15"
+                          onClick={() => primeResumeReview(resumeProfile)}
+                        >
+                          Review Last Scan
+                        </Button>
+                      )}
                       {profileForm.watch('resumeUrl')?.trim() && (
                         <Button type="button" variant="ghost" className="rounded-xl text-primary hover:text-primary" asChild>
-                          <a href={profileForm.watch('resumeUrl')?.trim()} target="_blank" rel="noreferrer">Open Resume</a>
+                          <a href={toResumeHref(profileForm.watch('resumeUrl'))} target="_blank" rel="noreferrer">Open Resume</a>
                         </Button>
                       )}
                     </div>
+                    <p className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
+                      PDF text is extracted automatically. Scanned image resumes need OCR enabled on the backend.
+                    </p>
                   </div>
                 </div>
 
@@ -525,7 +661,7 @@ export default function ProfileTab({ user, refreshUser, toast }: ProfileTabProps
                       </p>
                       {value?.trim() ? (
                         <a
-                          href={value.trim()}
+                          href={label === 'Resume URL' ? toResumeHref(value) : value.trim()}
                           target="_blank"
                           rel="noreferrer"
                           className="mt-2 block break-words text-sm font-semibold text-primary hover:underline"
@@ -639,6 +775,175 @@ export default function ProfileTab({ user, refreshUser, toast }: ProfileTabProps
               }}
             >
               {savingAvatar ? 'Saving...' : 'Save Photo'}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={resumeReviewOpen} onOpenChange={(open) => !applyingResumeProfile && setResumeReviewOpen(open)}>
+        <DialogContent className="max-h-[85vh] overflow-y-auto sm:max-w-3xl">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <BrainCircuit className="h-5 w-5 text-primary" />
+              Review CV profile scan
+            </DialogTitle>
+            <DialogDescription>
+              Confirm what should be written to your SkillEX profile and skills.
+            </DialogDescription>
+          </DialogHeader>
+
+          {resumeProfile && (
+            <div className="space-y-5">
+              <div className="rounded-2xl border border-primary/20 bg-primary/5 p-4">
+                <div className="flex flex-wrap items-start justify-between gap-3">
+                  <div>
+                    <p className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
+                      {resumeProfile.extractionMethod} / {resumeProfile.status}
+                    </p>
+                    <h4 className="mt-1 text-lg font-extrabold text-foreground">
+                      {resumeProfile.headline || 'Resume profile'}
+                    </h4>
+                  </div>
+                  <Badge variant="outline" className="border-primary/30 bg-primary/10 text-primary">
+                    {resumeProfile.confidence}% confidence
+                  </Badge>
+                </div>
+                {resumeProfile.rawTextPreview && resumeProfile.status === 'NEEDS_REVIEW' && (
+                  <p className="mt-3 rounded-xl border border-amber-400/20 bg-amber-400/10 p-3 text-xs text-amber-100">
+                    Only a small amount of text was extracted. If this is a scanned resume, enable OCR on the backend or upload a selectable-text PDF.
+                  </p>
+                )}
+              </div>
+
+              <div className="grid gap-3 sm:grid-cols-3">
+                {[
+                  { label: 'Bio', checked: applyResumeBio, setChecked: setApplyResumeBio, value: resumeProfile.experienceSummary || resumeProfile.projectSummary || resumeProfile.headline },
+                  { label: 'Teach intent', checked: applyResumeTeachIntent, setChecked: setApplyResumeTeachIntent, value: resumeProfile.teachSummary },
+                  { label: 'Learn intent', checked: applyResumeLearnIntent, setChecked: setApplyResumeLearnIntent, value: resumeProfile.learnSummary },
+                ].map(({ label, checked, setChecked, value }) => (
+                  <label key={label} className="rounded-2xl border border-border bg-muted/30 p-4">
+                    <span className="flex items-center gap-2 text-sm font-bold text-foreground">
+                      <Checkbox checked={checked} onCheckedChange={(next) => setChecked(Boolean(next))} />
+                      {label}
+                    </span>
+                    <span className="mt-2 block text-xs leading-relaxed text-muted-foreground">
+                      {value?.trim() || 'No confident value extracted.'}
+                    </span>
+                  </label>
+                ))}
+              </div>
+
+              <div className="grid gap-3 sm:grid-cols-2">
+                {[
+                  { label: 'Education', value: resumeProfile.educationSummary },
+                  { label: 'Experience', value: resumeProfile.experienceSummary },
+                  { label: 'Projects', value: resumeProfile.projectSummary },
+                  { label: 'Certifications', value: resumeProfile.certificationSummary },
+                  { label: 'Tools', value: resumeProfile.toolsSummary },
+                  { label: 'Career goal', value: resumeProfile.careerGoal },
+                ]
+                  .filter((section) => section.value?.trim())
+                  .map((section) => (
+                    <div key={section.label} className="rounded-2xl border border-border bg-background p-4">
+                      <p className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">{section.label}</p>
+                      <p className="mt-2 text-sm leading-relaxed text-foreground">{section.value}</p>
+                    </div>
+                  ))}
+              </div>
+
+              {(resumeProfile.profileSignals ?? []).length > 0 && (
+                <div className="rounded-2xl border border-border bg-muted/20 p-4">
+                  <p className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">Evidence signals</p>
+                  <div className="mt-3 grid gap-2 sm:grid-cols-2">
+                    {(resumeProfile.profileSignals ?? []).map((signal, index) => (
+                      <div key={`${signal.label}-${index}`} className="rounded-xl border border-border bg-background p-3">
+                        <p className="text-xs font-bold text-foreground">{signal.label}</p>
+                        <p className="mt-1 text-xs leading-relaxed text-muted-foreground">{signal.value}</p>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              <div className="grid gap-4 sm:grid-cols-2">
+                <div className="space-y-3">
+                  <div>
+                    <h4 className="text-sm font-extrabold text-foreground">Can teach</h4>
+                    <p className="text-xs text-muted-foreground">These become offered skills.</p>
+                  </div>
+                  {(resumeProfile.suggestedOfferedSkills ?? []).length === 0 ? (
+                    <p className="rounded-xl border border-border bg-muted/20 p-3 text-xs text-muted-foreground">
+                      No resume-backed teaching skills found.
+                    </p>
+                  ) : (
+                    (resumeProfile.suggestedOfferedSkills ?? []).map((skill) => {
+                      const key = skillSuggestionKey(skill);
+                      return (
+                        <label key={key} className="block rounded-2xl border border-border bg-background p-4">
+                          <span className="flex items-start gap-3">
+                            <Checkbox
+                              className="mt-1"
+                              checked={selectedOfferedResumeSkills.has(key)}
+                              onCheckedChange={() => toggleResumeSkill('offered', key)}
+                            />
+                            <span className="min-w-0">
+                              <span className="flex flex-wrap items-center gap-2">
+                                <span className="font-bold text-foreground">{skill.name}</span>
+                                <Badge variant="secondary" className="text-[10px]">{skill.level}</Badge>
+                              </span>
+                              <span className="mt-1 block text-xs text-muted-foreground">{skill.evidence}</span>
+                            </span>
+                          </span>
+                        </label>
+                      );
+                    })
+                  )}
+                </div>
+
+                <div className="space-y-3">
+                  <div>
+                    <h4 className="text-sm font-extrabold text-foreground">Should learn next</h4>
+                    <p className="text-xs text-muted-foreground">These become wanted skills for path generation.</p>
+                  </div>
+                  {(resumeProfile.suggestedWantedSkills ?? []).length === 0 ? (
+                    <p className="rounded-xl border border-border bg-muted/20 p-3 text-xs text-muted-foreground">
+                      No next-skill suggestions found.
+                    </p>
+                  ) : (
+                    (resumeProfile.suggestedWantedSkills ?? []).map((skill) => {
+                      const key = skillSuggestionKey(skill);
+                      return (
+                        <label key={key} className="block rounded-2xl border border-border bg-background p-4">
+                          <span className="flex items-start gap-3">
+                            <Checkbox
+                              className="mt-1"
+                              checked={selectedWantedResumeSkills.has(key)}
+                              onCheckedChange={() => toggleResumeSkill('wanted', key)}
+                            />
+                            <span className="min-w-0">
+                              <span className="flex flex-wrap items-center gap-2">
+                                <span className="font-bold text-foreground">{skill.name}</span>
+                                <Badge variant="secondary" className="text-[10px]">{skill.level}</Badge>
+                              </span>
+                              <span className="mt-1 block text-xs text-muted-foreground">{skill.evidence}</span>
+                            </span>
+                          </span>
+                        </label>
+                      );
+                    })
+                  )}
+                </div>
+              </div>
+            </div>
+          )}
+
+          <DialogFooter className="gap-2 sm:gap-0">
+            <Button variant="outline" onClick={() => setResumeReviewOpen(false)} disabled={applyingResumeProfile}>
+              Cancel
+            </Button>
+            <Button onClick={applyResumeProfile} disabled={!resumeProfile || applyingResumeProfile}>
+              {applyingResumeProfile ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <CheckCircle2 className="mr-2 h-4 w-4" />}
+              {applyingResumeProfile ? 'Applying...' : 'Apply Selected Data'}
             </Button>
           </DialogFooter>
         </DialogContent>

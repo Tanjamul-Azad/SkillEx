@@ -315,8 +315,15 @@
 
   /* ── Text selection ── */
   ::selection {
-    background: hsl(var(--primary) / 0.22);
+    background: hsl(var(--primary) / 0.25);
     color: hsl(var(--foreground));
+  }
+
+  /* Dark surfaces need a solid accent behind selected text — a translucent
+     teal wash over near-black is unreadable. */
+  .dark ::selection {
+    background: hsl(var(--primary) / 0.9);
+    color: hsl(var(--primary-foreground));
   }
 
   /* ── Heading defaults ── */

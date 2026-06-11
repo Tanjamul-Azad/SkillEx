@@ -210,6 +210,16 @@ public class UserServiceImpl implements UserService {
 
     @Override
     @Transactional
+    public void updateSkillSubtitle(String userId, String skillId, String subtitle) {
+        UserSkillOffered entry = offeredRepo
+            .findById(new UserSkillOffered.UserSkillId(userId, skillId))
+            .orElseThrow(() -> new EntityNotFoundException("Offered skill not found: " + skillId));
+        entry.setSubtitle(subtitle == null || subtitle.isBlank() ? null : subtitle.trim());
+        offeredRepo.save(entry);
+    }
+
+    @Override
+    @Transactional
     public void removeSkill(String userId, String skillId, String type) {
         if ("offered".equalsIgnoreCase(type)) {
             offeredRepo.deleteByIdUserIdAndIdSkillId(userId, skillId);

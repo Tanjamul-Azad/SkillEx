@@ -28,4 +28,10 @@ public interface UserSkillOfferedRepository
     @Modifying(clearAutomatically = true, flushAutomatically = true)
     @Query("DELETE FROM UserSkillOffered u WHERE u.id.userId = :userId AND u.id.skillId = :skillId")
     void deleteByIdUserIdAndIdSkillId(@Param("userId") String userId, @Param("skillId") String skillId);
+
+    @Query("SELECT uso FROM UserSkillOffered uso JOIN FETCH uso.skill WHERE uso.id.userId = :userId")
+    List<UserSkillOffered> findByUserId(@Param("userId") String userId);
+
+    @Query("SELECT uso FROM UserSkillOffered uso WHERE uso.id.skillId = :skillId")
+    List<UserSkillOffered> findBySkillId(@Param("skillId") String skillId);
 }

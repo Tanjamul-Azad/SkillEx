@@ -220,12 +220,51 @@ export default function Header({
   };
 
   const getNotificationRoute = useCallback((notification: Notification): string => {
-    if (notification.actionUrl) {
+    if (notification.actionUrl?.startsWith('/')) {
       return notification.actionUrl;
     }
 
     const type = String(notification.type ?? '').toLowerCase();
+    const targetType = String(notification.targetType ?? '').toUpperCase();
     const msg = String(notification.message ?? '').toLowerCase();
+
+    if (targetType === 'EVENT' && notification.targetId) {
+      return `/community?tab=events&eventId=${notification.targetId}`;
+    }
+
+    if (targetType === 'DISCUSSION' && notification.targetId) {
+      return `/community?tab=discussions&discussionId=${notification.targetId}`;
+    }
+
+    if (targetType === 'CIRCLE' && notification.targetId) {
+      return `/community?tab=circles&circleId=${notification.targetId}`;
+    }
+
+    if (targetType === 'CERTIFICATE') {
+      return notification.targetId ? `/certificates?certificateId=${notification.targetId}` : '/certificates';
+    }
+
+    if (targetType === 'BADGE') {
+      return '/certificates';
+    }
+
+    if (targetType === 'GROUP_SESSION') {
+      return '/group-sessions';
+    }
+
+    if (targetType === 'SESSION') {
+      return notification.targetId
+        ? `/dashboard?panel=upcoming&sessionId=${notification.targetId}#upcoming-sessions`
+        : '/dashboard?panel=upcoming#upcoming-sessions';
+    }
+
+    if (targetType === 'EXCHANGE') {
+      return '/dashboard?panel=requests#exchange-requests';
+    }
+
+    if (targetType === 'CONNECTION') {
+      return '/connections';
+    }
 
     if (type.includes('message')) {
       return notification.fromUser?.id ? `/messages/${notification.fromUser.id}` : '/messages';
@@ -243,6 +282,14 @@ export default function Header({
 
     if (type.includes('session')) {
       return '/dashboard?panel=upcoming#upcoming-sessions';
+    }
+
+    if (msg.includes('certificate') || msg.includes('credential') || msg.includes('badge')) {
+      return msg.includes('ready to claim') ? '/group-sessions' : '/certificates';
+    }
+
+    if (msg.includes('event')) {
+      return '/community?tab=events';
     }
 
     if (type.includes('review')) {

@@ -86,7 +86,10 @@ public class ExchangeServiceImpl implements ExchangeService {
             receiver.getId(),
             requester.getId(),
             "MATCH_REQUEST",
-            requester.getName() + " sent you a skill exchange request."
+            requester.getName() + " sent you a skill exchange request.",
+            "EXCHANGE",
+            saved.getId(),
+            "/dashboard?panel=requests&requestsTab=received#exchange-requests"
         );
 
         return mapper.toExchange(saved);
@@ -154,7 +157,10 @@ public class ExchangeServiceImpl implements ExchangeService {
                 saved.getRequester().getId(),
                 saved.getReceiver().getId(),
                 "MATCH_REQUEST",
-                saved.getReceiver().getName() + " accepted your skill exchange request."
+                saved.getReceiver().getName() + " accepted your skill exchange request.",
+                "EXCHANGE",
+                saved.getId(),
+                "/dashboard?panel=requests&requestsTab=sent#exchange-requests"
             );
 
             // Symmetrically auto-create or accept Connection
@@ -188,7 +194,10 @@ public class ExchangeServiceImpl implements ExchangeService {
                 saved.getRequester().getId(),
                 saved.getReceiver().getId(),
                 "MATCH_REQUEST",
-                saved.getReceiver().getName() + " declined your skill exchange request."
+                saved.getReceiver().getName() + " declined your skill exchange request.",
+                "EXCHANGE",
+                saved.getId(),
+                "/dashboard?panel=requests&requestsTab=sent#exchange-requests"
             );
         }
 

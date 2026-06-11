@@ -21,4 +21,17 @@ public class SkillGapAnalyzerController {
         String userId = (String) auth.getPrincipal();
         return ApiResponse.ok(skillGapAnalyzerService.analyzeGap(userId, goalSkillId));
     }
+
+    @PostMapping("/custom")
+    public ApiResponse<SkillGapAnalysisDto> analyzeCustom(
+        Authentication auth,
+        @RequestBody SkillGapAnalysisDto.CustomGoalRequest request
+    ) {
+        String userId = (String) auth.getPrincipal();
+        return ApiResponse.ok(skillGapAnalyzerService.analyzeCustomGoal(
+            userId,
+            request.goalSkillName(),
+            request.category()
+        ));
+    }
 }

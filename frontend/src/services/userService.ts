@@ -85,6 +85,11 @@ export const UserService = {
     });
   },
 
+  /** PATCH /api/users/me/skills/{skillId} — update an offered skill's description */
+  updateSkillDescription: async (skillId: string, subtitle: string): Promise<void> => {
+    return api.patch<void>(`/users/me/skills/${skillId}`, { subtitle });
+  },
+
   /** DELETE /api/users/me/skills/{skillId}?type=offered|wanted */
   removeSkill: async (skillId: string, type: 'offered' | 'wanted'): Promise<void> => {
     return api.delete<void>(`/users/me/skills/${skillId}?type=${type}`);

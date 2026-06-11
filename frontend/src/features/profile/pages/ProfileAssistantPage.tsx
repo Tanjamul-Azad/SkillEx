@@ -5,38 +5,30 @@ import { useDocumentTitle } from '@/hooks/useDocumentTitle';
 import DashboardLayout from '@/components/layout/DashboardLayout';
 import { motion } from 'framer-motion';
 import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Wand2, BookOpen, Users, FileText } from 'lucide-react';
+import { BookOpen, Users, FileText, ArrowRight } from 'lucide-react';
 import BioSuggestionModal from '../components/BioSuggestionModal';
 import SkillDescriptionEditor from '../components/SkillDescriptionEditor';
-import { userService } from '@/services/userService';
+import CircleBlurbModal from '../components/CircleBlurbModal';
+import { UserService } from '@/services/userService';
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog';
+import type { Skill } from '@/types';
+import { cn } from '@/lib/utils';
 
-const container = {
+const containerVariants = {
   hidden: { opacity: 0 },
-  visible: {
-    opacity: 1,
-    transition: {
-      staggerChildren: 0.1,
-      delayChildren: 0.2,
-    },
-  },
+  visible: { opacity: 1, transition: { staggerChildren: 0.08, delayChildren: 0.05 } },
 };
 
-const item = {
-  hidden: { opacity: 0, y: 20 },
-  visible: {
-    opacity: 1,
-    y: 0,
-    transition: { type: 'spring', stiffness: 120, damping: 20 },
-  },
+const itemVariants = {
+  hidden: { opacity: 0, y: 12 },
+  visible: { opacity: 1, y: 0, transition: { duration: 0.35 } },
 };
-
-interface Skill {
-  id: string;
-  name: string;
-  level?: string;
-  description?: string;
-}
 
 export default function ProfileAssistantPage() {
   useDocumentTitle('Profile Assistant');
@@ -44,245 +36,152 @@ export default function ProfileAssistantPage() {
   const { toast } = useToast();
 
   const [bioModalOpen, setBioModalOpen] = useState(false);
+  const [skillPickerOpen, setSkillPickerOpen] = useState(false);
   const [skillEditorOpen, setSkillEditorOpen] = useState(false);
   const [selectedSkill, setSelectedSkill] = useState<Skill | null>(null);
   const [circleBlurbOpen, setCircleBlurbOpen] = useState(false);
 
+  const skillsOffered = user?.skillsOffered ?? [];
+
   const handleBioSelect = async (bio: string) => {
     if (!user) return;
     try {
-      await userService.updateProfile(user.id, { bio });
+      await UserService.updateProfile(user.id, { bio });
       await refreshUser();
       toast({
-        title: 'Success',
-        description: 'Your bio has been updated.',
+        title: 'Bio updated',
+        description: 'Your new bio is live on your profile.',
       });
     } catch (error) {
       toast({
-        title: 'Error',
-        description: 'Failed to update bio.',
+        title: 'Could not update your bio',
+        description: 'Try again in a moment.',
         variant: 'destructive',
       });
     }
+  };
+
+  const handlePickSkill = (skill: Skill) => {
+    setSelectedSkill(skill);
+    setSkillPickerOpen(false);
+    setSkillEditorOpen(true);
   };
 
   const handleSkillDescriptionSave = async (description: string) => {
     if (!selectedSkill) return;
     try {
-      // Note: This would require a backend endpoint to update skill descriptions
-      // For now, we'll just show a toast
-      toast({
-        title: 'Success',
-        description: 'Skill description has been updated.',
-      });
+      await UserService.updateSkillDescription(selectedSkill.id, description);
+      await refreshUser();
     } catch (error) {
       toast({
-        title: 'Error',
-        description: 'Failed to update skill description.',
+        title: 'Could not save the description',
+        description: 'Try again in a moment.',
         variant: 'destructive',
       });
     }
   };
 
+  const tools = [
+    {
+      key: 'bio',
+      icon: FileText,
+      title: 'Bio',
+      description: 'Turn a few rough lines about yourself into a profile-ready introduction.',
+      status:
+        user?.bio && user.bio.length > 0
+          ? `Current: "${user.bio.substring(0, 90)}${user.bio.length > 90 ? '…' : ''}"`
+          : "You haven't written a bio yet.",
+      action: 'Write My Bio',
+      disabled: false,
+      onOpen: () => setBioModalOpen(true),
+    },
+    {
+      key: 'skills',
+      icon: BookOpen,
+      title: 'Skill Descriptions',
+      description: 'Give each skill you teach a clear description learners can trust.',
+      status:
+        skillsOffered.length > 0
+          ? `${skillsOffered.length} skill${skillsOffered.length !== 1 ? 's' : ''} on your profile.`
+          : 'Add a skill you teach to use this.',
+      action: 'Describe a Skill',
+      disabled: skillsOffered.length === 0,
+      onOpen: () => skillsOffered.length > 0 && setSkillPickerOpen(true),
+    },
+    {
+      key: 'circles',
+      icon: Users,
+      title: 'Circle Blurbs',
+      description: 'Write a short, inviting intro for a circle or group you run.',
+      status: 'Ready to paste into any circle description.',
+      action: 'Draft a Blurb',
+      disabled: false,
+      onOpen: () => setCircleBlurbOpen(true),
+    },
+  ];
+
   return (
     <DashboardLayout>
-      <div className="product-page space-y-6">
-        {/* Header */}
-        <motion.div
-          initial={{ opacity: 0, y: -12 }}
-          animate={{ opacity: 1, y: 0 }}
-          className="product-header"
-        >
-          <div className="flex items-start justify-between">
-            <div className="flex items-start gap-4">
-              <div className="p-3 rounded-lg bg-primary/10">
-                <Wand2 className="h-8 w-8 text-primary" />
-              </div>
-              <div>
-                <h1 className="product-title text-foreground">Profile Assistant</h1>
-                <p className="product-subtitle text-muted-foreground">
-                  Let AI help you craft polished, professional profile content. Write rough ideas, get 3 variations to choose from.
+      <motion.div
+        initial="hidden"
+        animate="visible"
+        variants={containerVariants}
+        className="mx-auto max-w-5xl space-y-8 py-8"
+      >
+        <motion.div variants={itemVariants} className="space-y-1.5">
+          <h1 className="font-headline text-3xl font-extrabold tracking-tight text-foreground">
+            Profile Assistant
+          </h1>
+          <p className="max-w-2xl text-muted-foreground">
+            Start from rough notes — each tool drafts three variations for you to pick from,
+            edit, and apply to your profile.
+          </p>
+        </motion.div>
+
+        <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
+          {tools.map((tool) => (
+            <motion.div
+              key={tool.key}
+              variants={itemVariants}
+              role="button"
+              tabIndex={tool.disabled ? -1 : 0}
+              onClick={tool.onOpen}
+              onKeyDown={(e) => {
+                if (!tool.disabled && (e.key === 'Enter' || e.key === ' ')) {
+                  e.preventDefault();
+                  tool.onOpen();
+                }
+              }}
+              className={cn(
+                'rounded-2xl border border-border/40 bg-card transition-colors',
+                tool.disabled ? 'opacity-70' : 'cursor-pointer hover:border-primary/40'
+              )}
+            >
+              <div className="flex h-full flex-col p-6">
+                <div className="rounded-xl bg-primary/10 p-2.5 self-start">
+                  <tool.icon className="h-5 w-5 text-primary" />
+                </div>
+                <h2 className="mt-4 font-headline text-lg font-extrabold text-foreground">
+                  {tool.title}
+                </h2>
+                <p className="mt-1 text-sm text-muted-foreground">{tool.description}</p>
+                <p className="mt-4 flex-1 text-xs italic text-muted-foreground/80">
+                  {tool.status}
                 </p>
+                <Button
+                  className="mt-5 w-full gap-2 rounded-xl"
+                  variant={tool.key === 'bio' ? 'default' : 'outline'}
+                  disabled={tool.disabled}
+                  tabIndex={-1}
+                >
+                  {tool.action}
+                  <ArrowRight className="h-4 w-4" />
+                </Button>
               </div>
-            </div>
-          </div>
-        </motion.div>
-
-        {/* Feature Cards */}
-        <motion.div
-          variants={container}
-          initial="hidden"
-          animate="visible"
-          className="grid grid-cols-1 md:grid-cols-3 gap-4"
-        >
-          {/* Bio Assistant Card */}
-          <motion.div variants={item} key="bio">
-            <Card className="h-full hover:border-primary/50 transition-colors cursor-pointer"
-                  onClick={() => setBioModalOpen(true)}>
-              <CardHeader>
-                <div className="flex items-center justify-between">
-                  <div>
-                    <CardTitle className="flex items-center gap-2">
-                      <FileText className="h-5 w-5 text-primary" />
-                      Professional Bio
-                    </CardTitle>
-                    <CardDescription>Craft your introduction</CardDescription>
-                  </div>
-                </div>
-              </CardHeader>
-              <CardContent>
-                <div className="space-y-3">
-                  <p className="text-sm text-muted-foreground">
-                    {user?.bio && user.bio.length > 0
-                      ? `Current: "${user.bio.substring(0, 80)}..."`
-                      : 'No bio yet. Click to create one.'}
-                  </p>
-                  <Button className="w-full gap-2" variant="default">
-                    <Wand2 className="h-4 w-4" />
-                    Generate Bio
-                  </Button>
-                </div>
-              </CardContent>
-            </Card>
-          </motion.div>
-
-          {/* Skill Descriptions Card */}
-          <motion.div variants={item} key="skills">
-            <Card className="h-full hover:border-primary/50 transition-colors cursor-pointer">
-              <CardHeader>
-                <div className="flex items-center justify-between">
-                  <div>
-                    <CardTitle className="flex items-center gap-2">
-                      <BookOpen className="h-5 w-5 text-primary" />
-                      Skill Descriptions
-                    </CardTitle>
-                    <CardDescription>Polish your expertise</CardDescription>
-                  </div>
-                </div>
-              </CardHeader>
-              <CardContent>
-                <div className="space-y-3">
-                  <p className="text-sm text-muted-foreground">
-                    {user?.skillsOffered && user.skillsOffered.length > 0
-                      ? `You have ${user.skillsOffered.length} skill${user.skillsOffered.length !== 1 ? 's' : ''}`
-                      : 'Add skills to enhance with descriptions.'}
-                  </p>
-                  <Button
-                    className="w-full gap-2"
-                    variant="default"
-                    disabled={!user?.skillsOffered || user.skillsOffered.length === 0}
-                  >
-                    <Wand2 className="h-4 w-4" />
-                    Enhance Skills
-                  </Button>
-                </div>
-              </CardContent>
-            </Card>
-          </motion.div>
-
-          {/* Circle Blurb Card */}
-          <motion.div variants={item} key="circles">
-            <Card className="h-full hover:border-primary/50 transition-colors cursor-pointer"
-                  onClick={() => setCircleBlurbOpen(true)}>
-              <CardHeader>
-                <div className="flex items-center justify-between">
-                  <div>
-                    <CardTitle className="flex items-center gap-2">
-                      <Users className="h-5 w-5 text-primary" />
-                      Circle Blurbs
-                    </CardTitle>
-                    <CardDescription>Engage your community</CardDescription>
-                  </div>
-                </div>
-              </CardHeader>
-              <CardContent>
-                <div className="space-y-3">
-                  <p className="text-sm text-muted-foreground">
-                    Create compelling descriptions for skill circles or groups you manage.
-                  </p>
-                  <Button className="w-full gap-2" variant="default">
-                    <Wand2 className="h-4 w-4" />
-                    Create Blurb
-                  </Button>
-                </div>
-              </CardContent>
-            </Card>
-          </motion.div>
-        </motion.div>
-
-        {/* How It Works Section */}
-        <motion.div
-          variants={item}
-          initial="hidden"
-          animate="visible"
-          className="product-panel"
-        >
-          <div className="p-6 space-y-4">
-            <h2 className="text-lg font-semibold">How It Works</h2>
-            <div className="grid gap-4 md:grid-cols-3">
-              <div className="flex gap-3">
-                <div className="flex-shrink-0 w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center text-primary font-semibold text-sm">
-                  1
-                </div>
-                <div>
-                  <p className="font-medium text-sm">Write Rough Ideas</p>
-                  <p className="text-xs text-muted-foreground">
-                    Describe yourself naturally, without worrying about polish.
-                  </p>
-                </div>
-              </div>
-              <div className="flex gap-3">
-                <div className="flex-shrink-0 w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center text-primary font-semibold text-sm">
-                  2
-                </div>
-                <div>
-                  <p className="font-medium text-sm">Get AI Variations</p>
-                  <p className="text-xs text-muted-foreground">
-                    Receive 3 distinct, professionally-written alternatives.
-                  </p>
-                </div>
-              </div>
-              <div className="flex gap-3">
-                <div className="flex-shrink-0 w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center text-primary font-semibold text-sm">
-                  3
-                </div>
-                <div>
-                  <p className="font-medium text-sm">Pick & Apply</p>
-                  <p className="text-xs text-muted-foreground">
-                    Choose one, edit if needed, and update your profile instantly.
-                  </p>
-                </div>
-              </div>
-            </div>
-          </div>
-        </motion.div>
-
-        {/* Tips Section */}
-        <motion.div
-          variants={item}
-          initial="hidden"
-          animate="visible"
-          className="product-panel"
-        >
-          <div className="p-6 space-y-3">
-            <h3 className="text-sm font-semibold uppercase tracking-wide text-muted-foreground">Tips for Better Results</h3>
-            <ul className="space-y-2 text-sm text-muted-foreground">
-              <li className="flex gap-2">
-                <span className="text-primary">→</span>
-                <span>Be specific: mention particular skills, projects, or interests you're passionate about.</span>
-              </li>
-              <li className="flex gap-2">
-                <span className="text-primary">→</span>
-                <span>Describe what you enjoy: teaching style, learning approach, community values.</span>
-              </li>
-              <li className="flex gap-2">
-                <span className="text-primary">→</span>
-                <span>Regenerate anytime: don't like the suggestions? Try again with slightly different wording.</span>
-              </li>
-            </ul>
-          </div>
-        </motion.div>
-      </div>
+            </motion.div>
+          ))}
+        </div>
+      </motion.div>
 
       {/* Modals */}
       <BioSuggestionModal
@@ -291,14 +190,46 @@ export default function ProfileAssistantPage() {
         onSelectBio={handleBioSelect}
       />
 
+      <Dialog open={skillPickerOpen} onOpenChange={setSkillPickerOpen}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle>Pick a skill</DialogTitle>
+            <DialogDescription>
+              Choose which of your offered skills to write a description for.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="max-h-72 space-y-2 overflow-y-auto">
+            {skillsOffered.map((skill) => (
+              <button
+                key={skill.id}
+                type="button"
+                onClick={() => handlePickSkill(skill)}
+                className="flex w-full items-center gap-3 rounded-xl border border-border/40 p-3 text-left transition-colors hover:border-primary/40 hover:bg-muted/30"
+              >
+                {skill.icon && <span className="shrink-0 text-xl">{skill.icon}</span>}
+                <div className="min-w-0 flex-1">
+                  <p className="truncate text-sm font-semibold text-foreground">{skill.name}</p>
+                  <p className="truncate text-xs text-muted-foreground">
+                    {skill.subtitle || 'No description yet'}
+                  </p>
+                </div>
+              </button>
+            ))}
+          </div>
+        </DialogContent>
+      </Dialog>
+
       <SkillDescriptionEditor
+        key={selectedSkill?.id ?? 'none'}
         open={skillEditorOpen}
         onOpenChange={setSkillEditorOpen}
         skillName={selectedSkill?.name || ''}
-        skillLevel={selectedSkill?.level || 'PRACTITIONER'}
-        currentDescription={selectedSkill?.description}
+        skillLevel={selectedSkill?.level || 'beginner'}
+        currentDescription={selectedSkill?.subtitle}
         onSaveDescription={handleSkillDescriptionSave}
       />
+
+      <CircleBlurbModal open={circleBlurbOpen} onOpenChange={setCircleBlurbOpen} />
     </DashboardLayout>
   );
 }

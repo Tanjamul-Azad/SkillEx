@@ -7,7 +7,6 @@ import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Star, MessageCircle, Users, Zap, ArrowRight } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import type { SearchResult } from '@/services/searchService';
-import LucideIcon from '@/components/icons/LucideIcon';
 
 interface SearchResultCardProps {
   result: SearchResult;
@@ -70,7 +69,7 @@ export function SearchResultCard({ result, onClick }: SearchResultCardProps) {
                   variant="outline"
                   className="text-[10px] flex items-center gap-1"
                 >
-                  <LucideIcon name={skill.icon} className="h-3 w-3" />
+                  {skill.icon && <span className="text-xs leading-none">{skill.icon}</span>}
                   {skill.name}
                 </Badge>
               ))}
@@ -113,11 +112,11 @@ export function SearchResultCard({ result, onClick }: SearchResultCardProps) {
         exit={{ opacity: 0, y: -4 }}
         transition={{ duration: 0.2 }}
         className="group rounded-xl border border-border/70 bg-card p-4 hover:border-primary/40 hover:shadow-md transition-all dark:border-white/10 dark:bg-slate-900 dark:hover:shadow-primary/10 cursor-pointer"
-        onClick={() => navigate(`/community?tab=circles&skill=${result.id}`)}
+        onClick={() => handleNavigate(`/search?q=${encodeURIComponent(result.name)}&type=mentors`)}
       >
         <div className="flex items-start gap-3">
-          <div className="flex-shrink-0 h-10 w-10 rounded-lg bg-primary/10 flex items-center justify-center">
-            <LucideIcon name={result.icon} className="h-5 w-5 text-primary" />
+          <div className="flex-shrink-0 h-10 w-10 rounded-lg bg-primary/10 flex items-center justify-center text-lg">
+            {result.icon || <Zap className="h-5 w-5 text-primary" />}
           </div>
 
           <div className="min-w-0 flex-1">
@@ -160,7 +159,7 @@ export function SearchResultCard({ result, onClick }: SearchResultCardProps) {
               className="w-full h-8 text-xs"
               onClick={(e) => {
                 e.stopPropagation();
-                navigate(`/community?tab=circles&skill=${result.id}`);
+                handleNavigate(`/search?q=${encodeURIComponent(result.name)}&type=mentors`);
               }}
             >
               Find Mentors
@@ -180,7 +179,7 @@ export function SearchResultCard({ result, onClick }: SearchResultCardProps) {
         exit={{ opacity: 0, y: -4 }}
         transition={{ duration: 0.2 }}
         className="group rounded-xl border border-border/70 bg-card p-4 hover:border-primary/40 hover:shadow-md transition-all dark:border-white/10 dark:bg-slate-900 dark:hover:shadow-primary/10 cursor-pointer"
-        onClick={() => navigate(`/community?tab=discussions`)}
+        onClick={() => handleNavigate(`/community?tab=discussions&discussionId=${result.id}`)}
       >
         <div className="flex items-start gap-3">
           <Avatar className="h-10 w-10 ring-2 ring-border/70 flex-shrink-0">
@@ -229,7 +228,7 @@ export function SearchResultCard({ result, onClick }: SearchResultCardProps) {
               className="w-full h-8 text-xs"
               onClick={(e) => {
                 e.stopPropagation();
-                navigate(`/community?tab=discussions`);
+                handleNavigate(`/community?tab=discussions&discussionId=${result.id}`);
               }}
             >
               Read Discussion
@@ -249,7 +248,7 @@ export function SearchResultCard({ result, onClick }: SearchResultCardProps) {
         exit={{ opacity: 0, y: -4 }}
         transition={{ duration: 0.2 }}
         className="group rounded-xl border border-border/70 bg-card p-4 hover:border-primary/40 hover:shadow-md transition-all dark:border-white/10 dark:bg-slate-900 dark:hover:shadow-primary/10 cursor-pointer"
-        onClick={() => navigate(`/community?tab=circles`)}
+        onClick={() => handleNavigate(`/community?tab=circles&circleId=${result.id}`)}
       >
         <div className="flex items-start gap-3">
           <div className="flex-shrink-0 h-10 w-10 rounded-lg bg-primary/10 flex items-center justify-center text-lg">
@@ -299,7 +298,7 @@ export function SearchResultCard({ result, onClick }: SearchResultCardProps) {
               className="w-full h-8 text-xs"
               onClick={(e) => {
                 e.stopPropagation();
-                navigate(`/community?tab=circles`);
+                handleNavigate(`/community?tab=circles&circleId=${result.id}`);
               }}
             >
               Join Circle

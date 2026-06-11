@@ -32,9 +32,10 @@ export interface GradedAssessment {
 
 export const skillAssessmentService = {
   generate: (skillId: string, difficulty: string = 'intermediate'): Promise<SkillAssessment> =>
-    api.post<SkillAssessment>('/ai/assessments/generate', null, {
-      params: { skillId, difficulty }
-    }),
+    api.post<SkillAssessment>(
+      `/ai/assessments/generate?skillId=${encodeURIComponent(skillId)}&difficulty=${encodeURIComponent(difficulty)}`,
+      null
+    ),
 
   submit: (assessmentId: string, answers: Record<string, string>): Promise<GradedAssessment> =>
     api.post<GradedAssessment>(`/ai/assessments/${assessmentId}/submit`, answers),

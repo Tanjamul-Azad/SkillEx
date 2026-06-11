@@ -43,6 +43,8 @@ import {
   FileText,
   Trash2,
   AlertTriangle,
+  CalendarDays,
+  Users,
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Link, Navigate, useNavigate as useNav, useSearchParams } from 'react-router-dom';
@@ -50,7 +52,7 @@ import { cn } from '@/lib/utils';
 import DashboardLayout from '@/components/layout/DashboardLayout';
 import { SkillBadge } from '@/components/ui/SkillBadge';
 import { SkillExScoreBadge } from '@/components/ui/SkillExScoreBadge';
-import type { User, Skill, Review, UserProgress, PortfolioProof, PortfolioProofType } from '@/types';
+import type { User, Skill, Review, UserProgress, PortfolioProof, PortfolioProofType, Event as CommunityEvent } from '@/types';
 import {
   connectionService,
   type ConnectionRelationship,
@@ -128,6 +130,7 @@ function SkillSection({
   const [showAll, setShowAll] = useState(false);
   const displayed = showAll ? skills : skills.slice(0, 4);
   const { toast } = useToast();
+  const navigate = useNavigate();
 
   const requestSkillCheck = async (skill: Skill) => {
     if (!profileUserId) return;
@@ -206,6 +209,39 @@ function SkillSection({
                       >
                         Skill Check
                       </Button>
+                    )}
+                    {variant === 'offer' && isOwner && (
+                      <Button
+                        type="button"
+                        size="sm"
+                        variant="ghost"
+                        className="h-7 justify-start rounded-lg px-2 text-[9px] font-bold uppercase tracking-widest text-muted-foreground hover:text-primary"
+                        onClick={() => navigate(`/ai/assessment?skillId=${skill.id}&skillName=${encodeURIComponent(skill.name)}`)}
+                      >
+                        Verify via Quiz
+                      </Button>
+                    )}
+                    {variant === 'want' && isOwner && (
+                      <div className="flex gap-1">
+                        <Button
+                          type="button"
+                          size="sm"
+                          variant="ghost"
+                          className="h-7 justify-start rounded-lg px-2 text-[9px] font-bold uppercase tracking-widest text-muted-foreground hover:text-primary"
+                          onClick={() => navigate(`/ai/tutor/${skill.id}`)}
+                        >
+                          Practice
+                        </Button>
+                        <Button
+                          type="button"
+                          size="sm"
+                          variant="ghost"
+                          className="h-7 justify-start rounded-lg px-2 text-[9px] font-bold uppercase tracking-widest text-muted-foreground hover:text-primary"
+                          onClick={() => navigate(`/ai/assessment?skillId=${skill.id}&skillName=${encodeURIComponent(skill.name)}`)}
+                        >
+                          Take Quiz
+                        </Button>
+                      </div>
                     )}
                   </div>
                 ))}
@@ -299,6 +335,73 @@ function ReviewCard({ review }: { review: Review }) {
   );
 }
 
+function ProfileEventCard({ event, relation }: { event: CommunityEvent; relation: 'hosted' | 'rsvp' }) {
+  const eventDate = new Date(event.eventDate);
+  const dateLabel = Number.isNaN(eventDate.getTime())
+    ? 'Date pending'
+    : eventDate.toLocaleString('en-US', {
+        month: 'short',
+        day: 'numeric',
+        hour: 'numeric',
+        minute: '2-digit',
+      });
+  const participationLabel = relation === 'hosted'
+    ? 'Organizing'
+    : event.rsvpState === 'GOING'
+      ? 'Going'
+      : 'Interested';
+
+  return (
+    <Link
+      to={`/community?tab=events&eventId=${event.id}`}
+      className="group block rounded-xl border border-border/45 bg-muted/15 p-4 transition-all hover:border-primary/30 hover:bg-primary/[0.03]"
+    >
+      <div className="flex flex-wrap items-center gap-2">
+        <Badge className={cn(
+          'rounded-full border-none text-[10px]',
+          relation === 'hosted'
+            ? 'bg-primary/10 text-primary'
+            : event.rsvpState === 'GOING'
+              ? 'bg-emerald-500/15 text-emerald-500'
+              : 'bg-amber-500/15 text-amber-500'
+        )}>
+          {participationLabel}
+        </Badge>
+        <Badge variant="outline" className="rounded-full text-[10px]">
+          {event.isOnline ? 'Online' : 'In person'}
+        </Badge>
+        {event.eventType && (
+          <Badge variant="secondary" className="rounded-full border-none text-[10px]">
+            {event.eventType.split('_').join(' ')}
+          </Badge>
+        )}
+      </div>
+
+      <h4 className="mt-3 line-clamp-1 text-sm font-bold text-foreground group-hover:text-primary">
+        {event.title}
+      </h4>
+      <p className="mt-1 line-clamp-2 text-xs text-muted-foreground">{event.description}</p>
+
+      <div className="mt-4 grid gap-2 text-[11px] font-medium text-muted-foreground sm:grid-cols-2">
+        <span className="flex min-w-0 items-center gap-2">
+          <CalendarDays className="h-3.5 w-3.5 shrink-0 text-primary" />
+          <span className="truncate">{dateLabel}</span>
+        </span>
+        <span className="flex min-w-0 items-center gap-2">
+          <MapPin className="h-3.5 w-3.5 shrink-0 text-amber-500" />
+          <span className="truncate">{event.isOnline ? 'Online event' : event.location}</span>
+        </span>
+        <span className="flex min-w-0 items-center gap-2 sm:col-span-2">
+          <Users className="h-3.5 w-3.5 shrink-0 text-primary" />
+          <span className="truncate">
+            {event.attendeeCount ?? event.attendees?.length ?? 0} going - {event.interestedCount ?? 0} interested
+          </span>
+        </span>
+      </div>
+    </Link>
+  );
+}
+
 const PROOF_TYPES: Array<{ value: PortfolioProofType; label: string }> = [
   { value: 'PROJECT', label: 'Project' },
   { value: 'GITHUB', label: 'GitHub' },
@@ -371,6 +474,10 @@ export default function ProfilePage() {
   const [reviewComment, setReviewComment] = useState('');
   const [reviewSubmitted, setReviewSubmitted] = useState(false);
   const [userPosts, setUserPosts] = useState<Post[]>([]);
+  const [hostedEvents, setHostedEvents] = useState<CommunityEvent[]>([]);
+  const [participatingEvents, setParticipatingEvents] = useState<CommunityEvent[]>([]);
+  const [hostedEventCount, setHostedEventCount] = useState(0);
+  const [participatingEventCount, setParticipatingEventCount] = useState(0);
   const [certificates, setCertificates] = useState<SkillCertificate[]>([]);
   const [badges, setBadges] = useState<UserBadge[]>([]);
   const [progress, setProgress] = useState<UserProgress | null>(null);
@@ -384,6 +491,7 @@ export default function ProfilePage() {
 
   const tabParam = searchParams.get('tab');
   const focusParam = searchParams.get('focus');
+
   const resolvedInitialTab = tabParam === 'reviews' || tabParam === 'activity' || tabParam === 'skills' || tabParam === 'credentials' || tabParam === 'portfolio'
     ? tabParam
     : 'skills';
@@ -402,25 +510,31 @@ export default function ProfilePage() {
     setNotFound(false);
     Promise.all([
       UserService.getById(userId),
-      ReviewService.getForUser(userId),
-      CommunityService.getUserPosts(userId),
-      certificateService.userCertificates(userId),
-      certificateService.userBadges(userId),
-      progressService.userProgress(userId),
-      progressService.userPortfolio(userId, 0, 20),
+      ReviewService.getForUser(userId).catch(() => []),
+      CommunityService.getUserPosts(userId).catch(() => ({ content: [] })),
+      CommunityService.getUserEvents(userId, 'hosted', 0, 4).catch(() => ({ content: [], totalElements: 0 })),
+      CommunityService.getUserEvents(userId, 'rsvp', 0, 4).catch(() => ({ content: [], totalElements: 0 })),
+      certificateService.userCertificates(userId).catch(() => []),
+      certificateService.userBadges(userId).catch(() => []),
+      progressService.userProgress(userId).catch(() => null),
+      progressService.userPortfolio(userId, 0, 20).catch(() => ({ content: [] })),
     ])
-      .then(([userResult, reviewsResult, postsResult, certificateResult, badgeResult, progressResult, portfolioResult]) => {
+      .then(([userResult, reviewsResult, postsResult, hostedEventResult, participatingEventResult, certificateResult, badgeResult, progressResult, portfolioResult]) => {
         const u = userResult as User;
         setProfileUser(u);
         setOfferedSkills(u.skillsOffered ?? []);
         setWantedSkills(u.skillsWanted ?? []);
-        const reviews = (reviewsResult as unknown as { content?: Review[] }).content ?? (reviewsResult as unknown as Review[]) ?? [];
+        const reviews = (reviewsResult as unknown as { content?: Review[] })?.content ?? (reviewsResult as unknown as Review[]) ?? [];
         setUserReviews(reviews);
-        setUserPosts(postsResult.content ?? []);
+        setUserPosts(postsResult?.content ?? []);
+        setHostedEvents(hostedEventResult?.content ?? []);
+        setParticipatingEvents(participatingEventResult?.content ?? []);
+        setHostedEventCount(hostedEventResult?.totalElements ?? 0);
+        setParticipatingEventCount(participatingEventResult?.totalElements ?? 0);
         setCertificates(certificateResult ?? []);
         setBadges(badgeResult ?? []);
         setProgress(progressResult);
-        setPortfolioProofs(portfolioResult.content ?? []);
+        setPortfolioProofs(portfolioResult?.content ?? []);
       })
       .catch(() => setNotFound(true))
       .finally(() => setLoading(false));
@@ -474,6 +588,7 @@ export default function ProfilePage() {
   const isPendingSent = relationshipStatus === 'PENDING_SENT';
   const isPendingReceived = relationshipStatus === 'PENDING_RECEIVED';
   const emphasizeOfferedSkills = activeTab === 'skills' && focusParam === 'offered';
+  const hasActivity = userPosts.length > 0 || hostedEvents.length > 0 || participatingEvents.length > 0;
   const handleTabChange = (next: string) => {
     if (next !== 'skills' && next !== 'reviews' && next !== 'activity' && next !== 'credentials' && next !== 'portfolio') return;
     setActiveTab(next);
@@ -1189,7 +1304,7 @@ export default function ProfilePage() {
           {/* ── Activity Tab ── */}
           <TabsContent value="activity" className="mt-6">
             <div className="space-y-6">
-              {userPosts.length === 0 ? (
+              {!hasActivity ? (
                 <div className="p-12 text-center border border-border/40 border-dashed rounded-2xl">
                   <div className="w-16 h-16 mx-auto rounded-full bg-muted/40 border border-border/30 flex items-center justify-center mb-4">
                     <Zap className="w-8 h-8 text-muted-foreground/30" />
@@ -1200,15 +1315,69 @@ export default function ProfilePage() {
                   </p>
                 </div>
               ) : (
-                <div className="grid grid-cols-1 gap-6">
-                  {userPosts.map(post => (
-                    <PostCard 
-                      key={post.id} 
-                      post={post} 
-                      onDelete={(id) => setUserPosts(prev => prev.filter(p => p.id !== id))}
-                    />
-                  ))}
-                </div>
+                <>
+                  {(hostedEvents.length > 0 || participatingEvents.length > 0) && (
+                    <div className="rounded-2xl border border-border/50 bg-card p-5">
+                      <div className="mb-4 flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+                        <div>
+                          <h3 className="text-sm font-bold uppercase tracking-widest text-foreground">Community events</h3>
+                          <p className="mt-1 text-xs text-muted-foreground">
+                            Hosted, registered, and interested events from live RSVP records.
+                          </p>
+                        </div>
+                        <Link to="/community?tab=events" className="text-[10px] font-bold uppercase tracking-widest text-primary hover:underline">
+                          Open events
+                        </Link>
+                      </div>
+
+                      <div className="grid gap-4 lg:grid-cols-2">
+                        <div className="space-y-3">
+                          <div className="flex items-center justify-between">
+                            <p className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">Organized</p>
+                            <Badge variant="outline" className="rounded-full text-[10px]">{hostedEventCount}</Badge>
+                          </div>
+                          {hostedEvents.length === 0 ? (
+                            <div className="rounded-xl border border-dashed border-border/45 bg-muted/10 p-5 text-xs text-muted-foreground">
+                              {isOwnProfile ? 'Events you create will appear here.' : 'No hosted events yet.'}
+                            </div>
+                          ) : (
+                            hostedEvents.map((event) => (
+                              <ProfileEventCard key={event.id} event={event} relation="hosted" />
+                            ))
+                          )}
+                        </div>
+
+                        <div className="space-y-3">
+                          <div className="flex items-center justify-between">
+                            <p className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">Going / Interested</p>
+                            <Badge variant="outline" className="rounded-full text-[10px]">{participatingEventCount}</Badge>
+                          </div>
+                          {participatingEvents.length === 0 ? (
+                            <div className="rounded-xl border border-dashed border-border/45 bg-muted/10 p-5 text-xs text-muted-foreground">
+                              {isOwnProfile ? 'Events you register for or follow will appear here.' : 'No RSVP activity yet.'}
+                            </div>
+                          ) : (
+                            participatingEvents.map((event) => (
+                              <ProfileEventCard key={event.id} event={event} relation="rsvp" />
+                            ))
+                          )}
+                        </div>
+                      </div>
+                    </div>
+                  )}
+
+                  {userPosts.length > 0 && (
+                    <div className="grid grid-cols-1 gap-6">
+                      {userPosts.map(post => (
+                        <PostCard
+                          key={post.id}
+                          post={post}
+                          onDelete={(id) => setUserPosts(prev => prev.filter(p => p.id !== id))}
+                        />
+                      ))}
+                    </div>
+                  )}
+                </>
               )}
             </div>
           </TabsContent>

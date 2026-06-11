@@ -17,7 +17,6 @@ import com.skillex.repository.SkillEmbeddingRepository;
 import com.skillex.repository.SkillRepository;
 import com.skillex.repository.UserRepository;
 import com.skillex.repository.UserSkillOfferedRepository;
-import com.skillex.service.SkillTrustService;
 import com.skillex.service.UnifiedSearchService;
 import com.skillex.service.embedding.TextEmbeddingProvider;
 import lombok.RequiredArgsConstructor;
@@ -62,7 +61,6 @@ public class UnifiedSearchServiceImpl implements UnifiedSearchService {
     private final UserSkillOfferedRepository userSkillOfferedRepository;
     private final DiscussionRepository discussionRepository;
     private final SkillCircleRepository skillCircleRepository;
-    private final SkillTrustService skillTrustService;
 
     @Override
     public List<SearchResultDto> search(String query, int limit) {
@@ -169,8 +167,8 @@ public class UnifiedSearchServiceImpl implements UnifiedSearchService {
                     ))
                     .collect(Collectors.toList());
 
-                // Get trust score
-                double trustScore = skillTrustService.getTrustScore(user.getId());
+                double avgRating = user.getRating() != null ? user.getRating().doubleValue() : 0.0;
+                int sessionsCompleted = user.getSessionsCompleted() != null ? user.getSessionsCompleted() : 0;
 
                 MentorResult result = new MentorResult(
                     user.getId(),
@@ -178,9 +176,9 @@ public class UnifiedSearchServiceImpl implements UnifiedSearchService {
                     user.getAvatar(),
                     user.getBio() != null ? user.getBio() : "",
                     topSkills,
-                    trustScore,
-                    0, // sessionsCompleted - would need to query separately
-                    0.0, // avgRating - would need to query separately
+                    avgRating,
+                    sessionsCompleted,
+                    avgRating,
                     relevance
                 );
                 results.add(result);

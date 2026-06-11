@@ -1,4 +1,4 @@
-import apiClient from './apiClient';
+import { api } from './api';
 
 export interface ProfileAssistantSuggestion {
   suggestions: string[];
@@ -14,39 +14,36 @@ export const profileAssistantService = {
   /**
    * Generate 3 professional bio suggestions from a rough self-description.
    */
-  async suggestBios(topic: string): Promise<ProfileAssistantSuggestion> {
-    const response = await apiClient.post<{ data: ProfileAssistantSuggestion }>(
+  suggestBios(topic: string): Promise<ProfileAssistantSuggestion> {
+    return api.post<ProfileAssistantSuggestion>(
       '/ai/profile-assistant/suggest-bio',
       { topic }
     );
-    return response.data.data;
   },
 
   /**
    * Generate 3 polished skill descriptions from skill name and level.
    */
-  async suggestSkillDescriptions(
+  suggestSkillDescriptions(
     skillName: string,
     level: string
   ): Promise<ProfileAssistantSuggestion> {
-    const response = await apiClient.post<{ data: ProfileAssistantSuggestion }>(
+    return api.post<ProfileAssistantSuggestion>(
       '/ai/profile-assistant/suggest-skill-description',
       { skillName, level }
     );
-    return response.data.data;
   },
 
   /**
    * Generate 3 compelling circle blurbs from circle name and topic.
    */
-  async suggestCircleBlurbs(
+  suggestCircleBlurbs(
     circleName: string,
     topic: string
   ): Promise<ProfileAssistantSuggestion> {
-    const response = await apiClient.post<{ data: ProfileAssistantSuggestion }>(
+    return api.post<ProfileAssistantSuggestion>(
       '/ai/profile-assistant/suggest-circle-blurb',
       { circleName, topic }
     );
-    return response.data.data;
   },
 };

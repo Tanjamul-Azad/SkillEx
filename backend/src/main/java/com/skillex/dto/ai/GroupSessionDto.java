@@ -29,6 +29,22 @@ public record GroupSessionDto(
         int maxAttendees
     ) {}
 
+    public record AiDraftRequest(
+        String skillId,
+        String audienceLevel,
+        String goal
+    ) {}
+
+    public record WorkshopDraft(
+        String title,
+        String description,
+        int durationMinutes,
+        int maxAttendees,
+        String agenda,
+        String prerequisites,
+        String takeaways
+    ) {}
+
     public record Attendee(
         String userId,
         String name,

@@ -13,6 +13,8 @@ const DEBOUNCE_MS = 400;
 interface UnifiedSearchBoxProps {
   className?: string;
   placeholder?: string;
+  initialQuery?: string;
+  onQueryChange?: (query: string) => void;
   onResultSelected?: (result: SearchResult) => void;
 }
 
@@ -23,16 +25,22 @@ interface UnifiedSearchBoxProps {
 export function UnifiedSearchBox({
   className,
   placeholder = 'Search mentors, skills, discussions...',
+  initialQuery = '',
+  onQueryChange,
   onResultSelected,
 }: UnifiedSearchBoxProps) {
   const rootRef = useRef<HTMLDivElement>(null);
-  const [query, setQuery] = useState('');
+  const [query, setQuery] = useState(initialQuery);
   const [debouncedQuery, setDebouncedQuery] = useState('');
   const [open, setOpen] = useState(false);
   const [loading, setLoading] = useState(false);
   const [results, setResults] = useState<SearchResult[]>([]);
   const [selectedIndex, setSelectedIndex] = useState(0);
   const resultsRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    setQuery(initialQuery);
+  }, [initialQuery]);
 
   // Debounce query
   useEffect(() => {
@@ -147,7 +155,9 @@ export function UnifiedSearchBox({
           <Input
             value={query}
             onChange={(e) => {
-              setQuery(e.target.value);
+              const nextQuery = e.target.value;
+              setQuery(nextQuery);
+              onQueryChange?.(nextQuery);
               if (!open) setOpen(true);
             }}
             onKeyDown={handleKeyDown}

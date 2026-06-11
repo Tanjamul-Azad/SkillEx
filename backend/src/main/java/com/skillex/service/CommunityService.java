@@ -17,9 +17,11 @@ public interface CommunityService {
 
     CommunityDtos.EventDto getEvent(String viewerId, String eventId);
 
+    PagedResponse<CommunityDtos.EventDto> getUserEvents(String userId, String relation, int page, int size);
+
     CommunityDtos.EventDto createEvent(String organizerId, CreateEventRequest req);
 
-    void attendEvent(String userId, String eventId);
+    CommunityDtos.EventDto attendEvent(String userId, String eventId);
 
     CommunityDtos.EventDto interestEvent(String userId, String eventId);
 

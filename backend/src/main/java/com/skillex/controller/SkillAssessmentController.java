@@ -31,7 +31,8 @@ public class SkillAssessmentController {
         @PathVariable String assessmentId,
         @RequestBody Map<String, String> answers
     ) {
-        return ApiResponse.ok(assessmentService.submitAnswers(assessmentId, answers));
+        String userId = (String) auth.getPrincipal();
+        return ApiResponse.ok(assessmentService.submitAnswers(userId, assessmentId, answers));
     }
 
     @GetMapping("/latest/{skillId}")

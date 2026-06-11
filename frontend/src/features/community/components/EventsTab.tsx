@@ -1,6 +1,6 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { useSearchParams } from 'react-router-dom';
-import { Calendar, MapPin, Users, Plus, Loader2, ExternalLink, Sparkles } from 'lucide-react';
+import { Calendar, MapPin, Users, Plus, Loader2, ExternalLink, Sparkles, Clock } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
@@ -23,6 +23,73 @@ import { CommunityService } from '@/services/communityService';
 import { SkillService } from '@/services/skillService';
 import type { Event, Skill, SkillCircle } from '@/types';
 
+// ─── Skill recommendation engine ─────────────────────────────────────────────
+// Maps lower-case keywords (found in the purpose/description text) to skill category names.
+const CATEGORY_KEYWORDS: Record<string, string[]> = {
+  Programming: [
+    'java','spring','springboot','kotlin','python','django','flask','c++','c#','nodejs',
+    'express','php','laravel','ruby','rails','swift','objective-c','rust','go','golang',
+    'code','coding','programming','software','backend','api','rest','microservice',
+    'algorithm','data structure','oop','functional',
+  ],
+  'Web Development': [
+    'html','css','javascript','typescript','react','vue','angular','svelte','nextjs',
+    'nuxt','gatsby','webpack','vite','frontend','web','ui','ux','tailwind','bootstrap',
+    'responsive','dom','browser','fullstack','full-stack','full stack',
+  ],
+  'Data Science': [
+    'data','dataset','pandas','numpy','matplotlib','seaborn','sql','database','postgres',
+    'mongodb','mysql','etl','pipeline','analytics','statistics','excel','tableau','powerbi',
+    'bi','visualization','dashboards',
+  ],
+  'AI/ML': [
+    'machine learning','ml','deep learning','neural','ai','llm','gpt','bert','transformers',
+    'tensorflow','pytorch','keras','scikit','model','training','inference','nlp','cv','computer vision',
+  ],
+  Design: [
+    'design','figma','sketch','photoshop','illustrator','xd','adobe','ui design','ux design',
+    'graphic','logo','branding','typography','wireframe','prototype','colour','color','visual',
+  ],
+  'Blockchain': [
+    'blockchain','solidity','ethereum','web3','crypto','nft','smart contract','defi','token','ledger',
+  ],
+  'Public Speaking': [
+    'speak','speech','presentation','debate','communication','storytelling','pitch','rhetoric','toastmaster',
+  ],
+  'English Writing': [
+    'english','write','writing','grammar','ielts','toefl','essay','content','copywriting','blog','journalism',
+  ],
+  'Video Editing': [
+    'video','edit','premiere','after effects','davinci','motion','animation','youtube','shorts','reel','film',
+  ],
+  Photography: [
+    'photo','photography','camera','lens','lightroom','raw','portrait','landscape','shoot',
+  ],
+  Music: [
+    'music','guitar','piano','drum','bass','chord','melody','compose','audio','sound','mixing','producer',
+  ],
+};
+
+function deriveSuggestedSkills(
+  text: string,
+  skills: Skill[],
+  selectedIds: string[],
+  maxResults = 8,
+): Skill[] {
+  if (!text.trim()) return [];
+  const lower = text.toLowerCase();
+  const matchedCategories = new Set<string>();
+  for (const [category, keywords] of Object.entries(CATEGORY_KEYWORDS)) {
+    if (keywords.some(kw => lower.includes(kw))) {
+      matchedCategories.add(category);
+    }
+  }
+  if (matchedCategories.size === 0) return [];
+  return skills
+    .filter(s => matchedCategories.has(s.category) && !selectedIds.includes(s.id))
+    .slice(0, maxResults);
+}
+
 const EVENT_TYPES = [
   { value: 'ANNOUNCEMENT', label: 'Announcement' },
   { value: 'WORKSHOP', label: 'Workshop' },
@@ -38,6 +105,24 @@ const formatEnumLabel = (value?: string | null) =>
     .split('_')
     .map(part => part.charAt(0).toUpperCase() + part.slice(1))
     .join(' ');
+
+const isPastEvent = (event: Event) => {
+  const time = new Date(event.eventDate).getTime();
+  return !Number.isNaN(time) && time < Date.now();
+};
+
+const formatEventDate = (value: string) => {
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return 'Date pending';
+  const sameYear = date.getFullYear() === new Date().getFullYear();
+  return date.toLocaleString('en-US', {
+    month: 'short',
+    day: 'numeric',
+    ...(sameYear ? {} : { year: 'numeric' }),
+    hour: 'numeric',
+    minute: '2-digit',
+  });
+};
 
 interface EventCardProps {
   event: Event;
@@ -60,15 +145,23 @@ const EventCard = React.memo(({
 }: EventCardProps) => {
   const attending = event.rsvpState === 'GOING' || Boolean(currentUserId && event.attendees?.some(attendee => attendee.id === currentUserId));
   const interested = event.rsvpState === 'INTERESTED';
+  const past = isPastEvent(event);
   const attendeeCount = Number(event.attendeeCount ?? event.attendees?.length ?? 0);
   const interestedCount = Number(event.interestedCount ?? 0);
 
   return (
-    <div className="product-row group grid gap-4 p-4 sm:grid-cols-[minmax(0,1.4fr)_minmax(240px,0.8fr)_auto] sm:items-center">
+    <div className={cn('product-row group grid gap-4 p-4 sm:grid-cols-[minmax(0,1.4fr)_minmax(240px,0.8fr)_auto] sm:items-center', past && 'opacity-75')}>
       <div className="min-w-0">
         <div className="mb-2 flex flex-wrap items-center gap-2">
-          <Badge className={cn('rounded-full border px-2.5 py-0.5 text-[9px] font-bold uppercase tracking-widest', attending ? 'border-emerald-500/30 bg-emerald-500/10 text-emerald-400' : 'border-primary/25 bg-primary/10 text-primary')}>
-            {attending ? 'Registered' : 'Upcoming'}
+          <Badge className={cn(
+            'rounded-full border px-2.5 py-0.5 text-[9px] font-bold uppercase tracking-widest',
+            past
+              ? 'border-border/60 bg-muted/40 text-muted-foreground'
+              : attending
+                ? 'border-emerald-500/30 bg-emerald-500/10 text-emerald-400'
+                : 'border-primary/25 bg-primary/10 text-primary'
+          )}>
+            {past ? 'Past' : attending ? 'Registered' : 'Upcoming'}
           </Badge>
           <span className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
             {event.isOnline ? 'Online' : 'In person'}
@@ -100,7 +193,7 @@ const EventCard = React.memo(({
       <div className="grid gap-2 text-sm text-foreground/90">
         <div className="flex items-center gap-2">
           <Calendar className="h-4 w-4 text-primary" />
-          <span>{new Date(event.eventDate).toLocaleString('en-US', { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' })}</span>
+          <span>{formatEventDate(event.eventDate)}</span>
         </div>
         <div className="flex items-center gap-2">
           <MapPin className="h-4 w-4 text-secondary" />
@@ -115,21 +208,21 @@ const EventCard = React.memo(({
       <div className="flex flex-col gap-2 sm:min-w-[150px]">
         <Button
           size="sm"
-          disabled={busy || attending}
+          disabled={busy || past}
           className={cn(
             'rounded-xl px-5 text-[10px] font-bold uppercase tracking-widest',
-            attending ? 'bg-emerald-500/15 text-emerald-400 hover:bg-emerald-500/15' : 'bg-primary text-primary-foreground hover:bg-primary/90'
+            attending ? 'bg-emerald-500/15 text-emerald-400 hover:bg-emerald-500/25' : 'bg-primary text-primary-foreground hover:bg-primary/90'
           )}
           onClick={() => onAttend(event)}
         >
-          {busy ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : attending ? 'Going' : 'Register'}
+          {busy ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : past ? 'Ended' : attending ? 'Cancel RSVP' : 'Register'}
         </Button>
         <div className="grid grid-cols-2 gap-2">
           <Button
             size="sm"
             variant="outline"
-            disabled={interestBusy || interested || attending}
-            className={cn("rounded-xl text-[10px] font-bold uppercase tracking-widest", interested && "border-secondary/40 bg-secondary/10 text-secondary")}
+            disabled={interestBusy || attending || past}
+            className={cn("rounded-xl text-[10px] font-bold uppercase tracking-widest", interested && "border-secondary/40 bg-secondary/10 text-secondary hover:bg-secondary/20")}
             onClick={() => onInterest(event)}
           >
             {interestBusy ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : interested ? 'Interested' : '+ Interested'}
@@ -168,6 +261,7 @@ function EventDetailDialog({
   const interestedCount = Number(event.interestedCount ?? 0);
   const going = event.rsvpState === 'GOING';
   const interested = event.rsvpState === 'INTERESTED';
+  const past = isPastEvent(event);
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -175,7 +269,7 @@ function EventDetailDialog({
         <DialogHeader>
           <div className="flex flex-wrap items-center gap-2">
             <Badge className="rounded-full bg-primary/15 text-primary">{formatEnumLabel(event.eventType)}</Badge>
-            <Badge variant="outline" className="rounded-full">{formatEnumLabel(event.status)}</Badge>
+            <Badge variant="outline" className="rounded-full">{past ? 'Past' : formatEnumLabel(event.status)}</Badge>
             {event.circleName && <Badge variant="outline" className="rounded-full">{event.circleName}</Badge>}
           </div>
           <DialogTitle className="font-headline text-2xl">{event.title}</DialogTitle>
@@ -187,7 +281,7 @@ function EventDetailDialog({
             <div className="rounded-xl border border-border/50 bg-muted/20 p-4">
               <h4 className="mb-3 text-xs font-bold uppercase tracking-widest text-muted-foreground">Event Details</h4>
               <div className="space-y-3 text-sm">
-                <div className="flex items-center gap-2"><Calendar className="h-4 w-4 text-primary" />{new Date(event.eventDate).toLocaleString()}</div>
+                <div className="flex items-center gap-2"><Calendar className="h-4 w-4 text-primary" />{formatEventDate(event.eventDate)}</div>
                 <div className="flex items-center gap-2"><MapPin className="h-4 w-4 text-secondary" />{event.isOnline ? 'Online event' : event.location || 'Location pending'}</div>
                 {event.meetingUrl && (
                   <a className="flex items-center gap-2 text-primary hover:underline" href={event.meetingUrl} target="_blank" rel="noreferrer">
@@ -238,13 +332,13 @@ function EventDetailDialog({
 
         <DialogFooter>
           <Button variant="outline" onClick={() => onOpenChange(false)}>Close</Button>
-          <Button variant="outline" disabled={interestBusy || interested || going} className={cn(interested && "border-secondary/40 bg-secondary/10 text-secondary")} onClick={() => onInterest(event)}>
+          <Button variant="outline" disabled={interestBusy || going || past} className={cn(interested && "border-secondary/40 bg-secondary/10 text-secondary hover:bg-secondary/20")} onClick={() => onInterest(event)}>
             {interestBusy ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Sparkles className="mr-2 h-4 w-4" />}
             {interested ? 'Interested' : '+ Interested'}
           </Button>
-          <Button disabled={busy || going} onClick={() => onAttend(event)}>
+          <Button disabled={busy || past} onClick={() => onAttend(event)}>
             {busy ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Calendar className="mr-2 h-4 w-4" />}
-            {going ? 'Going' : 'Register'}
+            {past ? 'Ended' : going ? 'Cancel RSVP' : 'Register'}
           </Button>
         </DialogFooter>
       </DialogContent>
@@ -266,18 +360,29 @@ export const EventsTab = () => {
   const [submitting, setSubmitting] = useState(false);
   const [attendBusy, setAttendBusy] = useState<Record<string, boolean>>({});
   const [interestBusy, setInterestBusy] = useState<Record<string, boolean>>({});
+  // Split date/time state for the custom picker
+  const [eventDatePart, setEventDatePart] = useState('');
+  const [eventTimePart, setEventTimePart] = useState('');
+
+  // Derive combined ISO string from split parts (local time)
+  const combinedEventDate = eventDatePart && eventTimePart ? `${eventDatePart}T${eventTimePart}` : '';
+
   const [eventForm, setEventForm] = useState({
     title: '',
     description: '',
-    eventDate: '',
     location: '',
     isOnline: true,
     eventType: 'WORKSHOP',
     circleId: '',
-    meetingUrl: '',
     skillIds: [] as string[],
   });
-  const filterChips = ['All', 'Online', 'In-Person'];
+
+  const suggestedSkills = useMemo(
+    () => deriveSuggestedSkills(`${eventForm.title} ${eventForm.description}`, skills, eventForm.skillIds),
+    [eventForm.title, eventForm.description, skills, eventForm.skillIds],
+  );
+
+  const filterChips = ['All', 'Joined', 'Explore', 'Online', 'In-Person'];
   const memberCircles = circles.filter(circle =>
     circle.memberRole === 'OWNER'
     || circle.memberRole === 'MEMBER'
@@ -285,7 +390,7 @@ export const EventsTab = () => {
   );
 
   const loadEvents = useCallback(async () => {
-    const response = await CommunityService.getEvents();
+    const response = await CommunityService.getEvents(0, 60);
     setEvents(response.content ?? []);
   }, []);
 
@@ -307,21 +412,34 @@ export const EventsTab = () => {
   }, [searchParams]);
 
   const filteredEvents = events.filter(event => {
-    if (activeFilter === 'All') return true;
+    const isJoined = event.rsvpState === 'GOING' 
+      || event.rsvpState === 'INTERESTED' 
+      || Boolean(user?.id && event.attendees?.some(a => a.id === user.id));
+
+    if (activeFilter === 'Joined') return isJoined;
+    if (activeFilter === 'Explore') return !isJoined;
     if (activeFilter === 'Online') return event.isOnline;
     if (activeFilter === 'In-Person') return !event.isOnline;
     return true;
   });
+  const upcomingEvents = filteredEvents
+    .filter(event => !isPastEvent(event))
+    .sort((a, b) => new Date(a.eventDate).getTime() - new Date(b.eventDate).getTime());
+  const pastEvents = filteredEvents
+    .filter(isPastEvent)
+    .sort((a, b) => new Date(b.eventDate).getTime() - new Date(a.eventDate).getTime());
 
   const handleAttend = async (event: Event) => {
     setAttendBusy(prev => ({ ...prev, [event.id]: true }));
     try {
-      await CommunityService.attendEvent(event.id);
-      await loadEvents();
-      if (selectedEvent?.id === event.id) {
-        CommunityService.getEvent(event.id).then(setSelectedEvent).catch(() => {});
+      const updated = await CommunityService.attendEvent(event.id);
+      setEvents(prev => prev.map(item => item.id === updated.id ? updated : item));
+      setSelectedEvent(prev => prev?.id === updated.id ? updated : prev);
+      if (updated.rsvpState === 'GOING') {
+        toast({ title: 'Registration confirmed', description: `You are going to ${event.title}.`, variant: 'success' });
+      } else {
+        toast({ title: 'Registration cancelled', description: `You are no longer registered for ${event.title}.` });
       }
-      toast({ title: 'Registration confirmed', description: `You are going to ${event.title}.`, variant: 'success' });
     } catch (error) {
       toast({
         title: 'Registration failed',
@@ -343,10 +461,16 @@ export const EventsTab = () => {
       const updated = await CommunityService.interestEvent(event.id);
       setEvents(prev => prev.map(item => item.id === updated.id ? updated : item));
       setSelectedEvent(prev => prev?.id === updated.id ? updated : prev);
-      toast({ title: 'Marked interested', description: `You will get updates for ${event.title}.`, variant: 'success' });
+      if (updated.rsvpState === 'INTERESTED') {
+        toast({ title: 'Marked interested', description: `You will get updates for ${event.title}.`, variant: 'success' });
+      } else if (updated.rsvpState === 'GOING') {
+        toast({ title: 'Already registered', description: `You are going to ${event.title}.` });
+      } else {
+        toast({ title: 'Interest removed', description: `You will no longer get updates for ${event.title}.` });
+      }
     } catch (error) {
       toast({
-        title: 'Could not mark interest',
+        title: 'Could not update interest',
         description: error instanceof Error ? error.message : 'Please try again.',
         variant: 'destructive',
       });
@@ -365,11 +489,13 @@ export const EventsTab = () => {
   };
 
   const handleCreateEvent = async () => {
-    if (!eventForm.title.trim() || !eventForm.eventDate) {
+    if (!eventForm.title.trim() || !combinedEventDate) {
       toast({ title: 'Event title and time are required', variant: 'destructive' });
       return;
     }
-    if (new Date(eventForm.eventDate).getTime() <= Date.now()) {
+    // Parse as local time: datetime-local string is treated as local by the browser
+    const eventMs = new Date(combinedEventDate).getTime();
+    if (Number.isNaN(eventMs) || eventMs <= Date.now()) {
       toast({ title: 'Choose a future event time', variant: 'destructive' });
       return;
     }
@@ -378,19 +504,20 @@ export const EventsTab = () => {
     try {
       const created = await CommunityService.createEvent({
         title: eventForm.title.trim(),
-        description: eventForm.description.trim(),
-        eventDate: eventForm.eventDate,
+        description: eventForm.description?.trim() ?? '',
+        eventDate: combinedEventDate,
         location: eventForm.isOnline ? 'Online' : eventForm.location.trim(),
         isOnline: eventForm.isOnline,
         eventType: eventForm.eventType,
         circleId: eventForm.circleId || undefined,
-        meetingUrl: eventForm.meetingUrl.trim() || undefined,
         coverGradient: 'from-slate-950 via-slate-900 to-primary/30',
         skillIds: eventForm.skillIds,
       });
       setEvents(prev => [created, ...prev]);
       setCreateOpen(false);
-      setEventForm({ title: '', description: '', eventDate: '', location: '', isOnline: true, eventType: 'WORKSHOP', circleId: '', meetingUrl: '', skillIds: [] });
+      setEventDatePart('');
+      setEventTimePart('');
+      setEventForm({ title: '', description: '', location: '', isOnline: true, eventType: 'WORKSHOP', circleId: '', skillIds: [] });
       toast({ title: 'Event created', description: 'Your event is live in the community.', variant: 'success' });
     } catch (error) {
       toast({
@@ -441,7 +568,7 @@ export const EventsTab = () => {
 
       <div className="product-panel overflow-hidden">
         <div className="product-table">
-          {filteredEvents.map(event => (
+          {upcomingEvents.map(event => (
             <EventCard
               key={event.id}
               event={event}
@@ -453,15 +580,38 @@ export const EventsTab = () => {
               onOpen={openEvent}
             />
           ))}
-          {filteredEvents.length === 0 && (
+          {upcomingEvents.length === 0 && (
             <div className="product-empty">
               <Calendar className="mx-auto mb-3 h-8 w-8 text-muted-foreground/40" />
-              <p className="font-bold text-foreground">No events found</p>
+              <p className="font-bold text-foreground">No upcoming events</p>
               <p className="mt-1 text-sm text-muted-foreground">Create one for this community lane.</p>
             </div>
           )}
         </div>
       </div>
+
+      {pastEvents.length > 0 && (
+        <div className="product-panel overflow-hidden">
+          <div className="border-b border-border/40 px-5 py-4">
+            <h3 className="font-headline text-lg font-extrabold text-foreground">Past events</h3>
+            <p className="mt-1 text-sm text-muted-foreground">Sessions that already wrapped up. Open one to review the details and attendance.</p>
+          </div>
+          <div className="product-table">
+            {pastEvents.map(event => (
+              <EventCard
+                key={event.id}
+                event={event}
+                currentUserId={user?.id}
+                busy={attendBusy[event.id]}
+                interestBusy={interestBusy[event.id]}
+                onAttend={handleAttend}
+                onInterest={handleInterest}
+                onOpen={openEvent}
+              />
+            ))}
+          </div>
+        </div>
+      )}
 
       <Dialog open={createOpen} onOpenChange={setCreateOpen}>
         <DialogContent className="sm:max-w-2xl">
@@ -477,43 +627,64 @@ export const EventsTab = () => {
                 setEventForm(prev => ({ ...prev, title: value }));
               }} placeholder="Portfolio review night" />
             </div>
-            <div className="grid gap-4 sm:grid-cols-2">
-              <div className="space-y-2">
-                <Label htmlFor="event-date">Date and time</Label>
-                <Input
-                  id="event-date"
-                  type="datetime-local"
-                  value={eventForm.eventDate}
-                  onInput={event => {
-                    const value = event.currentTarget.value;
-                    setEventForm(prev => ({ ...prev, eventDate: value }));
-                  }}
-                  onChange={event => {
-                    const value = event.currentTarget.value;
-                    setEventForm(prev => ({ ...prev, eventDate: value }));
-                  }}
-                />
-              </div>
-              <div className="space-y-2">
-              <Label>Format</Label>
-                <div className="grid grid-cols-2 gap-2">
-                  {[
-                    { value: true, label: 'Online' },
-                    { value: false, label: 'In person' },
-                  ].map(option => (
-                    <button
-                      key={option.label}
-                      type="button"
-                      onClick={() => setEventForm(prev => ({ ...prev, isOnline: option.value }))}
-                      className={cn(
-                        'rounded-xl border px-3 py-2 text-sm font-semibold transition-all',
-                        eventForm.isOnline === option.value ? 'border-primary/40 bg-primary/15 text-primary' : 'border-border/70 bg-background/70 text-muted-foreground'
-                      )}
-                    >
-                      {option.label}
-                    </button>
-                  ))}
+            {/* Date & Time picker row */}
+            <div className="space-y-2">
+              <Label>Date and time</Label>
+              <div className="grid gap-3 sm:grid-cols-2">
+                {/* Calendar date picker */}
+                <div className="relative">
+                  <Calendar className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-primary" />
+                  <input
+                    id="event-date"
+                    type="date"
+                    value={eventDatePart}
+                    min={new Date().toISOString().slice(0, 10)}
+                    onChange={e => setEventDatePart(e.target.value)}
+                    className="h-10 w-full rounded-xl border border-input bg-background pl-9 pr-3 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-primary/40"
+                  />
                 </div>
+                {/* Clock time picker */}
+                <div className="relative">
+                  <Clock className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-primary" />
+                  <input
+                    id="event-time"
+                    type="time"
+                    value={eventTimePart}
+                    onChange={e => setEventTimePart(e.target.value)}
+                    className="h-10 w-full rounded-xl border border-input bg-background pl-9 pr-3 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-primary/40"
+                  />
+                </div>
+              </div>
+              {combinedEventDate && (
+                <p className="text-xs text-muted-foreground">
+                  Scheduled for{' '}
+                  <span className="font-semibold text-primary">
+                    {new Date(combinedEventDate).toLocaleString('en-US', { weekday: 'short', month: 'short', day: 'numeric', year: 'numeric', hour: 'numeric', minute: '2-digit' })}
+                  </span>
+                </p>
+              )}
+            </div>
+
+            {/* Format toggle */}
+            <div className="space-y-2">
+              <Label>Format</Label>
+              <div className="grid grid-cols-2 gap-2">
+                {[
+                  { value: true, label: 'Online' },
+                  { value: false, label: 'In person' },
+                ].map(option => (
+                  <button
+                    key={option.label}
+                    type="button"
+                    onClick={() => setEventForm(prev => ({ ...prev, isOnline: option.value }))}
+                    className={cn(
+                      'rounded-xl border px-3 py-2 text-sm font-semibold transition-all',
+                      eventForm.isOnline === option.value ? 'border-primary/40 bg-primary/15 text-primary' : 'border-border/70 bg-background/70 text-muted-foreground'
+                    )}
+                  >
+                    {option.label}
+                  </button>
+                ))}
               </div>
             </div>
             <div className="grid gap-4 sm:grid-cols-2">
@@ -559,12 +730,11 @@ export const EventsTab = () => {
               </div>
             )}
             {eventForm.isOnline && (
-              <div className="space-y-2">
-                <Label htmlFor="event-meeting-url">Meeting link</Label>
-                <Input id="event-meeting-url" value={eventForm.meetingUrl} onChange={event => {
-                  const value = event.currentTarget.value;
-                  setEventForm(prev => ({ ...prev, meetingUrl: value }));
-                }} placeholder="https://meet.google.com/..." />
+              <div className="rounded-xl border border-primary/20 bg-primary/5 px-4 py-3">
+                <p className="flex items-center gap-2 text-xs font-semibold text-primary">
+                  <Sparkles className="h-3.5 w-3.5" />
+                  This is an in-app event — attendees will join via the built-in SkillEx meeting room when the session starts.
+                </p>
               </div>
             )}
             <div className="space-y-2">
@@ -574,6 +744,36 @@ export const EventsTab = () => {
                 setEventForm(prev => ({ ...prev, description: value }));
               }} placeholder="What people will practice, build, or review..." />
             </div>
+
+            {/* ── AI-style skill recommendation strip ── */}
+            {suggestedSkills.length > 0 && (
+              <div className="space-y-2">
+                <div className="flex items-center gap-2">
+                  <Sparkles className="h-3.5 w-3.5 text-primary" />
+                  <span className="text-[10px] font-bold uppercase tracking-widest text-primary">
+                    Recommended skills
+                  </span>
+                </div>
+                <div className="flex flex-wrap gap-2">
+                  {suggestedSkills.map(skill => (
+                    <button
+                      key={skill.id}
+                      type="button"
+                      onClick={() => {
+                        if (!eventForm.skillIds.includes(skill.id) && eventForm.skillIds.length < 4) {
+                          setEventForm(prev => ({ ...prev, skillIds: [...prev.skillIds, skill.id] }));
+                        }
+                      }}
+                      className="flex items-center gap-1.5 rounded-xl border border-primary/30 bg-primary/10 px-3 py-1.5 text-[10px] font-bold uppercase tracking-widest text-primary transition-all hover:bg-primary/20 hover:scale-105 active:scale-95"
+                    >
+                      <Plus className="h-3 w-3" />
+                      {skill.name}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            )}
+
             <div className="space-y-2">
               <Label>Target skills</Label>
               <SkillPicker skills={skills} selected={eventForm.skillIds} onChange={ids => setEventForm(prev => ({ ...prev, skillIds: ids }))} />

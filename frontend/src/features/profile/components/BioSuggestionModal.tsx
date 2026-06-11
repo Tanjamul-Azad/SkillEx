@@ -7,11 +7,10 @@ import {
   DialogTitle,
 } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { useToast } from '@/hooks/use-toast';
 import { profileAssistantService } from '@/services/profileAssistantService';
-import { Loader2, Copy, Check, Wand2 } from 'lucide-react';
+import { Loader2, Copy, Check } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
 interface BioSuggestionModalProps {
@@ -33,28 +32,17 @@ export default function BioSuggestionModal({
   const [copiedIdx, setCopiedIdx] = useState<number | null>(null);
 
   const handleGenerate = async () => {
-    if (!input.trim()) {
-      toast({
-        title: 'Required',
-        description: 'Please enter something about yourself.',
-        variant: 'destructive',
-      });
-      return;
-    }
+    if (!input.trim()) return;
 
     setLoading(true);
     try {
       const result = await profileAssistantService.suggestBios(input);
       setSuggestions(result.suggestions);
       setSelectedIdx(null);
-      toast({
-        title: 'Success',
-        description: 'Generated 3 bio suggestions for you.',
-      });
     } catch (error) {
       toast({
-        title: 'Error',
-        description: 'Failed to generate suggestions. Please try again.',
+        title: 'Could not draft suggestions',
+        description: 'Try again in a moment.',
         variant: 'destructive',
       });
     } finally {
@@ -66,10 +54,6 @@ export default function BioSuggestionModal({
     navigator.clipboard.writeText(bio);
     setCopiedIdx(idx);
     setTimeout(() => setCopiedIdx(null), 2000);
-    toast({
-      title: 'Copied',
-      description: 'Bio copied to clipboard.',
-    });
   };
 
   const handleSelect = (bio: string) => {
@@ -78,40 +62,32 @@ export default function BioSuggestionModal({
     setInput('');
     setSelectedIdx(null);
     onOpenChange(false);
-    toast({
-      title: 'Applied',
-      description: 'Bio has been applied to your profile.',
-    });
   };
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-2xl">
         <DialogHeader>
-          <DialogTitle className="flex items-center gap-2">
-            <Wand2 className="h-5 w-5 text-primary" />
-            AI Bio Assistant
-          </DialogTitle>
+          <DialogTitle>Write your bio</DialogTitle>
           <DialogDescription>
-            Describe yourself in a sentence or two, and let AI polish it into 3 professional variations.
+            Jot down a few honest lines about yourself — you'll get three polished drafts to
+            choose from.
           </DialogDescription>
         </DialogHeader>
 
         <div className="space-y-4">
           {/* Input Section */}
           <div className="space-y-2">
-            <label className="text-sm font-medium">
-              Tell us about yourself
-            </label>
+            <label className="text-sm font-medium text-foreground">Your notes</label>
             <Textarea
-              placeholder="e.g., I'm a software engineer passionate about web development and teaching others..."
+              placeholder="e.g., Backend developer for 6 years, mostly Java. Love teaching beginners. Learning UI design on the side..."
               value={input}
               onChange={(e) => setInput(e.target.value)}
-              className="min-h-20 resize-none"
+              className="min-h-20 resize-none rounded-xl"
               disabled={loading}
             />
             <p className="text-xs text-muted-foreground">
-              Be honest and specific about your skills, interests, and what you enjoy teaching/learning.
+              Specifics work best — skills, years, what you enjoy teaching or learning.
             </p>
           </div>
 
@@ -120,36 +96,38 @@ export default function BioSuggestionModal({
             <Button
               onClick={handleGenerate}
               disabled={loading || !input.trim()}
-              className="gap-2"
+              className="gap-2 rounded-xl"
             >
               {loading && <Loader2 className="h-4 w-4 animate-spin" />}
-              {loading ? 'Generating...' : 'Generate Suggestions'}
+              {loading
+                ? 'Drafting...'
+                : suggestions.length > 0
+                  ? 'Draft New Versions'
+                  : 'Draft My Bio'}
             </Button>
           </div>
 
           {/* Suggestions */}
           {suggestions.length > 0 && (
-            <div className="space-y-3 pt-4 border-t">
-              <p className="text-sm font-medium">
-                Choose one or generate again:
-              </p>
+            <div className="space-y-3 border-t border-border/40 pt-4">
+              <p className="text-sm font-medium text-foreground">Pick the one that sounds like you</p>
               {suggestions.map((bio, idx) => (
                 <div
                   key={idx}
                   className={cn(
-                    'p-4 rounded-lg border-2 transition-all cursor-pointer',
+                    'cursor-pointer rounded-xl border p-4 transition-colors',
                     selectedIdx === idx
                       ? 'border-primary bg-primary/5'
-                      : 'border-border hover:border-primary/50 hover:bg-muted/50'
+                      : 'border-border/40 hover:border-primary/40 hover:bg-muted/30'
                   )}
                   onClick={() => setSelectedIdx(idx)}
                 >
-                  <p className="text-sm leading-relaxed mb-3">{bio}</p>
+                  <p className="mb-3 text-sm leading-relaxed text-foreground">{bio}</p>
                   <div className="flex gap-2">
                     <Button
                       size="sm"
                       variant="outline"
-                      className="gap-2"
+                      className="gap-2 rounded-lg"
                       onClick={(e) => {
                         e.stopPropagation();
                         handleCopy(bio, idx);
@@ -169,7 +147,7 @@ export default function BioSuggestionModal({
                     </Button>
                     <Button
                       size="sm"
-                      className="ml-auto"
+                      className="ml-auto rounded-lg"
                       onClick={(e) => {
                         e.stopPropagation();
                         handleSelect(bio);
@@ -180,16 +158,6 @@ export default function BioSuggestionModal({
                   </div>
                 </div>
               ))}
-
-              {/* Regenerate Option */}
-              <Button
-                variant="outline"
-                className="w-full"
-                onClick={handleGenerate}
-                disabled={loading || !input.trim()}
-              >
-                {loading ? 'Generating...' : 'Generate Different Variations'}
-              </Button>
             </div>
           )}
         </div>

@@ -4,8 +4,6 @@ import com.skillex.dto.ai.GroupSessionDto;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 
-import java.util.List;
-
 public interface GroupSessionService {
     /**
      * Create a new group session (workshop, class, etc.).
@@ -18,12 +16,26 @@ public interface GroupSessionService {
     GroupSessionDto create(String userId, GroupSessionDto.CreateRequest request);
 
     /**
+     * Generate an AI workshop draft for a mentor-owned skill. The caller still
+     * chooses the date/time before publishing the real session.
+     */
+    GroupSessionDto.WorkshopDraft generateWorkshopDraft(String userId, GroupSessionDto.AiDraftRequest request);
+
+    /**
      * Learner joins an active group session.
      *
      * @param learnerUserId learner
      * @param sessionId group session
      */
     void joinSession(String learnerUserId, String sessionId);
+
+    /**
+     * Learner leaves a session they previously joined.
+     *
+     * @param learnerUserId learner
+     * @param sessionId group session
+     */
+    void leaveSession(String learnerUserId, String sessionId);
 
     /**
      * Get group session details.
@@ -42,7 +54,7 @@ public interface GroupSessionService {
     Page<GroupSessionDto> listActive(Pageable pageable);
 
     /**
-     * List sessions a user is attending.
+     * List sessions a user is attending or hosting.
      *
      * @param userId learner/mentor
      * @param pageable pagination
@@ -51,15 +63,24 @@ public interface GroupSessionService {
     Page<GroupSessionDto> listUserSessions(String userId, Pageable pageable);
 
     /**
-     * Complete group session and generate group certificate for all attendees.
+     * Complete a group session. Only the hosting mentor may complete it.
      *
+     * @param mentorId caller (must be the session's mentor)
      * @param sessionId session ID
      * @param mentorNotes shared notes from session
      */
-    void completeSes sion(String sessionId, String mentorNotes);
+    void completeSession(String mentorId, String sessionId, String mentorNotes);
 
     /**
-     * Generate group certificate for attendee.
+     * Cancel a scheduled group session. Only the hosting mentor may cancel.
+     *
+     * @param mentorId caller (must be the session's mentor)
+     * @param sessionId session ID
+     */
+    void cancelSession(String mentorId, String sessionId);
+
+    /**
+     * Generate (or fetch the existing) certificate for an attendee of a completed session.
      *
      * @param sessionId session
      * @param learnerUserId learner

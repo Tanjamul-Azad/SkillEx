@@ -96,6 +96,17 @@ public class UserController {
         return ResponseEntity.ok(ApiResponse.ok(userService.addSkill(userId(auth), req)));
     }
 
+    /** PATCH /api/users/me/skills/{skillId} — update an offered skill's description */
+    @PatchMapping("/me/skills/{skillId}")
+    public ResponseEntity<ApiResponse<String>> updateSkillSubtitle(
+        Authentication auth,
+        @PathVariable String skillId,
+        @Valid @RequestBody UpdateSkillSubtitleRequest req
+    ) {
+        userService.updateSkillSubtitle(userId(auth), skillId, req.subtitle());
+        return ResponseEntity.ok(ApiResponse.ok("Skill description updated."));
+    }
+
     /** DELETE /api/users/me/skills/{skillId}?type=offered|wanted */
     @DeleteMapping("/me/skills/{skillId}")
     public ResponseEntity<ApiResponse<String>> removeSkill(

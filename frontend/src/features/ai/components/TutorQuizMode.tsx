@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { motion } from 'framer-motion';
-import { CheckCircle2, XCircle, ArrowRight } from 'lucide-react';
+import { CheckCircle2, XCircle, Loader2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import type { TutorMessageDto, TutorMessageMetadata } from '@/services/tutorBotService';
@@ -15,10 +15,8 @@ interface TutorQuizModeProps {
 }
 
 const optionVariants = {
-  initial: { opacity: 0, x: -20 },
-  animate: { opacity: 1, x: 0 },
-  hover: { scale: 1.02, transition: { duration: 0.2 } },
-  selected: { scale: 0.98 },
+  initial: { opacity: 0, y: 6 },
+  animate: { opacity: 1, y: 0 },
 };
 
 export const TutorQuizMode: React.FC<TutorQuizModeProps> = ({
@@ -48,70 +46,71 @@ export const TutorQuizMode: React.FC<TutorQuizModeProps> = ({
 
   return (
     <motion.div
-      initial={{ opacity: 0, y: 20 }}
+      initial={{ opacity: 0, y: 12 }}
       animate={{ opacity: 1, y: 0 }}
-      className={cn('space-y-6 p-6 rounded-xl border border-border bg-card', className)}
+      className={cn('space-y-6 rounded-2xl border border-border/40 bg-card p-6', className)}
     >
       {/* Question Header */}
       <div className="space-y-2">
-        <Badge variant="secondary">Quiz Question</Badge>
-        <p className="text-lg font-semibold leading-relaxed text-foreground">
+        <Badge variant="secondary">Quiz</Badge>
+        <p className="font-semibold leading-relaxed text-foreground">
           {quizMessage.content}
         </p>
       </div>
 
       {/* Options */}
       {metadata.quizType === 'multiple-choice' && metadata.quizOptions && (
-        <div className="space-y-3">
+        <div className="space-y-2.5">
           {metadata.quizOptions.map((option, index) => {
             const isSelected = selectedAnswer === index;
-            const showResult = submitted && isSelected;
             const isCorrectAnswer = index === metadata.correctAnswerIndex;
 
             return (
               <motion.button
                 key={index}
+                type="button"
                 variants={optionVariants}
                 initial="initial"
                 animate="animate"
-                whileHover={submitted ? undefined : 'hover'}
-                whileTap={submitted ? undefined : 'selected'}
-                transition={{ delay: index * 0.05 }}
+                transition={{ delay: index * 0.04 }}
                 onClick={() => handleSelectAnswer(index)}
                 disabled={submitted || loading}
                 className={cn(
-                  'w-full p-4 rounded-lg border-2 text-left transition-all',
+                  'w-full rounded-xl border p-4 text-left transition-colors',
                   isSelected && !submitted
                     ? 'border-primary bg-primary/5'
-                    : 'border-border bg-background hover:border-primary/50',
-                  submitted && isCorrectAnswer && 'border-green-500 bg-green-50 dark:bg-green-950/30',
-                  submitted && isSelected && !isCorrectAnswer && 'border-red-500 bg-red-50 dark:bg-red-950/30',
+                    : 'border-border/40 bg-background',
+                  !submitted && !loading && 'hover:border-primary/50',
+                  submitted && isCorrectAnswer && 'border-green-500/50 bg-green-500/10',
+                  submitted && isSelected && !isCorrectAnswer && 'border-destructive/50 bg-destructive/10',
+                  submitted && !isSelected && !isCorrectAnswer && 'opacity-60',
                   submitted && 'cursor-default'
                 )}
               >
-                <div className="flex items-start gap-4">
-                  <div className={cn(
-                    'flex h-8 w-8 items-center justify-center rounded-full border-2 flex-shrink-0 font-semibold',
-                    isSelected && !submitted
-                      ? 'border-primary bg-primary text-primary-foreground'
-                      : 'border-muted-foreground text-muted-foreground',
-                    submitted && isCorrectAnswer && 'border-green-500 bg-green-500 text-white',
-                    submitted && isSelected && !isCorrectAnswer && 'border-red-500 bg-red-500 text-white'
-                  )}>
+                <div className="flex items-center gap-4">
+                  <div
+                    className={cn(
+                      'flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-full border text-sm font-semibold',
+                      isSelected && !submitted
+                        ? 'border-primary bg-primary text-primary-foreground'
+                        : 'border-muted-foreground/40 text-muted-foreground',
+                      submitted && isCorrectAnswer && 'border-green-500 bg-green-500 text-white',
+                      submitted && isSelected && !isCorrectAnswer &&
+                        'border-destructive bg-destructive text-destructive-foreground'
+                    )}
+                  >
                     {String.fromCharCode(65 + index)}
                   </div>
 
-                  <div className="flex-1">
-                    <p className="text-sm font-medium">{option}</p>
-                  </div>
+                  <p className="flex-1 text-sm font-medium text-foreground">{option}</p>
 
                   {submitted && (
                     <div className="flex-shrink-0">
                       {isCorrectAnswer && (
-                        <CheckCircle2 className="h-5 w-5 text-green-500" />
+                        <CheckCircle2 className="h-5 w-5 text-green-600 dark:text-green-400" />
                       )}
                       {isSelected && !isCorrectAnswer && (
-                        <XCircle className="h-5 w-5 text-red-500" />
+                        <XCircle className="h-5 w-5 text-destructive" />
                       )}
                     </div>
                   )}
@@ -124,69 +123,70 @@ export const TutorQuizMode: React.FC<TutorQuizModeProps> = ({
 
       {/* Short Answer */}
       {metadata.quizType === 'short-answer' && (
-        <div className="space-y-3">
-          <input
-            type="text"
-            placeholder="Type your answer..."
-            disabled={submitted || loading}
-            className="w-full px-4 py-3 rounded-lg border border-border bg-background focus:outline-none focus:ring-2 focus:ring-primary"
-          />
-        </div>
+        <input
+          type="text"
+          placeholder="Type your answer..."
+          disabled={submitted || loading}
+          className="w-full rounded-xl border border-border/40 bg-background px-4 py-3 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring disabled:opacity-60"
+        />
       )}
 
       {/* Feedback */}
       {submitted && (
         <motion.div
-          initial={{ opacity: 0, y: 10 }}
+          initial={{ opacity: 0, y: 8 }}
           animate={{ opacity: 1, y: 0 }}
           className={cn(
-            'p-4 rounded-lg',
+            'rounded-xl border p-4',
             isCorrect
-              ? 'bg-green-50 dark:bg-green-950/30 border border-green-200 dark:border-green-800'
-              : 'bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-800'
+              ? 'border-green-500/40 bg-green-500/10'
+              : 'border-amber-500/40 bg-amber-500/10'
           )}
         >
           <div className="flex gap-3">
             {isCorrect ? (
-              <CheckCircle2 className="h-5 w-5 text-green-600 dark:text-green-400 flex-shrink-0 mt-0.5" />
+              <CheckCircle2 className="mt-0.5 h-5 w-5 flex-shrink-0 text-green-600 dark:text-green-400" />
             ) : (
-              <ArrowRight className="h-5 w-5 text-amber-600 dark:text-amber-400 flex-shrink-0 mt-0.5" />
+              <XCircle className="mt-0.5 h-5 w-5 flex-shrink-0 text-amber-600 dark:text-amber-400" />
             )}
             <div className="space-y-1">
-              <p className={cn(
-                'font-semibold',
-                isCorrect ? 'text-green-700 dark:text-green-300' : 'text-amber-700 dark:text-amber-300'
-              )}>
-                {isCorrect ? 'Excellent work!' : 'Not quite right'}
+              <p
+                className={cn(
+                  'text-sm font-semibold',
+                  isCorrect
+                    ? 'text-green-700 dark:text-green-300'
+                    : 'text-amber-700 dark:text-amber-300'
+                )}
+              >
+                {isCorrect ? 'Correct' : 'Not quite'}
               </p>
-              <p className={cn(
-                'text-sm',
-                isCorrect ? 'text-green-600 dark:text-green-400' : 'text-amber-600 dark:text-amber-400'
-              )}>
-                {metadata.answerFeedback || (isCorrect ? 'Great job mastering this concept!' : 'Review and try again.')}
+              <p className="text-sm text-muted-foreground">
+                {metadata.answerFeedback ||
+                  (isCorrect
+                    ? 'You nailed this one — keep going.'
+                    : 'Review the highlighted answer, then ask the tutor to explain it.')}
               </p>
             </div>
           </div>
         </motion.div>
       )}
 
-      {/* Actions */}
-      {!submitted ? (
+      {/* Action */}
+      {!submitted && (
         <Button
           onClick={handleSubmit}
           disabled={selectedAnswer === null || loading}
-          className="w-full"
+          className="w-full rounded-xl"
           size="lg"
         >
-          Check Answer
-        </Button>
-      ) : (
-        <Button
-          variant="outline"
-          className="w-full"
-          size="lg"
-        >
-          Next Question
+          {loading ? (
+            <>
+              <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+              Checking...
+            </>
+          ) : (
+            'Check Answer'
+          )}
         </Button>
       )}
     </motion.div>

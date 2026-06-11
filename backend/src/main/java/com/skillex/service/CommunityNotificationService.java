@@ -65,6 +65,22 @@ public class CommunityNotificationService {
         notifyMany(recipients, actorId, "COMMUNITY_EVENT", message, "EVENT", event.getId(), eventUrl(event.getId()));
     }
 
+    public void notifyEventRsvp(Event event, User actor, EventRsvp.RsvpState state) {
+        if (event.getHost() == null || actor == null || event.getHost().getId().equals(actor.getId())) {
+            return;
+        }
+        String action = state == EventRsvp.RsvpState.GOING ? "registered for" : "is interested in";
+        notificationService.create(
+            event.getHost().getId(),
+            actor.getId(),
+            "COMMUNITY_EVENT",
+            actor.getName() + " " + action + " your event: " + event.getTitle(),
+            "EVENT",
+            event.getId(),
+            eventUrl(event.getId())
+        );
+    }
+
     public void notifyCircleActivity(SkillCircle circle, String actorId, String message) {
         Set<String> recipients = new LinkedHashSet<>();
         circle.getMembers().stream().map(User::getId).forEach(recipients::add);

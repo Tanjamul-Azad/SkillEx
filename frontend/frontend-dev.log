@@ -1,0 +1,188 @@
+
+> skillex@0.1.0 dev
+> vite --host 127.0.0.1
+
+
+  [32m[1mVITE[22m v6.4.2[39m  [2mready in [0m[1m218[22m[2m[0m ms[22m
+
+  [32m➜[39m  [1mLocal[22m:   [36mhttp://127.0.0.1:[1m3000[22m/[39m
+[2m[32m  ➜[39m[22m[2m  press [22m[1mh + enter[22m[2m to show help[22m
+[2m5:45:10 PM[22m [36m[1m[vite][22m[39m [90m[2m(client)[22m[39m [32mpage reload [39m[2msrc/services/skillGapService.ts[22m
+[2m5:47:44 PM[22m [36m[1m[vite][22m[39m [90m[2m(client)[22m[39m [32mpage reload [39m[2msrc/services/skillGapService.ts[22m
+[2m6:20:20 PM[22m [36m[1m[vite][22m[39m [90m[2m(client)[22m[39m [32mpage reload [39m[2msrc/services/skillGapService.ts[22m
+[2m6:21:25 PM[22m [36m[1m[vite][22m[39m [90m[2m(client)[22m[39m [32mpage reload [39m[2msrc/features/settings/components/ProfileTab.tsx[22m
+[2m6:21:38 PM[22m [36m[1m[vite][22m[39m [90m[2m(client)[22m[39m [32mpage reload [39m[2msrc/features/settings/components/ProfileTab.tsx[22m
+[2m6:22:09 PM[22m [36m[1m[vite][22m[39m [90m[2m(client)[22m[39m [32mpage reload [39m[2msrc/features/settings/components/ProfileTab.tsx[22m
+[2m6:22:27 PM[22m [36m[1m[vite][22m[39m [90m[2m(client)[22m[39m [32mpage reload [39m[2msrc/features/settings/components/ProfileTab.tsx[22m
+[2m6:23:21 PM[22m [36m[1m[vite][22m[39m [90m[2m(client)[22m[39m [32mpage reload [39m[2msrc/features/settings/components/ProfileTab.tsx[22m
+[2m6:23:31 PM[22m [36m[1m[vite][22m[39m [90m[2m(client)[22m[39m [32mpage reload [39m[2msrc/features/settings/components/ProfileTab.tsx[22m
+[2m6:25:59 PM[22m [36m[1m[vite][22m[39m [90m[2m(client)[22m[39m [32mpage reload [39m[2msrc/features/settings/components/ProfileTab.tsx[22m
+[2m6:33:28 PM[22m [36m[1m[vite][22m[39m [90m[2m(client)[22m[39m [32mpage reload [39m[2msrc/features/settings/components/ProfileTab.tsx[22m
+[2m6:35:30 PM[22m [31m[1m[vite][22m[39m [31mhttp proxy error: /api/users/me[39m
+AggregateError [ECONNREFUSED]: 
+    at internalConnectMultiple (node:net:1134:18)
+    at afterConnectMultiple (node:net:1715:7)
+[2m6:35:30 PM[22m [31m[1m[vite][22m[39m [31mhttp proxy error: /api/users/me[39m
+AggregateError [ECONNREFUSED]: 
+    at internalConnectMultiple (node:net:1134:18)
+    at afterConnectMultiple (node:net:1715:7)
+[2m6:35:30 PM[22m [31m[1m[vite][22m[39m [31mhttp proxy error: /api/users/me[39m
+AggregateError [ECONNREFUSED]: 
+    at internalConnectMultiple (node:net:1134:18)
+    at afterConnectMultiple (node:net:1715:7)
+[2m6:35:30 PM[22m [31m[1m[vite][22m[39m [31mhttp proxy error: /api/users/me[39m
+AggregateError [ECONNREFUSED]: 
+    at internalConnectMultiple (node:net:1134:18)
+    at afterConnectMultiple (node:net:1715:7)
+[2m6:35:31 PM[22m [31m[1m[vite][22m[39m [31mhttp proxy error: /api/messages/conversations[39m
+AggregateError [ECONNREFUSED]: 
+    at internalConnectMultiple (node:net:1134:18)
+    at afterConnectMultiple (node:net:1715:7)
+[2m6:35:31 PM[22m [31m[1m[vite][22m[39m [31mhttp proxy error: /api/notifications?page=0&size=25[39m
+AggregateError [ECONNREFUSED]: 
+    at internalConnectMultiple (node:net:1134:18)
+    at afterConnectMultiple (node:net:1715:7)
+[2m6:35:31 PM[22m [31m[1m[vite][22m[39m [31mhttp proxy error: /api/credits/wallet[39m
+AggregateError [ECONNREFUSED]: 
+    at internalConnectMultiple (node:net:1134:18)
+    at afterConnectMultiple (node:net:1715:7)
+[2m6:35:31 PM[22m [31m[1m[vite][22m[39m [31mhttp proxy error: /api/credits/transactions?page=0&size=8[39m
+AggregateError [ECONNREFUSED]: 
+    at internalConnectMultiple (node:net:1134:18)
+    at afterConnectMultiple (node:net:1715:7)
+[2m6:35:31 PM[22m [31m[1m[vite][22m[39m [31mhttp proxy error: /api/messages/conversations[39m
+AggregateError [ECONNREFUSED]: 
+    at internalConnectMultiple (node:net:1134:18)
+    at afterConnectMultiple (node:net:1715:7)
+[2m6:35:31 PM[22m [31m[1m[vite][22m[39m [31mhttp proxy error: /api/users/me/restrictions[39m
+AggregateError [ECONNREFUSED]: 
+    at internalConnectMultiple (node:net:1134:18)
+    at afterConnectMultiple (node:net:1715:7)
+[2m6:35:31 PM[22m [31m[1m[vite][22m[39m [31mhttp proxy error: /api/users/me/resume-profile[39m
+AggregateError [ECONNREFUSED]: 
+    at internalConnectMultiple (node:net:1134:18)
+    at afterConnectMultiple (node:net:1715:7)
+[2m6:35:31 PM[22m [31m[1m[vite][22m[39m [31mhttp proxy error: /api/notifications?page=0&size=25[39m
+AggregateError [ECONNREFUSED]: 
+    at internalConnectMultiple (node:net:1134:18)
+    at afterConnectMultiple (node:net:1715:7)
+[2m6:35:31 PM[22m [31m[1m[vite][22m[39m [31mhttp proxy error: /api/credits/wallet[39m
+AggregateError [ECONNREFUSED]: 
+    at internalConnectMultiple (node:net:1134:18)
+    at afterConnectMultiple (node:net:1715:7)
+[2m6:35:31 PM[22m [31m[1m[vite][22m[39m [31mhttp proxy error: /api/credits/transactions?page=0&size=8[39m
+AggregateError [ECONNREFUSED]: 
+    at internalConnectMultiple (node:net:1134:18)
+    at afterConnectMultiple (node:net:1715:7)
+[2m6:35:31 PM[22m [31m[1m[vite][22m[39m [31mhttp proxy error: /api/users/me/restrictions[39m
+AggregateError [ECONNREFUSED]: 
+    at internalConnectMultiple (node:net:1134:18)
+    at afterConnectMultiple (node:net:1715:7)
+[2m6:35:31 PM[22m [31m[1m[vite][22m[39m [31mhttp proxy error: /api/skills[39m
+AggregateError [ECONNREFUSED]: 
+    at internalConnectMultiple (node:net:1134:18)
+    at afterConnectMultiple (node:net:1715:7)
+[2m6:35:31 PM[22m [31m[1m[vite][22m[39m [31mhttp proxy error: /api/community/posts?page=0&size=20[39m
+AggregateError [ECONNREFUSED]: 
+    at internalConnectMultiple (node:net:1134:18)
+    at afterConnectMultiple (node:net:1715:7)
+[2m6:35:31 PM[22m [31m[1m[vite][22m[39m [31mhttp proxy error: /api/community/stories[39m
+AggregateError [ECONNREFUSED]: 
+    at internalConnectMultiple (node:net:1134:18)
+    at afterConnectMultiple (node:net:1715:7)
+[2m6:35:31 PM[22m [31m[1m[vite][22m[39m [31mhttp proxy error: /api/community/trending-skills[39m
+AggregateError [ECONNREFUSED]: 
+    at internalConnectMultiple (node:net:1134:18)
+    at afterConnectMultiple (node:net:1715:7)
+[2m6:35:31 PM[22m [31m[1m[vite][22m[39m [31mhttp proxy error: /api/community/suggested-users[39m
+AggregateError [ECONNREFUSED]: 
+    at internalConnectMultiple (node:net:1134:18)
+    at afterConnectMultiple (node:net:1715:7)
+[2m6:35:31 PM[22m [31m[1m[vite][22m[39m [31mhttp proxy error: /api/community/online-count[39m
+AggregateError [ECONNREFUSED]: 
+    at internalConnectMultiple (node:net:1134:18)
+    at afterConnectMultiple (node:net:1715:7)
+[2m6:35:31 PM[22m [31m[1m[vite][22m[39m [31mhttp proxy error: /api/messages/conversations[39m
+AggregateError [ECONNREFUSED]: 
+    at internalConnectMultiple (node:net:1134:18)
+    at afterConnectMultiple (node:net:1715:7)
+[2m6:35:31 PM[22m [31m[1m[vite][22m[39m [31mhttp proxy error: /api/messages/conversations[39m
+AggregateError [ECONNREFUSED]: 
+    at internalConnectMultiple (node:net:1134:18)
+    at afterConnectMultiple (node:net:1715:7)
+[2m6:35:31 PM[22m [31m[1m[vite][22m[39m [31mhttp proxy error: /api/notifications?page=0&size=25[39m
+AggregateError [ECONNREFUSED]: 
+    at internalConnectMultiple (node:net:1134:18)
+    at afterConnectMultiple (node:net:1715:7)
+[2m6:35:31 PM[22m [31m[1m[vite][22m[39m [31mhttp proxy error: /api/credits/wallet[39m
+AggregateError [ECONNREFUSED]: 
+    at internalConnectMultiple (node:net:1134:18)
+    at afterConnectMultiple (node:net:1715:7)
+[2m6:35:31 PM[22m [31m[1m[vite][22m[39m [31mhttp proxy error: /api/notifications?page=0&size=25[39m
+AggregateError [ECONNREFUSED]: 
+    at internalConnectMultiple (node:net:1134:18)
+    at afterConnectMultiple (node:net:1715:7)
+[2m6:35:31 PM[22m [31m[1m[vite][22m[39m [31mhttp proxy error: /api/credits/transactions?page=0&size=8[39m
+AggregateError [ECONNREFUSED]: 
+    at internalConnectMultiple (node:net:1134:18)
+    at afterConnectMultiple (node:net:1715:7)
+[2m6:35:31 PM[22m [31m[1m[vite][22m[39m [31mhttp proxy error: /api/credits/wallet[39m
+AggregateError [ECONNREFUSED]: 
+    at internalConnectMultiple (node:net:1134:18)
+    at afterConnectMultiple (node:net:1715:7)
+[2m6:35:31 PM[22m [31m[1m[vite][22m[39m [31mhttp proxy error: /api/credits/transactions?page=0&size=8[39m
+AggregateError [ECONNREFUSED]: 
+    at internalConnectMultiple (node:net:1134:18)
+    at afterConnectMultiple (node:net:1715:7)
+[2m6:35:31 PM[22m [31m[1m[vite][22m[39m [31mhttp proxy error: /api/users/me/restrictions[39m
+AggregateError [ECONNREFUSED]: 
+    at internalConnectMultiple (node:net:1134:18)
+    at afterConnectMultiple (node:net:1715:7)
+[2m6:35:31 PM[22m [31m[1m[vite][22m[39m [31mhttp proxy error: /api/skills[39m
+AggregateError [ECONNREFUSED]: 
+    at internalConnectMultiple (node:net:1134:18)
+    at afterConnectMultiple (node:net:1715:7)
+[2m6:35:31 PM[22m [31m[1m[vite][22m[39m [31mhttp proxy error: /api/users/me/restrictions[39m
+AggregateError [ECONNREFUSED]: 
+    at internalConnectMultiple (node:net:1134:18)
+    at afterConnectMultiple (node:net:1715:7)
+[2m6:35:31 PM[22m [31m[1m[vite][22m[39m [31mhttp proxy error: /api/community/posts?page=0&size=20[39m
+AggregateError [ECONNREFUSED]: 
+    at internalConnectMultiple (node:net:1134:18)
+    at afterConnectMultiple (node:net:1715:7)
+[2m6:35:31 PM[22m [31m[1m[vite][22m[39m [31mhttp proxy error: /api/users/me/resume-profile[39m
+AggregateError [ECONNREFUSED]: 
+    at internalConnectMultiple (node:net:1134:18)
+    at afterConnectMultiple (node:net:1715:7)
+[2m6:35:31 PM[22m [31m[1m[vite][22m[39m [31mhttp proxy error: /api/community/stories[39m
+AggregateError [ECONNREFUSED]: 
+    at internalConnectMultiple (node:net:1134:18)
+    at afterConnectMultiple (node:net:1715:7)
+[2m6:35:31 PM[22m [31m[1m[vite][22m[39m [31mhttp proxy error: /api/community/trending-skills[39m
+AggregateError [ECONNREFUSED]: 
+    at internalConnectMultiple (node:net:1134:18)
+    at afterConnectMultiple (node:net:1715:7)
+[2m6:35:31 PM[22m [31m[1m[vite][22m[39m [31mhttp proxy error: /api/community/suggested-users[39m
+AggregateError [ECONNREFUSED]: 
+    at internalConnectMultiple (node:net:1134:18)
+    at afterConnectMultiple (node:net:1715:7)
+[2m6:35:31 PM[22m [31m[1m[vite][22m[39m [31mhttp proxy error: /api/community/online-count[39m
+AggregateError [ECONNREFUSED]: 
+    at internalConnectMultiple (node:net:1134:18)
+    at afterConnectMultiple (node:net:1715:7)
+[2m6:35:31 PM[22m [31m[1m[vite][22m[39m [31mhttp proxy error: /ws/info?t=1781181331416[39m
+AggregateError [ECONNREFUSED]: 
+    at internalConnectMultiple (node:net:1134:18)
+    at afterConnectMultiple (node:net:1715:7)
+[2m6:35:31 PM[22m [31m[1m[vite][22m[39m [31mhttp proxy error: /ws/info?t=1781181331416[39m
+AggregateError [ECONNREFUSED]: 
+    at internalConnectMultiple (node:net:1134:18)
+    at afterConnectMultiple (node:net:1715:7)
+[2m6:35:31 PM[22m [31m[1m[vite][22m[39m [31mhttp proxy error: /ws/info?t=1781181331425[39m
+AggregateError [ECONNREFUSED]: 
+    at internalConnectMultiple (node:net:1134:18)
+    at afterConnectMultiple (node:net:1715:7)
+[2m6:35:31 PM[22m [31m[1m[vite][22m[39m [31mhttp proxy error: /ws/info?t=1781181331425[39m
+AggregateError [ECONNREFUSED]: 
+    at internalConnectMultiple (node:net:1134:18)
+    at afterConnectMultiple (node:net:1715:7)

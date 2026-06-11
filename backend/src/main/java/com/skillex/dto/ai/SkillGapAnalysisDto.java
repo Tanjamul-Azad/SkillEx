@@ -10,6 +10,11 @@ public record SkillGapAnalysisDto(
     LearningPath recommendedPath,
     String summary
 ) {
+    public record CustomGoalRequest(
+        String goalSkillName,
+        String category
+    ) {}
+
     public record LearningPath(
         List<PathStep> steps,
         int estimatedHours,
@@ -21,6 +26,12 @@ public record SkillGapAnalysisDto(
         String skillName,
         String skillId,
         String rationale,
+        String learningOutcome,
+        String practiceTask,
+        String suggestedSessionTitle,
+        String completionProof,
+        String nextStepDependency,
+        String platformAction,
         int estimatedHours,
         List<MentorMatch> availableMentors
     ) {}

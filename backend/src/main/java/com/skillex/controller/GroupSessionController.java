@@ -26,6 +26,15 @@ public class GroupSessionController {
         return ApiResponse.created(groupSessionService.create(userId, request));
     }
 
+    @PostMapping("/draft")
+    public ApiResponse<GroupSessionDto.WorkshopDraft> draft(
+        Authentication auth,
+        @RequestBody GroupSessionDto.AiDraftRequest request
+    ) {
+        String userId = (String) auth.getPrincipal();
+        return ApiResponse.ok(groupSessionService.generateWorkshopDraft(userId, request));
+    }
+
     @PostMapping("/{sessionId}/join")
     public ApiResponse<Void> join(
         Authentication auth,
@@ -77,15 +86,38 @@ public class GroupSessionController {
         ));
     }
 
+    @PostMapping("/{sessionId}/leave")
+    public ApiResponse<Void> leave(
+        Authentication auth,
+        @PathVariable String sessionId
+    ) {
+        String userId = (String) auth.getPrincipal();
+        groupSessionService.leaveSession(userId, sessionId);
+        return ApiResponse.ok(null);
+    }
+
     @PostMapping("/{sessionId}/complete")
     public ApiResponse<Void> complete(
         Authentication auth,
         @PathVariable String sessionId,
-        @RequestParam String notes
+        @RequestBody(required = false) CompleteRequest body
     ) {
-        groupSessionService.completeSes sion(sessionId, notes);
+        String userId = (String) auth.getPrincipal();
+        groupSessionService.completeSession(userId, sessionId, body == null ? null : body.notes());
         return ApiResponse.ok(null);
     }
+
+    @PostMapping("/{sessionId}/cancel")
+    public ApiResponse<Void> cancel(
+        Authentication auth,
+        @PathVariable String sessionId
+    ) {
+        String userId = (String) auth.getPrincipal();
+        groupSessionService.cancelSession(userId, sessionId);
+        return ApiResponse.ok(null);
+    }
+
+    public record CompleteRequest(String notes) {}
 
     @PostMapping("/{sessionId}/certificate")
     public ApiResponse<GroupSessionDto.GroupCertificate> generateCertificate(

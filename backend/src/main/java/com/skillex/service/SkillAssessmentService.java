@@ -16,12 +16,14 @@ public interface SkillAssessmentService {
 
     /**
      * Submit assessment answers and get auto-graded result.
+     * Only the user who started the assessment may submit it.
      *
+     * @param userId caller (must own the assessment)
      * @param assessmentId assessment ID
      * @param answers map of questionId → userAnswer
      * @return graded assessment with score
      */
-    SkillAssessmentDto.GradedAssessment submitAnswers(String assessmentId, java.util.Map<String, String> answers);
+    SkillAssessmentDto.GradedAssessment submitAnswers(String userId, String assessmentId, java.util.Map<String, String> answers);
 
     /**
      * Get assessment result for a user's skill.

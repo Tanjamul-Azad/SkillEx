@@ -585,6 +585,22 @@ public class NoteGenerationService {
         );
     }
 
+    /**
+     * General-purpose generation entry point for other AI features (skill gaps,
+     * learning paths, assessments). Routes through the configured provider —
+     * Gemini Cloud when an API key is set, otherwise the local Ollama model.
+     * Returns an empty string on failure; callers supply their own fallbacks.
+     */
+    public String generateWithOllama(String prompt) {
+        if ("gemini".equalsIgnoreCase(aiProvider) && geminiApiKey != null && !geminiApiKey.isBlank()) {
+            String viaGemini = callGeminiApi(prompt);
+            if (viaGemini != null && !viaGemini.isBlank()) {
+                return viaGemini;
+            }
+        }
+        return callGemmaRawOrEmpty(prompt);
+    }
+
     /** Final synthesis call: on any failure, degrade to a transcript-derived fallback so the user always gets notes. */
     private String callGemmaForSynthesis(String prompt, PreparedTranscript prepared) {
         String raw = callGemmaRawOrEmpty(prompt);

@@ -23,6 +23,7 @@ import { Input } from '@/components/ui/input';
 import { useToast } from '@/hooks/use-toast';
 import { cn } from '@/lib/utils';
 import { certificateService, type SkillCertificate } from '@/services/certificateService';
+import { useSearchParams } from 'react-router-dom';
 
 const numberFormatter = new Intl.NumberFormat('en-US');
 const dateFormatter = new Intl.DateTimeFormat('en-US', {
@@ -140,12 +141,14 @@ function CertificateCard({
 
 export default function CertificatesPage() {
   const { toast } = useToast();
+  const [searchParams] = useSearchParams();
   const [certificates, setCertificates] = useState<SkillCertificate[]>([]);
   const [demoCertificates, setDemoCertificates] = useState<SkillCertificate[]>([]);
   const [loading, setLoading] = useState(true);
   const [demoLoading, setDemoLoading] = useState(false);
   const [query, setQuery] = useState('');
   const [selectedId, setSelectedId] = useState<string | null>(null);
+  const requestedCertificateId = searchParams.get('certificateId');
 
   useEffect(() => {
     let alive = true;
@@ -154,7 +157,11 @@ export default function CertificatesPage() {
       .then((items) => {
         if (!alive) return;
         setCertificates(items);
-        setSelectedId(items[0]?.id ?? null);
+        setSelectedId(
+          requestedCertificateId && items.some((item) => item.id === requestedCertificateId)
+            ? requestedCertificateId
+            : items[0]?.id ?? null
+        );
         if (items.length === 0) {
           setDemoLoading(true);
           Promise.allSettled(DEMO_CERTIFICATE_CODES.map(code => certificateService.publicCertificate(code)))
@@ -164,7 +171,11 @@ export default function CertificatesPage() {
                 .filter((result): result is PromiseFulfilledResult<SkillCertificate> => result.status === 'fulfilled')
                 .map(result => result.value);
               setDemoCertificates(seeded);
-              setSelectedId(seeded[0]?.id ?? null);
+              setSelectedId(
+                requestedCertificateId && seeded.some((item) => item.id === requestedCertificateId)
+                  ? requestedCertificateId
+                  : seeded[0]?.id ?? null
+              );
             })
             .finally(() => {
               if (alive) setDemoLoading(false);
@@ -186,7 +197,7 @@ export default function CertificatesPage() {
     return () => {
       alive = false;
     };
-  }, [toast]);
+  }, [requestedCertificateId, toast]);
 
   const displayCertificates = certificates.length > 0 ? certificates : demoCertificates;
   const isShowingExamples = certificates.length === 0 && demoCertificates.length > 0;
@@ -213,6 +224,13 @@ export default function CertificatesPage() {
     () => displayCertificates.find((certificate) => certificate.id === selectedId) ?? filteredCertificates[0] ?? null,
     [displayCertificates, filteredCertificates, selectedId],
   );
+
+  useEffect(() => {
+    if (!requestedCertificateId) return;
+    if (displayCertificates.some((certificate) => certificate.id === requestedCertificateId)) {
+      setSelectedId(requestedCertificateId);
+    }
+  }, [displayCertificates, requestedCertificateId]);
 
   const stats = useMemo(() => {
     const active = displayCertificates.filter((certificate) => certificate.status === 'ACTIVE').length;

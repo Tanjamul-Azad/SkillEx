@@ -1,32 +1,43 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Clock, CheckCircle2, AlertCircle, ArrowRight, Sparkles } from 'lucide-react';
+import {
+  Clock,
+  CheckCircle2,
+  AlertCircle,
+  ArrowRight,
+  ListChecks,
+  Award,
+  SearchX,
+  Loader2,
+} from 'lucide-react';
 import DashboardLayout from '@/components/layout/DashboardLayout';
 import { Button } from '@/components/ui/button';
-import { Badge } from '@/components/ui/badge';
+import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
-import { useSearchParams } from 'react-router-dom';
+import { Link, useSearchParams } from 'react-router-dom';
 import { useToast } from '@/hooks/use-toast';
-import { useAuth } from '@/hooks/useAuth';
 import {
   skillAssessmentService,
   type SkillAssessment,
   type GradedAssessment,
   type QuizQuestion,
 } from '@/services/skillAssessmentService';
+import { SkillService } from '@/services/skillService';
+import type { Skill } from '@/types';
 import { cn } from '@/lib/utils';
 
 type Page = 'intro' | 'quiz' | 'results';
 
 export default function SkillAssessmentPage() {
-  const { user } = useAuth();
   const { toast } = useToast();
   const [searchParams] = useSearchParams();
-  const skillId = searchParams.get('skillId');
-  const skillName = searchParams.get('skillName');
+  const paramSkillId = searchParams.get('skillId');
+  const paramSkillName = searchParams.get('skillName');
   const difficulty = searchParams.get('difficulty') || 'intermediate';
 
+  const [skillId, setSkillId] = useState<string | null>(paramSkillId);
+  const [skillName, setSkillName] = useState<string | null>(paramSkillName);
   const [page, setPage] = useState<Page>('intro');
   const [assessment, setAssessment] = useState<SkillAssessment | null>(null);
   const [results, setResults] = useState<GradedAssessment | null>(null);
@@ -34,24 +45,30 @@ export default function SkillAssessmentPage() {
   const [answers, setAnswers] = useState<Record<string, string>>({});
   const [timeRemaining, setTimeRemaining] = useState(30 * 60); // 30 minutes in seconds
 
-  // Timer
+  // Keep the latest submit handler in a ref so the countdown can auto-submit
+  // with the answers as they are at that moment, not as they were at mount.
+  const submitRef = useRef<() => void>(() => {});
+
+  // Timer — decrements only; auto-submit fires from the effect below.
   useEffect(() => {
     if (page !== 'quiz') return;
     const timer = setInterval(() => {
-      setTimeRemaining((t) => {
-        if (t <= 0) {
-          handleSubmit();
-          return 0;
-        }
-        return t - 1;
-      });
+      setTimeRemaining((t) => Math.max(0, t - 1));
     }, 1000);
     return () => clearInterval(timer);
   }, [page]);
 
+  useEffect(() => {
+    if (page === 'quiz' && timeRemaining === 0) {
+      toast({ title: "Time's up", description: 'Submitting your answers now.' });
+      submitRef.current();
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [timeRemaining, page]);
+
   const handleStartAssessment = async () => {
     if (!skillId) {
-      toast({ variant: 'destructive', title: 'Missing skill ID' });
+      toast({ variant: 'destructive', title: 'Pick a skill to assess first' });
       return;
     }
 
@@ -59,16 +76,23 @@ export default function SkillAssessmentPage() {
     try {
       const data = await skillAssessmentService.generate(skillId, difficulty);
       setAssessment(data);
+      setSkillName(data.skillName || skillName);
+      setAnswers({});
+      setTimeRemaining(30 * 60);
       setPage('quiz');
     } catch (error) {
-      toast({ variant: 'destructive', title: 'Failed to generate assessment' });
+      toast({
+        variant: 'destructive',
+        title: 'Could not create the quiz',
+        description: error instanceof Error ? error.message : 'Try again in a moment.',
+      });
     } finally {
       setLoading(false);
     }
   };
 
   const handleSubmit = async () => {
-    if (!assessment) return;
+    if (!assessment || loading) return;
 
     setLoading(true);
     try {
@@ -77,20 +101,24 @@ export default function SkillAssessmentPage() {
       setPage('results');
 
       if (graded.passedThreshold) {
-        toast({ title: '🎉 Assessment Passed!', description: 'You earned the certificate!' });
+        toast({ title: 'Assessment passed', description: 'Your certificate is in your collection.' });
       } else {
         toast({
-          variant: 'destructive',
-          title: 'Assessment Not Passed',
-          description: `Score: ${graded.score}%. Try again to reach 70%.`,
+          title: 'Not quite there',
+          description: `You scored ${graded.score}%. You need 70% — try again whenever you're ready.`,
         });
       }
     } catch (error) {
-      toast({ variant: 'destructive', title: 'Failed to submit assessment' });
+      toast({
+        variant: 'destructive',
+        title: 'Could not submit',
+        description: error instanceof Error ? error.message : undefined,
+      });
     } finally {
       setLoading(false);
     }
   };
+  submitRef.current = handleSubmit;
 
   const formatTime = (seconds: number) => {
     const mins = Math.floor(seconds / 60);
@@ -100,12 +128,17 @@ export default function SkillAssessmentPage() {
 
   return (
     <DashboardLayout>
-      <motion.div className="mx-auto max-w-4xl py-8 space-y-8">
+      <motion.div className="mx-auto max-w-5xl space-y-8 py-8">
         <AnimatePresence mode="wait">
           {page === 'intro' && (
             <IntroPage
+              skillId={skillId}
               skillName={skillName}
               difficulty={difficulty}
+              onPickSkill={(skill) => {
+                setSkillId(skill.id);
+                setSkillName(skill.name);
+              }}
               onStart={handleStartAssessment}
               loading={loading}
             />
@@ -127,7 +160,7 @@ export default function SkillAssessmentPage() {
           {page === 'results' && results && (
             <ResultsPage
               results={results}
-              skillName={skillName}
+              skillName={results.skillName || skillName}
               onRestart={() => {
                 setPage('intro');
                 setAnswers({});
@@ -142,80 +175,147 @@ export default function SkillAssessmentPage() {
 }
 
 function IntroPage({
+  skillId,
   skillName,
   difficulty,
+  onPickSkill,
   onStart,
   loading,
 }: {
+  skillId: string | null;
   skillName: string | null;
   difficulty: string;
+  onPickSkill: (skill: Skill) => void;
   onStart: () => void;
   loading: boolean;
 }) {
+  const [skills, setSkills] = useState<Skill[]>([]);
+  const [search, setSearch] = useState('');
+
+  useEffect(() => {
+    if (skillId) return;
+    SkillService.getAll().then(setSkills).catch(() => setSkills([]));
+  }, [skillId]);
+
+  const filtered = skills.filter((s) =>
+    s.name.toLowerCase().includes(search.toLowerCase())
+  );
+
   return (
     <motion.div
-      initial={{ opacity: 0, y: 20 }}
+      initial={{ opacity: 0, y: 12 }}
       animate={{ opacity: 1, y: 0 }}
-      exit={{ opacity: 0, y: -20 }}
+      exit={{ opacity: 0, y: -12 }}
       className="space-y-8"
     >
-      {/* Header */}
-      <div className="text-center space-y-4">
-        <div className="inline-flex items-center gap-2 rounded-full border border-primary/20 bg-primary/10 px-4 py-2">
-          <Sparkles className="h-4 w-4 text-primary" />
-          <span className="text-sm font-semibold text-primary">AI Skill Assessment</span>
-        </div>
-        <h1 className="font-headline text-4xl font-extrabold tracking-tight text-foreground">
-          {skillName || 'Skill'} Assessment
+      <div className="space-y-1.5">
+        <h1 className="font-headline text-3xl font-extrabold tracking-tight text-foreground">
+          {skillName ? `${skillName} Assessment` : 'Skill Assessment'}
         </h1>
-        <p className="text-lg text-muted-foreground max-w-2xl mx-auto">
-          Take this AI-graded quiz to verify your capability and earn a credible certificate.
+        <p className="max-w-2xl text-muted-foreground">
+          A short, timed quiz that verifies what you know. Pass it and the certificate is yours.
         </p>
       </div>
 
-      {/* Info Cards */}
-      <div className="grid gap-4 md:grid-cols-3">
+      {/* Skill picker — shown when arriving without a preselected skill */}
+      {!skillId && (
+        <div className="space-y-3">
+          <label className="block text-sm font-semibold text-foreground">
+            Which skill are you verifying?
+          </label>
+          <Input
+            placeholder="Search skills..."
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            className="h-11 rounded-xl"
+          />
+          {skills.length > 0 && filtered.length === 0 ? (
+            <div className="rounded-2xl border border-border/40 bg-card p-8 text-center">
+              <SearchX className="mx-auto h-8 w-8 text-muted-foreground/40" />
+              <p className="mt-3 text-sm text-muted-foreground">
+                No skills match "{search}" — try a broader term.
+              </p>
+            </div>
+          ) : (
+            <div className="grid max-h-72 grid-cols-2 gap-3 overflow-y-auto pr-1 md:grid-cols-3">
+              {filtered.map((skill) => (
+                <button
+                  key={skill.id}
+                  type="button"
+                  onClick={() => onPickSkill(skill)}
+                  className="rounded-xl border border-border/40 bg-card p-4 text-left transition-colors hover:border-primary/40"
+                >
+                  <div className="flex items-start gap-3">
+                    {skill.icon && <span className="text-xl leading-none">{skill.icon}</span>}
+                    <div className="min-w-0">
+                      <p className="truncate font-semibold text-foreground">{skill.name}</p>
+                      <p className="text-xs text-muted-foreground">{skill.category}</p>
+                    </div>
+                  </div>
+                </button>
+              ))}
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* Format at a glance */}
+      <div className="grid divide-y divide-border/40 rounded-2xl border border-border/40 bg-card sm:grid-cols-3 sm:divide-x sm:divide-y-0">
         {[
-          { icon: '📋', label: 'Questions', value: '5 questions' },
-          { icon: '⏱️', label: 'Time', value: '30 minutes' },
-          { icon: '✅', label: 'Pass Score', value: '70% or higher' },
+          { icon: ListChecks, label: 'Format', value: '5 questions' },
+          { icon: Clock, label: 'Time limit', value: '30 minutes' },
+          { icon: Award, label: 'To pass', value: '70% or higher' },
         ].map((item) => (
-          <div key={item.label} className="rounded-xl border border-border/40 bg-card p-6 text-center">
-            <div className="text-3xl mb-2">{item.icon}</div>
-            <p className="text-xs font-semibold text-muted-foreground uppercase">{item.label}</p>
-            <p className="text-lg font-bold text-foreground mt-1">{item.value}</p>
+          <div key={item.label} className="flex items-center gap-4 p-5">
+            <div className="rounded-xl bg-primary/10 p-2.5">
+              <item.icon className="h-5 w-5 text-primary" />
+            </div>
+            <div>
+              <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+                {item.label}
+              </p>
+              <p className="font-bold text-foreground">{item.value}</p>
+            </div>
           </div>
         ))}
       </div>
 
-      {/* What to Expect */}
-      <div className="rounded-2xl border border-primary/20 bg-primary/5 p-8 space-y-4">
-        <h2 className="font-headline text-lg font-extrabold text-foreground">What to expect:</h2>
-        <ul className="space-y-3">
+      <div className="rounded-2xl border border-border/40 bg-card p-6">
+        <h2 className="font-headline text-base font-extrabold text-foreground">
+          Before you start
+        </h2>
+        <ul className="mt-3 space-y-2.5">
           {[
-            'Mix of multiple-choice and free-text questions',
-            'Questions test real-world application, not just definitions',
-            'AI grades your answers using semantic understanding',
-            'If you pass, you unlock a verified certificate',
+            `Expect a mix of multiple-choice and written questions at ${difficulty} level.`,
+            'Questions focus on applying the skill, not reciting definitions.',
+            'Written answers are graded automatically — explain your reasoning in your own words.',
           ].map((item) => (
             <li key={item} className="flex items-start gap-3">
-              <CheckCircle2 className="h-5 w-5 text-primary shrink-0 mt-0.5" />
-              <span className="text-muted-foreground">{item}</span>
+              <CheckCircle2 className="mt-0.5 h-4 w-4 shrink-0 text-primary" />
+              <span className="text-sm text-muted-foreground">{item}</span>
             </li>
           ))}
         </ul>
       </div>
 
-      {/* Start Button */}
-      <div className="flex justify-center">
+      <div className="flex justify-end">
         <Button
           size="lg"
           onClick={onStart}
-          disabled={loading}
+          disabled={loading || !skillId}
           className="rounded-xl px-8"
         >
-          {loading ? 'Generating Assessment...' : 'Start Assessment'}
-          <ArrowRight className="ml-2 h-4 w-4" />
+          {loading ? (
+            <>
+              <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+              Preparing your quiz...
+            </>
+          ) : (
+            <>
+              Start Assessment
+              <ArrowRight className="ml-2 h-4 w-4" />
+            </>
+          )}
         </Button>
       </div>
     </motion.div>
@@ -237,18 +337,17 @@ function QuizPage({
   onSubmit: () => void;
   loading: boolean;
 }) {
-  const answered = Object.keys(answers).length;
+  const answered = Object.values(answers).filter((a) => a.trim().length > 0).length;
   const total = assessment.questions.length;
 
   return (
     <motion.div
-      initial={{ opacity: 0, y: 20 }}
+      initial={{ opacity: 0, y: 12 }}
       animate={{ opacity: 1, y: 0 }}
-      exit={{ opacity: 0, y: -20 }}
+      exit={{ opacity: 0, y: -12 }}
       className="space-y-8"
     >
-      {/* Header */}
-      <div className="flex items-center justify-between gap-4 rounded-xl bg-muted/50 p-4">
+      <div className="sticky top-0 z-10 flex items-center justify-between gap-4 rounded-2xl border border-border/40 bg-card p-4">
         <div className="flex items-center gap-3">
           <div className="text-sm font-semibold text-foreground">
             {answered} / {total} answered
@@ -261,13 +360,12 @@ function QuizPage({
             />
           </div>
         </div>
-        <div className="flex items-center gap-2 text-sm font-bold text-foreground">
-          <Clock className="h-4 w-4" />
+        <div className="flex items-center gap-2 text-sm font-bold tabular-nums text-foreground">
+          <Clock className="h-4 w-4 text-muted-foreground" />
           {timeRemaining}
         </div>
       </div>
 
-      {/* Questions */}
       <div className="space-y-6">
         {assessment.questions.map((q, idx) => (
           <QuestionCard
@@ -280,16 +378,29 @@ function QuizPage({
         ))}
       </div>
 
-      {/* Submit */}
-      <div className="flex justify-center">
+      <div className="flex items-center justify-between gap-4 border-t border-border/40 pt-6">
+        <p className="text-sm text-muted-foreground">
+          {answered < total
+            ? `${total - answered} question${total - answered !== 1 ? 's' : ''} left`
+            : 'All questions answered.'}
+        </p>
         <Button
           size="lg"
           onClick={onSubmit}
           disabled={loading || answered < total}
           className="rounded-xl px-8"
         >
-          {loading ? 'Submitting...' : 'Submit Assessment'}
-          <ArrowRight className="ml-2 h-4 w-4" />
+          {loading ? (
+            <>
+              <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+              Grading...
+            </>
+          ) : (
+            <>
+              Submit Assessment
+              <ArrowRight className="ml-2 h-4 w-4" />
+            </>
+          )}
         </Button>
       </div>
     </motion.div>
@@ -309,17 +420,17 @@ function QuestionCard({
 }) {
   return (
     <motion.div
-      initial={{ opacity: 0, y: 20 }}
+      initial={{ opacity: 0, y: 8 }}
       animate={{ opacity: 1, y: 0 }}
-      transition={{ delay: index * 0.05 }}
+      transition={{ delay: index * 0.04 }}
       className="rounded-2xl border border-border/40 bg-card p-6"
     >
       <div className="flex items-start gap-4">
-        <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-primary/15 font-bold text-primary text-sm">
+        <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-primary/10 text-sm font-bold text-primary">
           {index}
         </div>
-        <div className="flex-1 min-w-0 space-y-4">
-          <p className="font-semibold text-foreground text-lg">{question.question}</p>
+        <div className="min-w-0 flex-1 space-y-4">
+          <p className="font-semibold text-foreground">{question.question}</p>
 
           {question.type === 'multiple_choice' && question.options && (
             <RadioGroup value={answer} onValueChange={onAnswer}>
@@ -327,10 +438,22 @@ function QuestionCard({
                 {question.options.map((option) => (
                   <label
                     key={option}
-                    className="flex items-center gap-3 rounded-lg border border-border/40 p-3 cursor-pointer hover:bg-muted/30 transition-colors"
+                    className={cn(
+                      'flex cursor-pointer items-center gap-3 rounded-xl border p-3 transition-colors',
+                      answer === option
+                        ? 'border-primary bg-primary/5'
+                        : 'border-border/40 hover:bg-muted/30'
+                    )}
                   >
                     <RadioGroupItem value={option} id={`${question.questionId}-${option}`} />
-                    <span className="text-sm font-medium text-muted-foreground">{option}</span>
+                    <span
+                      className={cn(
+                        'text-sm font-medium',
+                        answer === option ? 'text-foreground' : 'text-muted-foreground'
+                      )}
+                    >
+                      {option}
+                    </span>
                   </label>
                 ))}
               </div>
@@ -339,10 +462,10 @@ function QuestionCard({
 
           {question.type === 'free_text' && (
             <Textarea
-              placeholder="Your answer..."
+              placeholder="Write your answer in your own words..."
               value={answer}
               onChange={(e) => onAnswer(e.target.value)}
-              className="min-h-24 resize-none rounded-lg"
+              className="min-h-24 resize-none rounded-xl"
             />
           )}
         </div>
@@ -364,50 +487,48 @@ function ResultsPage({
 
   return (
     <motion.div
-      initial={{ opacity: 0, scale: 0.95 }}
-      animate={{ opacity: 1, scale: 1 }}
-      exit={{ opacity: 0, scale: 0.95 }}
+      initial={{ opacity: 0, y: 12 }}
+      animate={{ opacity: 1, y: 0 }}
+      exit={{ opacity: 0, y: -12 }}
       className="space-y-8"
     >
-      {/* Result Card */}
-      <motion.div
+      <div
         className={cn(
-          'rounded-2xl border-2 p-8 md:p-12 text-center space-y-6',
-          isPassed
-            ? 'border-green-500/50 bg-gradient-to-br from-green-500/10 via-card to-card'
-            : 'border-amber-500/50 bg-gradient-to-br from-amber-500/10 via-card to-card'
+          'space-y-6 rounded-2xl border bg-card p-8 text-center md:p-12',
+          isPassed ? 'border-green-500/40' : 'border-amber-500/40'
         )}
       >
         <motion.div
-          initial={{ scale: 0 }}
-          animate={{ scale: 1 }}
-          transition={{ type: 'spring', stiffness: 200, damping: 20 }}
+          initial={{ opacity: 0, y: 8 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.35 }}
         >
           {isPassed ? (
-            <CheckCircle2 className="mx-auto h-16 w-16 text-green-600" />
+            <CheckCircle2 className="mx-auto h-14 w-14 text-green-600 dark:text-green-400" />
           ) : (
-            <AlertCircle className="mx-auto h-16 w-16 text-amber-600" />
+            <AlertCircle className="mx-auto h-14 w-14 text-amber-600 dark:text-amber-400" />
           )}
         </motion.div>
 
         <div>
           <h2 className="font-headline text-3xl font-extrabold text-foreground">
-            {isPassed ? '🎉 Assessment Passed!' : 'Almost There!'}
+            {isPassed ? 'Assessment Passed' : 'Almost There'}
           </h2>
-          <p className="text-lg text-muted-foreground mt-2">
+          <p className="mt-2 text-muted-foreground">
             {isPassed
-              ? `You've successfully verified your ${skillName} capabilities!`
-              : 'You can try again to improve your score.'}
+              ? `Your ${skillName ?? 'skill'} proficiency is now verified.`
+              : 'No penalty for retaking — review the feedback below and try again.'}
           </p>
         </div>
 
-        {/* Score Display */}
         <div className="grid grid-cols-3 gap-4">
           {[
             {
               label: 'Score',
               value: `${results.score}%`,
-              color: isPassed ? 'text-green-600' : 'text-amber-600',
+              color: isPassed
+                ? 'text-green-600 dark:text-green-400'
+                : 'text-amber-600 dark:text-amber-400',
             },
             {
               label: 'Correct',
@@ -419,36 +540,46 @@ function ResultsPage({
               capitalize: true,
             },
           ].map((item) => (
-            <div key={item.label} className="rounded-xl bg-muted/50 p-4">
-              <p className="text-xs font-semibold text-muted-foreground uppercase">{item.label}</p>
-              <p className={cn('text-2xl font-bold mt-2', item.color || 'text-foreground')}>
-                {item.capitalize ? results.proficiencyLevel.toUpperCase() : item.value}
+            <div key={item.label} className="rounded-xl border border-border/40 bg-muted/30 p-4">
+              <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+                {item.label}
+              </p>
+              <p
+                className={cn(
+                  'mt-2 text-2xl font-bold',
+                  item.color || 'text-foreground',
+                  item.capitalize && 'capitalize'
+                )}
+              >
+                {item.capitalize ? results.proficiencyLevel.toLowerCase() : item.value}
               </p>
             </div>
           ))}
         </div>
 
-        {/* Feedback */}
-        <div className="rounded-lg border border-border/40 bg-muted/20 p-4 text-left">
-          <p className="text-sm font-medium text-foreground mb-2">Feedback:</p>
-          <p className="text-sm text-muted-foreground">{results.feedback}</p>
-        </div>
-      </motion.div>
+        {results.feedback && (
+          <div className="rounded-xl border border-border/40 bg-muted/30 p-4 text-left">
+            <p className="mb-1 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+              Grader feedback
+            </p>
+            <p className="text-sm text-muted-foreground">{results.feedback}</p>
+          </div>
+        )}
+      </div>
 
-      {/* Actions */}
-      <div className="flex gap-3 justify-center flex-wrap">
+      <div className="flex flex-wrap justify-center gap-3">
         {!isPassed && (
-          <Button onClick={onRestart} variant="outline" size="lg" className="rounded-xl">
+          <Button onClick={onRestart} size="lg" className="rounded-xl">
             Try Again
           </Button>
         )}
         {isPassed && (
           <Button asChild size="lg" className="rounded-xl">
-            <a href="/certificates">View Certificate</a>
+            <Link to="/certificates">View Certificate</Link>
           </Button>
         )}
         <Button asChild variant="outline" size="lg" className="rounded-xl">
-          <a href="/dashboard">Back to Dashboard</a>
+          <Link to="/dashboard">Back to Dashboard</Link>
         </Button>
       </div>
     </motion.div>

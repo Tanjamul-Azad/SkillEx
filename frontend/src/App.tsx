@@ -43,9 +43,11 @@ const AdminAuditPage = React.lazy(() => import('./features/admin/pages/AdminAudi
 const CertificateVerifyPage = React.lazy(() => import('./features/certificates/pages/CertificateVerifyPage'));
 const SkillGapAnalyzerPage = React.lazy(() => import('./features/ai/pages/SkillGapAnalyzerPage'));
 const LearningPathsPage = React.lazy(() => import('./features/ai/pages/LearningPathsPage'));
+const SkillAssessmentPage = React.lazy(() => import('./features/ai/pages/SkillAssessmentPage'));
 const TutorBotPage = React.lazy(() => import('./features/ai/pages/TutorBotPage'));
 const ProfileAssistantPage = React.lazy(() => import('./features/profile/pages/ProfileAssistantPage'));
 const SearchPage = React.lazy(() => import('./features/search/pages/SearchPage'));
+const GroupSessionsPage = React.lazy(() => import('./features/sessions/pages/GroupSessionsPage'));
 
 
 // Helper for preloading the current route chunk
@@ -165,9 +167,11 @@ function AppShell() {
           <Route path="/verify/certificate/:code" element={<CertificateVerifyPage />} />
           <Route path="/ai/skill-gap" element={<SkillGapAnalyzerPage />} />
           <Route path="/ai/learning-paths" element={<LearningPathsPage />} />
+          <Route path="/ai/assessment" element={<SkillAssessmentPage />} />
           <Route path="/ai/tutor/:skillId" element={<TutorBotPage />} />
           <Route path="/profile-assistant" element={<ProfileAssistantPage />} />
           <Route path="/search" element={<SearchPage />} />
+          <Route path="/group-sessions" element={<GroupSessionsPage />} />
           <Route path="/admin" element={adminOnly(<AdminDashboardPage />)} />
           <Route path="/admin/reports" element={adminOnly(<AdminReportsPage />)} />
           <Route path="/admin/cases/:caseId" element={adminOnly(<AdminReportsPage />)} />

@@ -75,18 +75,34 @@ public class TutorBotServiceImpl implements TutorBotService {
         String tutorResponse = aiProvider.generateText("tutor-bot", prompt,
             "I'm here to help you learn " + skill.getName() + "! What would you like to know?");
 
-        // Determine if this should be a quiz question
+        // Every few exchanges, swap the reply for a real quiz question.
+        // Quiz stats are recorded when the learner answers, not when we ask.
         TutorMessageMetadata metadata = null;
+        String tutorContent = tutorResponse;
         if (shouldAskQuiz(messages)) {
-            metadata = buildQuizMetadata(skill, tutorResponse);
-            conversation.recordQuizAttempt(false); // Mark as quiz attempt (correct flag set when answered)
+            GeneratedQuiz quiz = generateQuiz(skill, messages);
+            if (quiz != null) {
+                metadata = new TutorMessageMetadata(
+                    true,
+                    "multiple-choice",
+                    quiz.options(),
+                    quiz.correctIndex(),
+                    false,
+                    null,
+                    quiz.explanation(),
+                    List.of(),
+                    skill.getName(),
+                    List.of("Explain this concept", "Give me an example", "Ask another question")
+                );
+                tutorContent = quiz.question();
+            }
         }
 
         // Add tutor response
         String tutorMessageId = UUID.randomUUID().toString();
         TutorMessageDto tutorMessage = new TutorMessageDto(
             tutorMessageId,
-            tutorResponse,
+            tutorContent,
             "tutor",
             LocalDateTime.now().format(ISO_FORMATTER),
             metadata
@@ -300,26 +316,55 @@ public class TutorBotServiceImpl implements TutorBotService {
         return recentQuizzes < 1 && messages.size() % 6 == 0;
     }
 
-    private TutorMessageMetadata buildQuizMetadata(Skill skill, String response) {
-        // In a real implementation, parse the response to extract quiz details
-        // For now, return a simple multiple-choice question template
-        return new TutorMessageMetadata(
-            true,
-            "multiple-choice",
-            Arrays.asList(
-                "Option A",
-                "Option B",
-                "Option C",
-                "Option D"
-            ),
-            0,
-            false,
-            null,
-            null,
-            Arrays.asList("Recent session"),
-            skill.getName(),
-            Arrays.asList("Try another question", "Review the concept", "See an example")
-        );
+    private record GeneratedQuiz(String question, List<String> options, int correctIndex, String explanation) {}
+
+    /**
+     * Ask the model for one real multiple-choice question grounded in the
+     * conversation so far. Returns null when generation or parsing fails —
+     * callers then skip the quiz instead of showing placeholder options.
+     */
+    private GeneratedQuiz generateQuiz(Skill skill, List<TutorMessageDto> messages) {
+        String recentTopics = messages.stream()
+            .skip(Math.max(0, messages.size() - 6))
+            .map(TutorMessageDto::content)
+            .collect(Collectors.joining("\n"));
+
+        String prompt = """
+            Based on this %s tutoring conversation:
+            %s
+
+            Write ONE multiple-choice quiz question testing what was just discussed.
+            Respond with ONLY this JSON, nothing else:
+            {"question": "...", "options": ["...", "...", "...", "..."], "correctIndex": 0, "explanation": "one sentence why"}
+            """.formatted(skill.getName(), recentTopics);
+
+        String response = aiProvider.generateText("tutor-quiz", prompt, "");
+        if (response == null || response.isBlank()) {
+            return null;
+        }
+
+        try {
+            String json = response;
+            int start = json.indexOf('{');
+            int end = json.lastIndexOf('}');
+            if (start < 0 || end <= start) return null;
+            json = json.substring(start, end + 1);
+
+            var node = objectMapper.readTree(json);
+            String question = node.path("question").asText("");
+            List<String> options = new ArrayList<>();
+            node.path("options").forEach(o -> options.add(o.asText()));
+            int correctIndex = node.path("correctIndex").asInt(-1);
+            String explanation = node.path("explanation").asText("");
+
+            if (question.isBlank() || options.size() < 2 || correctIndex < 0 || correctIndex >= options.size()) {
+                return null;
+            }
+            return new GeneratedQuiz(question, options, correctIndex, explanation);
+        } catch (Exception e) {
+            log.warn("[TutorBot] Could not parse generated quiz: {}", e.getMessage());
+            return null;
+        }
     }
 
     private TutorConversationDto mapToDto(TutorBotConversation conversation) {

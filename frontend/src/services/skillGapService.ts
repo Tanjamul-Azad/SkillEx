@@ -3,8 +3,14 @@ import { api } from './api';
 export interface PathStep {
   order: number;
   skillName: string;
-  skillId: string;
+  skillId: string | null;
   rationale: string;
+  learningOutcome?: string;
+  practiceTask?: string;
+  suggestedSessionTitle?: string;
+  completionProof?: string;
+  nextStepDependency?: string;
+  platformAction?: string;
   estimatedHours: number;
   availableMentors: MentorMatch[];
 }
@@ -26,7 +32,7 @@ export interface LearningPath {
 }
 
 export interface SkillGap {
-  skillId: string;
+  skillId: string | null;
   skillName: string;
   category: string;
   similarityToGoal: number;
@@ -36,7 +42,7 @@ export interface SkillGap {
 }
 
 export interface SkillGapAnalysis {
-  goalSkillId: string;
+  goalSkillId: string | null;
   goalSkillName: string;
   currentSkills: string[];
   gaps: SkillGap[];
@@ -47,4 +53,7 @@ export interface SkillGapAnalysis {
 export const skillGapService = {
   analyze: (goalSkillId: string): Promise<SkillGapAnalysis> =>
     api.get<SkillGapAnalysis>(`/ai/skill-gap/${goalSkillId}`),
+
+  analyzeCustom: (goalSkillName: string, category = 'Other'): Promise<SkillGapAnalysis> =>
+    api.post<SkillGapAnalysis>('/ai/skill-gap/custom', { goalSkillName, category }),
 };

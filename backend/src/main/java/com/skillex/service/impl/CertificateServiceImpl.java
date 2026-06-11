@@ -191,7 +191,15 @@ public class CertificateServiceImpl implements CertificateService {
             }
         }
         if (!active.isEmpty()) {
-            notificationService.create(userId, null, "SYSTEM_UPDATE", "One or more SkillEX credentials were revoked because of an active account restriction.");
+            notificationService.create(
+                userId,
+                null,
+                "SYSTEM_UPDATE",
+                "One or more SkillEX credentials were revoked because of an active account restriction.",
+                "CERTIFICATE",
+                null,
+                "/certificates"
+            );
         }
     }
 
@@ -248,7 +256,15 @@ public class CertificateServiceImpl implements CertificateService {
             .eventType("ISSUED")
             .message("Certificate issued automatically from SkillEX trust signals.")
             .build());
-        notificationService.create(user.getId(), null, "SYSTEM_UPDATE", "You earned a " + certificate.getTitle() + ".");
+        notificationService.create(
+            user.getId(),
+            null,
+            "SYSTEM_UPDATE",
+            "You earned a " + certificate.getTitle() + ".",
+            "CERTIFICATE",
+            certificate.getId(),
+            "/certificates?certificateId=" + certificate.getId()
+        );
     }
 
     private void awardBadge(User user, Skill skill, String code, String sourceType, String sourceId) {
@@ -263,7 +279,15 @@ public class CertificateServiceImpl implements CertificateService {
             .build());
         BadgeDefinition definition = badgeDefinitionRepository.findByCode(saved.getBadgeCode()).orElse(null);
         String name = definition != null ? definition.getName() : code.replace("_", " ");
-        notificationService.create(user.getId(), null, "SYSTEM_UPDATE", "You earned the " + name + " badge.");
+        notificationService.create(
+            user.getId(),
+            null,
+            "SYSTEM_UPDATE",
+            "You earned the " + name + " badge.",
+            "BADGE",
+            saved.getId(),
+            "/certificates?badgeId=" + saved.getId()
+        );
     }
 
     private BadgeDto toBadgeDto(UserBadge badge) {

@@ -24,17 +24,19 @@ public interface LearningPathService {
     List<LearningPathDto> listUserPaths(String userId);
 
     /**
-     * Mark a learning path step as completed.
+     * Mark a learning path step as completed. Only the path owner may do this.
      *
+     * @param userId caller (must own the path)
      * @param pathId path ID
      * @param stepOrder which step (1-indexed)
      */
-    void completeStep(String pathId, int stepOrder);
+    void completeStep(String userId, String pathId, int stepOrder);
 
     /**
-     * Cancel an active learning path.
+     * Cancel an active learning path. Only the path owner may do this.
      *
+     * @param userId caller (must own the path)
      * @param pathId path ID
      */
-    void cancelPath(String pathId);
+    void cancelPath(String userId, String pathId);
 }

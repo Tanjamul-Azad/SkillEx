@@ -32,7 +32,7 @@ import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/comp
 import {
   Award, LayoutDashboard, Zap, Users, User, Settings, LogOut,
   ChevronLeft, ChevronRight, X, MessageSquare,
-  UserPlus, Shield,
+  UserPlus, Shield, Target, Route, GraduationCap, Search,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { dashboardNav } from '@/config/navigation.config';
@@ -51,6 +51,10 @@ const ICON_MAP: Record<string, LucideIcon> = {
   Settings,
   MessageSquare,
   Shield,
+  Target,
+  Route,
+  GraduationCap,
+  Search,
 };
 
 /* ── Constants ─────────────────────────────────────────────────────────────── */

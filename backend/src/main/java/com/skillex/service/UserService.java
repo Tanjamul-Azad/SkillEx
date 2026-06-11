@@ -15,6 +15,8 @@ public interface UserService {
 
     AddSkillResult addSkill(String userId, AddSkillRequest req);
 
+    void updateSkillSubtitle(String userId, String skillId, String subtitle);
+
     void removeSkill(String userId, String skillId, String type);
 
     PagedResponse<UserSearchResultDto> searchUsers(String viewerId, String query, int page, int size);

@@ -56,6 +56,16 @@ public class CommunityController {
         return ResponseEntity.ok(ApiResponse.ok(communityService.getEvent(currentUserId(request), eventId)));
     }
 
+    @GetMapping("/users/{userId}/events")
+    public ResponseEntity<ApiResponse<PagedResponse<CommunityDtos.EventDto>>> getUserEvents(
+        @PathVariable String userId,
+        @RequestParam(defaultValue = "rsvp") String relation,
+        @RequestParam(defaultValue = "0") int page,
+        @RequestParam(defaultValue = "6") int size
+    ) {
+        return ResponseEntity.ok(ApiResponse.ok(communityService.getUserEvents(userId, relation, page, size)));
+    }
+
     @PostMapping("/events")
     public ResponseEntity<ApiResponse<CommunityDtos.EventDto>> createEvent(
         HttpServletRequest request,
@@ -67,13 +77,12 @@ public class CommunityController {
     }
 
     @PostMapping("/events/{eventId}/attend")
-    public ResponseEntity<ApiResponse<Void>> attendEvent(
+    public ResponseEntity<ApiResponse<CommunityDtos.EventDto>> attendEvent(
         HttpServletRequest request,
         @PathVariable String eventId
     ) {
         String userId = currentUserId(request);
-        communityService.attendEvent(userId, eventId);
-        return ResponseEntity.ok(ApiResponse.ok(null));
+        return ResponseEntity.ok(ApiResponse.ok(communityService.attendEvent(userId, eventId)));
     }
 
     @PostMapping("/events/{eventId}/interest")

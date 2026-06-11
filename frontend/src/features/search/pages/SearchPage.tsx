@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { ArrowLeft, Filter, Loader2 } from 'lucide-react';
@@ -31,9 +31,10 @@ const FILTERS: FilterOption[] = [
 export default function SearchPage() {
   useDocumentTitle('Search');
   const navigate = useNavigate();
-  const [searchParams] = useSearchParams();
+  const [searchParams, setSearchParams] = useSearchParams();
 
   const initialQuery = searchParams.get('q') || '';
+  const initialFilter = (searchParams.get('type') as ResultFilter | null) || 'all';
   const [query, setQuery] = useState(initialQuery);
   const [loading, setLoading] = useState(!!initialQuery);
   const [results, setResults] = useState<GroupedSearchResults>({
@@ -42,7 +43,18 @@ export default function SearchPage() {
     discussions: [],
     circles: [],
   });
-  const [selectedFilter, setSelectedFilter] = useState<ResultFilter>('all');
+  const [selectedFilter, setSelectedFilter] = useState<ResultFilter>(
+    FILTERS.some((filter) => filter.id === initialFilter) ? initialFilter : 'all'
+  );
+
+  useEffect(() => {
+    const nextQuery = searchParams.get('q') || '';
+    setQuery(nextQuery);
+    const nextType = (searchParams.get('type') as ResultFilter | null) || 'all';
+    if (FILTERS.some((filter) => filter.id === nextType)) {
+      setSelectedFilter(nextType);
+    }
+  }, [searchParams]);
 
   // Perform search when query changes
   useEffect(() => {
@@ -92,7 +104,14 @@ export default function SearchPage() {
       return allResults.sort((a, b) => b.relevanceScore - a.relevanceScore);
     }
 
-    return allResults.filter((r) => r.type === selectedFilter)
+    const typeForFilter: Record<Exclude<ResultFilter, 'all'>, SearchResult['type']> = {
+      mentors: 'mentor',
+      skills: 'skill',
+      discussions: 'discussion',
+      circles: 'circle',
+    };
+
+    return allResults.filter((r) => r.type === typeForFilter[selectedFilter])
       .sort((a, b) => b.relevanceScore - a.relevanceScore);
   }, [results, selectedFilter]);
 
@@ -104,8 +123,39 @@ export default function SearchPage() {
     circles: results.circles.length,
   };
 
-  const handleSearch = (newQuery: string) => {
+  const handleSearch = useCallback((newQuery: string) => {
     setQuery(newQuery);
+    setSearchParams((prev) => {
+      const next = new URLSearchParams(prev);
+      const trimmed = newQuery.trim();
+      if (trimmed) {
+        next.set('q', trimmed);
+      } else {
+        next.delete('q');
+      }
+      return next;
+    }, { replace: true });
+  }, [setSearchParams]);
+
+  const routeForResult = useCallback((result: SearchResult) => {
+    if (result.type === 'mentor') return `/profile/${result.id}`;
+    if (result.type === 'discussion') return `/community?tab=discussions&discussionId=${result.id}`;
+    if (result.type === 'circle') return `/community?tab=circles&circleId=${result.id}`;
+    if (result.type === 'skill') return `/search?q=${encodeURIComponent(result.name)}&type=mentors`;
+    return '/search';
+  }, []);
+
+  const handleFilterChange = (filterId: ResultFilter) => {
+    setSelectedFilter(filterId);
+    setSearchParams((prev) => {
+      const next = new URLSearchParams(prev);
+      if (filterId === 'all') {
+        next.delete('type');
+      } else {
+        next.set('type', filterId);
+      }
+      return next;
+    }, { replace: true });
   };
 
   return (
@@ -142,7 +192,9 @@ export default function SearchPage() {
               <div className="max-w-2xl">
                 <UnifiedSearchBox
                   placeholder="Search mentors, skills, discussions, circles..."
-                  onResultSelected={() => {}}
+                  initialQuery={query}
+                  onQueryChange={handleSearch}
+                  onResultSelected={(result) => navigate(routeForResult(result))}
                 />
               </div>
             </div>
@@ -165,7 +217,7 @@ export default function SearchPage() {
                       key={filter.id}
                       variant={selectedFilter === filter.id ? 'default' : 'outline'}
                       size="sm"
-                      onClick={() => setSelectedFilter(filter.id)}
+                      onClick={() => handleFilterChange(filter.id)}
                       className="rounded-full"
                     >
                       {filter.label}

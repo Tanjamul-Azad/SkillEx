@@ -129,7 +129,15 @@ public class SessionServiceImpl implements SessionService {
             String message = proposer.getName() + " proposed a " + meetingType.name().toLowerCase()
                     + " session for " + details.skill().getName() + " on "
                     + req.scheduledAt().toLocalDate() + " at " + req.scheduledAt().toLocalTime() + ".";
-            notificationService.create(recipientId, requestingUserId, "SESSION_SCHEDULED", message);
+            notificationService.create(
+                recipientId,
+                requestingUserId,
+                "SESSION_SCHEDULED",
+                message,
+                "SESSION",
+                saved.getId(),
+                sessionActionUrl(saved.getId())
+            );
         } catch (Exception e) {
             log.warn("[Session] Failed to send proposal notification", e);
         }
@@ -197,7 +205,15 @@ public class SessionServiceImpl implements SessionService {
         try {
             String message = proposer.getName() + " proposed a connection meeting on "
                 + req.scheduledAt().toLocalDate() + " at " + req.scheduledAt().toLocalTime() + ".";
-            notificationService.create(partner.getId(), proposer.getId(), "SESSION_SCHEDULED", message);
+            notificationService.create(
+                partner.getId(),
+                proposer.getId(),
+                "SESSION_SCHEDULED",
+                message,
+                "SESSION",
+                saved.getId(),
+                sessionActionUrl(saved.getId())
+            );
         } catch (Exception e) {
             log.warn("[Session] Failed to send connected meeting notification", e);
         }
@@ -240,7 +256,15 @@ public class SessionServiceImpl implements SessionService {
             String proposerId = session.getProposedBy() != null ? session.getProposedBy().getId() : null;
             if (proposerId != null && acceptor != null) {
                 String message = acceptor.getName() + " accepted your proposed session time!";
-                notificationService.create(proposerId, requestingUserId, "SESSION_SCHEDULED", message);
+                notificationService.create(
+                    proposerId,
+                    requestingUserId,
+                    "SESSION_SCHEDULED",
+                    message,
+                    "SESSION",
+                    saved.getId(),
+                    sessionActionUrl(saved.getId())
+                );
             }
         } catch (Exception e) {
             log.warn("[Session] Failed to send acceptance notification", e);
@@ -282,7 +306,15 @@ public class SessionServiceImpl implements SessionService {
                 : session.getTeacher().getId();
             String message = newProposer.getName() + " proposed a new time: "
                 + newScheduledAt.toLocalDate() + " at " + newScheduledAt.toLocalTime() + ".";
-            notificationService.create(partnerId, requestingUserId, "SESSION_SCHEDULED", message);
+            notificationService.create(
+                partnerId,
+                requestingUserId,
+                "SESSION_SCHEDULED",
+                message,
+                "SESSION",
+                saved.getId(),
+                sessionActionUrl(saved.getId())
+            );
         } catch (Exception e) {
             log.warn("[Session] Failed to send reschedule notification", e);
         }
@@ -378,7 +410,15 @@ public class SessionServiceImpl implements SessionService {
             String recipientId = requestingUserId.equals(teacher.getId()) ? learner.getId() : teacher.getId();
             
             String message = senderName + " has joined the Study Room! Click to join them.";
-            notificationService.create(recipientId, requestingUserId, "SESSION_SCHEDULED", message);
+            notificationService.create(
+                recipientId,
+                requestingUserId,
+                "SESSION_SCHEDULED",
+                message,
+                "SESSION",
+                session.getId(),
+                sessionActionUrl(session.getId())
+            );
         } catch (Exception e) {
             // Log warning but don't fail transaction if notification delivery fails
         }
@@ -586,6 +626,10 @@ public class SessionServiceImpl implements SessionService {
 
     private boolean hasText(String value) {
         return value != null && !value.isBlank();
+    }
+
+    private String sessionActionUrl(String sessionId) {
+        return "/dashboard?panel=upcoming&sessionId=" + sessionId + "#upcoming-sessions";
     }
 
     private record ScheduleDetails(User teacher, User learner, Skill skill) {}

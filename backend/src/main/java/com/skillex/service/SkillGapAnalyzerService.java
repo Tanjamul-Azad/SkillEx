@@ -1,8 +1,6 @@
 package com.skillex.service;
 
 import com.skillex.dto.ai.SkillGapAnalysisDto;
-import com.skillex.dto.ai.SkillGapDto;
-import com.skillex.dto.match.MatchUserDto;
 
 import java.util.List;
 
@@ -16,6 +14,12 @@ public interface SkillGapAnalyzerService {
      * @return analysis with missing skills and mentor suggestions
      */
     SkillGapAnalysisDto analyzeGap(String userId, String goalSkillId);
+
+    /**
+     * Analyze a free-text goal skill. Unknown skills are submitted into the
+     * catalog governance queue, but the user still receives an AI plan now.
+     */
+    SkillGapAnalysisDto analyzeCustomGoal(String userId, String goalSkillName, String category);
 
     /**
      * Generate a learning path from goal skill using AI.

@@ -62,6 +62,14 @@ export const CommunityService = {
   getEvent: (eventId: string): Promise<Event> =>
     api.get<Event>(`/community/events/${eventId}`),
 
+  getUserEvents: (
+    userId: string,
+    relation: 'hosted' | 'rsvp' | 'going' | 'interested' = 'rsvp',
+    page = 0,
+    size = 6,
+  ): Promise<PagedResponse<Event>> =>
+    api.get<PagedResponse<Event>>(`/community/users/${userId}/events?relation=${relation}&page=${page}&size=${size}`),
+
   createEvent: (data: {
     title: string;
     description?: string;
@@ -76,8 +84,8 @@ export const CommunityService = {
   }): Promise<Event> =>
     api.post<Event>('/community/events', data),
 
-  attendEvent: (eventId: string): Promise<void> =>
-    api.post<void>(`/community/events/${eventId}/attend`, {}),
+  attendEvent: (eventId: string): Promise<Event> =>
+    api.post<Event>(`/community/events/${eventId}/attend`, {}),
 
   interestEvent: (eventId: string): Promise<Event> =>
     api.post<Event>(`/community/events/${eventId}/interest`, {}),

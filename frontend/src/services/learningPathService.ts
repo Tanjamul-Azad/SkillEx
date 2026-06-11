@@ -29,9 +29,10 @@ export interface LearningPath {
 
 export const learningPathService = {
   generate: (goalSkillId: string, targetLevel: string = 'intermediate'): Promise<LearningPath> =>
-    api.post<LearningPath>(`/ai/learning-paths`, null, {
-      params: { goalSkillId, targetLevel }
-    }),
+    api.post<LearningPath>(
+      `/ai/learning-paths?goalSkillId=${encodeURIComponent(goalSkillId)}&targetLevel=${encodeURIComponent(targetLevel)}`,
+      null
+    ),
 
   list: (): Promise<LearningPath[]> =>
     api.get<LearningPath[]>('/ai/learning-paths'),

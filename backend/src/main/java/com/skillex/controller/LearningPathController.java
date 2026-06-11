@@ -37,7 +37,8 @@ public class LearningPathController {
         @PathVariable String pathId,
         @PathVariable int stepOrder
     ) {
-        learningPathService.completeStep(pathId, stepOrder);
+        String userId = (String) auth.getPrincipal();
+        learningPathService.completeStep(userId, pathId, stepOrder);
         return ApiResponse.ok(null);
     }
 
@@ -46,7 +47,8 @@ public class LearningPathController {
         Authentication auth,
         @PathVariable String pathId
     ) {
-        learningPathService.cancelPath(pathId);
+        String userId = (String) auth.getPrincipal();
+        learningPathService.cancelPath(userId, pathId);
         return ApiResponse.ok(null);
     }
 }

@@ -71,6 +71,11 @@ public class Discussion {
     @JoinColumn(name = "circle_id")
     private SkillCircle circle;
 
+    /** Optional link to a community event — powers the per-event discussion/activity wall. */
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "event_id")
+    private Event event;
+
     @Enumerated(EnumType.STRING)
     @Column(nullable = false, length = 12)
     @Builder.Default

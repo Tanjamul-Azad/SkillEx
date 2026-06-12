@@ -220,6 +220,7 @@ public class CommunityServiceImpl implements CommunityService {
         String status,
         String circleId,
         String skillId,
+        String eventId,
         int page,
         int size
     ) {
@@ -240,6 +241,7 @@ public class CommunityServiceImpl implements CommunityService {
             parsedStatus,
             blankToNull(circleId),
             blankToNull(skillId),
+            blankToNull(eventId),
             pageable
         );
         List<Discussion> discussions = discussionPage.getContent();
@@ -286,6 +288,13 @@ public class CommunityServiceImpl implements CommunityService {
                 .orElseThrow(() -> new EntityNotFoundException("SkillCircle not found: " + req.circleId()));
             assertCircleMember(circle, authorId, "Join this skill circle before posting in it.");
             discussion.setCircle(circle);
+        }
+        if (req.eventId() != null && !req.eventId().isBlank()) {
+            // Event discussion walls are open to any signed-in member (events are public),
+            // so no membership gate here — just link the thread to the event.
+            Event event = eventRepository.findById(req.eventId())
+                .orElseThrow(() -> new EntityNotFoundException("Event not found: " + req.eventId()));
+            discussion.setEvent(event);
         }
         discussion.setUpvotes(0);
         discussion.setReplies(0);
@@ -819,6 +828,7 @@ public class CommunityServiceImpl implements CommunityService {
                 Discussion.ThreadType.QUESTION,
                 Discussion.DiscussionStatus.OPEN,
                 circleId,
+                null,
                 null,
                 PageRequest.of(0, 5, Sort.by("createdAt").descending())
             )

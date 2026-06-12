@@ -42,6 +42,8 @@ public final class CommunityDtos {
         SkillRef skill,
         String circleId,
         String circleName,
+        String eventId,
+        String eventTitle,
         String status,
         String acceptedReplyId,
         int upvotes,

@@ -279,7 +279,7 @@ export default function GlobalSearch({ className }: { className?: string }) {
               className={cn(
                 'inline-flex h-7 items-center gap-1.5 rounded-md px-2 text-[11px] font-semibold transition-colors',
                 mode === 'people'
-                  ? 'bg-background text-foreground shadow-sm dark:bg-slate-800'
+                  ? 'bg-primary text-primary-foreground shadow-sm'
                   : 'text-muted-foreground hover:text-foreground'
               )}
             >
@@ -292,7 +292,7 @@ export default function GlobalSearch({ className }: { className?: string }) {
               className={cn(
                 'inline-flex h-7 items-center gap-1.5 rounded-md px-2 text-[11px] font-semibold transition-colors',
                 mode === 'skills'
-                  ? 'bg-background text-foreground shadow-sm dark:bg-slate-800'
+                  ? 'bg-primary text-primary-foreground shadow-sm'
                   : 'text-muted-foreground hover:text-foreground'
               )}
             >

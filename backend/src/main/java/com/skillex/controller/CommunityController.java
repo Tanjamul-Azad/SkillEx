@@ -104,12 +104,13 @@ public class CommunityController {
         @RequestParam(required = false) String status,
         @RequestParam(required = false) String circleId,
         @RequestParam(required = false) String skillId,
+        @RequestParam(required = false) String eventId,
         @RequestParam(defaultValue = "0") int page,
         @RequestParam(defaultValue = "20") int size
     ) {
         String viewerId = currentUserId(request);
         return ResponseEntity.ok(ApiResponse.ok(communityService.getDiscussions(
-            viewerId, category, threadType, status, circleId, skillId, page, size)));
+            viewerId, category, threadType, status, circleId, skillId, eventId, page, size)));
     }
 
     @PostMapping("/discussions")

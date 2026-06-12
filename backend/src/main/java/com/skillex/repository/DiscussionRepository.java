@@ -23,6 +23,9 @@ public interface DiscussionRepository extends JpaRepository<Discussion, String> 
 
     long countByCircleIdAndThreadTypeAndStatus(String circleId, Discussion.ThreadType threadType, Discussion.DiscussionStatus status);
 
+    // The last predicate keeps event activity threads scoped to their event:
+    // they stay out of the general feed / circle help desk unless an eventId is
+    // explicitly requested. (Comments must live outside the @Query JPQL string.)
     @Query("""
         SELECT d
         FROM Discussion d
@@ -31,6 +34,8 @@ public interface DiscussionRepository extends JpaRepository<Discussion, String> 
           AND (:status IS NULL OR d.status = :status)
           AND (:circleId IS NULL OR d.circle.id = :circleId)
           AND (:skillId IS NULL OR d.skill.id = :skillId)
+          AND (:eventId IS NULL OR d.event.id = :eventId)
+          AND (:eventId IS NOT NULL OR d.event IS NULL)
         """)
     Page<Discussion> searchCommunityThreads(
         @Param("category") String category,
@@ -38,6 +43,7 @@ public interface DiscussionRepository extends JpaRepository<Discussion, String> 
         @Param("status") Discussion.DiscussionStatus status,
         @Param("circleId") String circleId,
         @Param("skillId") String skillId,
+        @Param("eventId") String eventId,
         Pageable pageable
     );
 }

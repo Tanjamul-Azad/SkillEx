@@ -67,7 +67,7 @@ public class DtoMapper {
 
         return new UserProfileDto(
             u.getId(), u.getName(), u.getUsername(), u.getEmail(), u.getAvatar(),
-            u.getUniversity(), u.getLocation(), u.getBio(),
+            u.getUniversity(), u.getLocation(), u.getPhone(), u.getAddress(), u.getBio(),
             u.getTeachIntentText(), u.getLearnIntentText(),
             u.getGithubUrl(), u.getLinkedinUrl(), u.getFacebookUrl(), u.getWebsiteUrl(), u.getResumeUrl(),
             safeRoleName(u),
@@ -195,6 +195,8 @@ public class DtoMapper {
             d.getSkill() == null ? null : toSkillRefCommunity(d.getSkill()),
             d.getCircle() == null ? null : d.getCircle().getId(),
             d.getCircle() == null ? null : d.getCircle().getName(),
+            d.getEvent() == null ? null : d.getEvent().getId(),
+            d.getEvent() == null ? null : d.getEvent().getTitle(),
             d.getStatus() == null ? Discussion.DiscussionStatus.OPEN.name() : d.getStatus().name(),
             d.getAcceptedReply() == null ? null : d.getAcceptedReply().getId(),
             d.getUpvotes(), isUpvotedByViewer, d.getReplies(), d.getViews(),

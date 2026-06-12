@@ -73,7 +73,7 @@ export default function SettingsPage() {
                   className={cn(
                     "flex w-full items-center justify-start gap-3 rounded-xl border px-3 py-2.5 text-left text-[11px] font-extrabold uppercase tracking-wider transition-colors whitespace-nowrap lg:whitespace-normal group",
                     active === s.id
-                      ? 'border-primary/35 bg-primary/10 text-primary'
+                      ? 'border-primary bg-primary text-primary-foreground shadow-sm'
                       : 'border-transparent text-muted-foreground hover:border-border/70 hover:bg-muted/30 hover:text-foreground dark:hover:border-white/10',
                     s.id === 'danger' && 'lg:mt-auto text-destructive hover:bg-destructive/10 hover:text-destructive hover:border-destructive/30'
                   )}

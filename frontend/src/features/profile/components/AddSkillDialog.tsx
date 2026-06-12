@@ -12,8 +12,8 @@ import { Checkbox } from '@/components/ui/checkbox';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { useToast } from '@/hooks/use-toast';
 import { cn } from '@/lib/utils';
-import { Search, Plus, Check } from 'lucide-react';
-import { SkillService } from '@/services/skillService';
+import { Search, Plus, Check, Sparkles, Loader2 } from 'lucide-react';
+import { SkillService, type SkillIntentSuggestion } from '@/services/skillService';
 import { UserService } from '@/services/userService';
 import type { Skill } from '@/types';
 
@@ -45,6 +45,12 @@ export function AddSkillDialog({ open, onClose, mode, existingIds, onSave }: Pro
   // custom skill state
   const [customSelected, setCustomSelected] = useState(false);
   const [customCategory, setCustomCategory] = useState('Other');
+
+  // AI semantic suggest state
+  const [aiIntentText, setAiIntentText] = useState('');
+  const [aiSuggestions, setAiSuggestions] = useState<SkillIntentSuggestion[]>([]);
+  const [aiLoading, setAiLoading] = useState(false);
+  const [aiSelectedIds, setAiSelectedIds] = useState<Set<string | 'custom'>>(new Set());
   
   // Showcase Video State
   const [videoFile, setVideoFile] = useState<File | null>(null);
@@ -58,6 +64,38 @@ export function AddSkillDialog({ open, onClose, mode, existingIds, onSave }: Pro
       .then((data) => setSkills(Array.isArray(data) ? data : []))
       .catch(() => setSkills([]));
   }, [open]);
+
+  const handleAiSuggest = async () => {
+    if (!aiIntentText.trim()) return;
+    setAiLoading(true);
+    setAiSuggestions([]);
+    try {
+      const payload = mode === 'offered'
+        ? { teachText: aiIntentText }
+        : { learnText: aiIntentText };
+      const res = await SkillService.interpretIntent(payload);
+      const result = mode === 'offered' ? res.teach : res.learn;
+      if (result) {
+        const all: SkillIntentSuggestion[] = [
+          ...(result.primary ? [result.primary] : []),
+          ...result.alternatives,
+        ].filter((s, i, arr) => arr.findIndex((x) => x.skillName === s.skillName) === i);
+        setAiSuggestions(all);
+      }
+    } catch {
+      toast({ title: 'Could not get suggestions', variant: 'destructive' });
+    } finally {
+      setAiLoading(false);
+    }
+  };
+
+  const toggleAiSuggestion = (key: string) => {
+    setAiSelectedIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(key)) next.delete(key); else next.add(key);
+      return next;
+    });
+  };
 
   const filtered = useMemo(() => {
     return skills.filter((s) => {
@@ -77,7 +115,7 @@ export function AddSkillDialog({ open, onClose, mode, existingIds, onSave }: Pro
 
   // Show "create custom" card when query has no catalog matches
   const showCreateCustom = query.trim().length > 0 && filtered.length === 0;
-  const totalToAdd = selected.size + (customSelected ? 1 : 0);
+  const totalToAdd = selected.size + (customSelected ? 1 : 0) + aiSelectedIds.size;
 
   const handleSave = async () => {
     if (totalToAdd === 0) {
@@ -95,17 +133,36 @@ export function AddSkillDialog({ open, onClose, mode, existingIds, onSave }: Pro
         uploadedVideoUrl = res.url;
       }
 
+      // Build AI suggestion add calls
+      const selectedAiSuggestions = aiSuggestions.filter((s) => {
+        const key = s.skillId ?? `ai_custom_${s.skillName}`;
+        return aiSelectedIds.has(key);
+      });
+
       await Promise.all([
         ...Array.from(selected).map((id) => UserService.addSkill(id, mode, 'BEGINNER', uploadedVideoUrl, subtitle)),
         ...(customSelected
           ? [UserService.addCustomSkill(query.trim(), customCategory, mode, 'BEGINNER', uploadedVideoUrl, subtitle)]
           : []),
+        ...selectedAiSuggestions.map((s) =>
+          s.skillId
+            ? UserService.addSkill(s.skillId, mode, 'BEGINNER', uploadedVideoUrl, subtitle)
+            : UserService.addCustomSkill(s.skillName, s.category, mode, 'BEGINNER', uploadedVideoUrl, subtitle)
+        ),
       ]);
       const added: Skill[] = [
         ...skills.filter((s) => selected.has(s.id)),
         ...(customSelected
           ? [{ id: `custom_${Date.now()}`, name: query.trim(), icon: 'Zap', category: customCategory, level: 'beginner' as Skill['level'], description: '' }]
           : []),
+        ...selectedAiSuggestions.map((s) => ({
+          id: s.skillId ?? `ai_custom_${Date.now()}_${s.skillName}`,
+          name: s.skillName,
+          icon: 'Sparkles',
+          category: s.category,
+          level: 'beginner' as Skill['level'],
+          description: '',
+        })),
       ];
       onSave(added);
       setSaving(false);
@@ -118,6 +175,9 @@ export function AddSkillDialog({ open, onClose, mode, existingIds, onSave }: Pro
       setVideoFile(null);
       setVideoPreview(null);
       setSubtitle('');
+      setAiIntentText('');
+      setAiSuggestions([]);
+      setAiSelectedIds(new Set());
       onClose();
       toast({
         title: `${added.length} skill${added.length > 1 ? 's' : ''} added`,
@@ -160,6 +220,9 @@ export function AddSkillDialog({ open, onClose, mode, existingIds, onSave }: Pro
     setCustomCategory('Other');
     setQuery('');
     setCategory('All');
+    setAiIntentText('');
+    setAiSuggestions([]);
+    setAiSelectedIds(new Set());
     onClose();
   };
 
@@ -178,13 +241,71 @@ export function AddSkillDialog({ open, onClose, mode, existingIds, onSave }: Pro
           </DialogDescription>
         </DialogHeader>
 
+        {/* AI Semantic Suggest */}
+        <div className="mt-3 rounded-xl border border-primary/20 bg-primary/5 p-3 space-y-2">
+          <p className="text-[10px] font-bold uppercase tracking-widest text-primary flex items-center gap-1.5">
+            <Sparkles className="h-3 w-3" /> AI Skill Matching
+          </p>
+          <div className="flex gap-2">
+            <Input
+              value={aiIntentText}
+              onChange={(e) => setAiIntentText(e.target.value)}
+              onKeyDown={(e) => e.key === 'Enter' && handleAiSuggest()}
+              placeholder={mode === 'offered' ? 'e.g. I know Python and Django...' : 'e.g. I want to learn machine learning...'}
+              className="rounded-xl text-sm h-9 flex-1"
+            />
+            <Button
+              size="sm"
+              variant="outline"
+              className="rounded-xl h-9 px-3 shrink-0 border-primary/30 text-primary hover:bg-primary hover:text-primary-foreground"
+              onClick={handleAiSuggest}
+              disabled={aiLoading || !aiIntentText.trim()}
+            >
+              {aiLoading ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Sparkles className="h-3.5 w-3.5" />}
+              <span className="ml-1.5 text-xs font-semibold">Suggest</span>
+            </Button>
+          </div>
+          {aiSuggestions.length > 0 && (
+            <div className="flex flex-wrap gap-1.5 pt-1">
+              {aiSuggestions.map((s) => {
+                const key = s.skillId ?? `ai_custom_${s.skillName}`;
+                const isChosen = aiSelectedIds.has(key);
+                const alreadyAdded = s.skillId ? existingIds.includes(s.skillId) : false;
+                return (
+                  <button
+                    key={key}
+                    type="button"
+                    disabled={alreadyAdded}
+                    onClick={() => !alreadyAdded && toggleAiSuggestion(key)}
+                    className={cn(
+                      'flex items-center gap-1.5 rounded-full border px-3 py-1 text-xs font-semibold transition-colors',
+                      alreadyAdded && 'opacity-40 cursor-not-allowed border-border/30',
+                      !alreadyAdded && isChosen && 'bg-primary text-primary-foreground border-primary',
+                      !alreadyAdded && !isChosen && 'border-border/50 text-foreground hover:border-primary/50 hover:bg-primary/10',
+                    )}
+                  >
+                    {isChosen && <Check className="h-3 w-3" />}
+                    {s.skillName}
+                    <span className={cn('ml-0.5 text-[9px] font-bold', isChosen ? 'opacity-80' : 'text-muted-foreground')}>
+                      {s.confidence}%
+                    </span>
+                    {s.custom && (
+                      <span className="ml-0.5 rounded-full bg-secondary/20 px-1 text-[9px] text-secondary-foreground">new</span>
+                    )}
+                  </button>
+                );
+              })}
+            </div>
+          )}
+        </div>
+
         {/* Search */}
         <div className="relative mt-2">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
           <Input
             value={query}
             onChange={(e) => setQuery(e.target.value)}
-            placeholder="Search skills..."
+            placeholder="Or search the catalog..."
             className="pl-9 rounded-xl"
           />
         </div>

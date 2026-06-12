@@ -53,6 +53,12 @@ public class User {
     @Column(length = 120)
     private String location;
 
+    @Column(length = 50)
+    private String phone;
+
+    @Column(length = 300)
+    private String address;
+
     // DB column is `avatar` (not avatar_url)
     @Column(name = "avatar", length = 500)
     private String avatar;

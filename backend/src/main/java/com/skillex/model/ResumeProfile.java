@@ -46,6 +46,15 @@ public class ResumeProfile {
     @Column(length = 180)
     private String headline;
 
+    @Column(length = 255)
+    private String email;
+
+    @Column(length = 50)
+    private String phone;
+
+    @Column(length = 300)
+    private String address;
+
     @Column(name = "education_summary", columnDefinition = "TEXT")
     private String educationSummary;
 

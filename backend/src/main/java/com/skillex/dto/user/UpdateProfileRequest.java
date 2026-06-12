@@ -13,6 +13,8 @@ public record UpdateProfileRequest(
     @Email @Size(max = 255)   String email,
     @Size(max = 200)          String university,
     @Size(max = 120)          String location,
+    @Size(max = 50)           String phone,
+    @Size(max = 300)          String address,
     @Size(max = 500)          String bio,
     @Size(max = 500)          String teachIntentText,
     @Size(max = 500)          String learnIntentText,

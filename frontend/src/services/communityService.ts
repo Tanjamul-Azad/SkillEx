@@ -100,6 +100,7 @@ export const CommunityService = {
       status?: string;
       circleId?: string;
       skillId?: string;
+      eventId?: string;
     } = {},
   ): Promise<PagedResponse<Discussion>> => {
     const params = new URLSearchParams({ page: String(page), size: String(size) });
@@ -116,6 +117,7 @@ export const CommunityService = {
     threadType?: string;
     skillId?: string;
     circleId?: string;
+    eventId?: string;
   }): Promise<Discussion> =>
     normalizeDiscussion(await api.post<Discussion>('/community/discussions', data)),
 

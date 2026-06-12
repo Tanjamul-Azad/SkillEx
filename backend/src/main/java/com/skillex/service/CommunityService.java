@@ -34,6 +34,7 @@ public interface CommunityService {
         String status,
         String circleId,
         String skillId,
+        String eventId,
         int page,
         int size
     );

@@ -23,6 +23,9 @@ export interface ResumeProfile {
   extractionMethod: string;
   status: string;
   headline?: string | null;
+  email?: string | null;
+  phone?: string | null;
+  address?: string | null;
   educationSummary?: string | null;
   experienceSummary?: string | null;
   projectSummary?: string | null;
@@ -31,9 +34,7 @@ export interface ResumeProfile {
   languageSummary?: string | null;
   careerGoal?: string | null;
   teachSummary?: string | null;
-  learnSummary?: string | null;
   suggestedOfferedSkills: ResumeSkillSuggestion[];
-  suggestedWantedSkills: ResumeSkillSuggestion[];
   profileSignals: ResumeProfileSignal[];
   confidence: number;
   rawTextPreview?: string | null;
@@ -44,14 +45,9 @@ export interface ResumeProfile {
 export interface ApplyResumeProfileRequest {
   applyBio: boolean;
   applyTeachIntent: boolean;
-  applyLearnIntent: boolean;
+  applyContact: boolean;
+  learnIntentText?: string;
   offeredSkills: Array<{
-    name: string;
-    category: string;
-    level: string;
-    evidence: string;
-  }>;
-  wantedSkills: Array<{
     name: string;
     category: string;
     level: string;

@@ -10,5 +10,6 @@ public record CreateDiscussionRequest(
     @Size(max = 100) String category,
     String threadType,
     String skillId,
-    String circleId
+    String circleId,
+    String eventId
 ) {}

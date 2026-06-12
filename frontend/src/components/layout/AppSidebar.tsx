@@ -89,7 +89,7 @@ function NavItem({
         'transition-all duration-300 ease-out select-none outline-none',
         'focus-visible:ring-2 focus-visible:ring-primary/40 focus-visible:ring-offset-2 ring-offset-background',
         isActive
-          ? 'bg-primary/10 text-primary dark:bg-white/5 dark:text-primary shadow-[inset_0_0_0_1px_hsl(var(--primary)/0.25)] dark:shadow-none'
+          ? 'bg-primary text-primary-foreground shadow-sm'
           : 'text-muted-foreground hover:text-foreground',
         collapsed && 'justify-center px-0 py-2.5'
       )}
@@ -106,7 +106,7 @@ function NavItem({
       {isActive && (
         <motion.span
           layoutId="sidebar-active-pill"
-          className="absolute left-0 top-1/2 -translate-y-1/2 h-5 w-[3px] rounded-full bg-primary"
+          className="absolute left-0 top-1/2 -translate-y-1/2 h-5 w-[3px] rounded-full bg-primary-foreground"
           transition={{ type: 'spring', stiffness: 400, damping: 30 }}
         />
       )}
@@ -114,7 +114,7 @@ function NavItem({
       <Icon
         className={cn(
           'h-[18px] w-[18px] shrink-0 transition-colors duration-150',
-          isActive ? 'text-primary' : 'text-muted-foreground group-hover:text-foreground'
+          isActive ? 'text-primary-foreground' : 'text-muted-foreground group-hover:text-foreground'
         )}
         aria-hidden="true"
       />

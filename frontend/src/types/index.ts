@@ -35,6 +35,8 @@ export interface User {
   avatar: string;
   university: string;
   location?: string;
+  phone?: string;
+  address?: string;
   bio: string;
   teachIntentText?: string;
   learnIntentText?: string;
@@ -191,6 +193,8 @@ export interface Discussion {
   skill?: Skill | null;
   circleId?: string | null;
   circleName?: string | null;
+  eventId?: string | null;
+  eventTitle?: string | null;
   status?: 'OPEN' | 'SOLVED' | string;
   acceptedReplyId?: string | null;
   content: string;

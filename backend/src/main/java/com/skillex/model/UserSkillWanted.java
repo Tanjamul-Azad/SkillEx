@@ -38,7 +38,7 @@ public class UserSkillWanted {
     @Builder.Default
     private UserSkillOffered.SkillProficiency level = UserSkillOffered.SkillProficiency.BEGINNER;
 
-    // ── Embedded composite key ────────────────────────────────────────────────
+    // Embedded composite key
     @Embeddable
     @Getter
     @Setter

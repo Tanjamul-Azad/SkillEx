@@ -20,7 +20,6 @@ public class NotificationController {
 
     private final NotificationService notificationService;
 
-    /** GET /api/notifications?page=0&size=20 */
     @GetMapping
     public ResponseEntity<ApiResponse<PagedResponse<NotificationDto>>> list(
         Authentication auth,
@@ -31,7 +30,6 @@ public class NotificationController {
             notificationService.getForUser(userId(auth), page, size)));
     }
 
-    /** PATCH /api/notifications/{id}/read — mark one notification read */
     @PatchMapping("/{id}/read")
     public ResponseEntity<ApiResponse<NotificationDto>> markRead(
         Authentication auth,
@@ -50,7 +48,6 @@ public class NotificationController {
             notificationService.markRead(id, userId(auth))));
     }
 
-    /** POST /api/notifications/read-all — mark all notifications read */
     @PostMapping("/read-all")
     public ResponseEntity<ApiResponse<String>> markAllRead(Authentication auth) {
         notificationService.markAllRead(userId(auth));

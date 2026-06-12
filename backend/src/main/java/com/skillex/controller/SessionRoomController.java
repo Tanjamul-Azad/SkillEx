@@ -362,7 +362,7 @@ public class SessionRoomController {
         return ResponseEntity.ok(dtos);
     }
 
-    // ── WebSocket / STOMP Mappings ──────────────────────────────────────────
+    // WebSocket / STOMP Mappings
 
     /**
      * STOMP Message mapping to handle real-time collaborative shared editor notes.

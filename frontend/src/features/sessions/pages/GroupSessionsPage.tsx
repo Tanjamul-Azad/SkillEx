@@ -42,6 +42,7 @@ import {
   type GroupSession,
 } from '@/services/groupSessionService';
 import { cn } from '@/lib/utils';
+import { ImageUploadField } from '@/components/upload/ImageUploadField';
 
 const containerVariants = {
   hidden: { opacity: 0 },
@@ -357,6 +358,15 @@ function SessionCard({
       exit={{ opacity: 0, scale: 0.97 }}
       className="flex flex-col rounded-2xl border border-border/40 bg-card overflow-hidden"
     >
+      {session.coverImageUrl && (
+        <div className="relative aspect-video w-full overflow-hidden border-b border-border/40 bg-muted">
+          <img
+            src={session.coverImageUrl}
+            alt={session.title}
+            className="h-full w-full object-cover transition-transform duration-300 hover:scale-105"
+          />
+        </div>
+      )}
       <div className="p-5 flex-1">
         <div className="flex items-start justify-between gap-3">
           <div className="min-w-0">
@@ -559,6 +569,7 @@ function CreateSessionDialog({
   const [maxAttendees, setMaxAttendees] = useState('10');
   const [audienceLevel, setAudienceLevel] = useState('beginner to intermediate');
   const [goal, setGoal] = useState('');
+  const [coverImageUrl, setCoverImageUrl] = useState<string | null>(null);
   const [drafting, setDrafting] = useState(false);
   const [draftBrief, setDraftBrief] = useState<{
     agenda: string;
@@ -628,6 +639,7 @@ function CreateSessionDialog({
         scheduledAt,
         durationMinutes: parseInt(duration, 10),
         maxAttendees: parseInt(maxAttendees, 10),
+        coverImageUrl,
       });
       toast({ title: 'Workshop published', description: 'Learners can now reserve seats.' });
       setSkillId('');
@@ -635,6 +647,7 @@ function CreateSessionDialog({
       setDescription('');
       setScheduledAt('');
       setGoal('');
+      setCoverImageUrl(null);
       setDraftBrief(null);
       onCreated();
     } catch (error) {
@@ -762,6 +775,13 @@ function CreateSessionDialog({
                 )}
               </AnimatePresence>
             </motion.div>
+
+            <ImageUploadField
+              value={coverImageUrl}
+              onChange={setCoverImageUrl}
+              label="Cover image"
+              aspect="video"
+            />
 
             <div className="space-y-2">
               <label className="text-sm font-medium">Title</label>

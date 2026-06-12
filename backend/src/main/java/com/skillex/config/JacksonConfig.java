@@ -28,11 +28,11 @@ public class JacksonConfig {
     public ObjectMapper objectMapper() {
         ObjectMapper mapper = new ObjectMapper();
 
-        // ── Java Time (LocalDateTime → ISO-8601) ──────────────────────────────
+        // Java Time (LocalDateTime → ISO-8601)
         mapper.registerModule(new JavaTimeModule());
         mapper.disable(SerializationFeature.WRITE_DATES_AS_TIMESTAMPS);
 
-        // ── Hibernate lazy-loading ────────────────────────────────────────────
+        // Hibernate lazy-loading
         Hibernate6Module hibernateModule = new Hibernate6Module();
         // Serialize initialized associations; leave uninitialized ones as null
         hibernateModule.configure(
@@ -41,7 +41,7 @@ public class JacksonConfig {
             Hibernate6Module.Feature.SERIALIZE_IDENTIFIER_FOR_LAZY_NOT_LOADED_OBJECTS, true);
         mapper.registerModule(hibernateModule);
 
-        // ── Resilience ────────────────────────────────────────────────────────
+        // Resilience
         mapper.disable(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES);
         mapper.disable(SerializationFeature.FAIL_ON_EMPTY_BEANS);
 

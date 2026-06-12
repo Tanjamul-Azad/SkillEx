@@ -153,7 +153,7 @@ public class TutorBotController {
         return ResponseEntity.ok(ApiResponse.ok(feedback));
     }
 
-    // ── DTOs ────────────────────────────────────────────────────────────
+    // DTOs
 
     record SendMessageRequest(
         @Valid String message

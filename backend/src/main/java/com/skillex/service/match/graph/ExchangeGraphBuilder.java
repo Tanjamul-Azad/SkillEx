@@ -60,7 +60,7 @@ public class ExchangeGraphBuilder {
     private volatile ExchangeGraph cachedFullGraph;
     private volatile Instant cachedFullGraphAt = Instant.EPOCH;
 
-    // ── Public API ────────────────────────────────────────────────────────────
+    // Public API
 
     /**
      * Build and return a complete exchange graph for all active users.
@@ -159,7 +159,7 @@ public class ExchangeGraphBuilder {
         return subgraph;
     }
 
-    // ── Private helpers ───────────────────────────────────────────────────────
+    // Private helpers
 
     /**
      * Merge two user lists (one with offered skills, one with wanted skills)

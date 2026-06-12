@@ -32,7 +32,6 @@ public class AuthController {
     private final DtoMapper dtoMapper;
     private final FirebaseTokenVerifier firebaseTokenVerifier;
 
-    /** POST /api/auth/register */
     @PostMapping("/register")
     public ResponseEntity<ApiResponse<AuthResponse>> register(
         @Valid @RequestBody RegisterRequest request
@@ -41,7 +40,6 @@ public class AuthController {
         return ResponseEntity.status(HttpStatus.CREATED).body(ApiResponse.created(response));
     }
 
-    /** POST /api/auth/login */
     @PostMapping("/login")
     public ResponseEntity<ApiResponse<AuthResponse>> login(
         @Valid @RequestBody LoginRequest request
@@ -50,7 +48,6 @@ public class AuthController {
         return ResponseEntity.ok(ApiResponse.ok(response));
     }
 
-    /** POST /api/auth/firebase/google */
     @PostMapping("/firebase/google")
     public ResponseEntity<ApiResponse<AuthResponse>> loginWithFirebaseGoogle(
         @Valid @RequestBody FirebaseGoogleLoginRequest request
@@ -64,7 +61,6 @@ public class AuthController {
         return ResponseEntity.ok(ApiResponse.ok(response));
     }
 
-    /** POST /api/auth/refresh */
     @PostMapping("/refresh")
     public ResponseEntity<ApiResponse<AuthResponse>> refresh(
         @Valid @RequestBody RefreshTokenRequest request
@@ -72,7 +68,6 @@ public class AuthController {
         return ResponseEntity.ok(ApiResponse.ok(authService.refresh(request)));
     }
 
-    /** POST /api/auth/logout */
     @PostMapping("/logout")
     public ResponseEntity<ApiResponse<String>> logout(Authentication authentication) {
         String userId = (String) authentication.getPrincipal();
@@ -80,7 +75,6 @@ public class AuthController {
         return ResponseEntity.ok(ApiResponse.ok("Logged out."));
     }
 
-    /** GET /api/auth/me  — requires Authorization: Bearer <token> */
     @GetMapping("/me")
 public ResponseEntity<ApiResponse<UserProfileDto>> me(Authentication authentication) {
         String userId = (String) authentication.getPrincipal();

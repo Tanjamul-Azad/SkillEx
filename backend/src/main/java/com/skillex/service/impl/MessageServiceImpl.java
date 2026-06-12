@@ -43,7 +43,7 @@ public class MessageServiceImpl implements MessageService {
     @Value("${app.messaging.require-relationship:false}")
     private boolean requireRelationship;
 
-    // ── Queries ──────────────────────────────────────────────────────────────
+    // Queries
 
     @Override
     @Transactional(readOnly = true)
@@ -85,7 +85,7 @@ public class MessageServiceImpl implements MessageService {
             messageRepository.findConversation(userId, peerId, pageable).map(this::toDto));
     }
 
-    // ── Commands ─────────────────────────────────────────────────────────────
+    // Commands
 
     @Override
     @Transactional
@@ -125,7 +125,7 @@ public class MessageServiceImpl implements MessageService {
         messageRepository.markRead(peerId, userId);
     }
 
-    // ── Mapper ───────────────────────────────────────────────────────────────
+    // Mapper
 
     private MessageDto toDto(Message m) {
         return new MessageDto(

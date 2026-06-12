@@ -64,7 +64,7 @@ public class DataSeeder {
 
         log.info("[DataSeeder] Seeding demo data…");
 
-        // ── 1. Users ─────────────────────────────────────────────────────────
+        // 1. Users
         String demoPass  = passwordEncoder.encode("Demo1234!");
         String adminPass = passwordEncoder.encode("Admin1234!");
 
@@ -83,7 +83,7 @@ public class DataSeeder {
         User u9    = saveUser("Rafiq Uddin",   "rafiq@aust.edu",      demoPass,  "AUST",         User.UserRole.STUDENT, User.UserLevel.ADVANCED,     1050, 18,  new BigDecimal("4.80"), true,  "Excel wizard and cooking enthusiast.");
         User u10   = saveUser("Mitu Akter",    "mitu@ewu.edu.bd",     demoPass,  "EWU",          User.UserRole.STUDENT, User.UserLevel.PRACTITIONER, 720,  11,  new BigDecimal("4.70"), false, "Drawing, chess, and English writing.");
 
-        // ── 2. Skills offered / wanted ────────────────────────────────────────
+        // 2. Skills offered / wanted
         skillFor(u1, skills, "Python",           "Video Editing",    SkillProficiency.EXPERT);
         skillFor(u2, skills, "Figma",            "Python",           SkillProficiency.EXPERT);
         skillFor(u3, skills, "Guitar",           "Figma",            SkillProficiency.MODERATE);
@@ -102,7 +102,7 @@ public class DataSeeder {
         skillOffered(u4, skills, "Photography",     SkillProficiency.EXPERT);
         skillOffered(u5, skills, "Chess",           SkillProficiency.MODERATE);
 
-        // ── 3. Events ─────────────────────────────────────────────────────────
+        // 3. Events
         Skill webDev  = findSkill(skills, "Web Development");
         Skill uiux    = findSkill(skills, "UI/UX Design");
         Skill photo   = findSkill(skills, "Photography");
@@ -140,7 +140,7 @@ public class DataSeeder {
                   "bg-gradient-to-br from-gray-700 to-gray-900",
                   List.of(chess), List.of(u4, u5, u6, u7, u8, u9));
 
-        // ── 4. Discussions ────────────────────────────────────────────────────
+        // 4. Discussions
         String[] dTopics = {
             "Python", "Guitar", "Figma", "Photography", "Public Speaking",
             "Data Science", "3D Modeling", "Chess"
@@ -170,7 +170,7 @@ public class DataSeeder {
             discussionRepository.save(d);
         }
 
-        // ── 5. Skill Circles ──────────────────────────────────────────────────
+        // 5. Skill Circles
         Skill python  = findSkill(skills, "Python");
         Skill dsci    = findSkill(skills, "Data Science");
         Skill music   = findSkill(skills, "Guitar");
@@ -196,7 +196,7 @@ public class DataSeeder {
                    List.of(findSkill(skills, "English Writing"), findSkill(skills, "French Language")),
                    List.of(u6, u10));
 
-        // ── 6. Accepted connections ───────────────────────────────────────────
+        // 6. Accepted connections
         // So the dashboard "connections" panel and 1:1 messaging look alive out of the box.
         saveAcceptedConnection(u1, u2, "Loved your Figma walkthrough — let's swap Python for design tips!");
         saveAcceptedConnection(u1, u3, "Guitar for Python? I'm in.");
@@ -219,7 +219,7 @@ public class DataSeeder {
             .build());
     }
 
-    // ── Helpers ──────────────────────────────────────────────────────────────
+    // Helpers
 
     private User saveUser(String name, String email, String passwordHash,
                           String university, User.UserRole role, User.UserLevel level,

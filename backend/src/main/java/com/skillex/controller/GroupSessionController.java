@@ -96,6 +96,19 @@ public class GroupSessionController {
         return ApiResponse.ok(null);
     }
 
+    @PostMapping("/{sessionId}/start")
+    public ApiResponse<Void> start(
+        Authentication auth,
+        @PathVariable String sessionId,
+        @RequestBody(required = false) StartRequest body
+    ) {
+        String userId = (String) auth.getPrincipal();
+        groupSessionService.startSession(userId, sessionId, body == null ? null : body.meetingLink());
+        return ApiResponse.ok(null);
+    }
+
+    public record StartRequest(String meetingLink) {}
+
     @PostMapping("/{sessionId}/complete")
     public ApiResponse<Void> complete(
         Authentication auth,

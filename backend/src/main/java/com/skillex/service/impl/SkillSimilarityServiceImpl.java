@@ -48,7 +48,7 @@ public class SkillSimilarityServiceImpl implements SkillSimilarityService {
     private final SkillRelationRepository skillRelationRepository;
     private final SkillEmbeddingSyncService skillEmbeddingSyncService;
 
-    // ── Interface implementation ──────────────────────────────────────────────
+    // Interface implementation
 
     /**
      * {@inheritDoc}

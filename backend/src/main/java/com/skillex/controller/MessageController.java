@@ -31,7 +31,7 @@ public class MessageController {
     private final MessageService          messageService;
     private final SimpMessagingTemplate   messagingTemplate;
 
-    // ── REST ─────────────────────────────────────────────────────────────────
+    // REST
 
     /**
      * GET /api/messages/conversations
@@ -93,7 +93,7 @@ public class MessageController {
         return ResponseEntity.ok(ApiResponse.ok(saved));
     }
 
-    // ── WebSocket ─────────────────────────────────────────────────────────────
+    // WebSocket
 
     /**
      * Clients send to: /app/chat.send
@@ -119,7 +119,7 @@ public class MessageController {
         messagingTemplate.convertAndSendToUser(senderId, "/queue/messages", saved);
     }
 
-    // ── Helpers ───────────────────────────────────────────────────────────────
+    // Helpers
 
     private String userId(Authentication auth) {
         return (String) auth.getPrincipal();

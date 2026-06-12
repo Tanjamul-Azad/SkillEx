@@ -233,7 +233,7 @@ public class TutorBotServiceImpl implements TutorBotService {
         return feedbackMessage;
     }
 
-    // ── Private helper methods ──────────────────────────────────────────────
+    // Private helper methods
 
     private TutorBotConversation createNewConversation(User user, Skill skill) {
         TutorBotConversation conversation = TutorBotConversation.builder()

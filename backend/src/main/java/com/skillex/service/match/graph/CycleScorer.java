@@ -71,13 +71,13 @@ import java.util.stream.Collectors;
 @Slf4j
 public class CycleScorer {
 
-    // ── Weights (must sum to 100) ─────────────────────────────────────────────
+    // Weights (must sum to 100)
 
     private static final double WEIGHT_RATING       = 40.0;
     private static final double WEIGHT_SKILL        = 35.0;
     private static final double WEIGHT_AVAILABILITY = 25.0;
 
-    // ── Normalisation constants ───────────────────────────────────────────────
+    // Normalisation constants
 
     /**
      * A hop with this many (or more) matching skill IDs receives the maximum
@@ -90,11 +90,11 @@ public class CycleScorer {
      */
     private static final double MAX_SESSIONS = 20.0;
 
-    // ── Dependencies ─────────────────────────────────────────────────────────
+    // Dependencies
 
     private final UserRepository userRepository;
 
-    // ── Public API ────────────────────────────────────────────────────────────
+    // Public API
 
     /**
      * Score a single {@link ExchangeCycle} and return the enriched {@link ScoredCycle}.
@@ -155,7 +155,7 @@ public List<ScoredCycle> rankCycles(List<ExchangeCycle> cycles, int limit) {
             .collect(Collectors.toList());
     }
 
-    // ── Private helpers ────────────────────────────────────────────────────────
+    // Private helpers
 
     /**
      * Score a cycle using a pre-loaded user cache — avoids repeated DB calls
@@ -174,7 +174,7 @@ public List<ScoredCycle> rankCycles(List<ExchangeCycle> cycles, int limit) {
         return new ScoredCycle(cycle, avgRating, skillQuality, availability, total);
     }
 
-    // ── Factor 1: averageRating ───────────────────────────────────────────────
+    // Factor 1: averageRating
 
     /**
      * Mean participant rating normalised to [0, 1].
@@ -201,7 +201,7 @@ public List<ScoredCycle> rankCycles(List<ExchangeCycle> cycles, int limit) {
         return count == 0 ? 0.0 : sum / count;
     }
 
-    // ── Factor 2: skillMatchQuality ───────────────────────────────────────────
+    // Factor 2: skillMatchQuality
 
     /**
      * Average per-hop skill overlap quality, normalised to [0, 1].
@@ -226,7 +226,7 @@ public List<ScoredCycle> rankCycles(List<ExchangeCycle> cycles, int limit) {
         return total / hops.size();
     }
 
-    // ── Factor 3: sessionAvailability (weakest link) ─────────────────────────
+    // Factor 3: sessionAvailability (weakest link)
 
     /**
      * Weakest-link availability across all participants.
@@ -273,7 +273,7 @@ public List<ScoredCycle> rankCycles(List<ExchangeCycle> cycles, int limit) {
         return Math.min(1.0, online + experience);
     }
 
-    // ── Utility ───────────────────────────────────────────────────────────────
+    // Utility
 
     /** Load all participant {@link User} entities for a single cycle in one query. */
 private Map<String, User> loadParticipants(ExchangeCycle cycle) {

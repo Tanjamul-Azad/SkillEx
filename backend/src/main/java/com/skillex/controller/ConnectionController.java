@@ -25,7 +25,6 @@ public class ConnectionController {
 
     private final ConnectionService connectionService;
 
-    /** POST /api/connections — send a new connection request */
     @PostMapping
     public ResponseEntity<ApiResponse<ConnectionDto>> create(
         Authentication auth,
@@ -35,7 +34,6 @@ public class ConnectionController {
         return ResponseEntity.status(HttpStatus.CREATED).body(ApiResponse.ok(dto));
     }
 
-    /** GET /api/connections?status=&direction=all|sent|received&page=0&size=20 */
     @GetMapping
     public ResponseEntity<ApiResponse<PagedResponse<ConnectionDto>>> list(
         Authentication auth,
@@ -49,7 +47,6 @@ public class ConnectionController {
         ));
     }
 
-    /** GET /api/connections/relationship/{targetUserId} */
     @GetMapping("/relationship/{targetUserId}")
     public ResponseEntity<ApiResponse<ConnectionRelationshipDto>> relationship(
         Authentication auth,
@@ -60,7 +57,6 @@ public class ConnectionController {
         ));
     }
 
-    /** PATCH /api/connections/{id}/status — accept / decline / cancel */
     @PatchMapping("/{id}/status")
     public ResponseEntity<ApiResponse<ConnectionDto>> updateStatus(
         Authentication auth,
@@ -72,7 +68,6 @@ public class ConnectionController {
         ));
     }
 
-    /** GET /api/connections/pending-count */
     @GetMapping("/pending-count")
     public ResponseEntity<ApiResponse<Long>> pendingCount(Authentication auth) {
         return ResponseEntity.ok(ApiResponse.ok(connectionService.countIncomingPending(userId(auth))));

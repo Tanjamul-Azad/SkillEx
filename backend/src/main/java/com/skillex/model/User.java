@@ -131,7 +131,7 @@ public class User {
     @Column(name = "updated_at")
     private LocalDateTime updatedAt;
 
-    // ── Relationships ────────────────────────────────────────────────────────
+    // Relationships
     @ManyToMany(fetch = FetchType.LAZY)
     @JoinTable(
         name = "user_skills_offered",
@@ -150,7 +150,7 @@ public class User {
     @Builder.Default
     private List<Skill> skillsWanted = new ArrayList<>();
 
-    // ── Enums (names stored verbatim by EnumType.STRING — must match DB ENUM values) ──
+    // Enums (names stored verbatim by EnumType.STRING — must match DB ENUM values)
     public enum UserRole    { STUDENT, ADMIN }
     public enum UserLevel   { NEWCOMER, LEARNER, PRACTITIONER, SKILLED, ADVANCED, MASTER }
 }

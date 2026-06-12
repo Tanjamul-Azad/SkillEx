@@ -16,7 +16,7 @@ public record ApiResponse<T>(
     T data,
     String message
 ) {
-    // ── Factory helpers ──────────────────────────────────────────────────────
+    // Factory helpers
 
     public static <T> ApiResponse<T> ok(T data) {
         return new ApiResponse<>(true, data, null);

@@ -19,7 +19,6 @@ public class DashboardController {
 
     private final DashboardService dashboardService;
 
-    /** GET /api/dashboard/stats — aggregated stats for the authenticated user */
     @GetMapping("/stats")
     public ResponseEntity<ApiResponse<DashboardStatsDto>> getStats(Authentication auth) {
         String userId = (String) auth.getPrincipal();

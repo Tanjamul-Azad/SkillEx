@@ -18,7 +18,10 @@ public record GroupSessionDto(
     List<Attendee> attendees,
     String status, // SCHEDULED, IN_PROGRESS, COMPLETED
     String sharedNotes,
-    LocalDateTime createdAt
+    LocalDateTime createdAt,
+    String coverImageUrl,
+    String meetingLink,
+    LocalDateTime startedAt
 ) {
     public record CreateRequest(
         String skillId,
@@ -26,7 +29,8 @@ public record GroupSessionDto(
         String description,
         LocalDateTime scheduledAt,
         int durationMinutes,
-        int maxAttendees
+        int maxAttendees,
+        String coverImageUrl
     ) {}
 
     public record AiDraftRequest(

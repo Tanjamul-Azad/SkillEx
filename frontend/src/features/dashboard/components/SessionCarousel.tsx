@@ -8,9 +8,12 @@ import { motion } from 'framer-motion';
 import { Progress } from '@/components/ui/progress';
 import type { Exchange } from '@/services/exchangeService';
 import { appVisuals } from '@/lib/appVisuals';
+import type { GroupSession } from '@/services/groupSessionService';
+import { useNavigate } from 'react-router-dom';
 
 interface SessionCarouselProps {
   exchanges: Exchange[];
+  groupSessions?: GroupSession[];
   currentUserId: string;
 }
 
@@ -22,7 +25,8 @@ const SKILL_IMAGES = [
 
 const PLACEHOLDER_PROGRESS = [34, 48, 62];
 
-export function SessionCarousel({ exchanges, currentUserId }: SessionCarouselProps) {
+export function SessionCarousel({ exchanges, groupSessions, currentUserId }: SessionCarouselProps) {
+  const navigate = useNavigate();
   const [emblaRef, emblaApi] = useEmblaCarousel({
     align: 'start',
     skipSnaps: false,
@@ -47,15 +51,52 @@ export function SessionCarousel({ exchanges, currentUserId }: SessionCarouselPro
     emblaApi.on('select', onSelect);
   }, [emblaApi, onSelect]);
 
-  // Fallback items if NO active exchanges
-  const items = exchanges.length > 0 ? exchanges : Array(3).fill(null).map((_, i) => ({
-    id: `placeholder-${i}`,
-    title: i === 0 ? 'React Essentials' : i === 1 ? 'Advanced Django' : 'UI/UX Fundamentals',
-    partner: 'Skill partner',
-    progress: PLACEHOLDER_PROGRESS[i % PLACEHOLDER_PROGRESS.length],
-    image: SKILL_IMAGES[i % SKILL_IMAGES.length],
-    placeholder: true
-  }));
+  // Combine active exchanges and user's group sessions
+  const items = React.useMemo(() => {
+    const activeExchanges = exchanges.filter(e => e.status?.toLowerCase() === 'accepted');
+    const activeGroupSessions = (groupSessions ?? []).filter(s => s.status === 'SCHEDULED' || s.status === 'IN_PROGRESS');
+
+    const mappedExchanges = activeExchanges.map((e, idx) => {
+      const isRequester = e.requester.id === currentUserId;
+      const title = (isRequester ? e.wantedSkill?.name : e.offeredSkill?.name) || 'Skill Session';
+      const partnerName = isRequester ? e.receiver.name : e.requester.name;
+      return {
+        id: `exchange-${e.id}`,
+        title,
+        partner: partnerName,
+        progress: 45,
+        image: null as string | null,
+        link: `/messages/${isRequester ? e.receiver.id : e.requester.id}`,
+        isGroup: false
+      };
+    });
+
+    const mappedGroupSessions = activeGroupSessions.map(s => {
+      return {
+        id: `group-${s.id}`,
+        title: s.title,
+        partner: `Hosted by ${s.mentorName}`,
+        progress: s.status === 'IN_PROGRESS' ? 75 : 10,
+        image: s.coverImageUrl,
+        link: `/group-sessions`,
+        isGroup: true
+      };
+    });
+
+    const combined = [...mappedExchanges, ...mappedGroupSessions];
+    if (combined.length > 0) return combined;
+
+    return Array(3).fill(null).map((_, i) => ({
+      id: `placeholder-${i}`,
+      title: i === 0 ? 'React Essentials' : i === 1 ? 'Advanced Django' : 'UI/UX Fundamentals',
+      partner: 'Skill partner',
+      progress: PLACEHOLDER_PROGRESS[i % PLACEHOLDER_PROGRESS.length],
+      image: SKILL_IMAGES[i % SKILL_IMAGES.length],
+      link: '#',
+      isGroup: false,
+      placeholder: true
+    }));
+  }, [exchanges, groupSessions, currentUserId]);
 
   return (
     <div className="relative w-full">
@@ -89,11 +130,10 @@ export function SessionCarousel({ exchanges, currentUserId }: SessionCarouselPro
       <div className="overflow-hidden rounded-xl" ref={emblaRef}>
         <div className="flex backface-hidden touch-pan-y gap-4 pb-2">
           {items.map((item, i) => {
-            const isPlaceholder = 'placeholder' in item;
-            const title = isPlaceholder ? item.title : (item.requester.id === currentUserId ? item.wantedSkill?.name : item.offeredSkill?.name) || 'Skill Session';
-            const progress = isPlaceholder ? item.progress : 45; // static 45 for demo purposes
-            const imgSrc = isPlaceholder ? item.image : SKILL_IMAGES[i % SKILL_IMAGES.length];
-            const partnerName = isPlaceholder ? item.partner : (item.requester.id === currentUserId ? item.receiver.name : item.requester.name);
+            const title = item.title;
+            const progress = item.progress;
+            const imgSrc = item.image || SKILL_IMAGES[i % SKILL_IMAGES.length];
+            const partnerName = item.partner;
 
             return (
               <motion.div
@@ -103,7 +143,10 @@ export function SessionCarousel({ exchanges, currentUserId }: SessionCarouselPro
                 animate={{ opacity: 1, scale: 1 }}
                 transition={{ delay: i * 0.1, duration: 0.4 }}
               >
-                <Card className="group h-full overflow-hidden border-border/50 bg-card hover:border-primary/30 transition-all duration-300">
+                <Card 
+                  onClick={() => item.link && item.link !== '#' && navigate(item.link)}
+                  className="group h-full overflow-hidden border-border/50 bg-card hover:border-primary/30 transition-all duration-300 cursor-pointer"
+                >
                   <div className="relative h-32 w-full overflow-hidden">
                     <img 
                       src={imgSrc} 

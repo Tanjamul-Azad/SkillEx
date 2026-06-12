@@ -24,6 +24,9 @@ export interface GroupSession {
   status: 'SCHEDULED' | 'IN_PROGRESS' | 'COMPLETED' | 'CANCELLED';
   sharedNotes: string | null;
   createdAt: string;
+  coverImageUrl?: string | null;
+  meetingLink?: string | null;
+  startedAt?: string | null;
 }
 
 export interface GroupCertificate {
@@ -45,6 +48,7 @@ export interface CreateGroupSessionRequest {
   scheduledAt: string;
   durationMinutes: number;
   maxAttendees: number;
+  coverImageUrl?: string | null;
 }
 
 export interface GroupSessionDraftRequest {
@@ -104,6 +108,10 @@ export const groupSessionService = {
   /** POST /api/group-sessions/{id}/complete - host only */
   complete: (sessionId: string, notes: string): Promise<void> =>
     api.post<void>(`/group-sessions/${sessionId}/complete`, { notes }),
+
+  /** POST /api/group-sessions/{id}/start - host only */
+  start: (sessionId: string, meetingLink: string | null): Promise<void> =>
+    api.post<void>(`/group-sessions/${sessionId}/start`, { meetingLink }),
 
   /** POST /api/group-sessions/{id}/cancel - host only */
   cancel: (sessionId: string): Promise<void> =>

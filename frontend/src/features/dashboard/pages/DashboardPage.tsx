@@ -66,6 +66,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
 import type { Skill, Session, UserProgress, XpEvent } from '@/types';
 import { creditService, type CreditTransaction, type CreditWallet } from '@/services/creditService';
+import { groupSessionService, type GroupSession } from '@/services/groupSessionService';
 
 /* ─────────────────────────────────────────────────────────────
    SHNEIDERMAN DESIGN PRINCIPLES APPLIED:
@@ -1546,6 +1547,20 @@ export default function DashboardPage() {
 
   const [sessions, setSessions] = useState<Session[]>([]);
   const [sessionsLoading, setSessionsLoading] = useState(false);
+  const [groupSessions, setGroupSessions] = useState<GroupSession[]>([]);
+  const [groupSessionsLoading, setGroupSessionsLoading] = useState(false);
+
+  const fetchGroupSessions = React.useCallback(async () => {
+    try {
+      setGroupSessionsLoading(true);
+      const res = await groupSessionService.listMine(0, 10);
+      setGroupSessions(res.content ?? []);
+    } catch {
+      // ignore
+    } finally {
+      setGroupSessionsLoading(false);
+    }
+  }, []);
 
   const fetchSessions = React.useCallback(async () => {
     try {
@@ -1607,21 +1622,23 @@ export default function DashboardPage() {
   const handleExchangeStatusChanged = React.useCallback(async () => {
     void refetch();
     void fetchSessions();
+    void fetchGroupSessions();
     refreshDashboardStats();
     refreshSmartActions();
     refreshLearningProgress();
-  }, [refetch, fetchSessions, refreshDashboardStats, refreshSmartActions, refreshLearningProgress]);
+  }, [refetch, fetchSessions, fetchGroupSessions, refreshDashboardStats, refreshSmartActions, refreshLearningProgress]);
 
   React.useEffect(() => {
     refreshDashboardStats();
     refreshSmartActions();
     if (user?.id) {
       fetchSessions();
+      fetchGroupSessions();
       refreshSkillChecks();
       refreshLearningProgress();
       creditService.wallet().then(setCreditWallet).catch(() => setCreditWallet(null));
     }
-  }, [refreshDashboardStats, refreshSmartActions, refreshSkillChecks, refreshLearningProgress, fetchSessions, user?.id]);
+  }, [refreshDashboardStats, refreshSmartActions, refreshSkillChecks, refreshLearningProgress, fetchSessions, fetchGroupSessions, user?.id]);
 
   React.useEffect(() => {
     if (!creditDialogOpen) {
@@ -1790,6 +1807,7 @@ export default function DashboardPage() {
       if (type.includes('MATCH') || type.includes('SESSION') || type.includes('REVIEW')) {
         void refetch();
         void fetchSessions();
+        void fetchGroupSessions();
         refreshSkillChecks();
         refreshDashboardStats();
         refreshSmartActions();
@@ -1802,7 +1820,7 @@ export default function DashboardPage() {
         refreshSmartActions();
       }
     });
-  }, [refetch, refetchConnections, refetchAcceptedConnections, refreshDashboardStats, refreshSmartActions, refreshSkillChecks, fetchSessions, user?.id]);
+  }, [refetch, refetchConnections, refetchAcceptedConnections, refreshDashboardStats, refreshSmartActions, refreshSkillChecks, fetchSessions, fetchGroupSessions, user?.id]);
   const activeExchanges = React.useMemo(() => {
     const seen = new Set<string>();
     return exchanges
@@ -2380,7 +2398,7 @@ export default function DashboardPage() {
         {/* ══ BENTO ROW 3 (Carousel + Tasks) ═══════════════════════════ */}
         <div className="md:col-span-2 lg:col-span-2 min-h-[140px] flex flex-col">
           <ScrollReveal animation="fade-up" delay={0.24} className="product-panel h-full flex-1 w-full p-4">
-             <SessionCarousel exchanges={exchanges} currentUserId={currentUserId} />
+             <SessionCarousel exchanges={exchanges} groupSessions={groupSessions} currentUserId={currentUserId} />
           </ScrollReveal>
         </div>
         

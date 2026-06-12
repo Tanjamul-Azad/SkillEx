@@ -204,6 +204,7 @@ export interface Discussion {
   views: number;
   createdAt: string;
   isPinned: boolean;
+  coverImageUrl?: string | null;
 }
 
 export interface NotificationUserRef {
@@ -242,6 +243,7 @@ export interface SkillCircle {
   resourceCount?: number;
   openHelpCount?: number;
   upcomingEventCount?: number;
+  coverImageUrl?: string | null;
 }
 
 export interface CircleResource {

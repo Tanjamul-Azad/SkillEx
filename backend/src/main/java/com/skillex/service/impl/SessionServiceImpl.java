@@ -449,7 +449,7 @@ public class SessionServiceImpl implements SessionService {
         log.info("[Session] Session {} and all associated data successfully deleted.", sessionId);
     }
 
-    // ── helpers ──────────────────────────────────────────────────────────────
+    // helpers
 
     private Session findSession(String id) {
         return sessionRepository.findById(id)

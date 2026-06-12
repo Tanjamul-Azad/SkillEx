@@ -54,6 +54,15 @@ public class GroupSession {
     @Column(name = "shared_notes", columnDefinition = "TEXT")
     private String sharedNotes;
 
+    @Column(name = "cover_image_url", length = 512)
+    private String coverImageUrl;
+
+    @Column(name = "meeting_link", length = 512)
+    private String meetingLink;
+
+    @Column(name = "started_at")
+    private LocalDateTime startedAt;
+
     @OneToMany(mappedBy = "groupSession", cascade = CascadeType.ALL, orphanRemoval = true)
     @Builder.Default
     private List<GroupSessionAttendee> attendees = new ArrayList<>();

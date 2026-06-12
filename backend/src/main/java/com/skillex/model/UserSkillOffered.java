@@ -46,7 +46,7 @@ public class UserSkillOffered {
     @Column(name = "subtitle", length = 500)
     private String subtitle;
 
-    // ── Embedded composite key ────────────────────────────────────────────────
+    // Embedded composite key
     @Embeddable
     @Getter
     @Setter

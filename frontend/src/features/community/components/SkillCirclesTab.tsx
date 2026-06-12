@@ -40,6 +40,7 @@ import { cn } from '@/lib/utils';
 import { SkillPicker } from './SkillPicker';
 import { CommunityService } from '@/services/communityService';
 import { SkillService } from '@/services/skillService';
+import { ImageUploadField } from '@/components/upload/ImageUploadField';
 import type {
   SkillCircle,
   Skill,
@@ -204,7 +205,17 @@ const CircleCard = React.memo(({
   return (
     <>
       <div className="group relative flex h-full min-h-[286px] flex-col overflow-hidden rounded-xl border border-border/60 bg-card text-card-foreground transition-all duration-300 hover:-translate-y-0.5 hover:border-primary/30 hover:shadow-lg hover:shadow-primary/5">
-        <div className="absolute inset-0 bg-gradient-to-br from-primary/5 via-transparent to-transparent opacity-0 transition-opacity duration-500 group-hover:opacity-100 pointer-events-none" />
+        {circle.coverImageUrl ? (
+          <div className="relative aspect-video w-full overflow-hidden border-b border-border/40 bg-muted">
+            <img
+              src={circle.coverImageUrl}
+              alt={circle.name}
+              className="h-full w-full object-cover transition-transform duration-300 group-hover:scale-105"
+            />
+          </div>
+        ) : (
+          <div className="absolute inset-0 bg-gradient-to-br from-primary/5 via-transparent to-transparent opacity-0 transition-opacity duration-500 group-hover:opacity-100 pointer-events-none" />
+        )}
         <div className="relative z-10 flex h-full flex-col p-5">
           <div className="flex items-start justify-between gap-3">
             <CircleMark circle={circle} size="md" />
@@ -583,6 +594,15 @@ const CircleWorkspaceDialog = ({
     <>
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-h-[88vh] overflow-y-auto sm:max-w-5xl">
+        {currentCircle.coverImageUrl && (
+          <div className="relative aspect-video max-h-48 w-full overflow-hidden rounded-xl border border-border/40 bg-muted mb-4">
+            <img
+              src={currentCircle.coverImageUrl}
+              alt={currentCircle.name}
+              className="h-full w-full object-cover"
+            />
+          </div>
+        )}
         <DialogHeader>
           <div className="flex items-center gap-3">
             <CircleMark circle={currentCircle} />
@@ -930,7 +950,7 @@ export const SkillCirclesTab = () => {
   const [selectedCircle, setSelectedCircle] = useState<SkillCircle | null>(null);
   const [submitting, setSubmitting] = useState(false);
   const [busy, setBusy] = useState<Record<string, boolean>>({});
-  const [circleForm, setCircleForm] = useState({ name: '', description: '', icon: 'SE', skillIds: [] as string[] });
+  const [circleForm, setCircleForm] = useState({ name: '', description: '', icon: 'SE', skillIds: [] as string[], coverImageUrl: null as string | null });
   const [circleFilter, setCircleFilter] = useState<'all' | 'joined' | 'explore'>('all');
 
   // Recommended skills based on BOTH circle name and purpose text
@@ -1005,10 +1025,11 @@ export const SkillCirclesTab = () => {
         description: circleForm.description.trim() || undefined,
         icon: circleForm.icon.trim() || 'SE',
         skillIds: circleForm.skillIds,
+        coverImageUrl: circleForm.coverImageUrl,
       });
       setCircles(prev => [created, ...prev]);
       setCreateOpen(false);
-      setCircleForm({ name: '', description: '', icon: 'SE', skillIds: [] });
+      setCircleForm({ name: '', description: '', icon: 'SE', skillIds: [], coverImageUrl: null });
       toast({ title: 'Skill circle created', description: 'The circle is ready for members.', variant: 'success' });
     } catch (error) {
       toast({ title: 'Could not create circle', description: error instanceof Error ? error.message : 'Please try again.', variant: 'destructive' });
@@ -1201,6 +1222,13 @@ export const SkillCirclesTab = () => {
                 setCircleForm(prev => ({ ...prev, description: value }));
               }} placeholder="What members practice, share, and help each other with..." />
             </div>
+
+            <ImageUploadField
+              value={circleForm.coverImageUrl}
+              onChange={url => setCircleForm(prev => ({ ...prev, coverImageUrl: url }))}
+              label="Cover image"
+              aspect="video"
+            />
 
             {/* ── AI-style skill recommendation strip ── */}
             {suggestedSkills.length > 0 && (

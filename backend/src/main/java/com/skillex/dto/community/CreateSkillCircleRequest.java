@@ -12,6 +12,7 @@ public record CreateSkillCircleRequest(
     @NotBlank @Size(max = 120) String name,
     @Size(max = 2000) String description,
     @Size(max = 40) String icon,
-    List<String> skillIds
+    List<String> skillIds,
+    @Size(max = 512) String coverImageUrl
 ) {
 }

@@ -54,7 +54,7 @@ public class CommunityServiceImpl implements CommunityService {
     private final CommunityNotificationService communityNotificationService;
     private final ProgressService progressService;
 
-    // ── Events ──────────────────────────────────────────────────────────────
+    // Events
 
     @Override
     @Transactional(readOnly = true)
@@ -209,7 +209,7 @@ public class CommunityServiceImpl implements CommunityService {
         return mapEvent(event, userId);
     }
 
-    // ── Discussions ──────────────────────────────────────────────────────────
+    // Discussions
 
     @Override
     @Transactional(readOnly = true)
@@ -300,6 +300,7 @@ public class CommunityServiceImpl implements CommunityService {
         discussion.setReplies(0);
         discussion.setViews(0);
         discussion.setIsPinned(false);
+        discussion.setCoverImageUrl(req.coverImageUrl() == null ? null : req.coverImageUrl().trim());
         Discussion saved = discussionRepository.save(discussion);
         CommunityDtos.DiscussionDto result = mapper.toDiscussion(saved);
 
@@ -428,7 +429,7 @@ public class CommunityServiceImpl implements CommunityService {
             discussionUpvoteRepository.existsByIdDiscussionIdAndIdUserId(discussionId, userId));
     }
 
-    // ── Posts ────────────────────────────────────────────────────────────────
+    // Posts
 
     @Override
     @Transactional(readOnly = true)
@@ -624,7 +625,7 @@ public class CommunityServiceImpl implements CommunityService {
         postRepository.delete(post);
     }
 
-    // ── Comments ─────────────────────────────────────────────────────────────
+    // Comments
 
     @Override
     @Transactional(readOnly = true)
@@ -665,7 +666,7 @@ public class CommunityServiceImpl implements CommunityService {
         return mapper.toComment(saved);
     }
 
-    // ── Stories ──────────────────────────────────────────────────────────────
+    // Stories
 
 
     @Override
@@ -675,7 +676,7 @@ public class CommunityServiceImpl implements CommunityService {
             .stream().map(mapper::toStory).collect(Collectors.toList());
     }
 
-    // ── Skill Circles ────────────────────────────────────────────────────────
+    // Skill Circles
 
     @Override
     @Transactional(readOnly = true)
@@ -723,6 +724,7 @@ public class CommunityServiceImpl implements CommunityService {
             List<Skill> skills = skillRepository.findAllById(req.skillIds());
             circle.setSkills(skills);
         }
+        circle.setCoverImageUrl(req.coverImageUrl() == null ? null : req.coverImageUrl().trim());
 
         SkillCircle saved = skillCircleRepository.save(circle);
         return mapSkillCircle(saved, creatorId);
@@ -852,7 +854,7 @@ public class CommunityServiceImpl implements CommunityService {
         );
     }
 
-    // ── Trending & Suggestions ───────────────────────────────────────────────
+    // Trending & Suggestions
 
     @Override
     @Transactional(readOnly = true)

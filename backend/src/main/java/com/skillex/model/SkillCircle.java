@@ -37,6 +37,9 @@ public class SkillCircle {
     @Column(columnDefinition = "TEXT")
     private String description;
 
+    @Column(name = "cover_image_url", length = 512)
+    private String coverImageUrl;
+
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "owner_id")
     private User owner;

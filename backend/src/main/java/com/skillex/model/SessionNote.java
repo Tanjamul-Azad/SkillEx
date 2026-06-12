@@ -87,7 +87,7 @@ public class SessionNote {
         this.generatedAt = LocalDateTime.now();
     }
 
-    // ── Encapsulated Domain Behaviors ──────────────────────────────────────
+    // Encapsulated Domain Behaviors
 
     /**
      * Checks if the generated note contains any actual synthesized data.

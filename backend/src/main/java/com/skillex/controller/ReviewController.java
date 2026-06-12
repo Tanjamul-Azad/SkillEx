@@ -22,7 +22,6 @@ public class ReviewController {
 
     private final ReviewService reviewService;
 
-    /** GET /api/reviews?userId=&page=0&size=20 — reviews received by a user */
     @GetMapping
     public ResponseEntity<ApiResponse<PagedResponse<ReviewDto>>> listForUser(
         @RequestParam String userId,
@@ -33,7 +32,6 @@ public class ReviewController {
             reviewService.getReviewsForUser(userId, page, size)));
     }
 
-    /** GET /api/reviews/user/{userId} */
     @GetMapping("/user/{userId}")
     public ResponseEntity<ApiResponse<PagedResponse<ReviewDto>>> listForUserPath(
         @PathVariable String userId,
@@ -44,7 +42,6 @@ public class ReviewController {
             reviewService.getReviewsForUser(userId, page, size)));
     }
 
-    /** POST /api/reviews — submit a review */
     @PostMapping
     public ResponseEntity<ApiResponse<ReviewDto>> create(
         Authentication auth,

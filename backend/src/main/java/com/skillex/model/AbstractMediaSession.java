@@ -37,12 +37,12 @@ public abstract class AbstractMediaSession {
         onParticipantJoin();
     }
 
-    // ── Concrete helper method ───────────────────────────────────────────────
+    // Concrete helper method
     public final void recordMediaMetric(String metricName, long value) {
         log.debug("[MediaSession] Session ID {}: Metric '{}' = {}", sessionId, metricName, value);
     }
 
-    // ── Abstract Lifecycle Hooks ─────────────────────────────────────────────
+    // Abstract Lifecycle Hooks
     protected abstract void onSessionStart();
     protected abstract void onSessionEnd();
     protected abstract void onParticipantJoin();

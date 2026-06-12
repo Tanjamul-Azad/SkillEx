@@ -11,5 +11,6 @@ public record CreateDiscussionRequest(
     String threadType,
     String skillId,
     String circleId,
-    String eventId
+    String eventId,
+    @Size(max = 512) String coverImageUrl
 ) {}

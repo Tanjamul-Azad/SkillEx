@@ -121,7 +121,7 @@ public class UnifiedSearchServiceImpl implements UnifiedSearchService {
         );
     }
 
-    // ── Mentor search ────────────────────────────────────────────────────────
+    // Mentor search
 
     private List<SearchResultDto> searchMentors(double[] queryEmbedding, int limit) {
         List<User> allUsers = userRepository.findAll();
@@ -191,7 +191,7 @@ public class UnifiedSearchServiceImpl implements UnifiedSearchService {
             .collect(Collectors.toList());
     }
 
-    // ── Skill search ────────────────────────────────────────────────────────
+    // Skill search
 
     private List<SearchResultDto> searchSkills(double[] queryEmbedding, int limit) {
         List<Skill> allSkills = skillRepository.findAll();
@@ -237,7 +237,7 @@ public class UnifiedSearchServiceImpl implements UnifiedSearchService {
             .collect(Collectors.toList());
     }
 
-    // ── Discussion search ────────────────────────────────────────────────────
+    // Discussion search
 
     private List<SearchResultDto> searchDiscussions(double[] queryEmbedding, int limit) {
         List<Discussion> allDiscussions = discussionRepository.findAll();
@@ -275,7 +275,7 @@ public class UnifiedSearchServiceImpl implements UnifiedSearchService {
             .collect(Collectors.toList());
     }
 
-    // ── Circle search ────────────────────────────────────────────────────────
+    // Circle search
 
     private List<SearchResultDto> searchCircles(double[] queryEmbedding, int limit) {
         List<SkillCircle> allCircles = skillCircleRepository.findAll();
@@ -308,7 +308,7 @@ public class UnifiedSearchServiceImpl implements UnifiedSearchService {
             .collect(Collectors.toList());
     }
 
-    // ── Utility methods ──────────────────────────────────────────────────────
+    // Utility methods
 
     private double cosineSimilarity(double[] left, double[] right) {
         if (left == null || right == null || left.length == 0 || right.length == 0 || left.length != right.length) {

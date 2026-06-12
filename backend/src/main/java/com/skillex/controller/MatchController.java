@@ -3,6 +3,7 @@ package com.skillex.controller;
 import com.skillex.dto.common.ApiResponse;
 import com.skillex.dto.match.ChainActivationRequest;
 import com.skillex.dto.match.ChainActivationResultDto;
+import com.skillex.dto.match.ChainStatusDto;
 import com.skillex.dto.match.MatchExplanationDto;
 import com.skillex.dto.user.MatchCompatibilityDto;
 import com.skillex.dto.user.MatchUserDto;
@@ -33,7 +34,6 @@ public class MatchController {
     private final MatchExplanationService matchExplanationService;
     private final SkillChainOrchestrationService chainOrchestrationService;
 
-    /** GET /api/match/users?limit=20 — ranked compatible users */
     @GetMapping("/users")
     public ResponseEntity<ApiResponse<List<MatchUserDto>>> findMatches(
         Authentication auth,
@@ -43,7 +43,6 @@ public class MatchController {
             matchService.findMatches(userId(auth), limit)));
     }
 
-    /** GET /api/match?limit=20 — alias of /users */
     @GetMapping
     public ResponseEntity<ApiResponse<List<MatchUserDto>>> findMatchesAlias(
         Authentication auth,
@@ -53,7 +52,6 @@ public class MatchController {
             matchService.findMatches(userId(auth), limit)));
     }
 
-    /** GET /api/match/{userId} — compatibility against one target user */
     @GetMapping("/{targetUserId:[0-9a-fA-F\\-]{36}}")
     public ResponseEntity<ApiResponse<MatchCompatibilityDto>> compatibility(
         Authentication auth,
@@ -64,7 +62,6 @@ public class MatchController {
         ));
     }
 
-    /** GET /api/match/explain/{targetUserId} â€” transparent production-grade match explanation */
     @GetMapping("/explain/{targetUserId:[0-9a-fA-F\\-]{36}}")
     public ResponseEntity<ApiResponse<MatchExplanationDto>> explain(
         Authentication auth,
@@ -170,6 +167,15 @@ public class MatchController {
     ) {
         return ResponseEntity.ok(ApiResponse.ok(
             chainOrchestrationService.activateChain(userId(auth), request)));
+    }
+
+    @PostMapping("/chains/status")
+    public ResponseEntity<ApiResponse<ChainStatusDto>> getChainStatus(
+        Authentication auth,
+        @Valid @RequestBody ChainActivationRequest request
+    ) {
+        return ResponseEntity.ok(ApiResponse.ok(
+            chainOrchestrationService.getChainStatus(request.hops())));
     }
 
     private String userId(Authentication auth) {

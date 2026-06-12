@@ -39,7 +39,7 @@ public class MatchEngine {
     private final BasicMatchStrategy basicStrategy;
     private final SmartMatchStrategy smartStrategy;
 
-    // ── Strategy selector ─────────────────────────────────────────────────
+    // Strategy selector
 
     /**
      * Supported matching strategies.
@@ -57,7 +57,7 @@ public class MatchEngine {
         SMART
     }
 
-    // ── Public API ────────────────────────────────────────────────────────
+    // Public API
 
     /**
      * Run the default strategy (SMART) for the given user.
@@ -82,7 +82,7 @@ public class MatchEngine {
         return selectStrategy(strategyType).findMatches(userId, limit);
     }
 
-    // ── Private ───────────────────────────────────────────────────────────
+    // Private
 
     private MatchStrategy selectStrategy(StrategyType type) {
         return switch (type) {

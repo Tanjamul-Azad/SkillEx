@@ -118,6 +118,7 @@ export const CommunityService = {
     skillId?: string;
     circleId?: string;
     eventId?: string;
+    coverImageUrl?: string | null;
   }): Promise<Discussion> =>
     normalizeDiscussion(await api.post<Discussion>('/community/discussions', data)),
 
@@ -201,7 +202,13 @@ export const CommunityService = {
   }): Promise<CircleResource> =>
     api.post<CircleResource>(`/community/skill-circles/${circleId}/resources`, data),
 
-  createSkillCircle: (data: { name: string; description?: string; icon?: string; skillIds?: string[] }): Promise<SkillCircle> =>
+  createSkillCircle: (data: {
+    name: string;
+    description?: string;
+    icon?: string;
+    skillIds?: string[];
+    coverImageUrl?: string | null;
+  }): Promise<SkillCircle> =>
     api.post<SkillCircle>('/community/skill-circles', data),
 
   joinCircle: (circleId: string): Promise<SkillCircle> =>

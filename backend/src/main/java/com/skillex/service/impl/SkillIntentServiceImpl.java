@@ -53,7 +53,7 @@ public class SkillIntentServiceImpl implements SkillIntentService {
     private final SkillRepository skillRepository;
     private final GrokSkillIntentMatcher grokSkillIntentMatcher;
 
-    // ── Stop words (noise words stripped from user intent) ────────────────────
+    // Stop words (noise words stripped from user intent)
     private static final Set<String> STOP_WORDS = Set.of(
         // articles / pronouns / prepositions
         "i","me","my","we","our","you","your","he","she","they","it",
@@ -72,7 +72,7 @@ public class SkillIntentServiceImpl implements SkillIntentService {
         "best","new","more","much","many","other","same","such"
     );
 
-    // ── Public API ─────────────────────────────────────────────────────────────
+    // Public API
 
     @Override
     @Transactional(readOnly = true)
@@ -114,7 +114,7 @@ public class SkillIntentServiceImpl implements SkillIntentService {
         return new SkillIntentInterpretResponse(teach, learn);
     }
 
-    // ── Core matching ──────────────────────────────────────────────────────────
+    // Core matching
 
     private SkillIntentInterpretResultDto interpretOne(String rawText, List<Skill> catalog) {
         String normalized = normalize(rawText);
@@ -154,7 +154,7 @@ public class SkillIntentServiceImpl implements SkillIntentService {
         return new SkillIntentInterpretResultDto(rawText, inferLevel(rawText), primary, ranked);
     }
 
-    // ── Skill Scoring ──────────────────────────────────────────────────────────
+    // Skill Scoring
 
     private Optional<SkillIntentInterpretResultDto> knownSemanticIntent(
         String rawText,
@@ -278,7 +278,7 @@ public class SkillIntentServiceImpl implements SkillIntentService {
         double bestCatScore    = 0.0;
 
         for (String kw : keywords) {
-            // ── Layer 1: Token matching against skill name ─────────────────
+            // Layer 1: Token matching against skill name
             double kwNameScore = 0.0;
 
             // 1a. Does full normalized skill name contain keyword? (phrase match)
@@ -309,7 +309,7 @@ public class SkillIntentServiceImpl implements SkillIntentService {
             }
             bestNameScore = Math.max(bestNameScore, kwNameScore);
 
-            // ── Layer 2: Character bigram similarity (morphological) ───────
+            // Layer 2: Character bigram similarity (morphological)
             // Compare keyword bigrams against each name token bigrams
             for (String nt : nameTok) {
                 double bg = bigramSimilarity(kw, nt);
@@ -323,7 +323,7 @@ public class SkillIntentServiceImpl implements SkillIntentService {
                 bestBigramScore = Math.max(bestBigramScore, bgFull * 0.85);
             }
 
-            // ── Category boost (moderate) ──────────────────────────────────
+            // Category boost (moderate)
             for (String ct : tokenize(categoryLc)) {
                 if (kw.equals(ct)) {
                     bestCatScore = Math.max(bestCatScore, 0.35);
@@ -332,7 +332,7 @@ public class SkillIntentServiceImpl implements SkillIntentService {
                 }
             }
 
-            // ── Layer 3: Description keyword matching ──────────────────────
+            // Layer 3: Description keyword matching
             // Exact keyword token in description (min 4 chars to avoid noise)
             if (kw.length() >= 4 && descSet.contains(kw)) {
                 bestDescBonus = Math.max(bestDescBonus, 0.65);
@@ -354,7 +354,7 @@ public class SkillIntentServiceImpl implements SkillIntentService {
             }
         }
 
-        // ── Combine layers ─────────────────────────────────────────────────
+        // Combine layers
         // Name match and bigram match compete; description is additive bonus.
         // Description alone can drive a result (e.g., 'javascript' found in
         // 'Web Development' description) — weighted at 0.70 so it scores ~0.45.
@@ -376,7 +376,7 @@ public class SkillIntentServiceImpl implements SkillIntentService {
             skill.getId(), skill.getName(), skill.getCategory(), confidence, false);
     }
 
-    // ── Character Bigram Similarity (Sørensen–Dice) ────────────────────────────
+    // Character Bigram Similarity (Sørensen–Dice)
 
     /**
      * Sørensen–Dice coefficient over character bigrams.
@@ -405,7 +405,7 @@ public class SkillIntentServiceImpl implements SkillIntentService {
         return result;
     }
 
-    // ── Jaro-Winkler ──────────────────────────────────────────────────────────
+    // Jaro-Winkler
 
     /**
      * Jaro-Winkler similarity in [0, 1].
@@ -449,7 +449,7 @@ public class SkillIntentServiceImpl implements SkillIntentService {
                 + (matches - t / 2.0) / matches) / 3.0;
     }
 
-    // ── Text utilities ─────────────────────────────────────────────────────────
+    // Text utilities
 
     private List<String> extractKeywords(String normalized) {
         return Arrays.stream(normalized.split("\\s+"))

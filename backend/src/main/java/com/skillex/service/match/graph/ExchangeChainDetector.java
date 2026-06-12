@@ -54,7 +54,7 @@ public class ExchangeChainDetector {
     /** Absolute maximum chain length — prevents combinatorial explosion. */
     private static final int MAX_CHAIN_LENGTH = 5;
 
-    // ── Public API ────────────────────────────────────────────────────────────
+    // Public API
 
     /**
      * Find all 3-way exchange chains that include {@code userId}.
@@ -120,7 +120,7 @@ public class ExchangeChainDetector {
         return results;
     }
 
-    // ── Private DFS ───────────────────────────────────────────────────────────
+    // Private DFS
 
     /**
      * Recursive depth-first search for directed cycles of exactly {@code targetLength}.

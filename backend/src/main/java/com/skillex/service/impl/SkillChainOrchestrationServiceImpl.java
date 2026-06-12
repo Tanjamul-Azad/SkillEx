@@ -2,6 +2,7 @@ package com.skillex.service.impl;
 
 import com.skillex.dto.match.ChainActivationRequest;
 import com.skillex.dto.match.ChainActivationResultDto;
+import com.skillex.dto.match.ChainStatusDto;
 import com.skillex.model.Exchange;
 import com.skillex.model.Skill;
 import com.skillex.model.User;
@@ -148,5 +149,59 @@ public class SkillChainOrchestrationServiceImpl implements SkillChainOrchestrati
             return base + "\n\n" + custom.trim();
         }
         return base;
+    }
+
+    @Override
+    public ChainStatusDto getChainStatus(List<ChainActivationRequest.Hop> hops) {
+        List<ChainStatusDto.HopStatus> hopStatuses = new ArrayList<>();
+        int pending = 0;
+        int accepted = 0;
+        int completed = 0;
+        int declined = 0;
+        boolean started = false;
+
+        for (ChainActivationRequest.Hop hop : hops) {
+            Exchange exchange = exchangeRepository
+                .findFirstByRequesterIdAndReceiverIdAndExchangeModeOrderByCreatedAtDesc(
+                    hop.toUserId(), hop.fromUserId(), Exchange.ExchangeMode.CHAIN_SWAP)
+                .orElse(null);
+
+            String statusStr = "NONE";
+            String exchangeId = null;
+
+            if (exchange != null) {
+                started = true;
+                statusStr = exchange.getStatus().name();
+                exchangeId = exchange.getId();
+
+                switch (exchange.getStatus()) {
+                    case PENDING -> pending++;
+                    case ACCEPTED -> accepted++;
+                    case COMPLETED -> completed++;
+                    case DECLINED -> declined++;
+                    default -> {}
+                }
+            }
+
+            hopStatuses.add(new ChainStatusDto.HopStatus(
+                hop.fromUserId(),
+                hop.toUserId(),
+                statusStr,
+                exchangeId
+            ));
+        }
+
+        int progress = hops.isEmpty() ? 0 : (int) Math.round(((double) (accepted + completed) / hops.size()) * 100);
+
+        return new ChainStatusDto(
+            started,
+            hops.size(),
+            pending,
+            accepted,
+            completed,
+            declined,
+            progress,
+            hopStatuses
+        );
     }
 }

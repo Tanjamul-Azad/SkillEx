@@ -34,6 +34,9 @@ public class Discussion {
     @Column(nullable = false, columnDefinition = "TEXT")
     private String content;
 
+    @Column(name = "cover_image_url", length = 512)
+    private String coverImageUrl;
+
     @ManyToOne(fetch = FetchType.LAZY, optional = false)
     @JoinColumn(name = "author_id", nullable = false)
     private User author;

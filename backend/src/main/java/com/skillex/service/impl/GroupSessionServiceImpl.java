@@ -73,6 +73,7 @@ public class GroupSessionServiceImpl implements GroupSessionService {
             .durationMinutes(duration)
             .maxAttendees(maxAttendees)
             .status("SCHEDULED")
+            .coverImageUrl(request.coverImageUrl() == null ? null : request.coverImageUrl().trim())
             .build();
 
         GroupSession saved = groupSessionRepository.save(session);
@@ -255,6 +256,33 @@ public class GroupSessionServiceImpl implements GroupSessionService {
     }
 
     @Override
+    public void startSession(String mentorId, String sessionId, String meetingLink) {
+        GroupSession session = findSession(sessionId);
+        assertMentor(session, mentorId);
+        if (!"SCHEDULED".equals(session.getStatus()) && !"IN_PROGRESS".equals(session.getStatus())) {
+            throw new IllegalArgumentException("Only scheduled or in-progress sessions can be updated.");
+        }
+        if ("SCHEDULED".equals(session.getStatus())) {
+            session.setStatus("IN_PROGRESS");
+            session.setStartedAt(LocalDateTime.now());
+        }
+        session.setMeetingLink(meetingLink);
+        groupSessionRepository.save(session);
+
+        for (GroupSessionAttendee attendee : session.getAttendees()) {
+            notificationService.create(
+                attendee.getUser().getId(),
+                mentorId,
+                "SYSTEM_UPDATE",
+                "Group session \"" + session.getTitle() + "\" is live now! Join the room.",
+                "GROUP_SESSION",
+                session.getId(),
+                "/group-sessions/" + session.getId()
+            );
+        }
+    }
+
+    @Override
     public void cancelSession(String mentorId, String sessionId) {
         GroupSession session = findSession(sessionId);
         assertMentor(session, mentorId);
@@ -317,7 +345,7 @@ public class GroupSessionServiceImpl implements GroupSessionService {
         );
     }
 
-    // ── helpers ──────────────────────────────────────────────────────────────
+    // helpers
 
     private GroupSession findSession(String sessionId) {
         return groupSessionRepository.findById(sessionId)
@@ -445,7 +473,10 @@ public class GroupSessionServiceImpl implements GroupSessionService {
                 .toList(),
             session.getStatus(),
             session.getSharedNotes(),
-            session.getCreatedAt()
+            session.getCreatedAt(),
+            session.getCoverImageUrl(),
+            session.getMeetingLink(),
+            session.getStartedAt()
         );
     }
 }

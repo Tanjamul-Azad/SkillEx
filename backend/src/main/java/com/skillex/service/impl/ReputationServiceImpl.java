@@ -46,7 +46,7 @@ public class ReputationServiceImpl implements ReputationService {
     private final PostRepository       postRepository;
     private final DiscussionRepository discussionRepository;
 
-    // ── Observer entry point ─────────────────────────────────────────────────
+    // Observer entry point
 
     /**
      * Spring event listener — fires synchronously within the publisher's transaction.
@@ -59,7 +59,7 @@ public class ReputationServiceImpl implements ReputationService {
         refreshReputation(event.userId());
     }
 
-    // ── ReputationService API ────────────────────────────────────────────────
+    // ReputationService API
 
     @Override
     @Transactional(readOnly = true)
@@ -90,7 +90,7 @@ public class ReputationServiceImpl implements ReputationService {
         log.debug("Reputation persisted for user {}: skillexScore={}", userId, score);
     }
 
-    // ── helpers ──────────────────────────────────────────────────────────────
+    // helpers
 private User fetchUser(String id) {
         String safeId = Objects.requireNonNull(id, "userId must not be null");
         return userRepository.findById(safeId)

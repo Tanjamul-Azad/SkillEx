@@ -33,6 +33,8 @@ const profileSchema = z.object({
   name: z.string().min(2, 'Name must be at least 2 characters.'),
   email: z.string().email('Please enter a valid email.'),
   university: z.string().min(2, 'University name is required.'),
+  phone: z.string().max(50, 'Phone number is too long.').optional(),
+  address: z.string().max(300, 'Address is too long.').optional(),
   bio: z.string().max(300, 'Bio cannot exceed 300 characters.').optional(),
   teachIntentText: z.string().max(500, 'Teach intent cannot exceed 500 characters.').optional(),
   learnIntentText: z.string().max(500, 'Learn intent cannot exceed 500 characters.').optional(),
@@ -100,9 +102,9 @@ export default function ProfileTab({ user, refreshUser, toast }: ProfileTabProps
   const [applyingResumeProfile, setApplyingResumeProfile] = useState(false);
   const [applyResumeBio, setApplyResumeBio] = useState(true);
   const [applyResumeTeachIntent, setApplyResumeTeachIntent] = useState(true);
-  const [applyResumeLearnIntent, setApplyResumeLearnIntent] = useState(true);
+  const [applyResumeContact, setApplyResumeContact] = useState(true);
+  const [learnIntentDraft, setLearnIntentDraft] = useState('');
   const [selectedOfferedResumeSkills, setSelectedOfferedResumeSkills] = useState<Set<string>>(new Set());
-  const [selectedWantedResumeSkills, setSelectedWantedResumeSkills] = useState<Set<string>>(new Set());
 
   const avatarInputRef = useRef<HTMLInputElement>(null);
   const resumeInputRef = useRef<HTMLInputElement>(null);
@@ -113,6 +115,8 @@ export default function ProfileTab({ user, refreshUser, toast }: ProfileTabProps
       name: user?.name ?? '',
       email: user?.email ?? '',
       university: user?.university ?? '',
+      phone: user?.phone ?? '',
+      address: user?.address ?? '',
       bio: user?.bio ?? '',
       teachIntentText: user?.teachIntentText ?? '',
       learnIntentText: user?.learnIntentText ?? '',
@@ -129,6 +133,8 @@ export default function ProfileTab({ user, refreshUser, toast }: ProfileTabProps
       name: user?.name ?? '',
       email: user?.email ?? '',
       university: user?.university ?? '',
+      phone: user?.phone ?? '',
+      address: user?.address ?? '',
       bio: user?.bio ?? '',
       teachIntentText: user?.teachIntentText ?? '',
       learnIntentText: user?.learnIntentText ?? '',
@@ -166,6 +172,8 @@ export default function ProfileTab({ user, refreshUser, toast }: ProfileTabProps
       name: user?.name ?? '',
       email: user?.email ?? '',
       university: user?.university ?? '',
+      phone: user?.phone ?? '',
+      address: user?.address ?? '',
       bio: user?.bio ?? '',
       teachIntentText: user?.teachIntentText ?? '',
       learnIntentText: user?.learnIntentText ?? '',
@@ -209,6 +217,8 @@ export default function ProfileTab({ user, refreshUser, toast }: ProfileTabProps
         name: data.name,
         email: data.email,
         university: data.university,
+        phone: data.phone ?? '',
+        address: data.address ?? '',
         bio: data.bio ?? '',
         teachIntentText: data.teachIntentText ?? '',
         learnIntentText: data.learnIntentText ?? '',
@@ -236,17 +246,17 @@ export default function ProfileTab({ user, refreshUser, toast }: ProfileTabProps
 
   const primeResumeReview = (profile: ResumeProfile) => {
     setResumeProfile(profile);
+    // Pre-select teachable skills (the resume is real evidence for these).
     setSelectedOfferedResumeSkills(new Set((profile.suggestedOfferedSkills ?? []).map(skillSuggestionKey)));
-    setSelectedWantedResumeSkills(new Set((profile.suggestedWantedSkills ?? []).map(skillSuggestionKey)));
     setApplyResumeBio(true);
     setApplyResumeTeachIntent(true);
-    setApplyResumeLearnIntent(true);
+    setApplyResumeContact(!!(profile.phone || profile.address));
+    setLearnIntentDraft(user?.learnIntentText ?? '');
     setResumeReviewOpen(true);
   };
 
-  const toggleResumeSkill = (type: 'offered' | 'wanted', key: string) => {
-    const setter = type === 'offered' ? setSelectedOfferedResumeSkills : setSelectedWantedResumeSkills;
-    setter((current) => {
+  const toggleResumeSkill = (key: string) => {
+    setSelectedOfferedResumeSkills((current) => {
       const next = new Set(current);
       if (next.has(key)) {
         next.delete(key);
@@ -299,16 +309,13 @@ export default function ProfileTab({ user, refreshUser, toast }: ProfileTabProps
       const offeredSkills = (resumeProfile.suggestedOfferedSkills ?? [])
         .filter((skill) => selectedOfferedResumeSkills.has(skillSuggestionKey(skill)))
         .map(({ name, category, level, evidence }) => ({ name, category, level, evidence }));
-      const wantedSkills = (resumeProfile.suggestedWantedSkills ?? [])
-        .filter((skill) => selectedWantedResumeSkills.has(skillSuggestionKey(skill)))
-        .map(({ name, category, level, evidence }) => ({ name, category, level, evidence }));
 
       await resumeProfileService.apply({
         applyBio: applyResumeBio,
         applyTeachIntent: applyResumeTeachIntent,
-        applyLearnIntent: applyResumeLearnIntent,
+        applyContact: applyResumeContact,
+        learnIntentText: learnIntentDraft.trim() || undefined,
         offeredSkills,
-        wantedSkills,
       });
       await refreshUser();
       setResumeReviewOpen(false);
@@ -335,6 +342,12 @@ export default function ProfileTab({ user, refreshUser, toast }: ProfileTabProps
   const learnIntentCount = profileForm.watch('learnIntentText')?.length ?? 0;
   const profileValues = profileForm.watch();
   const hasProfileChanges = profileForm.formState.isDirty;
+  const profileInputClass =
+    'appearance-none rounded-xl border-border/70 bg-background text-foreground placeholder:text-muted-foreground/60 focus:border-primary/50 focus:ring-primary/50';
+  const profileTextareaClass = cn(profileInputClass, 'h-24 resize-none custom-scrollbar');
+  const profileSurfaceClass = 'rounded-2xl border border-border/70 bg-card/80 shadow-sm';
+  const profileFieldClass = 'rounded-2xl border border-border/70 bg-muted/20 p-4';
+  const profileLinkFieldClass = 'rounded-xl border border-border/70 bg-muted/20 p-3';
 
   return (
     <>
@@ -354,9 +367,9 @@ export default function ProfileTab({ user, refreshUser, toast }: ProfileTabProps
                 'inline-flex items-center gap-2 rounded-full border px-3 py-1.5 text-[10px] font-extrabold uppercase tracking-widest',
                 profileEditMode
                   ? hasProfileChanges
-                    ? 'border-amber-400/30 bg-amber-400/10 text-amber-200'
-                    : 'border-white/10 bg-white/5 text-muted-foreground'
-                  : 'border-emerald-400/30 bg-emerald-400/10 text-emerald-200'
+                    ? 'border-amber-500/30 bg-amber-500/10 text-amber-700 dark:text-amber-200'
+                    : 'border-border bg-muted/30 text-muted-foreground'
+                  : 'border-emerald-500/30 bg-emerald-500/10 text-emerald-700 dark:text-emerald-200'
               )}
             >
               <CheckCircle2 className="h-3.5 w-3.5" />
@@ -368,7 +381,7 @@ export default function ProfileTab({ user, refreshUser, toast }: ProfileTabProps
                 variant="outline"
                 size="sm"
                 onClick={handleEditProfile}
-                className="rounded-xl border-white/10 bg-white/5 text-[10px] font-extrabold uppercase tracking-widest hover:bg-white/10"
+                className="rounded-xl text-[10px] font-extrabold uppercase tracking-widest"
               >
                 <PencilLine className="mr-2 h-4 w-4" />
                 Edit
@@ -380,7 +393,7 @@ export default function ProfileTab({ user, refreshUser, toast }: ProfileTabProps
           {/* Avatar */}
           <div className="mb-8 flex flex-col sm:flex-row items-start sm:items-center gap-6">
             <div className="relative group">
-              <Avatar className="h-24 w-24 ring-4 ring-primary/20 bg-black/50 transition-all duration-500 group-hover:ring-primary/50 shadow-[0_0_30px_hsl(var(--primary)/0.15)] group-hover:shadow-[0_0_40px_hsl(var(--primary)/0.3)]">
+              <Avatar className="h-24 w-24 ring-4 ring-primary/20 bg-muted transition-all duration-500 group-hover:ring-primary/50 shadow-[0_0_30px_hsl(var(--primary)/0.15)] group-hover:shadow-[0_0_40px_hsl(var(--primary)/0.3)]">
                 <AvatarImage src={localAvatar ?? user?.avatar} alt={user?.name} className="object-cover" />
                 <AvatarFallback className="text-2xl font-extrabold bg-gradient-to-br from-primary/20 to-secondary/20 text-primary">{user?.name?.charAt(0)}</AvatarFallback>
               </Avatar>
@@ -406,14 +419,14 @@ export default function ProfileTab({ user, refreshUser, toast }: ProfileTabProps
                   <FormField control={profileForm.control} name="name" render={({ field }) => (
                     <FormItem>
                       <FormLabel className="text-[10px] uppercase font-bold tracking-widest text-muted-foreground">Full Name</FormLabel>
-                      <FormControl><Input {...field} placeholder="Your name" className="appearance-none bg-black/20 border-white/10 text-white placeholder-white/30 focus:ring-primary/50 focus:border-primary/50 rounded-xl" /></FormControl>
+                      <FormControl><Input {...field} placeholder="Your name" className={profileInputClass} /></FormControl>
                       <FormMessage />
                     </FormItem>
                   )} />
                   <FormField control={profileForm.control} name="email" render={({ field }) => (
                     <FormItem>
                       <FormLabel className="text-[10px] uppercase font-bold tracking-widest text-muted-foreground">Email</FormLabel>
-                      <FormControl><Input {...field} type="email" placeholder="your@email.com" className="appearance-none bg-black/20 border-white/10 text-white placeholder-white/30 focus:ring-primary/50 focus:border-primary/50 rounded-xl" /></FormControl>
+                      <FormControl><Input {...field} type="email" placeholder="your@email.com" className={profileInputClass} /></FormControl>
                       <FormMessage />
                     </FormItem>
                   )} />
@@ -421,10 +434,26 @@ export default function ProfileTab({ user, refreshUser, toast }: ProfileTabProps
                 <FormField control={profileForm.control} name="university" render={({ field }) => (
                   <FormItem>
                     <FormLabel className="text-[10px] uppercase font-bold tracking-widest text-muted-foreground">University / Institution</FormLabel>
-                    <FormControl><Input {...field} placeholder="e.g. BUET, Dhaka University" className="appearance-none bg-black/20 border-white/10 text-white placeholder-white/30 focus:ring-primary/50 focus:border-primary/50 rounded-xl" /></FormControl>
+                    <FormControl><Input {...field} placeholder="e.g. BUET, Dhaka University" className={profileInputClass} /></FormControl>
                     <FormMessage />
                   </FormItem>
                 )} />
+                <div className="grid gap-6 sm:grid-cols-2">
+                  <FormField control={profileForm.control} name="phone" render={({ field }) => (
+                    <FormItem>
+                      <FormLabel className="text-[10px] uppercase font-bold tracking-widest text-muted-foreground">Phone Number</FormLabel>
+                      <FormControl><Input {...field} placeholder="+880 1700-000000" className={profileInputClass} /></FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )} />
+                  <FormField control={profileForm.control} name="address" render={({ field }) => (
+                    <FormItem>
+                      <FormLabel className="text-[10px] uppercase font-bold tracking-widest text-muted-foreground">Address</FormLabel>
+                      <FormControl><Input {...field} placeholder="City, District, Country" className={profileInputClass} /></FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )} />
+                </div>
                 <FormField control={profileForm.control} name="bio" render={({ field }) => (
                   <FormItem>
                     <FormLabel className="text-[10px] uppercase font-bold tracking-widest text-muted-foreground">Bio</FormLabel>
@@ -432,12 +461,12 @@ export default function ProfileTab({ user, refreshUser, toast }: ProfileTabProps
                       <Textarea
                         {...field}
                         placeholder="Tell others a bit about yourself..."
-                        className="appearance-none bg-black/20 border-white/10 text-white placeholder-white/30 focus:ring-primary/50 focus:border-primary/50 resize-none h-24 rounded-xl custom-scrollbar"
+                        className={profileTextareaClass}
                       />
                     </FormControl>
                     <div className="flex items-center justify-between mt-2">
                       <FormMessage />
-                      <span className={`text-[10px] font-bold tracking-widest ${charCount > 280 ? 'text-destructive' : 'text-white/40'}`}>
+                      <span className={`text-[10px] font-bold tracking-widest ${charCount > 280 ? 'text-destructive' : 'text-muted-foreground'}`}>
                         {charCount}/300
                       </span>
                     </div>
@@ -451,12 +480,12 @@ export default function ProfileTab({ user, refreshUser, toast }: ProfileTabProps
                         <Textarea
                           {...field}
                           placeholder="e.g. I can teach crafting with household waste materials"
-                          className="appearance-none bg-black/20 border-white/10 text-white placeholder-white/30 focus:ring-primary/50 focus:border-primary/50 resize-none h-24 rounded-xl custom-scrollbar"
+                          className={profileTextareaClass}
                         />
                       </FormControl>
                       <div className="flex items-center justify-between mt-2">
-                        <FormDescription className="text-[10px] uppercase font-bold tracking-widest text-white/40 leading-relaxed max-w-[200px]">Used for intent-based smart matching.</FormDescription>
-                        <span className={`text-[10px] font-bold tracking-widest ${teachIntentCount > 470 ? 'text-destructive' : 'text-white/40'}`}>
+                        <FormDescription className="text-[10px] uppercase font-bold tracking-widest text-muted-foreground leading-relaxed max-w-[200px]">Used for intent-based smart matching.</FormDescription>
+                        <span className={`text-[10px] font-bold tracking-widest ${teachIntentCount > 470 ? 'text-destructive' : 'text-muted-foreground'}`}>
                           {teachIntentCount}/500
                         </span>
                       </div>
@@ -470,12 +499,12 @@ export default function ProfileTab({ user, refreshUser, toast }: ProfileTabProps
                         <Textarea
                           {...field}
                           placeholder="e.g. I want to learn DIY upcycling craft"
-                          className="appearance-none bg-black/20 border-white/10 text-white placeholder-white/30 focus:ring-primary/50 focus:border-primary/50 resize-none h-24 rounded-xl custom-scrollbar"
+                          className={profileTextareaClass}
                         />
                       </FormControl>
                       <div className="flex items-center justify-between mt-2">
-                        <FormDescription className="text-[10px] uppercase font-bold tracking-widest text-white/40 leading-relaxed max-w-[200px]">Keep it practical and specific for better matches.</FormDescription>
-                        <span className={`text-[10px] font-bold tracking-widest ${learnIntentCount > 470 ? 'text-destructive' : 'text-white/40'}`}>
+                        <FormDescription className="text-[10px] uppercase font-bold tracking-widest text-muted-foreground leading-relaxed max-w-[200px]">Keep it practical and specific for better matches.</FormDescription>
+                        <span className={`text-[10px] font-bold tracking-widest ${learnIntentCount > 470 ? 'text-destructive' : 'text-muted-foreground'}`}>
                           {learnIntentCount}/500
                         </span>
                       </div>
@@ -484,9 +513,9 @@ export default function ProfileTab({ user, refreshUser, toast }: ProfileTabProps
                   )} />
                 </div>
 
-                <div className="rounded-2xl border border-white/10 bg-white/[0.03] p-4 md:p-5 space-y-5">
+                <div className={cn(profileSurfaceClass, 'p-4 md:p-5 space-y-5')}>
                   <div className="space-y-1">
-                    <h4 className="text-sm font-bold tracking-wide text-white">Public Links</h4>
+                    <h4 className="text-sm font-bold tracking-wide text-foreground">Public Links</h4>
                     <p className="text-[10px] uppercase font-bold tracking-widest text-muted-foreground">These links are shown on your profile.</p>
                   </div>
                   <div className="grid gap-5 sm:grid-cols-2">
@@ -495,7 +524,7 @@ export default function ProfileTab({ user, refreshUser, toast }: ProfileTabProps
                         <FormLabel className="text-[10px] uppercase font-bold tracking-widest text-muted-foreground flex items-center gap-2">
                           <Github className="h-3.5 w-3.5" /> GitHub
                         </FormLabel>
-                        <FormControl><Input {...field} placeholder="github.com/username" className="appearance-none bg-black/20 border-white/10 text-white placeholder-white/30 focus:ring-primary/50 focus:border-primary/50 rounded-xl" /></FormControl>
+                        <FormControl><Input {...field} placeholder="github.com/username" className={profileInputClass} /></FormControl>
                         <FormMessage />
                       </FormItem>
                     )} />
@@ -504,7 +533,7 @@ export default function ProfileTab({ user, refreshUser, toast }: ProfileTabProps
                         <FormLabel className="text-[10px] uppercase font-bold tracking-widest text-muted-foreground flex items-center gap-2">
                           <Linkedin className="h-3.5 w-3.5" /> LinkedIn
                         </FormLabel>
-                        <FormControl><Input {...field} placeholder="linkedin.com/in/username" className="appearance-none bg-black/20 border-white/10 text-white placeholder-white/30 focus:ring-primary/50 focus:border-primary/50 rounded-xl" /></FormControl>
+                        <FormControl><Input {...field} placeholder="linkedin.com/in/username" className={profileInputClass} /></FormControl>
                         <FormMessage />
                       </FormItem>
                     )} />
@@ -513,7 +542,7 @@ export default function ProfileTab({ user, refreshUser, toast }: ProfileTabProps
                         <FormLabel className="text-[10px] uppercase font-bold tracking-widest text-muted-foreground flex items-center gap-2">
                           <Facebook className="h-3.5 w-3.5" /> Facebook
                         </FormLabel>
-                        <FormControl><Input {...field} placeholder="facebook.com/username" className="appearance-none bg-black/20 border-white/10 text-white placeholder-white/30 focus:ring-primary/50 focus:border-primary/50 rounded-xl" /></FormControl>
+                        <FormControl><Input {...field} placeholder="facebook.com/username" className={profileInputClass} /></FormControl>
                         <FormMessage />
                       </FormItem>
                     )} />
@@ -522,7 +551,7 @@ export default function ProfileTab({ user, refreshUser, toast }: ProfileTabProps
                         <FormLabel className="text-[10px] uppercase font-bold tracking-widest text-muted-foreground flex items-center gap-2">
                           <Globe className="h-3.5 w-3.5" /> Website
                         </FormLabel>
-                        <FormControl><Input {...field} placeholder="your-portfolio.com" className="appearance-none bg-black/20 border-white/10 text-white placeholder-white/30 focus:ring-primary/50 focus:border-primary/50 rounded-xl" /></FormControl>
+                        <FormControl><Input {...field} placeholder="your-portfolio.com" className={profileInputClass} /></FormControl>
                         <FormMessage />
                       </FormItem>
                     )} />
@@ -531,7 +560,7 @@ export default function ProfileTab({ user, refreshUser, toast }: ProfileTabProps
                     <FormField control={profileForm.control} name="resumeUrl" render={({ field }) => (
                       <FormItem>
                         <FormLabel className="text-[10px] uppercase font-bold tracking-widest text-muted-foreground">Resume URL</FormLabel>
-                        <FormControl><Input {...field} placeholder="Auto-filled after PDF upload" className="appearance-none bg-black/20 border-white/10 text-white placeholder-white/30 focus:ring-primary/50 focus:border-primary/50 rounded-xl" /></FormControl>
+                        <FormControl><Input {...field} placeholder="Auto-filled after PDF upload" className={profileInputClass} /></FormControl>
                         <FormMessage />
                       </FormItem>
                     )} />
@@ -550,7 +579,7 @@ export default function ProfileTab({ user, refreshUser, toast }: ProfileTabProps
                       <Button
                         type="button"
                         variant="outline"
-                        className="rounded-xl border-white/10 bg-white/5 hover:bg-white/10"
+                        className="rounded-xl"
                         disabled={uploadingResume}
                         onClick={() => resumeInputRef.current?.click()}
                       >
@@ -592,7 +621,7 @@ export default function ProfileTab({ user, refreshUser, toast }: ProfileTabProps
                     variant="outline"
                     disabled={savingProfile}
                     onClick={handleCancelProfileEdit}
-                    className="rounded-xl border-white/10 bg-white/5 hover:bg-white/10"
+                    className="rounded-xl"
                   >
                     Cancel
                   </Button>
@@ -602,11 +631,11 @@ export default function ProfileTab({ user, refreshUser, toast }: ProfileTabProps
           ) : (
             <div className="space-y-6">
               {profileJustSaved && (
-                <div className="flex items-start gap-3 rounded-2xl border border-emerald-400/25 bg-emerald-400/10 p-4 text-emerald-100">
+                <div className="flex items-start gap-3 rounded-2xl border border-emerald-500/25 bg-emerald-500/10 p-4 text-emerald-700 dark:text-emerald-100">
                   <CheckCircle2 className="mt-0.5 h-5 w-5 shrink-0" />
                   <div>
                     <p className="text-sm font-extrabold">Profile saved</p>
-                    <p className="mt-1 text-xs text-emerald-100/80">Your text fields are hidden now. Use Edit when you need to change them again.</p>
+                    <p className="mt-1 text-xs text-emerald-700/80 dark:text-emerald-100/80">Your text fields are hidden now. Use Edit when you need to change them again.</p>
                   </div>
                 </div>
               )}
@@ -620,19 +649,19 @@ export default function ProfileTab({ user, refreshUser, toast }: ProfileTabProps
                   { label: 'Teach Intent', value: profileValues.teachIntentText },
                   { label: 'Learn Intent', value: profileValues.learnIntentText },
                 ].map(({ label, value }) => (
-                  <div key={label} className={cn('rounded-2xl border border-white/10 bg-black/20 p-4', label === 'Bio' && 'sm:col-span-2')}>
+                  <div key={label} className={cn(profileFieldClass, label === 'Bio' && 'sm:col-span-2')}>
                     <p className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">{label}</p>
-                    <p className="mt-2 whitespace-pre-wrap break-words text-sm font-semibold text-white">
+                    <p className="mt-2 whitespace-pre-wrap break-words text-sm font-semibold text-foreground">
                       {value?.trim() || 'Not added'}
                     </p>
                   </div>
                 ))}
               </div>
 
-              <div className="rounded-2xl border border-white/10 bg-white/[0.03] p-4 md:p-5">
+              <div className={cn(profileSurfaceClass, 'p-4 md:p-5')}>
                 <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
                   <div>
-                    <h4 className="text-sm font-bold tracking-wide text-white">Public Links</h4>
+                    <h4 className="text-sm font-bold tracking-wide text-foreground">Public Links</h4>
                     <p className="text-[10px] uppercase font-bold tracking-widest text-muted-foreground">These links are shown on your profile.</p>
                   </div>
                   <Button
@@ -654,7 +683,7 @@ export default function ProfileTab({ user, refreshUser, toast }: ProfileTabProps
                     { label: 'Website', value: profileValues.websiteUrl, Icon: Globe },
                     { label: 'Resume URL', value: profileValues.resumeUrl, Icon: FileUp },
                   ].map(({ label, value, Icon }) => (
-                    <div key={label} className={cn('rounded-xl border border-white/10 bg-black/20 p-3', label === 'Resume URL' && 'sm:col-span-2')}>
+                    <div key={label} className={cn(profileLinkFieldClass, label === 'Resume URL' && 'sm:col-span-2')}>
                       <p className="flex items-center gap-2 text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
                         <Icon className="h-3.5 w-3.5" />
                         {label}
@@ -669,7 +698,7 @@ export default function ProfileTab({ user, refreshUser, toast }: ProfileTabProps
                           {value.trim()}
                         </a>
                       ) : (
-                        <p className="mt-2 text-sm font-semibold text-white/50">Not added</p>
+                        <p className="mt-2 text-sm font-semibold text-muted-foreground">Not added</p>
                       )}
                     </div>
                   ))}
@@ -694,8 +723,8 @@ export default function ProfileTab({ user, refreshUser, toast }: ProfileTabProps
               { label: 'Rating', value: `${user?.rating} ★` },
               { label: 'Skills Offered', value: user?.skillsOffered?.length ?? 0 },
             ].map(({ label, value }) => (
-              <div key={label} className="rounded-2xl bg-black/50 border border-white/5 p-4 text-center group hover:bg-white/5 transition-colors">
-                <p className="font-headline text-3xl font-black text-white group-hover:text-primary transition-colors">{value}</p>
+              <div key={label} className="rounded-2xl border border-border/70 bg-muted/20 p-4 text-center transition-colors hover:border-primary/25 hover:bg-primary/5">
+                <p className="font-headline text-3xl font-black text-foreground transition-colors">{value}</p>
                 <p className="text-[10px] uppercase font-bold tracking-widest text-muted-foreground mt-2">{label}</p>
               </div>
             ))}
@@ -794,6 +823,8 @@ export default function ProfileTab({ user, refreshUser, toast }: ProfileTabProps
 
           {resumeProfile && (
             <div className="space-y-5">
+
+              {/* Header strip */}
               <div className="rounded-2xl border border-primary/20 bg-primary/5 p-4">
                 <div className="flex flex-wrap items-start justify-between gap-3">
                   <div>
@@ -815,13 +846,32 @@ export default function ProfileTab({ user, refreshUser, toast }: ProfileTabProps
                 )}
               </div>
 
+              {/* Contact info */}
+              {(resumeProfile.email || resumeProfile.phone || resumeProfile.address) && (
+                <div className="rounded-2xl border border-border bg-muted/20 p-4">
+                  <p className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground mb-3">Contact</p>
+                  <div className="flex flex-wrap gap-x-6 gap-y-1">
+                    {resumeProfile.email && (
+                      <span className="text-xs text-foreground"><span className="font-bold text-muted-foreground">Email: </span>{resumeProfile.email}</span>
+                    )}
+                    {resumeProfile.phone && (
+                      <span className="text-xs text-foreground"><span className="font-bold text-muted-foreground">Phone: </span>{resumeProfile.phone}</span>
+                    )}
+                    {resumeProfile.address && (
+                      <span className="text-xs text-foreground"><span className="font-bold text-muted-foreground">Location: </span>{resumeProfile.address}</span>
+                    )}
+                  </div>
+                </div>
+              )}
+
+              {/* Apply-to-profile toggles */}
               <div className="grid gap-3 sm:grid-cols-3">
                 {[
                   { label: 'Bio', checked: applyResumeBio, setChecked: setApplyResumeBio, value: resumeProfile.experienceSummary || resumeProfile.projectSummary || resumeProfile.headline },
                   { label: 'Teach intent', checked: applyResumeTeachIntent, setChecked: setApplyResumeTeachIntent, value: resumeProfile.teachSummary },
-                  { label: 'Learn intent', checked: applyResumeLearnIntent, setChecked: setApplyResumeLearnIntent, value: resumeProfile.learnSummary },
+                  { label: 'Contact info', checked: applyResumeContact, setChecked: setApplyResumeContact, value: [resumeProfile.phone, resumeProfile.address].filter(Boolean).join(' · ') || null },
                 ].map(({ label, checked, setChecked, value }) => (
-                  <label key={label} className="rounded-2xl border border-border bg-muted/30 p-4">
+                  <label key={label} className="rounded-2xl border border-border bg-muted/30 p-4 cursor-pointer">
                     <span className="flex items-center gap-2 text-sm font-bold text-foreground">
                       <Checkbox checked={checked} onCheckedChange={(next) => setChecked(Boolean(next))} />
                       {label}
@@ -833,16 +883,18 @@ export default function ProfileTab({ user, refreshUser, toast }: ProfileTabProps
                 ))}
               </div>
 
+              {/* CV sections */}
               <div className="grid gap-3 sm:grid-cols-2">
                 {[
                   { label: 'Education', value: resumeProfile.educationSummary },
                   { label: 'Experience', value: resumeProfile.experienceSummary },
                   { label: 'Projects', value: resumeProfile.projectSummary },
                   { label: 'Certifications', value: resumeProfile.certificationSummary },
-                  { label: 'Tools', value: resumeProfile.toolsSummary },
-                  { label: 'Career goal', value: resumeProfile.careerGoal },
+                  { label: 'Tools & Software', value: resumeProfile.toolsSummary },
+                  { label: 'Languages', value: resumeProfile.languageSummary },
+                  { label: 'Career Goal', value: resumeProfile.careerGoal },
                 ]
-                  .filter((section) => section.value?.trim())
+                  .filter((s) => s.value?.trim())
                   .map((section) => (
                     <div key={section.label} className="rounded-2xl border border-border bg-background p-4">
                       <p className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">{section.label}</p>
@@ -851,9 +903,10 @@ export default function ProfileTab({ user, refreshUser, toast }: ProfileTabProps
                   ))}
               </div>
 
+              {/* Evidence signals */}
               {(resumeProfile.profileSignals ?? []).length > 0 && (
                 <div className="rounded-2xl border border-border bg-muted/20 p-4">
-                  <p className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">Evidence signals</p>
+                  <p className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">Achievements & Signals</p>
                   <div className="mt-3 grid gap-2 sm:grid-cols-2">
                     {(resumeProfile.profileSignals ?? []).map((signal, index) => (
                       <div key={`${signal.label}-${index}`} className="rounded-xl border border-border bg-background p-3">
@@ -865,26 +918,25 @@ export default function ProfileTab({ user, refreshUser, toast }: ProfileTabProps
                 </div>
               )}
 
-              <div className="grid gap-4 sm:grid-cols-2">
-                <div className="space-y-3">
-                  <div>
-                    <h4 className="text-sm font-extrabold text-foreground">Can teach</h4>
-                    <p className="text-xs text-muted-foreground">These become offered skills.</p>
-                  </div>
-                  {(resumeProfile.suggestedOfferedSkills ?? []).length === 0 ? (
-                    <p className="rounded-xl border border-border bg-muted/20 p-3 text-xs text-muted-foreground">
-                      No resume-backed teaching skills found.
-                    </p>
-                  ) : (
-                    (resumeProfile.suggestedOfferedSkills ?? []).map((skill) => {
+              {/* Skills I can teach */}
+              <div>
+                <h4 className="text-sm font-extrabold text-foreground mb-1">Skills I can teach</h4>
+                <p className="text-xs text-muted-foreground mb-3">Tick to add as offered skills on your profile.</p>
+                {(resumeProfile.suggestedOfferedSkills ?? []).length === 0 ? (
+                  <p className="rounded-xl border border-border bg-muted/20 p-3 text-xs text-muted-foreground">
+                    No resume-backed teaching skills found.
+                  </p>
+                ) : (
+                  <div className="grid gap-2 sm:grid-cols-2">
+                    {(resumeProfile.suggestedOfferedSkills ?? []).map((skill) => {
                       const key = skillSuggestionKey(skill);
                       return (
-                        <label key={key} className="block rounded-2xl border border-border bg-background p-4">
+                        <label key={key} className="block rounded-2xl border border-border bg-background p-4 cursor-pointer">
                           <span className="flex items-start gap-3">
                             <Checkbox
                               className="mt-1"
                               checked={selectedOfferedResumeSkills.has(key)}
-                              onCheckedChange={() => toggleResumeSkill('offered', key)}
+                              onCheckedChange={() => toggleResumeSkill(key)}
                             />
                             <span className="min-w-0">
                               <span className="flex flex-wrap items-center gap-2">
@@ -896,44 +948,28 @@ export default function ProfileTab({ user, refreshUser, toast }: ProfileTabProps
                           </span>
                         </label>
                       );
-                    })
-                  )}
-                </div>
-
-                <div className="space-y-3">
-                  <div>
-                    <h4 className="text-sm font-extrabold text-foreground">Should learn next</h4>
-                    <p className="text-xs text-muted-foreground">These become wanted skills for path generation.</p>
+                    })}
                   </div>
-                  {(resumeProfile.suggestedWantedSkills ?? []).length === 0 ? (
-                    <p className="rounded-xl border border-border bg-muted/20 p-3 text-xs text-muted-foreground">
-                      No next-skill suggestions found.
-                    </p>
-                  ) : (
-                    (resumeProfile.suggestedWantedSkills ?? []).map((skill) => {
-                      const key = skillSuggestionKey(skill);
-                      return (
-                        <label key={key} className="block rounded-2xl border border-border bg-background p-4">
-                          <span className="flex items-start gap-3">
-                            <Checkbox
-                              className="mt-1"
-                              checked={selectedWantedResumeSkills.has(key)}
-                              onCheckedChange={() => toggleResumeSkill('wanted', key)}
-                            />
-                            <span className="min-w-0">
-                              <span className="flex flex-wrap items-center gap-2">
-                                <span className="font-bold text-foreground">{skill.name}</span>
-                                <Badge variant="secondary" className="text-[10px]">{skill.level}</Badge>
-                              </span>
-                              <span className="mt-1 block text-xs text-muted-foreground">{skill.evidence}</span>
-                            </span>
-                          </span>
-                        </label>
-                      );
-                    })
-                  )}
-                </div>
+                )}
               </div>
+
+              {/* What I want to learn */}
+              <div className="rounded-2xl border border-dashed border-primary/30 bg-primary/5 p-4 space-y-2">
+                <h4 className="text-sm font-extrabold text-foreground">What do you want to learn?</h4>
+                <p className="text-xs text-muted-foreground">
+                  Your CV shows what you've done, not what you want to learn. Type it here — smart matching
+                  will link it to real SkillEX skills and mentors.
+                </p>
+                <textarea
+                  className="w-full resize-none rounded-xl border border-primary/20 bg-background px-4 py-3 text-sm placeholder:text-muted-foreground/60 text-foreground focus:outline-none focus:ring-2 focus:ring-primary/50 min-h-[80px]"
+                  placeholder="e.g. I want to learn digital marketing, data analysis, or advanced Excel..."
+                  value={learnIntentDraft}
+                  onChange={(e) => setLearnIntentDraft(e.target.value)}
+                  maxLength={500}
+                />
+                <p className="text-[10px] text-muted-foreground text-right">{learnIntentDraft.length}/500</p>
+              </div>
+
             </div>
           )}
 

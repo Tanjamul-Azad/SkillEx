@@ -257,7 +257,7 @@ public class ExchangeServiceImpl implements ExchangeService {
         };
     }
 
-    // ── helpers ──────────────────────────────────────────────────────────────
+    // helpers
 
     private Exchange findExchange(String id) {
         return exchangeRepository.findById(id)

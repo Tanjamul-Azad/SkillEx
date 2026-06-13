@@ -49,13 +49,13 @@ export function BoostBanner({
         </div>
         <div className="absolute -right-8 -top-8 h-36 w-36 rounded-full border border-primary/20 bg-primary/10 blur-2xl" />
         
-        <CardContent className="relative z-10 flex h-full flex-col justify-center p-6 md:p-8">
-          <div className="mb-4 inline-flex h-10 w-10 items-center justify-center rounded-xl bg-primary/10 text-primary">
+        <CardContent className="relative z-10 flex h-full min-h-[280px] flex-col p-5 md:p-6">
+          <div className="mb-3 inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-primary/10 text-primary">
             <Icon className="h-5 w-5" />
           </div>
 
-          <div className="mb-3 flex items-center gap-2">
-            <h3 className="font-headline text-xl font-bold tracking-tight text-foreground">
+          <div className="mb-2 flex items-center gap-2">
+            <h3 className="font-headline text-lg font-bold tracking-tight text-foreground">
               Smart Actions
             </h3>
             {primaryAction && (
@@ -73,14 +73,14 @@ export function BoostBanner({
             </div>
           ) : primaryAction ? (
             <>
-              <p className="mb-2 max-w-[240px] text-sm font-semibold leading-snug text-foreground">
+              <p className="mb-2 max-w-[220px] text-sm font-semibold leading-snug text-foreground">
                 {primaryAction.title}
               </p>
-              <p className="mb-5 max-w-[240px] text-sm leading-relaxed text-muted-foreground">
+              <p className="mb-4 max-w-[220px] text-sm leading-relaxed text-muted-foreground">
                 {primaryAction.reason}
               </p>
               {secondaryActions.length > 0 && (
-                <div className="mb-5 max-w-[250px] space-y-1.5">
+                <div className="mb-4 max-w-[220px] space-y-1.5">
                   {secondaryActions.map((action) => (
                     <Link
                       key={action.id}
@@ -92,7 +92,7 @@ export function BoostBanner({
                   ))}
                 </div>
               )}
-              <Button asChild className="mt-auto w-fit rounded-lg font-semibold shadow-sm group/btn">
+              <Button asChild className="mt-auto w-fit max-w-full rounded-full px-5 font-semibold shadow-sm group/btn">
                 <Link to={primaryAction.route}>
                   {primaryAction.actionLabel}
                   <ArrowRight className="ml-2 h-4 w-4 transition-transform group-hover/btn:translate-x-1" />
@@ -100,12 +100,12 @@ export function BoostBanner({
               </Button>
             </>
           ) : (
-            <div className="max-w-[240px]">
+            <div className="flex h-full max-w-[220px] flex-col">
               <p className="mb-2 text-sm font-semibold text-foreground">No urgent actions</p>
-              <p className="mb-5 text-sm leading-relaxed text-muted-foreground">
+              <p className="mb-4 text-sm leading-relaxed text-muted-foreground">
                 Your dashboard is up to date. Find another exchange when you are ready.
               </p>
-              <Button asChild className="mt-auto w-fit rounded-lg font-semibold shadow-sm group/btn">
+              <Button asChild className="mt-auto w-fit max-w-full rounded-full px-5 font-semibold shadow-sm group/btn">
                 <Link to="/match">
                   Find match
                   <ArrowRight className="ml-2 h-4 w-4 transition-transform group-hover/btn:translate-x-1" />

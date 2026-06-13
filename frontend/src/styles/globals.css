@@ -128,14 +128,14 @@
     --text-primary: 229 84% 5%;
     --text-secondary: 220 15% 38%;
     --text-tertiary: 220 12% 55%;
-    --interactive-hover: 158 72% 22% / 0.07;
-    --interactive-active: 158 72% 22% / 0.14;
-    --interactive-focus: 158 72% 22% / 0.20;
+    --interactive-hover: 170 100% 15% / 0.07;
+    --interactive-active: 170 100% 15% / 0.14;
+    --interactive-focus: 170 100% 15% / 0.20;
     --card: 0 0% 100%;
     --card-foreground: 229 84% 5%;
     --popover: 0 0% 100%;
     --popover-foreground: 229 84% 5%;
-    --primary: 158 72% 22%;         /* Deep Signature Green */
+    --primary: 170 100% 15%;        /* #004D40 Marketplace Green */
     --primary-foreground: 0 0% 100%;
     --secondary: 43 96% 48%;        /* Yellowish tone / Gold for contrast */
     --secondary-foreground: 229 84% 5%;
@@ -147,8 +147,8 @@
     --destructive-foreground: 0 0% 100%;
     --border: 220 20% 88%;
     --input: 220 20% 88%;
-    --ring: 158 72% 22%;
-    --success: 158 72% 28%;
+    --ring: 170 100% 15%;
+    --success: 170 100% 15%;
     --warning: 43 96% 38%;          /* Darker Soft Butter */
     --info: 199 90% 46%;
     --sidebar: 220 20% 94%;
@@ -224,7 +224,7 @@
     --card-foreground: 171 100% 13%;
     --popover: 0 0% 100%;
     --popover-foreground: 171 100% 13%;
-    --primary: 158 72% 22%;
+    --primary: 170 100% 15%;
     --primary-foreground: 0 0% 100%;
     --secondary: 43 96% 42%;
     --secondary-foreground: 229 84% 5%;
@@ -234,8 +234,8 @@
     --accent-foreground: 171 100% 13%;
     --border: 165 11% 73%;          
     --input: 164 11% 82%;           
-    --ring: 158 72% 22%;            
-    --success: 158 72% 28%;
+    --ring: 170 100% 15%;            
+    --success: 170 100% 15%;
     --sidebar: 160 11% 91%;         
     --surface-1: 0 0% 100%;
     --surface-2: 160 11% 95%;
@@ -930,6 +930,58 @@
 
   .card-hover-glow:active {
     transform: translateY(-2px) scale(0.985) translateZ(0);
+  }
+
+  .card-lift,
+  .app-card,
+  .product-panel,
+  .product-kpi,
+  .surface-raised,
+  .card-hover,
+  .card-hover-glow {
+    transition:
+      transform 0.28s cubic-bezier(0.16, 1, 0.3, 1),
+      box-shadow 0.28s ease,
+      border-color 0.28s ease,
+      background-color 0.28s ease;
+    will-change: transform, box-shadow, border-color;
+  }
+
+  .card-lift:hover,
+  .app-card:hover,
+  .product-panel:hover,
+  .product-kpi:hover,
+  .surface-raised:hover,
+  .card-hover:hover,
+  .card-hover-glow:hover {
+    transform: translateY(-4px) translateZ(0);
+    box-shadow:
+      0 18px 42px -24px hsl(var(--primary) / 0.38),
+      0 10px 22px -16px hsl(var(--foreground) / 0.18);
+    border-color: hsl(var(--primary) / 0.35);
+  }
+
+  .card-lift:active,
+  .app-card:active,
+  .product-panel:active,
+  .product-kpi:active,
+  .surface-raised:active,
+  .card-hover:active,
+  .card-hover-glow:active {
+    transform: translateY(-2px) scale(0.99) translateZ(0);
+  }
+
+  .dark .card-lift:hover,
+  .dark .app-card:hover,
+  .dark .product-panel:hover,
+  .dark .product-kpi:hover,
+  .dark .surface-raised:hover,
+  .dark .card-hover:hover,
+  .dark .card-hover-glow:hover {
+    box-shadow:
+      0 20px 46px -22px hsl(var(--primary) / 0.32),
+      0 10px 24px -18px hsl(0 0% 0% / 0.55);
+    border-color: hsl(var(--primary) / 0.45);
   }
 
   .shadow-glow {

@@ -35,13 +35,11 @@ public class SkillController {
     private final SkillCatalogGovernanceService governanceService;
     private final AccountRestrictionService restrictionService;
 
-    /** GET /api/skills */
     @GetMapping
     public ResponseEntity<ApiResponse<List<Skill>>> list() {
         return ResponseEntity.ok(ApiResponse.ok(skillService.getAllSkills()));
     }
 
-    /** GET /api/skills?page=0&size=20 */
     @GetMapping(params = {"page", "size"})
     public ResponseEntity<ApiResponse<PagedResponse<Skill>>> listPaged(
         @RequestParam int page,
@@ -50,7 +48,6 @@ public class SkillController {
         return ResponseEntity.ok(ApiResponse.ok(skillService.getSkillsPage(page, size)));
     }
 
-    /** GET /api/skills/{id} */
     @GetMapping("/{id}")
     public ResponseEntity<ApiResponse<Skill>> getById(@PathVariable String id) {
         return ResponseEntity.ok(ApiResponse.ok(skillService.getSkillById(id)));
@@ -67,7 +64,6 @@ public class SkillController {
         return ResponseEntity.ok(ApiResponse.ok(skillIntentService.interpret(request)));
     }
 
-    /** GET /api/skills/search?intent=... */
     @GetMapping("/search")
     public ResponseEntity<ApiResponse<List<SkillSearchResultDto>>> searchByIntent(
         @RequestParam("intent") String intent
@@ -75,7 +71,6 @@ public class SkillController {
         return ResponseEntity.ok(ApiResponse.ok(skillService.searchByIntent(intent)));
     }
 
-    /** POST /api/skills/suggest */
     @PostMapping("/suggest")
     public ResponseEntity<ApiResponse<AddSkillResult>> suggest(
         Authentication auth,

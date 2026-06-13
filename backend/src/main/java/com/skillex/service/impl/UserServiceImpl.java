@@ -81,6 +81,8 @@ public class UserServiceImpl implements UserService {
         }
         if (req.university() != null) user.setUniversity(req.university());
         if (req.location()   != null) user.setLocation(req.location());
+        if (req.phone()      != null) user.setPhone(req.phone().trim());
+        if (req.address()    != null) user.setAddress(req.address().trim());
         if (req.bio()        != null) user.setBio(req.bio());
         if (req.teachIntentText() != null) user.setTeachIntentText(req.teachIntentText().trim());
         if (req.learnIntentText() != null) user.setLearnIntentText(req.learnIntentText().trim());
@@ -124,7 +126,7 @@ public class UserServiceImpl implements UserService {
         UserSkillOffered.SkillProficiency level =
             UserSkillOffered.SkillProficiency.valueOf(req.level());
 
-        // ── Resolve skill: catalog lookup by ID, or find/create by name ──────
+        // Resolve skill: catalog lookup by ID, or find/create by name
         if (req.skillId() != null && !req.skillId().isBlank()) {
             Skill skill = skillRepository.findById(req.skillId())
                 .orElseThrow(() -> new EntityNotFoundException("Skill not found: " + req.skillId()));
@@ -358,7 +360,7 @@ public class UserServiceImpl implements UserService {
         userRepository.save(user);
     }
 
-    // ── Private helpers ──────────────────────────────────────────────────────
+    // Private helpers
 
     private User findUserById(String userId) {
         return userRepository.findById(userId)

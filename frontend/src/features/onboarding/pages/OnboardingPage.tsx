@@ -151,13 +151,19 @@ const slideVariants = {
 };
 
 export default function OnboardingPage() {
-  const { user, isLoading } = useAuth();
+  const { user, isLoading, refreshUser } = useAuth();
   const navigate = useNavigate();
   const { toast } = useToast();
   const [step, setStep] = useState(0);
   const [dir, setDir] = useState(1);
   const [saving, setSaving] = useState(false);
   const [skillCatalog, setSkillCatalog] = useState<Omit<Skill, 'level' | 'description'>[]>(FALLBACK_CATALOG);
+
+  // A guest with no session can't complete onboarding (no user to attach skills
+  // to). Send them to sign in rather than showing a form that silently no-ops.
+  useEffect(() => {
+    if (!isLoading && !user) navigate('/login');
+  }, [isLoading, user, navigate]);
 
   useEffect(() => {
     SkillService.getAll()
@@ -202,6 +208,9 @@ export default function OnboardingPage() {
         ...skillsOffered.map((id) => UserService.addSkill(id, 'offered', 'BEGINNER')),
         ...skillsWanted.map((id) => UserService.addSkill(id, 'wanted', 'BEGINNER')),
       ]);
+      // Refresh the cached user so the dashboard immediately reflects the new
+      // profile + skills instead of the empty just-registered snapshot.
+      await refreshUser().catch(() => {});
       go(3); // success screen
       setTimeout(() => navigate('/dashboard'), 1800);
     } catch (e) {

@@ -30,6 +30,12 @@ public interface ExchangeRepository extends JpaRepository<Exchange, String> {
         ExchangeStatus status
     );
 
+    java.util.Optional<Exchange> findFirstByRequesterIdAndReceiverIdAndExchangeModeOrderByCreatedAtDesc(
+        String requesterId,
+        String receiverId,
+        Exchange.ExchangeMode exchangeMode
+    );
+
     /** Total exchanges the user has ever initiated (any status). */
     long countByRequesterId(String requesterId);
 

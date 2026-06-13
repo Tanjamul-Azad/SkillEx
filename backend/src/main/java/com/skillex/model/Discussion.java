@@ -34,6 +34,9 @@ public class Discussion {
     @Column(nullable = false, columnDefinition = "TEXT")
     private String content;
 
+    @Column(name = "cover_image_url", length = 512)
+    private String coverImageUrl;
+
     @ManyToOne(fetch = FetchType.LAZY, optional = false)
     @JoinColumn(name = "author_id", nullable = false)
     private User author;
@@ -70,6 +73,11 @@ public class Discussion {
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "circle_id")
     private SkillCircle circle;
+
+    /** Optional link to a community event — powers the per-event discussion/activity wall. */
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "event_id")
+    private Event event;
 
     @Enumerated(EnumType.STRING)
     @Column(nullable = false, length = 12)

@@ -37,7 +37,7 @@ public class PostLike {
     @Column(name = "created_at", updatable = false)
     private LocalDateTime createdAt;
 
-    // ── Embedded composite key ────────────────────────────────────────────────
+    // Embedded composite key
     @Embeddable
     @Getter
     @Setter

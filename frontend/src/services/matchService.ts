@@ -31,6 +31,26 @@ export interface ChainActivationResult {
   summary: string;
 }
 
+export type ChainHopState = 'NONE' | 'PENDING' | 'ACCEPTED' | 'COMPLETED' | 'DECLINED' | 'CANCELLED';
+
+export interface ChainStatusHop {
+  fromUserId: string;
+  toUserId: string;
+  status: ChainHopState;
+  exchangeId: string | null;
+}
+
+export interface ChainStatusResult {
+  started: boolean;
+  totalHops: number;
+  pending: number;
+  accepted: number;
+  completed: number;
+  declined: number;
+  progress: number;
+  hops: ChainStatusHop[];
+}
+
 export const MatchService = {
   /** GET /api/match/users?limit=20 — ranked compatible users for the current user */
   findMatches: (limit = 20): Promise<MatchUserDto[]> =>
@@ -39,4 +59,8 @@ export const MatchService = {
   /** POST /api/match/chains/activate — start a multi-party skill chain */
   activateChain: (hops: ChainActivationHop[], message?: string): Promise<ChainActivationResult> =>
     api.post<ChainActivationResult>('/match/chains/activate', { hops, message }),
+
+  /** POST /api/match/chains/status — get live status of hops in a chain */
+  getChainStatus: (hops: ChainActivationHop[]): Promise<ChainStatusResult> =>
+    api.post<ChainStatusResult>('/match/chains/status', { hops }),
 };

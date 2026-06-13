@@ -96,7 +96,7 @@ public class CompatibilityCalculator {
         int finalScore
     ) {}
 
-    // ── Normalisation constants ───────────────────────────────────────────────
+    // Normalisation constants
 
     /** Sessions needed to reach maximum sessions score. */
     private static final double MAX_SESSIONS = 20.0;
@@ -110,14 +110,14 @@ public class CompatibilityCalculator {
     /** SkillEX score needed to reach the maximum activity contribution. */
     private static final double MAX_SKILLEX_FOR_ACTIVITY = 500.0;
 
-    // ── Dependencies ─────────────────────────────────────────────────────────
+    // Dependencies
 
     private final SkillSimilarityService skillSimilarityService;
     private final ExchangeRepository     exchangeRepository;
     private final IntentMatchingProperties intentMatchingProperties;
     private final IntentEmbeddingCache intentEmbeddingCache;
 
-    // ── Public API ────────────────────────────────────────────────────────────
+    // Public API
 
     /**
      * Compute a 0–100 compatibility score between {@code viewer} and {@code candidate}.
@@ -163,7 +163,7 @@ public class CompatibilityCalculator {
         );
     }
 
-    // ── Sub-scores (each returns 0.0–1.0) ─────────────────────────────────────
+    // Sub-scores (each returns 0.0–1.0)
 
     /**
      * Average best-match semantic similarity across both teaching directions.

@@ -87,4 +87,13 @@ public interface GroupSessionService {
      * @return certificate data
      */
     GroupSessionDto.GroupCertificate generateCertificate(String sessionId, String learnerUserId);
+
+    /**
+     * Start a group session. Only the hosting mentor may start it.
+     *
+     * @param mentorId caller (must be the session's mentor)
+     * @param sessionId session ID
+     * @param meetingLink meeting link (optional, e.g. zoom/google meet)
+     */
+    void startSession(String mentorId, String sessionId, String meetingLink);
 }

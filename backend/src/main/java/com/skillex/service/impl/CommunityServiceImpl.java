@@ -54,7 +54,7 @@ public class CommunityServiceImpl implements CommunityService {
     private final CommunityNotificationService communityNotificationService;
     private final ProgressService progressService;
 
-    // ── Events ──────────────────────────────────────────────────────────────
+    // Events
 
     @Override
     @Transactional(readOnly = true)
@@ -209,7 +209,7 @@ public class CommunityServiceImpl implements CommunityService {
         return mapEvent(event, userId);
     }
 
-    // ── Discussions ──────────────────────────────────────────────────────────
+    // Discussions
 
     @Override
     @Transactional(readOnly = true)
@@ -220,6 +220,7 @@ public class CommunityServiceImpl implements CommunityService {
         String status,
         String circleId,
         String skillId,
+        String eventId,
         int page,
         int size
     ) {
@@ -240,6 +241,7 @@ public class CommunityServiceImpl implements CommunityService {
             parsedStatus,
             blankToNull(circleId),
             blankToNull(skillId),
+            blankToNull(eventId),
             pageable
         );
         List<Discussion> discussions = discussionPage.getContent();
@@ -287,10 +289,18 @@ public class CommunityServiceImpl implements CommunityService {
             assertCircleMember(circle, authorId, "Join this skill circle before posting in it.");
             discussion.setCircle(circle);
         }
+        if (req.eventId() != null && !req.eventId().isBlank()) {
+            // Event discussion walls are open to any signed-in member (events are public),
+            // so no membership gate here — just link the thread to the event.
+            Event event = eventRepository.findById(req.eventId())
+                .orElseThrow(() -> new EntityNotFoundException("Event not found: " + req.eventId()));
+            discussion.setEvent(event);
+        }
         discussion.setUpvotes(0);
         discussion.setReplies(0);
         discussion.setViews(0);
         discussion.setIsPinned(false);
+        discussion.setCoverImageUrl(req.coverImageUrl() == null ? null : req.coverImageUrl().trim());
         Discussion saved = discussionRepository.save(discussion);
         CommunityDtos.DiscussionDto result = mapper.toDiscussion(saved);
 
@@ -419,7 +429,7 @@ public class CommunityServiceImpl implements CommunityService {
             discussionUpvoteRepository.existsByIdDiscussionIdAndIdUserId(discussionId, userId));
     }
 
-    // ── Posts ────────────────────────────────────────────────────────────────
+    // Posts
 
     @Override
     @Transactional(readOnly = true)
@@ -615,7 +625,7 @@ public class CommunityServiceImpl implements CommunityService {
         postRepository.delete(post);
     }
 
-    // ── Comments ─────────────────────────────────────────────────────────────
+    // Comments
 
     @Override
     @Transactional(readOnly = true)
@@ -656,7 +666,7 @@ public class CommunityServiceImpl implements CommunityService {
         return mapper.toComment(saved);
     }
 
-    // ── Stories ──────────────────────────────────────────────────────────────
+    // Stories
 
 
     @Override
@@ -666,7 +676,7 @@ public class CommunityServiceImpl implements CommunityService {
             .stream().map(mapper::toStory).collect(Collectors.toList());
     }
 
-    // ── Skill Circles ────────────────────────────────────────────────────────
+    // Skill Circles
 
     @Override
     @Transactional(readOnly = true)
@@ -714,6 +724,7 @@ public class CommunityServiceImpl implements CommunityService {
             List<Skill> skills = skillRepository.findAllById(req.skillIds());
             circle.setSkills(skills);
         }
+        circle.setCoverImageUrl(req.coverImageUrl() == null ? null : req.coverImageUrl().trim());
 
         SkillCircle saved = skillCircleRepository.save(circle);
         return mapSkillCircle(saved, creatorId);
@@ -820,6 +831,7 @@ public class CommunityServiceImpl implements CommunityService {
                 Discussion.DiscussionStatus.OPEN,
                 circleId,
                 null,
+                null,
                 PageRequest.of(0, 5, Sort.by("createdAt").descending())
             )
             .getContent()
@@ -842,7 +854,7 @@ public class CommunityServiceImpl implements CommunityService {
         );
     }
 
-    // ── Trending & Suggestions ───────────────────────────────────────────────
+    // Trending & Suggestions
 
     @Override
     @Transactional(readOnly = true)

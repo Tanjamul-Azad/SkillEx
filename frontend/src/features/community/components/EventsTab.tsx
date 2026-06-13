@@ -19,6 +19,7 @@ import { useAuth } from '@/hooks/useAuth';
 import { useToast } from '@/hooks/use-toast';
 import { cn } from '@/lib/utils';
 import { SkillPicker } from './SkillPicker';
+import { EventActivityWall } from './EventActivityWall';
 import { CommunityService } from '@/services/communityService';
 import { SkillService } from '@/services/skillService';
 import type { Event, Skill, SkillCircle } from '@/types';
@@ -256,12 +257,22 @@ function EventDetailDialog({
   busy,
   interestBusy,
 }: EventDetailDialogProps) {
+  const { user } = useAuth();
+  const [detailTab, setDetailTab] = React.useState<'details' | 'activity'>('details');
+
+  // Reset to the Details tab whenever a different event is opened.
+  React.useEffect(() => {
+    if (open) setDetailTab('details');
+  }, [open, event?.id]);
+
   if (!event) return null;
   const attendeeCount = Number(event.attendeeCount ?? event.attendees?.length ?? 0);
   const interestedCount = Number(event.interestedCount ?? 0);
   const going = event.rsvpState === 'GOING';
   const interested = event.rsvpState === 'INTERESTED';
   const past = isPastEvent(event);
+  const isHost = Boolean(user?.id && event.host?.id === user.id);
+  const attendees = event.attendees ?? [];
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -276,6 +287,33 @@ function EventDetailDialog({
           <DialogDescription>{event.description || 'Skill-focused community event.'}</DialogDescription>
         </DialogHeader>
 
+        {/* Tab switcher: details vs live activity wall */}
+        <div className="flex gap-2 border-b border-border/40 pb-2">
+          {([
+            { id: 'details' as const, label: 'Details' },
+            { id: 'activity' as const, label: 'Activity & Discussion' },
+          ]).map(tab => (
+            <button
+              key={tab.id}
+              type="button"
+              onClick={() => setDetailTab(tab.id)}
+              className={cn(
+                'rounded-xl px-4 py-1.5 text-[10px] font-bold uppercase tracking-widest transition-all',
+                detailTab === tab.id ? 'bg-primary/15 text-primary' : 'text-muted-foreground hover:text-primary'
+              )}
+            >
+              {tab.label}
+            </button>
+          ))}
+        </div>
+
+        {detailTab === 'activity' && (
+          <div className="py-2">
+            <EventActivityWall eventId={event.id} isHost={isHost} />
+          </div>
+        )}
+
+        {detailTab === 'details' && (
         <div className="grid gap-4 py-2 md:grid-cols-[1fr_0.8fr]">
           <div className="space-y-4">
             <div className="rounded-xl border border-border/50 bg-muted/20 p-4">
@@ -327,8 +365,34 @@ function EventDetailDialog({
                 </div>
               </div>
             </div>
+            <div className="rounded-xl border border-border/50 bg-muted/20 p-4">
+              <h4 className="mb-3 text-xs font-bold uppercase tracking-widest text-muted-foreground">
+                Attendees ({attendeeCount})
+              </h4>
+              {attendees.length === 0 ? (
+                <p className="text-sm text-muted-foreground">No one has registered yet. Be the first to RSVP.</p>
+              ) : (
+                <div className="space-y-2">
+                  {attendees.slice(0, 8).map(attendee => (
+                    <div key={attendee.id} className="flex items-center gap-2">
+                      <Avatar className="h-7 w-7">
+                        <AvatarImage src={attendee.avatar ?? undefined} />
+                        <AvatarFallback className="text-[10px]">{attendee.name?.charAt(0) ?? 'U'}</AvatarFallback>
+                      </Avatar>
+                      <span className="truncate text-sm text-foreground">
+                        {attendee.name}{attendee.id === user?.id ? ' (You)' : ''}
+                      </span>
+                    </div>
+                  ))}
+                  {attendees.length > 8 && (
+                    <p className="pt-1 text-xs text-muted-foreground">+{attendees.length - 8} more going</p>
+                  )}
+                </div>
+              )}
+            </div>
           </div>
         </div>
+        )}
 
         <DialogFooter>
           <Button variant="outline" onClick={() => onOpenChange(false)}>Close</Button>

@@ -5,9 +5,9 @@ import java.util.List;
 public record ApplyResumeProfileRequest(
     Boolean applyBio,
     Boolean applyTeachIntent,
-    Boolean applyLearnIntent,
-    List<SelectedResumeSkill> offeredSkills,
-    List<SelectedResumeSkill> wantedSkills
+    Boolean applyContact,
+    String learnIntentText,
+    List<SelectedResumeSkill> offeredSkills
 ) {
     public record SelectedResumeSkill(
         String name,

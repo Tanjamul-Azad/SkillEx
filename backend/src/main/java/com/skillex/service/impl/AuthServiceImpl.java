@@ -169,7 +169,7 @@ public class AuthServiceImpl implements AuthService {
         return normalizeUserProfile(user);
     }
 
-    // ── Private helpers ──────────────────────────────────────────────────────
+    // Private helpers
 
     /** Builds the auth response with a full profile DTO so no second round-trip is needed. */
     private AuthResponse toAuthResponse(String token, User user) {

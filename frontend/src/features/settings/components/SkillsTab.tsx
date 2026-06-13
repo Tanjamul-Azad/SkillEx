@@ -312,18 +312,17 @@ export default function SkillsTab({ user, refreshUser, toast }: SkillsTabProps) 
   return (
     <div className="space-y-6">
       {/* AI Detection Panel */}
-      <div className="overflow-hidden rounded-[2rem] border border-primary/20 bg-primary/5 backdrop-blur-xl shadow-[inset_0_1px_0_0_hsla(0,0%,100%,0.05)] relative">
-        <div className="absolute inset-0 bg-gradient-to-br from-primary/10 to-transparent pointer-events-none" />
-        <div className="p-6 border-b border-primary/10 relative z-10">
-          <h3 className="text-xl font-extrabold font-headline text-primary flex items-center gap-2 drop-shadow-[0_0_8px_var(--primary)]">
+      <div className="overflow-hidden rounded-[2rem] border border-primary bg-primary text-primary-foreground shadow-sm relative">
+        <div className="p-6 border-b border-primary-foreground/20 relative z-10">
+          <h3 className="text-xl font-extrabold font-headline text-primary-foreground flex items-center gap-2">
             <Sparkles className="h-5 w-5" /> AI Skill Detection
           </h3>
-          <p className="text-[10px] uppercase font-bold tracking-widest text-primary/70 mt-1">Describe what you can teach and what you want to learn. We'll suggest matching skills.</p>
+          <p className="text-[10px] uppercase font-bold tracking-widest text-primary-foreground mt-1">Describe what you can teach and what you want to learn. We'll suggest matching skills.</p>
         </div>
         <div className="p-6 space-y-4 relative z-10">
           <div className="grid gap-4 sm:grid-cols-2">
             <div className="space-y-2">
-              <label className="text-[10px] uppercase font-bold tracking-widest text-primary/70">What can you teach?</label>
+              <label className="text-[10px] uppercase font-bold tracking-widest text-primary-foreground">What can you teach?</label>
               <textarea
                 value={teachIntentText}
                 onChange={(e) => {
@@ -335,7 +334,7 @@ export default function SkillsTab({ user, refreshUser, toast }: SkillsTabProps) 
               />
             </div>
             <div className="space-y-2">
-              <label className="text-[10px] uppercase font-bold tracking-widest text-primary/70">What do you want to learn?</label>
+              <label className="text-[10px] uppercase font-bold tracking-widest text-primary-foreground">What do you want to learn?</label>
               <textarea
                 value={learnIntentText}
                 onChange={(e) => {
@@ -348,7 +347,7 @@ export default function SkillsTab({ user, refreshUser, toast }: SkillsTabProps) 
             </div>
           </div>
           <Button
-            className="gap-2 bg-primary text-primary-foreground hover:bg-primary/90 rounded-xl font-bold shadow-[0_0_20px_hsl(var(--primary)/0.2)] hover:shadow-[0_0_30px_hsl(var(--primary)/0.4)] transition-all min-w-[160px]"
+            className="gap-2 border border-primary-foreground bg-primary text-primary-foreground hover:bg-primary rounded-xl font-bold shadow-none transition-all min-w-[160px]"
             disabled={isInterpreting || (!teachIntentText.trim() && !learnIntentText.trim())}
             onClick={handleInterpretSkills}
           >
@@ -358,21 +357,21 @@ export default function SkillsTab({ user, refreshUser, toast }: SkillsTabProps) 
           {interpretation && (
             <div className="grid gap-4 sm:grid-cols-2 pt-2">
               {teachPrimary && (
-                <div className="flex items-center justify-between rounded-2xl border border-primary/30 bg-primary/10 px-4 py-3 backdrop-blur-md shadow-[inset_0_1px_0_0_hsla(0,0%,100%,0.1)]">
+                <div className="flex items-center justify-between rounded-2xl border border-primary-foreground bg-primary px-4 py-3 shadow-sm">
                   <div>
-                    <p className="text-[10px] uppercase font-bold tracking-widest text-primary/70">Teach suggestion</p>
-                    <p className="font-bold text-foreground mt-0.5 flex items-center gap-2">
+                    <p className="text-[10px] uppercase font-bold tracking-widest text-primary-foreground">Teach suggestion</p>
+                    <p className="font-bold text-primary-foreground mt-0.5 flex items-center gap-2">
                       {teachPrimary.skillName}
-                      <span className="text-[10px] font-bold tracking-widest text-primary">({teachPrimary.confidence}%)</span>
+                      <span className="text-[10px] font-bold tracking-widest text-primary-foreground">({teachPrimary.confidence}%)</span>
                       {teachPrimary.custom && (
-                        <span className="rounded-full border border-primary bg-primary/20 px-2 py-0.5 text-[9px] uppercase tracking-widest font-black text-primary shadow-[0_0_10px_hsl(var(--primary)/0.3)]">AI New</span>
+                        <span className="rounded-full border border-primary-foreground px-2 py-0.5 text-[9px] uppercase tracking-widest font-black text-primary-foreground">AI New</span>
                       )}
                     </p>
                   </div>
                   <Button
                     size="sm"
                     variant="outline"
-                    className="h-8 rounded-lg text-xs font-bold gap-1 border-primary/30 text-primary hover:bg-primary/20 hover:text-primary shadow-[0_0_10px_hsl(var(--primary)/0.1)]"
+                    className="h-8 rounded-lg text-xs font-bold gap-1 border-primary-foreground text-primary-foreground hover:bg-primary-foreground hover:text-primary shadow-none"
                     disabled={addingSkill}
                     onClick={() => handleAddSkill(teachPrimary, 'offered')}
                   >
@@ -381,21 +380,21 @@ export default function SkillsTab({ user, refreshUser, toast }: SkillsTabProps) 
                 </div>
               )}
               {learnPrimary && (
-                <div className="flex items-center justify-between rounded-2xl border border-secondary/30 bg-secondary/10 px-4 py-3 backdrop-blur-md shadow-[inset_0_1px_0_0_hsla(0,0%,100%,0.1)]">
+                <div className="flex items-center justify-between rounded-2xl border border-primary-foreground bg-primary px-4 py-3 shadow-sm">
                   <div>
-                    <p className="text-[10px] uppercase font-bold tracking-widest text-secondary/70">Learn suggestion</p>
-                    <p className="font-bold text-foreground mt-0.5 flex items-center gap-2">
+                    <p className="text-[10px] uppercase font-bold tracking-widest text-primary-foreground">Learn suggestion</p>
+                    <p className="font-bold text-primary-foreground mt-0.5 flex items-center gap-2">
                       {learnPrimary.skillName}
-                      <span className="text-[10px] font-bold tracking-widest text-secondary">({learnPrimary.confidence}%)</span>
+                      <span className="text-[10px] font-bold tracking-widest text-primary-foreground">({learnPrimary.confidence}%)</span>
                       {learnPrimary.custom && (
-                        <span className="rounded-full border border-secondary bg-secondary/20 px-2 py-0.5 text-[9px] uppercase tracking-widest font-black text-secondary shadow-[0_0_10px_hsl(var(--secondary)/0.3)]">AI New</span>
+                        <span className="rounded-full border border-primary-foreground px-2 py-0.5 text-[9px] uppercase tracking-widest font-black text-primary-foreground">AI New</span>
                       )}
                     </p>
                   </div>
                   <Button
                     size="sm"
                     variant="outline"
-                    className="h-8 rounded-lg text-xs font-bold gap-1 border-secondary/30 text-secondary hover:bg-secondary/20 hover:text-secondary shadow-[0_0_10px_hsl(var(--secondary)/0.1)]"
+                    className="h-8 rounded-lg text-xs font-bold gap-1 border-primary-foreground text-primary-foreground hover:bg-primary-foreground hover:text-primary shadow-none"
                     disabled={addingSkill}
                     onClick={() => handleAddSkill(learnPrimary, 'wanted')}
                   >
@@ -408,19 +407,19 @@ export default function SkillsTab({ user, refreshUser, toast }: SkillsTabProps) 
 
           {interpretation && (teachAlternatives.length > 0 || learnAlternatives.length > 0) && (
             <div className="grid gap-4 sm:grid-cols-2 pt-1">
-              <div className="rounded-2xl border border-primary/20 bg-card p-3">
-                <p className="text-[10px] uppercase font-bold tracking-widest text-primary/70 mb-2">More teach suggestions</p>
+              <div className="rounded-2xl border border-primary-foreground bg-primary p-3">
+                <p className="text-[10px] uppercase font-bold tracking-widest text-primary-foreground mb-2">More teach suggestions</p>
                 {teachAlternatives.length === 0 ? (
-                  <p className="text-[10px] uppercase tracking-widest text-muted-foreground">No additional teach suggestions.</p>
+                  <p className="text-[10px] uppercase tracking-widest text-primary-foreground">No additional teach suggestions.</p>
                 ) : (
                   <div className="space-y-2">
                     {teachAlternatives.map((suggestion, idx) => (
-                      <div key={`teach-alt-${suggestion.skillId ?? suggestion.skillName}-${idx}`} className="flex items-center justify-between rounded-xl border border-border bg-muted/20 px-3 py-2">
+                      <div key={`teach-alt-${suggestion.skillId ?? suggestion.skillName}-${idx}`} className="flex items-center justify-between rounded-xl border border-primary-foreground bg-primary px-3 py-2">
                         <div className="min-w-0">
-                          <p className="truncate text-xs font-bold text-foreground">{suggestion.skillName}</p>
-                          <p className="text-[10px] uppercase tracking-widest text-primary/70">{suggestion.confidence}%</p>
+                          <p className="truncate text-xs font-bold text-primary-foreground">{suggestion.skillName}</p>
+                          <p className="text-[10px] uppercase tracking-widest text-primary-foreground">{suggestion.confidence}%</p>
                         </div>
-                        <Button size="sm" variant="outline" className="h-7 rounded-lg text-[10px] font-bold border-primary/30 text-primary hover:bg-primary/20" disabled={addingSkill} onClick={() => handleAddSkill(suggestion, 'offered')}>
+                        <Button size="sm" variant="outline" className="h-7 rounded-lg text-[10px] font-bold border-primary-foreground text-primary-foreground hover:bg-primary-foreground hover:text-primary" disabled={addingSkill} onClick={() => handleAddSkill(suggestion, 'offered')}>
                           Add
                         </Button>
                       </div>
@@ -429,19 +428,19 @@ export default function SkillsTab({ user, refreshUser, toast }: SkillsTabProps) 
                 )}
               </div>
 
-              <div className="rounded-2xl border border-secondary/20 bg-card p-3">
-                <p className="text-[10px] uppercase font-bold tracking-widest text-secondary/70 mb-2">More learn suggestions</p>
+              <div className="rounded-2xl border border-primary-foreground bg-primary p-3">
+                <p className="text-[10px] uppercase font-bold tracking-widest text-primary-foreground mb-2">More learn suggestions</p>
                 {learnAlternatives.length === 0 ? (
-                  <p className="text-[10px] uppercase tracking-widest text-muted-foreground">No additional learn suggestions.</p>
+                  <p className="text-[10px] uppercase tracking-widest text-primary-foreground">No additional learn suggestions.</p>
                 ) : (
                   <div className="space-y-2">
                     {learnAlternatives.map((suggestion, idx) => (
-                      <div key={`learn-alt-${suggestion.skillId ?? suggestion.skillName}-${idx}`} className="flex items-center justify-between rounded-xl border border-border bg-muted/20 px-3 py-2">
+                      <div key={`learn-alt-${suggestion.skillId ?? suggestion.skillName}-${idx}`} className="flex items-center justify-between rounded-xl border border-primary-foreground bg-primary px-3 py-2">
                         <div className="min-w-0">
-                          <p className="truncate text-xs font-bold text-foreground">{suggestion.skillName}</p>
-                          <p className="text-[10px] uppercase tracking-widest text-secondary/70">{suggestion.confidence}%</p>
+                          <p className="truncate text-xs font-bold text-primary-foreground">{suggestion.skillName}</p>
+                          <p className="text-[10px] uppercase tracking-widest text-primary-foreground">{suggestion.confidence}%</p>
                         </div>
-                        <Button size="sm" variant="outline" className="h-7 rounded-lg text-[10px] font-bold border-secondary/30 text-secondary hover:bg-secondary/20" disabled={addingSkill} onClick={() => handleAddSkill(suggestion, 'wanted')}>
+                        <Button size="sm" variant="outline" className="h-7 rounded-lg text-[10px] font-bold border-primary-foreground text-primary-foreground hover:bg-primary-foreground hover:text-primary" disabled={addingSkill} onClick={() => handleAddSkill(suggestion, 'wanted')}>
                           Add
                         </Button>
                       </div>
@@ -499,7 +498,7 @@ export default function SkillsTab({ user, refreshUser, toast }: SkillsTabProps) 
               </Select>
             </div>
             <Button
-              className="gap-2 bg-primary text-primary-foreground hover:bg-primary/90 rounded-xl font-bold shadow-[0_0_20px_hsl(var(--primary)/0.2)] hover:shadow-[0_0_30px_hsl(var(--primary)/0.4)] transition-all"
+              className="gap-2 bg-primary text-primary-foreground hover:bg-primary rounded-xl font-bold shadow-none transition-all"
               disabled={bulkAdding || selectedSkillIds.length === 0}
               onClick={handleBulkAddSkills}
             >
@@ -524,11 +523,11 @@ export default function SkillsTab({ user, refreshUser, toast }: SkillsTabProps) 
                       className={cn(
                         'rounded-xl border px-3 py-1.5 text-[11px] uppercase tracking-widest font-black transition-all shadow-sm',
                         selected
-                          ? 'border-primary bg-primary text-primary-foreground shadow-[0_0_15px_hsl(var(--primary)/0.3)] scale-[1.02]'
+                          ? 'border-primary bg-primary text-primary-foreground shadow-sm scale-[1.02]'
                           : 'border-border bg-background text-muted-foreground hover:border-muted-foreground/30 hover:text-foreground hover:bg-muted/10'
                       )}
                     >
-                      {skill.name} <span className={cn("opacity-50 font-medium ml-1", selected ? "text-primary-foreground" : "text-muted-foreground/50")}>· {skill.category}</span>
+                      {skill.name} <span className={cn("opacity-80 font-medium ml-1", selected ? "text-primary-foreground" : "text-muted-foreground/50")}>· {skill.category}</span>
                     </button>
                   );
                 })}
@@ -547,7 +546,7 @@ export default function SkillsTab({ user, refreshUser, toast }: SkillsTabProps) 
             </h3>
             <p className="text-[10px] uppercase font-bold tracking-widest text-muted-foreground mt-1">Manage your teaching skills and adjust levels anytime.</p>
           </div>
-          <span className="bg-primary/20 text-primary border border-primary/20 px-3 py-1 rounded-full text-[10px] uppercase tracking-[0.2em] font-extrabold shadow-[inset_0_1px_0_0_hsla(0,0%,100%,0.05)] whitespace-nowrap">{offeredSkills.length} skill{offeredSkills.length !== 1 ? 's' : ''}</span>
+          <span className="bg-primary text-primary-foreground border border-primary px-3 py-1 rounded-full text-[10px] uppercase tracking-[0.2em] font-extrabold shadow-sm whitespace-nowrap">{offeredSkills.length} skill{offeredSkills.length !== 1 ? 's' : ''}</span>
         </div>
         <div className="p-6">
           {offeredSkills.length === 0 ? (
@@ -620,7 +619,7 @@ export default function SkillsTab({ user, refreshUser, toast }: SkillsTabProps) 
             </h3>
             <p className="text-[10px] uppercase font-bold tracking-widest text-muted-foreground mt-1">Track your learning goals and tune level preferences.</p>
           </div>
-          <span className="bg-secondary/20 text-secondary border border-secondary/20 px-3 py-1 rounded-full text-[10px] uppercase tracking-[0.2em] font-extrabold shadow-[inset_0_1px_0_0_hsla(0,0%,100%,0.05)] whitespace-nowrap">{wantedSkills.length} skill{wantedSkills.length !== 1 ? 's' : ''}</span>
+          <span className="bg-primary text-primary-foreground border border-primary px-3 py-1 rounded-full text-[10px] uppercase tracking-[0.2em] font-extrabold shadow-sm whitespace-nowrap">{wantedSkills.length} skill{wantedSkills.length !== 1 ? 's' : ''}</span>
         </div>
         <div className="p-6">
           {wantedSkills.length === 0 ? (

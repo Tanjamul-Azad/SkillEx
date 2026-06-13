@@ -82,7 +82,7 @@ public class ExchangeCycleFinder {
 
     private final SkillRepository skillRepository;
 
-    // ── DFS node colours ─────────────────────────────────────────────────────
+    // DFS node colours
 
     /**
      * Three-colour marking used by the DFS to distinguish node states.
@@ -95,7 +95,7 @@ public class ExchangeCycleFinder {
      */
     private enum Color { WHITE, GRAY, BLACK }
 
-    // ── Public API ────────────────────────────────────────────────────────────
+    // Public API
 
     /**
      * Find all directed simple cycles in the entire {@code graph}.
@@ -164,7 +164,7 @@ public class ExchangeCycleFinder {
         return forUser;
     }
 
-    // ── Core DFS ──────────────────────────────────────────────────────────────
+    // Core DFS
 
     /**
      * Recursive DFS step.
@@ -227,7 +227,7 @@ public class ExchangeCycleFinder {
         colour.put(node, Color.BLACK);
     }
 
-    // ── Cycle construction ────────────────────────────────────────────────────
+    // Cycle construction
 
     /**
      * Build an enriched {@link ExchangeCycle} from a raw cycle path.
@@ -290,7 +290,7 @@ public class ExchangeCycleFinder {
         return new ExchangeCycle(path, userNames, hops);
     }
 
-    // ── Helpers ───────────────────────────────────────────────────────────────
+    // Helpers
 
     /**
      * Compute a canonical (rotation-invariant) key for a cycle so that

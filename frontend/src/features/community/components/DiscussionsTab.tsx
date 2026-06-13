@@ -20,6 +20,7 @@ import { useToast } from '@/hooks/use-toast';
 import { cn } from '@/lib/utils';
 import { CommunityService } from '@/services/communityService';
 import type { Discussion, DiscussionReply } from '@/types';
+import { ImageUploadField } from '@/components/upload/ImageUploadField';
 
 const THREAD_TYPES = [
   { value: 'QUESTION', label: 'Question' },
@@ -67,6 +68,15 @@ const DiscussionCard = React.memo(({ discussion: d, onOpen }: DiscussionCardProp
       )}
       onClick={() => onOpen(d)}
     >
+      {d.coverImageUrl && (
+        <div className="relative aspect-video max-h-40 w-full overflow-hidden border-b border-border/40 bg-muted">
+          <img
+            src={d.coverImageUrl}
+            alt={d.title}
+            className="h-full w-full object-cover transition-transform duration-300 group-hover:scale-105"
+          />
+        </div>
+      )}
       <div className="absolute inset-0 bg-gradient-to-r from-primary/5 via-transparent to-transparent opacity-0 transition-opacity duration-500 group-hover:opacity-100 pointer-events-none" />
       <div className="p-6 flex items-start gap-5 relative z-10">
         <div 
@@ -223,6 +233,15 @@ function DiscussionDetailDialog({
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-h-[88vh] overflow-y-auto sm:max-w-4xl">
+        {discussion.coverImageUrl && (
+          <div className="relative aspect-video max-h-48 w-full overflow-hidden rounded-xl border border-border/40 bg-muted mb-4">
+            <img
+              src={discussion.coverImageUrl}
+              alt={discussion.title}
+              className="h-full w-full object-cover"
+            />
+          </div>
+        )}
         <DialogHeader>
           <div className="flex flex-wrap items-center gap-2">
             <Badge className="rounded-full bg-primary/10 text-primary">{formatEnumLabel(discussion.threadType)}</Badge>
@@ -307,7 +326,7 @@ export const DiscussionsTab = () => {
   const [detailOpen, setDetailOpen] = useState(false);
   const [selectedDiscussion, setSelectedDiscussion] = useState<Discussion | null>(null);
   const [submitting, setSubmitting] = useState(false);
-  const [discussionForm, setDiscussionForm] = useState({ title: '', content: '', category: 'General', threadType: 'QUESTION' });
+  const [discussionForm, setDiscussionForm] = useState({ title: '', content: '', category: 'General', threadType: 'QUESTION', coverImageUrl: null as string | null });
 
   const loadDiscussions = useCallback(() => {
     return CommunityService.getDiscussions(0, 20, {
@@ -343,9 +362,10 @@ export const DiscussionsTab = () => {
         content: discussionForm.content.trim(),
         category: discussionForm.category,
         threadType: discussionForm.threadType,
+        coverImageUrl: discussionForm.coverImageUrl,
       });
       setDiscussions(prev => [created, ...prev]);
-      setDiscussionForm({ title: '', content: '', category: 'General', threadType: 'QUESTION' });
+      setDiscussionForm({ title: '', content: '', category: 'General', threadType: 'QUESTION', coverImageUrl: null });
       setCreateOpen(false);
       toast({ title: 'Discussion started', description: 'The community can now respond.', variant: 'success' });
     } catch (error) {
@@ -541,6 +561,13 @@ export const DiscussionsTab = () => {
                 setDiscussionForm(prev => ({ ...prev, content: value }));
               }} placeholder="Add context, what you tried, and what kind of answer you need..." />
             </div>
+
+            <ImageUploadField
+              value={discussionForm.coverImageUrl}
+              onChange={url => setDiscussionForm(prev => ({ ...prev, coverImageUrl: url }))}
+              label="Cover image"
+              aspect="video"
+            />
           </div>
           <DialogFooter>
             <Button variant="outline" onClick={() => setCreateOpen(false)}>Cancel</Button>

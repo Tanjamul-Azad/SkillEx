@@ -9,10 +9,10 @@ const config: Config = {
   ],
   theme: {
     extend: {
-      // ── LOCKED FONTS — DO NOT CHANGE ──────────────────────────
+      // LOCKED FONTS — DO NOT CHANGE
       // body:     DM Sans       (Google Fonts)
       // headline: Plus Jakarta Sans (Google Fonts)
-      // ──────────────────────────────────────────────────────────
+
       fontFamily: {
         body: ["DM Sans", "sans-serif"],
         headline: ["Plus Jakarta Sans", "sans-serif"],
@@ -61,7 +61,7 @@ const config: Config = {
         "2xl": "calc(var(--radius) + 8px)",
         "3xl": "calc(var(--radius) + 16px)",
       },
-      /* ── Custom easing curves ─────────────────────────────── */
+      // Custom easing curves
       transitionTimingFunction: {
         /* Spring-like: overshoot then settle */
         "spring": "cubic-bezier(0.34, 1.56, 0.64, 1)",

@@ -11,7 +11,7 @@ import java.util.List;
  */
 public interface CommunityService {
 
-    // ── Events ──────────────────────────────────────────────────────────────
+    // Events
 
     PagedResponse<CommunityDtos.EventDto> getEvents(String viewerId, int page, int size);
 
@@ -25,7 +25,7 @@ public interface CommunityService {
 
     CommunityDtos.EventDto interestEvent(String userId, String eventId);
 
-    // ── Discussions ──────────────────────────────────────────────────────────
+    // Discussions
 
     PagedResponse<CommunityDtos.DiscussionDto> getDiscussions(
         String viewerId,
@@ -34,6 +34,7 @@ public interface CommunityService {
         String status,
         String circleId,
         String skillId,
+        String eventId,
         int page,
         int size
     );
@@ -52,7 +53,7 @@ public interface CommunityService {
 
     CommunityDtos.DiscussionDto resolveDiscussion(String userId, String discussionId);
 
-    // ── Posts ────────────────────────────────────────────────────────────────
+    // Posts
 
     PagedResponse<CommunityDtos.PostDto> getPosts(String viewerId, int page, int size);
 
@@ -70,17 +71,17 @@ public interface CommunityService {
 
     void deletePost(String userId, String postId);
 
-    // ── Comments ─────────────────────────────────────────────────────────────
+    // Comments
 
     PagedResponse<CommentDto> getComments(String postId, int page, int size);
 
     CommentDto addComment(String userId, String postId, CreateCommentRequest req);
 
-    // ── Stories ──────────────────────────────────────────────────────────────
+    // Stories
 
     List<CommunityDtos.StoryDto> getStories();
 
-    // ── Skill Circles ────────────────────────────────────────────────────────
+    // Skill Circles
 
     PagedResponse<CommunityDtos.SkillCircleDto> getSkillCircles(String viewerId, int page, int size);
 
@@ -98,7 +99,7 @@ public interface CommunityService {
 
     CommunityDtos.SkillCircleDashboardDto getCircleDashboard(String viewerId, String circleId);
 
-    // ── Trending & Suggestions ───────────────────────────────────────────────
+    // Trending & Suggestions
 
     List<CommunityDtos.TrendingSkillDto> getTrendingSkills();
 

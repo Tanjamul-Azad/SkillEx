@@ -108,7 +108,7 @@ public class ReviewServiceImpl implements ReviewService {
         return mapper.toReview(saved);
     }
 
-    // ── helpers ──────────────────────────────────────────────────────────────
+    // helpers
 
     private User findUser(String id) {
         return userRepository.findById(id)

@@ -68,6 +68,7 @@ import { skillCheckService } from '@/services/skillCheckService';
 import { certificateService, type SkillCertificate, type UserBadge } from '@/services/certificateService';
 import { progressService } from '@/services/progressService';
 import { VerifiedBadge } from '@/components/trust/VerifiedBadge';
+import { AddSkillDialog } from '@/features/profile/components/AddSkillDialog';
 
 const containerVariants = {
   hidden: { opacity: 0 },
@@ -457,6 +458,8 @@ export default function ProfilePage() {
   const [notFound, setNotFound] = useState(false);
   const [offeredSkills, setOfferedSkills] = useState<Skill[]>([]);
   const [wantedSkills, setWantedSkills] = useState<Skill[]>([]);
+  const [addSkillDialogOpen, setAddSkillDialogOpen] = useState(false);
+  const [addSkillDialogMode, setAddSkillDialogMode] = useState<'offered' | 'wanted'>('offered');
   const navTo = useNav();
   const [searchParams, setSearchParams] = useSearchParams();
   const [connectionRelationship, setConnectionRelationship] = useState<ConnectionRelationship | null>(null);
@@ -1192,10 +1195,11 @@ export default function ProfilePage() {
                   title="Can teach"
                   skills={offeredSkills}
                   icon={CheckCircle}
-                  emptyText={isOwnProfile ? 'Manage your teach skills from Settings → My Skills.' : 'No teach skills added yet.'}
+                  emptyText="Add skills you can teach."
                   variant="offer"
                   emphasized={emphasizeOfferedSkills}
                   isOwner={isOwnProfile}
+                  onAdd={isOwnProfile ? () => { setAddSkillDialogMode('offered'); setAddSkillDialogOpen(true); } : undefined}
                   profileUserId={profileUser.id}
                 />
               </motion.div>
@@ -1204,18 +1208,26 @@ export default function ProfilePage() {
                   title="Wants to learn"
                   skills={wantedSkills}
                   icon={BookOpen}
-                  emptyText={isOwnProfile ? 'Manage your learning skills from Settings → My Skills.' : 'No learning goals listed yet.'}
+                  emptyText="Add skills you want to learn."
                   variant="want"
                   isOwner={isOwnProfile}
+                  onAdd={isOwnProfile ? () => { setAddSkillDialogMode('wanted'); setAddSkillDialogOpen(true); } : undefined}
                   profileUserId={profileUser.id}
                 />
               </motion.div>
             </motion.div>
 
             {isOwnProfile && (
-              <div className="mt-5 rounded-2xl border border-white/10 bg-white/[0.03] p-4 text-xs text-muted-foreground">
-                Skill management moved to <Link to="/settings?tab=skills" className="font-bold text-primary hover:underline">Settings → My Skills</Link> for AI suggestions and multi-skill updates.
-              </div>
+              <AddSkillDialog
+                open={addSkillDialogOpen}
+                onClose={() => setAddSkillDialogOpen(false)}
+                mode={addSkillDialogMode}
+                existingIds={addSkillDialogMode === 'offered' ? offeredSkills.map((s) => s.id) : wantedSkills.map((s) => s.id)}
+                onSave={(added) => {
+                  if (addSkillDialogMode === 'offered') setOfferedSkills((prev) => [...prev, ...added]);
+                  else setWantedSkills((prev) => [...prev, ...added]);
+                }}
+              />
             )}
 
           </TabsContent>

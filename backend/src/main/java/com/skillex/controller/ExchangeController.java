@@ -22,7 +22,6 @@ public class ExchangeController {
 
     private final ExchangeService exchangeService;
 
-    /** POST /api/exchanges — send a new exchange request */
     @PostMapping
     public ResponseEntity<ApiResponse<ExchangeDto>> create(
         Authentication auth,
@@ -32,7 +31,6 @@ public class ExchangeController {
         return ResponseEntity.status(HttpStatus.CREATED).body(ApiResponse.ok(dto));
     }
 
-    /** POST /api/exchanges/request - explicit request endpoint used by smart exchange flows */
     @PostMapping("/request")
     public ResponseEntity<ApiResponse<ExchangeDto>> createRequest(
         Authentication auth,
@@ -41,7 +39,6 @@ public class ExchangeController {
         return create(auth, req);
     }
 
-    /** GET /api/exchanges?status=&page=0&size=20 */
     @GetMapping
     public ResponseEntity<ApiResponse<PagedResponse<ExchangeDto>>> list(
         Authentication auth,
@@ -53,7 +50,6 @@ public class ExchangeController {
             exchangeService.listForUser(userId(auth), status, page, size)));
     }
 
-    /** GET /api/exchanges/{id} */
     @GetMapping("/{id}")
     public ResponseEntity<ApiResponse<ExchangeDto>> getById(
         Authentication auth,
@@ -62,7 +58,6 @@ public class ExchangeController {
         return ResponseEntity.ok(ApiResponse.ok(exchangeService.getById(id, userId(auth))));
     }
 
-    /** GET /api/exchanges/relationship/{targetUserId} */
     @GetMapping("/relationship/{targetUserId}")
     public ResponseEntity<ApiResponse<ExchangeRelationshipDto>> relationship(
         Authentication auth,
@@ -73,7 +68,6 @@ public class ExchangeController {
         ));
     }
 
-    /** PATCH /api/exchanges/{id}/status — accept / decline / complete */
     @PatchMapping("/{id}/status")
     public ResponseEntity<ApiResponse<ExchangeDto>> updateStatus(
         Authentication auth,
@@ -84,7 +78,6 @@ public class ExchangeController {
             exchangeService.updateStatus(id, userId(auth), req)));
     }
 
-    /** PUT /api/exchanges/{id}/accept */
     @PutMapping("/{id}/accept")
     public ResponseEntity<ApiResponse<ExchangeDto>> accept(
         Authentication auth,
@@ -94,7 +87,6 @@ public class ExchangeController {
             exchangeService.updateStatus(id, userId(auth), new UpdateExchangeRequest("ACCEPTED"))));
     }
 
-    /** PUT /api/exchanges/{id}/reject */
     @PutMapping("/{id}/reject")
     public ResponseEntity<ApiResponse<ExchangeDto>> reject(
         Authentication auth,
@@ -104,7 +96,6 @@ public class ExchangeController {
             exchangeService.updateStatus(id, userId(auth), new UpdateExchangeRequest("DECLINED"))));
     }
 
-    /** DELETE /api/exchanges/{id} — cancel (soft-delete via status) */
     @DeleteMapping("/{id}")
     public ResponseEntity<ApiResponse<String>> cancel(
         Authentication auth,

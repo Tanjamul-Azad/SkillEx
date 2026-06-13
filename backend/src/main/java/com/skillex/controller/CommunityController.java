@@ -27,7 +27,7 @@ public class CommunityController {
     private final CommunityService communityService;
     private final JwtUtil jwtUtil;
 
-    // ── Helper ───────────────────────────────────────────────────────────────
+    // Helper
 
     private String currentUserId(HttpServletRequest request) {
         String token = request.getHeader("Authorization");
@@ -37,7 +37,7 @@ public class CommunityController {
         return null;
     }
 
-    // ── Events ──────────────────────────────────────────────────────────────
+    // Events
 
     @GetMapping("/events")
     public ResponseEntity<ApiResponse<PagedResponse<CommunityDtos.EventDto>>> getEvents(
@@ -94,7 +94,7 @@ public class CommunityController {
         return ResponseEntity.ok(ApiResponse.ok(communityService.interestEvent(userId, eventId)));
     }
 
-    // ── Discussions ──────────────────────────────────────────────────────────
+    // Discussions
 
     @GetMapping("/discussions")
     public ResponseEntity<ApiResponse<PagedResponse<CommunityDtos.DiscussionDto>>> getDiscussions(
@@ -104,12 +104,13 @@ public class CommunityController {
         @RequestParam(required = false) String status,
         @RequestParam(required = false) String circleId,
         @RequestParam(required = false) String skillId,
+        @RequestParam(required = false) String eventId,
         @RequestParam(defaultValue = "0") int page,
         @RequestParam(defaultValue = "20") int size
     ) {
         String viewerId = currentUserId(request);
         return ResponseEntity.ok(ApiResponse.ok(communityService.getDiscussions(
-            viewerId, category, threadType, status, circleId, skillId, page, size)));
+            viewerId, category, threadType, status, circleId, skillId, eventId, page, size)));
     }
 
     @PostMapping("/discussions")
@@ -180,7 +181,7 @@ public class CommunityController {
         return ResponseEntity.ok(ApiResponse.ok(communityService.resolveDiscussion(userId, discussionId)));
     }
 
-    // ── Posts ────────────────────────────────────────────────────────────────
+    // Posts
 
     @GetMapping("/posts")
     public ResponseEntity<ApiResponse<PagedResponse<CommunityDtos.PostDto>>> getPosts(
@@ -264,7 +265,7 @@ public class CommunityController {
         return ResponseEntity.ok(ApiResponse.ok(null));
     }
 
-    // ── Comments ─────────────────────────────────────────────────────────────
+    // Comments
 
     @GetMapping("/posts/{postId}/comments")
     public ResponseEntity<ApiResponse<PagedResponse<CommentDto>>> getComments(
@@ -286,14 +287,14 @@ public class CommunityController {
             .body(ApiResponse.created(communityService.addComment(userId, postId, req)));
     }
 
-    // ── Stories ──────────────────────────────────────────────────────────────
+    // Stories
 
     @GetMapping("/stories")
     public ResponseEntity<ApiResponse<List<CommunityDtos.StoryDto>>> getStories() {
         return ResponseEntity.ok(ApiResponse.ok(communityService.getStories()));
     }
 
-    // ── Skill Circles ────────────────────────────────────────────────────────
+    // Skill Circles
 
     @GetMapping({"/skill-circles", "/circles"})
     public ResponseEntity<ApiResponse<PagedResponse<CommunityDtos.SkillCircleDto>>> getSkillCircles(
@@ -368,7 +369,7 @@ public class CommunityController {
         return ResponseEntity.ok(ApiResponse.ok(communityService.getCircleDashboard(currentUserId(request), circleId)));
     }
 
-    // ── Trending & Suggestions ───────────────────────────────────────────────
+    // Trending & Suggestions
 
     @GetMapping("/trending-skills")
     public ResponseEntity<ApiResponse<List<CommunityDtos.TrendingSkillDto>>> getTrendingSkills() {

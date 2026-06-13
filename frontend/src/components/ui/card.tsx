@@ -10,7 +10,7 @@ const Card = React.forwardRef<
     ref={ref}
     className={cn(
       "group relative overflow-hidden rounded-2xl border border-border/70 bg-card/75 shadow-[inset_0_1px_0_0_hsla(0,0%,100%,0.035)]",
-      "transition-[box-shadow,border-color,background-color] duration-220 ease-expo-out",
+      "card-lift transition-[transform,box-shadow,border-color,background-color] duration-300 ease-expo-out",
       "dark:border-white/10 dark:bg-card/65",
       className
     )}

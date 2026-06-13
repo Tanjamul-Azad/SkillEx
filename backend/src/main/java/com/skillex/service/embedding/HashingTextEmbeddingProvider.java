@@ -27,7 +27,7 @@ public class HashingTextEmbeddingProvider extends AbstractEmbeddingProvider {
     private static final Map<String, List<String>> SYNONYMS = new HashMap<>();
 
     static {
-        // ── Technology ────────────────────────────────────────────
+        // Technology
         SYNONYMS.put("react", List.of("frontend", "ui", "javascript", "web", "nextjs"));
         SYNONYMS.put("frontend", List.of("react", "ui", "web", "javascript", "html", "css"));
         SYNONYMS.put("backend", List.of("api", "server", "java", "python", "nodejs", "spring"));
@@ -54,7 +54,7 @@ public class HashingTextEmbeddingProvider extends AbstractEmbeddingProvider {
         SYNONYMS.put("cybersecurity", List.of("security", "hacking", "network", "privacy"));
         SYNONYMS.put("security", List.of("cybersecurity", "hacking", "network", "privacy"));
 
-        // ── Design & Creative Arts ─────────────────────────────────
+        // Design & Creative Arts
         SYNONYMS.put("design", List.of("ui", "ux", "figma", "graphic", "visual", "creative"));
         SYNONYMS.put("graphic", List.of("design", "ui", "visual", "illustration", "photoshop"));
         SYNONYMS.put("photography", List.of("visual", "camera", "editing", "video", "cinematography", "photo"));
@@ -72,7 +72,7 @@ public class HashingTextEmbeddingProvider extends AbstractEmbeddingProvider {
         SYNONYMS.put("figma", List.of("design", "ui", "ux", "prototype", "wireframe"));
         SYNONYMS.put("photoshop", List.of("editing", "graphic", "design", "photography", "illustration"));
 
-        // ── Music & Performing Arts ────────────────────────────────
+        // Music & Performing Arts
         SYNONYMS.put("music", List.of("guitar", "piano", "singing", "instrument", "audio", "production", "drums"));
         SYNONYMS.put("guitar", List.of("music", "instrument", "acoustic", "performance", "bass", "electric"));
         SYNONYMS.put("piano", List.of("music", "instrument", "keyboard", "performance", "classical"));
@@ -87,7 +87,7 @@ public class HashingTextEmbeddingProvider extends AbstractEmbeddingProvider {
         SYNONYMS.put("acting", List.of("performance", "film", "drama", "theater", "voice"));
         SYNONYMS.put("theater", List.of("acting", "performance", "drama", "stage", "play"));
 
-        // ── Communication & Language ───────────────────────────────
+        // Communication & Language
         SYNONYMS.put("writing", List.of("content", "communication", "marketing", "language", "copywriting", "english"));
         SYNONYMS.put("language", List.of("writing", "speaking", "communication", "translation", "english", "ielts"));
         SYNONYMS.put("english", List.of("writing", "language", "communication", "ielts", "speaking", "grammar"));
@@ -103,7 +103,7 @@ public class HashingTextEmbeddingProvider extends AbstractEmbeddingProvider {
         SYNONYMS.put("blogging", List.of("writing", "content", "marketing", "social", "media"));
         SYNONYMS.put("storytelling", List.of("writing", "presentation", "speaking", "communication", "content"));
 
-        // ── Business & Finance ─────────────────────────────────────
+        // Business & Finance
         SYNONYMS.put("marketing", List.of("content", "writing", "business", "brand", "social", "digital", "advertising"));
         SYNONYMS.put("business", List.of("marketing", "management", "finance", "entrepreneurship", "startup"));
         SYNONYMS.put("finance", List.of("business", "accounting", "money", "investment", "economics"));
@@ -114,7 +114,7 @@ public class HashingTextEmbeddingProvider extends AbstractEmbeddingProvider {
         SYNONYMS.put("investment", List.of("finance", "business", "stock", "money", "economics"));
         SYNONYMS.put("economics", List.of("finance", "business", "investment", "analysis"));
 
-        // ── Interview & Career ─────────────────────────────────────
+        // Interview & Career
         SYNONYMS.put("interview", List.of("career", "communication", "preparation", "speaking", "resume"));
         SYNONYMS.put("resume", List.of("career", "writing", "interview", "cv", "job"));
         SYNONYMS.put("career", List.of("interview", "resume", "job", "management", "business"));

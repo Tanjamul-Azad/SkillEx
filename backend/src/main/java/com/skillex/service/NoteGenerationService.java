@@ -693,7 +693,7 @@ public class NoteGenerationService {
             }
 
             log.error("[AI-Notes] Gemini API failed. Status: {}, Body: {}", response.statusCode(), response.body());
-            return "Gemini API Error: Status " + response.statusCode();
+            return "";
         } catch (Exception e) {
             log.error("[AI-Notes] Gemini Cloud connection failed.", e);
             return generateMockSummary();

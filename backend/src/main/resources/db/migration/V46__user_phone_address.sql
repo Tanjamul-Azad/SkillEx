@@ -1,0 +1,3 @@
+ALTER TABLE users
+    ADD COLUMN phone   VARCHAR(50)  NULL AFTER location,
+    ADD COLUMN address VARCHAR(300) NULL AFTER phone;

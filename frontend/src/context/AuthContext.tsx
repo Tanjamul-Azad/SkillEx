@@ -140,10 +140,18 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     data: { name: string; email: string; password: string; university?: string; skillToTeach?: string; skillToLearn?: string; level?: string }
   ): Promise<{ success: boolean; needsEmailConfirmation?: boolean; error?: string }> => {
     try {
-      const { needsEmailConfirmation } = await AuthService.register(data);
-      // Don't auto-login — user is redirected to the login tab to sign in explicitly
-      // Clear the JWT so the session isn't silently restored before they log in
-      AuthService.logout();
+      const { user: newUser, needsEmailConfirmation } = await AuthService.register(data);
+      if (needsEmailConfirmation) {
+        // Account requires email confirmation before sign-in — clear the JWT so
+        // the session isn't silently restored before the user confirms.
+        AuthService.logout();
+      } else {
+        // Registration returned a live session token (the default backend flow).
+        // Keep the user authenticated so they can complete onboarding immediately —
+        // otherwise the onboarding "Finalize" step has no user and silently no-ops.
+        setUser(newUser);
+        writeCachedUser(newUser);
+      }
       return { success: true, needsEmailConfirmation };
     } catch (error) {
       const message = error instanceof Error ? error.message : 'Registration failed';

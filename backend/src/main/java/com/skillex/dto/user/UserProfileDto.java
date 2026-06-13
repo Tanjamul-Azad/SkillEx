@@ -16,6 +16,8 @@ public record UserProfileDto(
     String avatar,
     String university,
     String location,
+    String phone,
+    String address,
     String bio,
     String teachIntentText,
     String learnIntentText,

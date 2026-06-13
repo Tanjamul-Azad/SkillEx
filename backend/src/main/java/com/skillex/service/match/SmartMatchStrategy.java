@@ -87,7 +87,7 @@ public List<MatchUserDto> findMatches(UUID userId, int limit) {
             return Collections.emptyList();
         }
 
-        // ── Semantic expansion ────────────────────────────────────────────────
+        // Semantic expansion
         // Expand each skill set with related skills from the similarity graph so
         // we surface candidates who know "nearby" skills, not only exact matches.
         // e.g. a Python user will also match against Data Science learners.
@@ -124,7 +124,7 @@ public List<MatchUserDto> findMatches(UUID userId, int limit) {
             .collect(Collectors.toList());
     }
 
-    // ── Helpers ──────────────────────────────────────────────────────────────
+    // Helpers
 
     /**
      * Build the result DTO.

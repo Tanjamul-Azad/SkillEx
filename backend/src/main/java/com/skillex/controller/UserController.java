@@ -26,25 +26,21 @@ public class UserController {
     private final AccountRestrictionService restrictionService;
     private final SkillTrustService skillTrustService;
 
-    /** GET /api/users/me — currently authenticated user's full profile */
     @GetMapping("/me")
     public ResponseEntity<ApiResponse<UserProfileDto>> myProfile(Authentication auth) {
         return ResponseEntity.ok(ApiResponse.ok(userService.getProfile(userId(auth))));
     }
 
-    /** GET /api/users/me/restrictions â€” active warning/restriction state for current user */
     @GetMapping("/me/restrictions")
     public ResponseEntity<ApiResponse<java.util.List<UserRestrictionDto>>> myRestrictions(Authentication auth) {
         return ResponseEntity.ok(ApiResponse.ok(restrictionService.getActiveRestrictionDtos(userId(auth))));
     }
 
-    /** GET /api/users/{id} — public profile */
     @GetMapping("/{id}")
     public ResponseEntity<ApiResponse<UserProfileDto>> getProfile(@PathVariable String id) {
         return ResponseEntity.ok(ApiResponse.ok(userService.getProfile(id)));
     }
 
-    /** PATCH /api/users/me — update own profile */
     @PatchMapping("/me")
     public ResponseEntity<ApiResponse<UserProfileDto>> updateProfile(
         Authentication auth,
@@ -53,7 +49,6 @@ public class UserController {
         return ResponseEntity.ok(ApiResponse.ok(userService.updateProfile(userId(auth), req)));
     }
 
-    /** PUT /api/users/me — update own profile (alias of PATCH) */
     @PutMapping("/me")
     public ResponseEntity<ApiResponse<UserProfileDto>> updateProfilePut(
         Authentication auth,
@@ -62,13 +57,11 @@ public class UserController {
         return ResponseEntity.ok(ApiResponse.ok(userService.updateProfile(userId(auth), req)));
     }
 
-    /** GET /api/users/{id}/skills */
     @GetMapping("/{id}/skills")
     public ResponseEntity<ApiResponse<UserSkillsDto>> getUserSkills(@PathVariable String id) {
         return ResponseEntity.ok(ApiResponse.ok(userService.getSkills(id)));
     }
 
-    /** GET /api/users/{userId}/skills/{skillId}/trust */
     @GetMapping("/{userId}/skills/{skillId}/trust")
     public ResponseEntity<ApiResponse<com.skillex.dto.trust.SkillTrustDto>> getSkillTrust(
         @PathVariable String userId,
@@ -77,7 +70,6 @@ public class UserController {
         return ResponseEntity.ok(ApiResponse.ok(skillTrustService.getTrust(userId, skillId)));
     }
 
-    /** POST /api/users/me/change-password */
     @PostMapping("/me/change-password")
     public ResponseEntity<ApiResponse<String>> changePassword(
         Authentication auth,
@@ -87,7 +79,6 @@ public class UserController {
         return ResponseEntity.ok(ApiResponse.ok("Password changed successfully."));
     }
 
-    /** POST /api/users/me/skills — add a skill (offered or wanted) */
     @PostMapping("/me/skills")
     public ResponseEntity<ApiResponse<AddSkillResult>> addSkill(
         Authentication auth,
@@ -96,7 +87,6 @@ public class UserController {
         return ResponseEntity.ok(ApiResponse.ok(userService.addSkill(userId(auth), req)));
     }
 
-    /** PATCH /api/users/me/skills/{skillId} — update an offered skill's description */
     @PatchMapping("/me/skills/{skillId}")
     public ResponseEntity<ApiResponse<String>> updateSkillSubtitle(
         Authentication auth,
@@ -107,7 +97,6 @@ public class UserController {
         return ResponseEntity.ok(ApiResponse.ok("Skill description updated."));
     }
 
-    /** DELETE /api/users/me/skills/{skillId}?type=offered|wanted */
     @DeleteMapping("/me/skills/{skillId}")
     public ResponseEntity<ApiResponse<String>> removeSkill(
         Authentication auth,
@@ -118,7 +107,6 @@ public class UserController {
         return ResponseEntity.ok(ApiResponse.ok("Skill removed."));
     }
 
-    /** GET /api/users/search?q=&page=0&size=20 — global people search */
     @GetMapping("/search")
     public ResponseEntity<ApiResponse<PagedResponse<UserSearchResultDto>>> searchUsers(
         Authentication auth,
@@ -129,14 +117,12 @@ public class UserController {
         return ResponseEntity.ok(ApiResponse.ok(userService.searchUsers(userId(auth), query, page, size)));
     }
 
-    /** DELETE /api/users/me — delete own account */
     @DeleteMapping("/me")
     public ResponseEntity<ApiResponse<String>> deleteAccount(Authentication auth) {
         userService.deleteAccount(userId(auth));
         return ResponseEntity.ok(ApiResponse.ok("Account deleted."));
     }
 
-    /** POST /api/users/me/connect-email/request-otp */
     @PostMapping("/me/connect-email/request-otp")
     public ResponseEntity<ApiResponse<String>> requestEmailConnectOtp(
         Authentication auth,
@@ -146,7 +132,6 @@ public class UserController {
         return ResponseEntity.ok(ApiResponse.ok("OTP sent to new email."));
     }
 
-    /** POST /api/users/me/connect-email/verify-otp */
     @PostMapping("/me/connect-email/verify-otp")
     public ResponseEntity<ApiResponse<String>> verifyEmailConnectOtp(
         Authentication auth,
@@ -156,7 +141,7 @@ public class UserController {
         return ResponseEntity.ok(ApiResponse.ok("Email successfully connected."));
     }
 
-    // ── helpers ──────────────────────────────────────────────────────────────
+    // helpers
 
     private String userId(Authentication auth) {
         return (String) auth.getPrincipal();

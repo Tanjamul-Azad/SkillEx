@@ -39,7 +39,7 @@ public class ExchangeGraph {
      */
     private final Map<String, List<ExchangeGraphEdge>> adjacency = new LinkedHashMap<>();
 
-    // ── Mutation (package-private — only ExchangeGraphBuilder should call these) ──
+    // Mutation (package-private — only ExchangeGraphBuilder should call these)
 
     /**
      * Register a user node. If the node already exists, it is replaced.
@@ -70,7 +70,7 @@ public class ExchangeGraph {
         adjacency.get(edge.fromUserId()).add(edge);
     }
 
-    // ── Read API ──────────────────────────────────────────────────────────────
+    // Read API
 
     /**
      * Look up a node by user ID.
@@ -126,7 +126,7 @@ public class ExchangeGraph {
             .anyMatch(e -> e.toUserId().equals(toUserId));
     }
 
-    // ── Statistics ────────────────────────────────────────────────────────────
+    // Statistics
 
     /** Number of user nodes in the graph. */
     public int nodeCount() {

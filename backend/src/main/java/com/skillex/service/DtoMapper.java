@@ -33,7 +33,7 @@ public class DtoMapper {
     private final UserSkillOfferedRepository offeredRepo;
     private final UserSkillWantedRepository wantedRepo;
 
-    // ── User ──────────────────────────────────────────────────────────────────
+    // User
 
     public UserSummaryDto toSummary(User u) {
         return new UserSummaryDto(
@@ -67,7 +67,7 @@ public class DtoMapper {
 
         return new UserProfileDto(
             u.getId(), u.getName(), u.getUsername(), u.getEmail(), u.getAvatar(),
-            u.getUniversity(), u.getLocation(), u.getBio(),
+            u.getUniversity(), u.getLocation(), u.getPhone(), u.getAddress(), u.getBio(),
             u.getTeachIntentText(), u.getLearnIntentText(),
             u.getGithubUrl(), u.getLinkedinUrl(), u.getFacebookUrl(), u.getWebsiteUrl(), u.getResumeUrl(),
             safeRoleName(u),
@@ -78,7 +78,7 @@ public class DtoMapper {
         );
     }
 
-    // ── Exchange ──────────────────────────────────────────────────────────────
+    // Exchange
 
     public ExchangeDto toExchange(Exchange e) {
         return new ExchangeDto(
@@ -100,7 +100,7 @@ public class DtoMapper {
         return new ExchangeDto.SkillRef(s.getId(), s.getName(), s.getIcon(), s.getCategory());
     }
 
-    // ── Connection ───────────────────────────────────────────────────────────
+    // Connection
 
     public ConnectionDto toConnection(Connection c) {
         return new ConnectionDto(
@@ -114,7 +114,7 @@ public class DtoMapper {
         );
     }
 
-    // ── Session ───────────────────────────────────────────────────────────────
+    // Session
 
     public SessionDto toSession(Session s) {
         return new SessionDto(
@@ -132,7 +132,7 @@ public class DtoMapper {
         );
     }
 
-    // ── Review ────────────────────────────────────────────────────────────────
+    // Review
 
     public ReviewDto toReview(Review r) {
         return new ReviewDto(
@@ -145,7 +145,7 @@ public class DtoMapper {
         );
     }
 
-    // ── Feedback ──────────────────────────────────────────────────────────────
+    // Feedback
 
     public FeedbackDto toFeedback(Feedback f) {
         return new FeedbackDto(
@@ -157,7 +157,7 @@ public class DtoMapper {
         );
     }
 
-    // ── Community ─────────────────────────────────────────────────────────────
+    // Community
 
     public CommunityDtos.EventDto toEvent(Event ev) {
         return toEvent(ev, "NONE", 0, ev.getAttendees() == null ? 0 : ev.getAttendees().size());
@@ -195,10 +195,13 @@ public class DtoMapper {
             d.getSkill() == null ? null : toSkillRefCommunity(d.getSkill()),
             d.getCircle() == null ? null : d.getCircle().getId(),
             d.getCircle() == null ? null : d.getCircle().getName(),
+            d.getEvent() == null ? null : d.getEvent().getId(),
+            d.getEvent() == null ? null : d.getEvent().getTitle(),
             d.getStatus() == null ? Discussion.DiscussionStatus.OPEN.name() : d.getStatus().name(),
             d.getAcceptedReply() == null ? null : d.getAcceptedReply().getId(),
             d.getUpvotes(), isUpvotedByViewer, d.getReplies(), d.getViews(),
-            d.getIsPinned(), d.getCreatedAt()
+            d.getIsPinned(), d.getCreatedAt(),
+            d.getCoverImageUrl()
         );
     }
 
@@ -276,7 +279,8 @@ public class DtoMapper {
             openHelpCount,
             upcomingEventCount,
             sc.getSkills().stream().map(this::toSkillRefCommunity).toList(),
-            sc.getMembers().stream().map(this::toSummary).toList()
+            sc.getMembers().stream().map(this::toSummary).toList(),
+            sc.getCoverImageUrl()
         );
     }
 
@@ -329,7 +333,7 @@ public class DtoMapper {
         return u.getRating() == null ? java.math.BigDecimal.ZERO : u.getRating();
     }
 
-    // ── Notification ──────────────────────────────────────────────────────────
+    // Notification
 
     public NotificationDto toNotification(Notification n) {
         NotificationDto.FromUserRef fromRef = n.getFromUser() == null ? null

@@ -174,7 +174,7 @@ public class SkillAssessmentServiceImpl implements SkillAssessmentService {
             .orElse(null);
     }
 
-    // ── Question generation ──────────────────────────────────────────────────
+    // Question generation
 
     private List<SkillAssessmentDto.QuizQuestion> generateQuestions(String skillName, String difficulty) {
         String prompt = String.format("""
@@ -258,7 +258,7 @@ public class SkillAssessmentServiceImpl implements SkillAssessmentService {
         );
     }
 
-    // ── Grading ──────────────────────────────────────────────────────────────
+    // Grading
 
     private boolean gradeAnswer(String skillName, SkillAssessmentDto.QuizQuestion question, String userAnswer) {
         // Multiple choice with a known key grades deterministically.
@@ -309,7 +309,7 @@ public class SkillAssessmentServiceImpl implements SkillAssessmentService {
         return feedback.trim();
     }
 
-    // ── Certificate ──────────────────────────────────────────────────────────
+    // Certificate
 
     private void issueCertificateIfMissing(User user, Skill skill, int score, String proficiencyLevel) {
         boolean exists = certificateRepository
@@ -344,7 +344,7 @@ public class SkillAssessmentServiceImpl implements SkillAssessmentService {
         );
     }
 
-    // ── JSON helpers ─────────────────────────────────────────────────────────
+    // JSON helpers
 
     private String writeQuestionsJson(List<SkillAssessmentDto.QuizQuestion> questions) {
         try {

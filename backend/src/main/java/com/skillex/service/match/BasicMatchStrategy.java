@@ -66,7 +66,7 @@ public List<MatchUserDto> findMatches(UUID userId, int limit) {
             .collect(Collectors.toList());
     }
 
-    // ── Helpers ──────────────────────────────────────────────────────────────
+    // Helpers
 
     /** Builds the result DTO from a candidate relative to the current user's skill sets. */
     protected MatchUserDto buildMatchDto(User candidate, Set<String> myOfferedIds, Set<String> myWantedIds) {

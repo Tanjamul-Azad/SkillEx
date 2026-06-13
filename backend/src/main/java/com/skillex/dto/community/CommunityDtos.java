@@ -42,6 +42,8 @@ public final class CommunityDtos {
         SkillRef skill,
         String circleId,
         String circleName,
+        String eventId,
+        String eventTitle,
         String status,
         String acceptedReplyId,
         int upvotes,
@@ -49,7 +51,8 @@ public final class CommunityDtos {
         int replies,
         int views,
         boolean isPinned,
-        LocalDateTime createdAt
+        LocalDateTime createdAt,
+        String coverImageUrl
     ) {}
 
     public record PostDto(
@@ -90,7 +93,8 @@ public final class CommunityDtos {
         long openHelpCount,
         long upcomingEventCount,
         List<SkillRef> skills,
-        List<UserSummaryDto> members
+        List<UserSummaryDto> members,
+        String coverImageUrl
     ) {}
 
     public record CircleResourceDto(

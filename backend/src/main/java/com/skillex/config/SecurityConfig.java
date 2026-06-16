@@ -55,6 +55,8 @@ public class SecurityConfig {
                 .requestMatchers("/api/admin/**", "/api/skills/pending/**").hasRole("ADMIN")
                 .requestMatchers(HttpMethod.POST, "/api/credits/admin/**", "/api/moderation/actions").hasRole("ADMIN")
                 .requestMatchers(HttpMethod.GET, "/api/moderation/reports", "/api/moderation/cases/**", "/api/moderation/users/**").hasRole("ADMIN")
+                // Platform-wide analytics are admin-only (the public snapshot is /api/analytics/impact).
+                .requestMatchers(HttpMethod.GET, "/api/analytics/platform").hasRole("ADMIN")
                 // Public read-only routes — skills catalogue, feedbacks and community browsing
                 .requestMatchers(HttpMethod.GET, "/api/skills", "/api/skills/**").permitAll()
                 .requestMatchers(HttpMethod.GET, "/api/feedbacks").permitAll()

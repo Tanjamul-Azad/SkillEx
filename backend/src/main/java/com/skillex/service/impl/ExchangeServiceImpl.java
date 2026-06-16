@@ -17,6 +17,7 @@ import com.skillex.service.CreditService;
 import com.skillex.service.SkillTrustService;
 import jakarta.persistence.EntityNotFoundException;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Sort;
 import org.springframework.security.access.AccessDeniedException;
@@ -24,6 +25,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 @Service
+@Slf4j
 @RequiredArgsConstructor
 public class ExchangeServiceImpl implements ExchangeService {
 
@@ -184,7 +186,9 @@ public class ExchangeServiceImpl implements ExchangeService {
                     connectionRepository.save(existingConn);
                 }
             } catch (Exception e) {
-                // Ignore silent errors during auto-connection sync
+                // Auto-connection is a non-critical convenience; the exchange acceptance still
+                // stands, but log so the failure is visible instead of silently swallowed.
+                log.warn("Auto-connection sync failed for exchange {}: {}", saved.getId(), e.getMessage());
             }
         } else if (next == Exchange.ExchangeStatus.DECLINED) {
             if (saved.getExchangeMode() == Exchange.ExchangeMode.CREDIT_PAYMENT) {
@@ -199,6 +203,11 @@ public class ExchangeServiceImpl implements ExchangeService {
                 saved.getId(),
                 "/dashboard?panel=requests&requestsTab=sent#exchange-requests"
             );
+        } else if (next == Exchange.ExchangeStatus.CANCELLED) {
+            // Mirror cancel(): a credit-funded request must be refunded however it is cancelled.
+            if (saved.getExchangeMode() == Exchange.ExchangeMode.CREDIT_PAYMENT) {
+                creditService.refundCreditExchange(saved);
+            }
         }
 
         return mapper.toExchange(saved);

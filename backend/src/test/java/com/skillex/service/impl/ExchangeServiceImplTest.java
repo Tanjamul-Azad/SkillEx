@@ -129,6 +129,26 @@ class ExchangeServiceImplTest {
     }
 
     @Test
+    void cancellingPendingCreditExchangeViaUpdateStatusRefunds() {
+        User requester = user("requester");
+        User receiver = user("receiver");
+        Exchange exchange = exchange("exchange-5", requester, receiver, Exchange.ExchangeStatus.PENDING);
+        exchange.setExchangeMode(Exchange.ExchangeMode.CREDIT_PAYMENT);
+        exchange.setCreditCost(10);
+
+        ExchangeDto dto = new ExchangeDto(exchange.getId(), null, null, null, null, null, "CREDIT_PAYMENT", 10, "CANCELLED", null, null);
+
+        when(exchangeRepository.findById(exchange.getId())).thenReturn(Optional.of(exchange));
+        when(exchangeRepository.save(exchange)).thenReturn(exchange);
+        when(mapper.toExchange(exchange)).thenReturn(dto);
+
+        // The requester cancels through PATCH /status (not the dedicated DELETE) — must still refund.
+        service.updateStatus(exchange.getId(), requester.getId(), new UpdateExchangeRequest("CANCELLED"));
+
+        verify(creditService).refundCreditExchange(exchange);
+    }
+
+    @Test
     void getRelationship_usesLatestExchangeInsteadOfOlderAcceptedExchange() {
         User requester = user("requester");
         User receiver = user("receiver");

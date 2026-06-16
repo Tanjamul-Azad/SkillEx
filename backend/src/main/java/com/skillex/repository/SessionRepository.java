@@ -22,6 +22,14 @@ public interface SessionRepository extends JpaRepository<Session, String> {
     @Query("SELECT s FROM Session s WHERE s.id = :id")
     Optional<Session> findRoomDetailsById(@Param("id") String id);
 
+    /** True when the user is the teacher or learner of the session — used to gate WebSocket room topics. */
+    @Query("""
+        SELECT (COUNT(s) > 0) FROM Session s
+        WHERE s.id = :sessionId
+          AND (s.teacher.id = :userId OR s.learner.id = :userId)
+        """)
+    boolean isParticipant(@Param("sessionId") String sessionId, @Param("userId") String userId);
+
     @Query("SELECT s FROM Session s WHERE s.teacher.id = :userId OR s.learner.id = :userId")
     Page<Session> findByUserId(@Param("userId") String userId, Pageable pageable);
 

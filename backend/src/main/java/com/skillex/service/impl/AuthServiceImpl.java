@@ -79,8 +79,7 @@ public class AuthServiceImpl implements AuthService {
         saveRegistrationSkills(user, req);
 
         user = normalizeUserProfile(user);
-        String token = jwtUtil.generateToken(user.getId(), user.getEmail(), safeRole(user).name());
-        return toAuthResponse(token, user);
+        return toAuthResponse(user);
     }
 
     @Override
@@ -100,8 +99,7 @@ public class AuthServiceImpl implements AuthService {
         }
 
         user = normalizeUserProfile(user);
-        String token = jwtUtil.generateToken(user.getId(), user.getEmail(), safeRole(user).name());
-        return toAuthResponse(token, user);
+        return toAuthResponse(user);
     }
 
     @Override
@@ -134,8 +132,7 @@ public class AuthServiceImpl implements AuthService {
             user = userRepository.save(user);
         }
 
-        String token = jwtUtil.generateToken(user.getId(), user.getEmail(), safeRole(user).name());
-        return toAuthResponse(token, user);
+        return toAuthResponse(user);
     }
 
     @Override
@@ -146,13 +143,23 @@ public class AuthServiceImpl implements AuthService {
             throw new IllegalArgumentException("Refresh token is required.");
         }
 
-        String userId = jwtUtil.extractUserId(token);
-        User user = userRepository.findById(userId)
+        io.jsonwebtoken.Claims claims;
+        try {
+            claims = jwtUtil.validateAndExtract(token);
+        } catch (io.jsonwebtoken.JwtException ex) {
+            throw new IllegalArgumentException("Invalid or expired refresh token.");
+        }
+
+        // Reject access tokens here — only a genuine refresh token can mint a new session.
+        if (!JwtUtil.TYPE_REFRESH.equals(jwtUtil.extractTokenType(claims))) {
+            throw new IllegalArgumentException("A refresh token is required.");
+        }
+
+        User user = userRepository.findById(claims.getSubject())
             .orElseThrow(() -> new IllegalArgumentException("Invalid refresh token."));
         user = normalizeUserProfile(user);
 
-        String newToken = jwtUtil.generateToken(user.getId(), user.getEmail(), safeRole(user).name());
-        return toAuthResponse(newToken, user);
+        return toAuthResponse(user);
     }
 
     @Override
@@ -171,9 +178,15 @@ public class AuthServiceImpl implements AuthService {
 
     // Private helpers
 
-    /** Builds the auth response with a full profile DTO so no second round-trip is needed. */
-    private AuthResponse toAuthResponse(String token, User user) {
-        return new AuthResponse(token, mapper.toProfile(user));
+    /**
+     * Builds the auth response with a fresh access + refresh token pair and a full
+     * profile DTO so no second round-trip is needed. Centralising token creation here
+     * keeps the access/refresh claims consistent across login, register, Google and refresh.
+     */
+    private AuthResponse toAuthResponse(User user) {
+        String accessToken = jwtUtil.generateToken(user.getId(), user.getEmail(), safeRole(user).name());
+        String refreshToken = jwtUtil.generateRefreshToken(user.getId());
+        return new AuthResponse(accessToken, refreshToken, mapper.toProfile(user));
     }
 
     /**

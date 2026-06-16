@@ -45,15 +45,20 @@ public class JwtAuthFilter extends OncePerRequestFilter {
             String token = header.substring(7);
             try {
                 var claims = jwtUtil.validateAndExtract(token);
-                String userId = claims.getSubject();
-                String role = (String) claims.get("role");
 
-                var auth = new UsernamePasswordAuthenticationToken(
-                    userId,
-                    null,
-                    List.of(new SimpleGrantedAuthority("ROLE_" + role.toUpperCase()))
-                );
-                SecurityContextHolder.getContext().setAuthentication(auth);
+                // Refresh tokens are only valid at /api/auth/refresh — never for API access.
+                if (jwtUtil.isAccessToken(claims)) {
+                    String userId = claims.getSubject();
+                    Object roleClaim = claims.get("role");
+                    String role = roleClaim == null ? "STUDENT" : roleClaim.toString();
+
+                    var auth = new UsernamePasswordAuthenticationToken(
+                        userId,
+                        null,
+                        List.of(new SimpleGrantedAuthority("ROLE_" + role.toUpperCase()))
+                    );
+                    SecurityContextHolder.getContext().setAuthentication(auth);
+                }
             } catch (JwtException ignored) {
                 // invalid/expired token → request proceeds as anonymous
             }

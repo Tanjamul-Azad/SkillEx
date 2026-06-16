@@ -71,7 +71,7 @@ export const AuthService = {
     };
   },
 
-  /** Clear JWT from localStorage — stateless JWT: no server call needed */
+  /** Clear JWT from sessionStorage — stateless JWT: no server call needed */
   logout(): void {
     TokenStore.clear();
   },

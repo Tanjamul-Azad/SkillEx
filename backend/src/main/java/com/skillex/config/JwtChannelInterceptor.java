@@ -43,11 +43,15 @@ public class JwtChannelInterceptor implements ChannelInterceptor {
             if (authHeader != null && authHeader.startsWith("Bearer ")) {
                 String token = authHeader.substring(7);
                 try {
-                    String userId = jwtUtil.extractUserId(token);
+                    var claims = jwtUtil.validateAndExtract(token);
+                    if (!jwtUtil.isAccessToken(claims)) {
+                        throw new org.springframework.security.access.AccessDeniedException(
+                            "Refresh tokens cannot open a WebSocket session");
+                    }
                     // Set the authenticated principal — Spring uses this for
                     // convertAndSendToUser routing and Principal injection in @MessageMapping
                     accessor.setUser(
-                        new UsernamePasswordAuthenticationToken(userId, null, Collections.emptyList())
+                        new UsernamePasswordAuthenticationToken(claims.getSubject(), null, Collections.emptyList())
                     );
                 } catch (Exception ex) {
                     log.warn("[ws] JWT validation failed on CONNECT: {}", ex.getMessage());

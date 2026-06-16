@@ -103,7 +103,7 @@ public class SessionRoomController {
             throw new IllegalStateException("Agora APP_ID is not configured.");
         }
         String token = agoraTokenService.generateToken(sessionId, userId);
-        int uid = Math.abs(userId.hashCode());
+        int uid = agoraTokenService.resolveUid(userId);
         broadcastPresence(sessionId, "JOINED", userId, sessionPresenceService.markJoined(sessionId, userId));
 
         return ResponseEntity.ok(new AgoraTokenDto(token, uid, sessionId, appId));

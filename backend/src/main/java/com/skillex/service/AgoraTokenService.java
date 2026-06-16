@@ -29,9 +29,18 @@ public class AgoraTokenService {
      * @param userId The unique String UUID of the user
      * @return String RTC token
      */
+    /**
+     * Maps a String user id to a stable non-negative 32-bit Agora uid.
+     * Masking the sign bit (rather than {@code Math.abs}) avoids the
+     * {@code Integer.MIN_VALUE} edge case, which stays negative under {@code abs}.
+     * Callers must use this same value as the join uid so token and client agree.
+     */
+    public int resolveUid(String userId) {
+        return userId.hashCode() & 0x7fffffff;
+    }
+
     public String generateToken(String channelName, String userId) {
-        // Hash String UUID deterministically to a positive 32-bit integer for Agora compatibility
-        int uid = Math.abs(userId.hashCode());
+        int uid = resolveUid(userId);
 
         if (appId == null || appId.isBlank()) {
             log.error("[Agora] Agora APP_ID not configured. Unable to generate token.");

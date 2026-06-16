@@ -10,6 +10,8 @@ import com.skillex.dto.user.UserProfileDto;
 import com.skillex.service.AuthService;
 import com.skillex.service.DtoMapper;
 import com.skillex.service.FirebaseTokenVerifier;
+import com.skillex.service.LoginAttemptService;
+import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
@@ -31,6 +33,7 @@ public class AuthController {
     private final AuthService authService;
     private final DtoMapper dtoMapper;
     private final FirebaseTokenVerifier firebaseTokenVerifier;
+    private final LoginAttemptService loginAttemptService;
 
     @PostMapping("/register")
     public ResponseEntity<ApiResponse<AuthResponse>> register(
@@ -42,10 +45,20 @@ public class AuthController {
 
     @PostMapping("/login")
     public ResponseEntity<ApiResponse<AuthResponse>> login(
+        HttpServletRequest httpRequest,
         @Valid @RequestBody LoginRequest request
     ) {
-        AuthResponse response = authService.login(request);
-        return ResponseEntity.ok(ApiResponse.ok(response));
+        String clientKey = clientIp(httpRequest);
+        loginAttemptService.assertNotBlocked(clientKey);
+        try {
+            AuthResponse response = authService.login(request);
+            loginAttemptService.recordSuccess(clientKey);
+            return ResponseEntity.ok(ApiResponse.ok(response));
+        } catch (RuntimeException ex) {
+            // Failed credentials (or any login error) count toward the per-IP rate limit.
+            loginAttemptService.recordFailure(clientKey);
+            throw ex;
+        }
     }
 
     @PostMapping("/firebase/google")
@@ -80,5 +93,14 @@ public ResponseEntity<ApiResponse<UserProfileDto>> me(Authentication authenticat
         String userId = (String) authentication.getPrincipal();
         var user = authService.getCurrentUser(userId);
         return ResponseEntity.ok(ApiResponse.ok(dtoMapper.toProfile(user)));
+    }
+
+    /** Resolves the originating client IP, honouring a single X-Forwarded-For hop if present. */
+    private String clientIp(HttpServletRequest request) {
+        String forwarded = request.getHeader("X-Forwarded-For");
+        if (forwarded != null && !forwarded.isBlank()) {
+            return forwarded.split(",")[0].trim();
+        }
+        return request.getRemoteAddr();
     }
 }

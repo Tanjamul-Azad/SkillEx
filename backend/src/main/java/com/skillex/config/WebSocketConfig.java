@@ -2,6 +2,7 @@ package com.skillex.config;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.RequiredArgsConstructor;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.lang.NonNull;
 import org.springframework.messaging.converter.DefaultContentTypeResolver;
@@ -37,12 +38,23 @@ import java.util.List;
 public class WebSocketConfig implements WebSocketMessageBrokerConfigurer {
 
     private final JwtChannelInterceptor jwtChannelInterceptor;
+    private final SessionStompAuthorizationInterceptor sessionStompAuthorizationInterceptor;
     private final ObjectMapper objectMapper;
+
+    @Value("${app.cors.allowed-origins}")
+    private String allowedOriginsRaw;
 
     @Override
     public void registerStompEndpoints(@NonNull StompEndpointRegistry registry) {
+        // Mirror the HTTP CORS allow-list instead of "*" so the SockJS handshake
+        // only accepts the configured frontend origins.
+        String[] origins = java.util.Arrays.stream(allowedOriginsRaw.split(","))
+            .map(String::trim)
+            .filter(s -> !s.isEmpty())
+            .toArray(String[]::new);
+
         registry.addEndpoint("/ws")
-            .setAllowedOriginPatterns("*")
+            .setAllowedOriginPatterns(origins.length == 0 ? new String[]{"*"} : origins)
             .withSockJS();
     }
 
@@ -58,8 +70,9 @@ public class WebSocketConfig implements WebSocketMessageBrokerConfigurer {
 
     @Override
     public void configureClientInboundChannel(@NonNull ChannelRegistration registration) {
-        // Validate JWT on every CONNECT and set Principal for the STOMP session
-        registration.interceptors(jwtChannelInterceptor);
+        // Order matters: authenticate the CONNECT first (sets the Principal), then
+        // authorize SUBSCRIBE/SEND to session-room destinations against that Principal.
+        registration.interceptors(jwtChannelInterceptor, sessionStompAuthorizationInterceptor);
     }
 
     @Override
